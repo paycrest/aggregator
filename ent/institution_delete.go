@@ -20,56 +20,56 @@ type InstitutionDelete struct {
 }
 
 // Where appends a list predicates to the InstitutionDelete builder.
-func (id *InstitutionDelete) Where(ps ...predicate.Institution) *InstitutionDelete {
-	id.mutation.Where(ps...)
-	return id
+func (_d *InstitutionDelete) Where(ps ...predicate.Institution) *InstitutionDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (id *InstitutionDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, id.sqlExec, id.mutation, id.hooks)
+func (_d *InstitutionDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (id *InstitutionDelete) ExecX(ctx context.Context) int {
-	n, err := id.Exec(ctx)
+func (_d *InstitutionDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (id *InstitutionDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *InstitutionDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(institution.Table, sqlgraph.NewFieldSpec(institution.FieldID, field.TypeInt))
-	if ps := id.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, id.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	id.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // InstitutionDeleteOne is the builder for deleting a single Institution entity.
 type InstitutionDeleteOne struct {
-	id *InstitutionDelete
+	_d *InstitutionDelete
 }
 
 // Where appends a list predicates to the InstitutionDelete builder.
-func (ido *InstitutionDeleteOne) Where(ps ...predicate.Institution) *InstitutionDeleteOne {
-	ido.id.mutation.Where(ps...)
-	return ido
+func (_d *InstitutionDeleteOne) Where(ps ...predicate.Institution) *InstitutionDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (ido *InstitutionDeleteOne) Exec(ctx context.Context) error {
-	n, err := ido.id.Exec(ctx)
+func (_d *InstitutionDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (ido *InstitutionDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ido *InstitutionDeleteOne) ExecX(ctx context.Context) {
-	if err := ido.Exec(ctx); err != nil {
+func (_d *InstitutionDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

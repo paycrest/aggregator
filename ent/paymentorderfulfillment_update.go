@@ -25,122 +25,122 @@ type PaymentOrderFulfillmentUpdate struct {
 }
 
 // Where appends a list predicates to the PaymentOrderFulfillmentUpdate builder.
-func (pofu *PaymentOrderFulfillmentUpdate) Where(ps ...predicate.PaymentOrderFulfillment) *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.Where(ps...)
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) Where(ps ...predicate.PaymentOrderFulfillment) *PaymentOrderFulfillmentUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pofu *PaymentOrderFulfillmentUpdate) SetUpdatedAt(t time.Time) *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.SetUpdatedAt(t)
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) SetUpdatedAt(v time.Time) *PaymentOrderFulfillmentUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetTxID sets the "tx_id" field.
-func (pofu *PaymentOrderFulfillmentUpdate) SetTxID(s string) *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.SetTxID(s)
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) SetTxID(v string) *PaymentOrderFulfillmentUpdate {
+	_u.mutation.SetTxID(v)
+	return _u
 }
 
 // SetNillableTxID sets the "tx_id" field if the given value is not nil.
-func (pofu *PaymentOrderFulfillmentUpdate) SetNillableTxID(s *string) *PaymentOrderFulfillmentUpdate {
-	if s != nil {
-		pofu.SetTxID(*s)
+func (_u *PaymentOrderFulfillmentUpdate) SetNillableTxID(v *string) *PaymentOrderFulfillmentUpdate {
+	if v != nil {
+		_u.SetTxID(*v)
 	}
-	return pofu
+	return _u
 }
 
 // ClearTxID clears the value of the "tx_id" field.
-func (pofu *PaymentOrderFulfillmentUpdate) ClearTxID() *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.ClearTxID()
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) ClearTxID() *PaymentOrderFulfillmentUpdate {
+	_u.mutation.ClearTxID()
+	return _u
 }
 
 // SetPsp sets the "psp" field.
-func (pofu *PaymentOrderFulfillmentUpdate) SetPsp(s string) *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.SetPsp(s)
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) SetPsp(v string) *PaymentOrderFulfillmentUpdate {
+	_u.mutation.SetPsp(v)
+	return _u
 }
 
 // SetNillablePsp sets the "psp" field if the given value is not nil.
-func (pofu *PaymentOrderFulfillmentUpdate) SetNillablePsp(s *string) *PaymentOrderFulfillmentUpdate {
-	if s != nil {
-		pofu.SetPsp(*s)
+func (_u *PaymentOrderFulfillmentUpdate) SetNillablePsp(v *string) *PaymentOrderFulfillmentUpdate {
+	if v != nil {
+		_u.SetPsp(*v)
 	}
-	return pofu
+	return _u
 }
 
 // ClearPsp clears the value of the "psp" field.
-func (pofu *PaymentOrderFulfillmentUpdate) ClearPsp() *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.ClearPsp()
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) ClearPsp() *PaymentOrderFulfillmentUpdate {
+	_u.mutation.ClearPsp()
+	return _u
 }
 
 // SetValidationStatus sets the "validation_status" field.
-func (pofu *PaymentOrderFulfillmentUpdate) SetValidationStatus(ps paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.SetValidationStatus(ps)
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) SetValidationStatus(v paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentUpdate {
+	_u.mutation.SetValidationStatus(v)
+	return _u
 }
 
 // SetNillableValidationStatus sets the "validation_status" field if the given value is not nil.
-func (pofu *PaymentOrderFulfillmentUpdate) SetNillableValidationStatus(ps *paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentUpdate {
-	if ps != nil {
-		pofu.SetValidationStatus(*ps)
+func (_u *PaymentOrderFulfillmentUpdate) SetNillableValidationStatus(v *paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentUpdate {
+	if v != nil {
+		_u.SetValidationStatus(*v)
 	}
-	return pofu
+	return _u
 }
 
 // SetValidationError sets the "validation_error" field.
-func (pofu *PaymentOrderFulfillmentUpdate) SetValidationError(s string) *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.SetValidationError(s)
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) SetValidationError(v string) *PaymentOrderFulfillmentUpdate {
+	_u.mutation.SetValidationError(v)
+	return _u
 }
 
 // SetNillableValidationError sets the "validation_error" field if the given value is not nil.
-func (pofu *PaymentOrderFulfillmentUpdate) SetNillableValidationError(s *string) *PaymentOrderFulfillmentUpdate {
-	if s != nil {
-		pofu.SetValidationError(*s)
+func (_u *PaymentOrderFulfillmentUpdate) SetNillableValidationError(v *string) *PaymentOrderFulfillmentUpdate {
+	if v != nil {
+		_u.SetValidationError(*v)
 	}
-	return pofu
+	return _u
 }
 
 // ClearValidationError clears the value of the "validation_error" field.
-func (pofu *PaymentOrderFulfillmentUpdate) ClearValidationError() *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.ClearValidationError()
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) ClearValidationError() *PaymentOrderFulfillmentUpdate {
+	_u.mutation.ClearValidationError()
+	return _u
 }
 
 // SetOrderID sets the "order" edge to the PaymentOrder entity by ID.
-func (pofu *PaymentOrderFulfillmentUpdate) SetOrderID(id uuid.UUID) *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.SetOrderID(id)
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) SetOrderID(id uuid.UUID) *PaymentOrderFulfillmentUpdate {
+	_u.mutation.SetOrderID(id)
+	return _u
 }
 
 // SetOrder sets the "order" edge to the PaymentOrder entity.
-func (pofu *PaymentOrderFulfillmentUpdate) SetOrder(p *PaymentOrder) *PaymentOrderFulfillmentUpdate {
-	return pofu.SetOrderID(p.ID)
+func (_u *PaymentOrderFulfillmentUpdate) SetOrder(v *PaymentOrder) *PaymentOrderFulfillmentUpdate {
+	return _u.SetOrderID(v.ID)
 }
 
 // Mutation returns the PaymentOrderFulfillmentMutation object of the builder.
-func (pofu *PaymentOrderFulfillmentUpdate) Mutation() *PaymentOrderFulfillmentMutation {
-	return pofu.mutation
+func (_u *PaymentOrderFulfillmentUpdate) Mutation() *PaymentOrderFulfillmentMutation {
+	return _u.mutation
 }
 
 // ClearOrder clears the "order" edge to the PaymentOrder entity.
-func (pofu *PaymentOrderFulfillmentUpdate) ClearOrder() *PaymentOrderFulfillmentUpdate {
-	pofu.mutation.ClearOrder()
-	return pofu
+func (_u *PaymentOrderFulfillmentUpdate) ClearOrder() *PaymentOrderFulfillmentUpdate {
+	_u.mutation.ClearOrder()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (pofu *PaymentOrderFulfillmentUpdate) Save(ctx context.Context) (int, error) {
-	pofu.defaults()
-	return withHooks(ctx, pofu.sqlSave, pofu.mutation, pofu.hooks)
+func (_u *PaymentOrderFulfillmentUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pofu *PaymentOrderFulfillmentUpdate) SaveX(ctx context.Context) int {
-	affected, err := pofu.Save(ctx)
+func (_u *PaymentOrderFulfillmentUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -148,76 +148,76 @@ func (pofu *PaymentOrderFulfillmentUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (pofu *PaymentOrderFulfillmentUpdate) Exec(ctx context.Context) error {
-	_, err := pofu.Save(ctx)
+func (_u *PaymentOrderFulfillmentUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pofu *PaymentOrderFulfillmentUpdate) ExecX(ctx context.Context) {
-	if err := pofu.Exec(ctx); err != nil {
+func (_u *PaymentOrderFulfillmentUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pofu *PaymentOrderFulfillmentUpdate) defaults() {
-	if _, ok := pofu.mutation.UpdatedAt(); !ok {
+func (_u *PaymentOrderFulfillmentUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := paymentorderfulfillment.UpdateDefaultUpdatedAt()
-		pofu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pofu *PaymentOrderFulfillmentUpdate) check() error {
-	if v, ok := pofu.mutation.ValidationStatus(); ok {
+func (_u *PaymentOrderFulfillmentUpdate) check() error {
+	if v, ok := _u.mutation.ValidationStatus(); ok {
 		if err := paymentorderfulfillment.ValidationStatusValidator(v); err != nil {
 			return &ValidationError{Name: "validation_status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrderFulfillment.validation_status": %w`, err)}
 		}
 	}
-	if pofu.mutation.OrderCleared() && len(pofu.mutation.OrderIDs()) > 0 {
+	if _u.mutation.OrderCleared() && len(_u.mutation.OrderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrderFulfillment.order"`)
 	}
 	return nil
 }
 
-func (pofu *PaymentOrderFulfillmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := pofu.check(); err != nil {
-		return n, err
+func (_u *PaymentOrderFulfillmentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(paymentorderfulfillment.Table, paymentorderfulfillment.Columns, sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID))
-	if ps := pofu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pofu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := pofu.mutation.TxID(); ok {
+	if value, ok := _u.mutation.TxID(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldTxID, field.TypeString, value)
 	}
-	if pofu.mutation.TxIDCleared() {
+	if _u.mutation.TxIDCleared() {
 		_spec.ClearField(paymentorderfulfillment.FieldTxID, field.TypeString)
 	}
-	if value, ok := pofu.mutation.Psp(); ok {
+	if value, ok := _u.mutation.Psp(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldPsp, field.TypeString, value)
 	}
-	if pofu.mutation.PspCleared() {
+	if _u.mutation.PspCleared() {
 		_spec.ClearField(paymentorderfulfillment.FieldPsp, field.TypeString)
 	}
-	if value, ok := pofu.mutation.ValidationStatus(); ok {
+	if value, ok := _u.mutation.ValidationStatus(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldValidationStatus, field.TypeEnum, value)
 	}
-	if value, ok := pofu.mutation.ValidationError(); ok {
+	if value, ok := _u.mutation.ValidationError(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldValidationError, field.TypeString, value)
 	}
-	if pofu.mutation.ValidationErrorCleared() {
+	if _u.mutation.ValidationErrorCleared() {
 		_spec.ClearField(paymentorderfulfillment.FieldValidationError, field.TypeString)
 	}
-	if pofu.mutation.OrderCleared() {
+	if _u.mutation.OrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -230,7 +230,7 @@ func (pofu *PaymentOrderFulfillmentUpdate) sqlSave(ctx context.Context) (n int, 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pofu.mutation.OrderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.OrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -246,7 +246,7 @@ func (pofu *PaymentOrderFulfillmentUpdate) sqlSave(ctx context.Context) (n int, 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, pofu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentorderfulfillment.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -254,8 +254,8 @@ func (pofu *PaymentOrderFulfillmentUpdate) sqlSave(ctx context.Context) (n int, 
 		}
 		return 0, err
 	}
-	pofu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // PaymentOrderFulfillmentUpdateOne is the builder for updating a single PaymentOrderFulfillment entity.
@@ -267,129 +267,129 @@ type PaymentOrderFulfillmentUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetUpdatedAt(t time.Time) *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.SetUpdatedAt(t)
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) SetUpdatedAt(v time.Time) *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetTxID sets the "tx_id" field.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetTxID(s string) *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.SetTxID(s)
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) SetTxID(v string) *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.SetTxID(v)
+	return _u
 }
 
 // SetNillableTxID sets the "tx_id" field if the given value is not nil.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetNillableTxID(s *string) *PaymentOrderFulfillmentUpdateOne {
-	if s != nil {
-		pofuo.SetTxID(*s)
+func (_u *PaymentOrderFulfillmentUpdateOne) SetNillableTxID(v *string) *PaymentOrderFulfillmentUpdateOne {
+	if v != nil {
+		_u.SetTxID(*v)
 	}
-	return pofuo
+	return _u
 }
 
 // ClearTxID clears the value of the "tx_id" field.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) ClearTxID() *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.ClearTxID()
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) ClearTxID() *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.ClearTxID()
+	return _u
 }
 
 // SetPsp sets the "psp" field.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetPsp(s string) *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.SetPsp(s)
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) SetPsp(v string) *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.SetPsp(v)
+	return _u
 }
 
 // SetNillablePsp sets the "psp" field if the given value is not nil.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetNillablePsp(s *string) *PaymentOrderFulfillmentUpdateOne {
-	if s != nil {
-		pofuo.SetPsp(*s)
+func (_u *PaymentOrderFulfillmentUpdateOne) SetNillablePsp(v *string) *PaymentOrderFulfillmentUpdateOne {
+	if v != nil {
+		_u.SetPsp(*v)
 	}
-	return pofuo
+	return _u
 }
 
 // ClearPsp clears the value of the "psp" field.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) ClearPsp() *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.ClearPsp()
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) ClearPsp() *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.ClearPsp()
+	return _u
 }
 
 // SetValidationStatus sets the "validation_status" field.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetValidationStatus(ps paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.SetValidationStatus(ps)
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) SetValidationStatus(v paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.SetValidationStatus(v)
+	return _u
 }
 
 // SetNillableValidationStatus sets the "validation_status" field if the given value is not nil.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetNillableValidationStatus(ps *paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentUpdateOne {
-	if ps != nil {
-		pofuo.SetValidationStatus(*ps)
+func (_u *PaymentOrderFulfillmentUpdateOne) SetNillableValidationStatus(v *paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentUpdateOne {
+	if v != nil {
+		_u.SetValidationStatus(*v)
 	}
-	return pofuo
+	return _u
 }
 
 // SetValidationError sets the "validation_error" field.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetValidationError(s string) *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.SetValidationError(s)
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) SetValidationError(v string) *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.SetValidationError(v)
+	return _u
 }
 
 // SetNillableValidationError sets the "validation_error" field if the given value is not nil.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetNillableValidationError(s *string) *PaymentOrderFulfillmentUpdateOne {
-	if s != nil {
-		pofuo.SetValidationError(*s)
+func (_u *PaymentOrderFulfillmentUpdateOne) SetNillableValidationError(v *string) *PaymentOrderFulfillmentUpdateOne {
+	if v != nil {
+		_u.SetValidationError(*v)
 	}
-	return pofuo
+	return _u
 }
 
 // ClearValidationError clears the value of the "validation_error" field.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) ClearValidationError() *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.ClearValidationError()
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) ClearValidationError() *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.ClearValidationError()
+	return _u
 }
 
 // SetOrderID sets the "order" edge to the PaymentOrder entity by ID.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetOrderID(id uuid.UUID) *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.SetOrderID(id)
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) SetOrderID(id uuid.UUID) *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.SetOrderID(id)
+	return _u
 }
 
 // SetOrder sets the "order" edge to the PaymentOrder entity.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SetOrder(p *PaymentOrder) *PaymentOrderFulfillmentUpdateOne {
-	return pofuo.SetOrderID(p.ID)
+func (_u *PaymentOrderFulfillmentUpdateOne) SetOrder(v *PaymentOrder) *PaymentOrderFulfillmentUpdateOne {
+	return _u.SetOrderID(v.ID)
 }
 
 // Mutation returns the PaymentOrderFulfillmentMutation object of the builder.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) Mutation() *PaymentOrderFulfillmentMutation {
-	return pofuo.mutation
+func (_u *PaymentOrderFulfillmentUpdateOne) Mutation() *PaymentOrderFulfillmentMutation {
+	return _u.mutation
 }
 
 // ClearOrder clears the "order" edge to the PaymentOrder entity.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) ClearOrder() *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.ClearOrder()
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) ClearOrder() *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.ClearOrder()
+	return _u
 }
 
 // Where appends a list predicates to the PaymentOrderFulfillmentUpdate builder.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) Where(ps ...predicate.PaymentOrderFulfillment) *PaymentOrderFulfillmentUpdateOne {
-	pofuo.mutation.Where(ps...)
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) Where(ps ...predicate.PaymentOrderFulfillment) *PaymentOrderFulfillmentUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) Select(field string, fields ...string) *PaymentOrderFulfillmentUpdateOne {
-	pofuo.fields = append([]string{field}, fields...)
-	return pofuo
+func (_u *PaymentOrderFulfillmentUpdateOne) Select(field string, fields ...string) *PaymentOrderFulfillmentUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated PaymentOrderFulfillment entity.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) Save(ctx context.Context) (*PaymentOrderFulfillment, error) {
-	pofuo.defaults()
-	return withHooks(ctx, pofuo.sqlSave, pofuo.mutation, pofuo.hooks)
+func (_u *PaymentOrderFulfillmentUpdateOne) Save(ctx context.Context) (*PaymentOrderFulfillment, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) SaveX(ctx context.Context) *PaymentOrderFulfillment {
-	node, err := pofuo.Save(ctx)
+func (_u *PaymentOrderFulfillmentUpdateOne) SaveX(ctx context.Context) *PaymentOrderFulfillment {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -397,50 +397,50 @@ func (pofuo *PaymentOrderFulfillmentUpdateOne) SaveX(ctx context.Context) *Payme
 }
 
 // Exec executes the query on the entity.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) Exec(ctx context.Context) error {
-	_, err := pofuo.Save(ctx)
+func (_u *PaymentOrderFulfillmentUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) ExecX(ctx context.Context) {
-	if err := pofuo.Exec(ctx); err != nil {
+func (_u *PaymentOrderFulfillmentUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) defaults() {
-	if _, ok := pofuo.mutation.UpdatedAt(); !ok {
+func (_u *PaymentOrderFulfillmentUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := paymentorderfulfillment.UpdateDefaultUpdatedAt()
-		pofuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pofuo *PaymentOrderFulfillmentUpdateOne) check() error {
-	if v, ok := pofuo.mutation.ValidationStatus(); ok {
+func (_u *PaymentOrderFulfillmentUpdateOne) check() error {
+	if v, ok := _u.mutation.ValidationStatus(); ok {
 		if err := paymentorderfulfillment.ValidationStatusValidator(v); err != nil {
 			return &ValidationError{Name: "validation_status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrderFulfillment.validation_status": %w`, err)}
 		}
 	}
-	if pofuo.mutation.OrderCleared() && len(pofuo.mutation.OrderIDs()) > 0 {
+	if _u.mutation.OrderCleared() && len(_u.mutation.OrderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrderFulfillment.order"`)
 	}
 	return nil
 }
 
-func (pofuo *PaymentOrderFulfillmentUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrderFulfillment, err error) {
-	if err := pofuo.check(); err != nil {
+func (_u *PaymentOrderFulfillmentUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrderFulfillment, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(paymentorderfulfillment.Table, paymentorderfulfillment.Columns, sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID))
-	id, ok := pofuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "PaymentOrderFulfillment.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := pofuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, paymentorderfulfillment.FieldID)
 		for _, f := range fields {
@@ -452,38 +452,38 @@ func (pofuo *PaymentOrderFulfillmentUpdateOne) sqlSave(ctx context.Context) (_no
 			}
 		}
 	}
-	if ps := pofuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pofuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := pofuo.mutation.TxID(); ok {
+	if value, ok := _u.mutation.TxID(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldTxID, field.TypeString, value)
 	}
-	if pofuo.mutation.TxIDCleared() {
+	if _u.mutation.TxIDCleared() {
 		_spec.ClearField(paymentorderfulfillment.FieldTxID, field.TypeString)
 	}
-	if value, ok := pofuo.mutation.Psp(); ok {
+	if value, ok := _u.mutation.Psp(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldPsp, field.TypeString, value)
 	}
-	if pofuo.mutation.PspCleared() {
+	if _u.mutation.PspCleared() {
 		_spec.ClearField(paymentorderfulfillment.FieldPsp, field.TypeString)
 	}
-	if value, ok := pofuo.mutation.ValidationStatus(); ok {
+	if value, ok := _u.mutation.ValidationStatus(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldValidationStatus, field.TypeEnum, value)
 	}
-	if value, ok := pofuo.mutation.ValidationError(); ok {
+	if value, ok := _u.mutation.ValidationError(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldValidationError, field.TypeString, value)
 	}
-	if pofuo.mutation.ValidationErrorCleared() {
+	if _u.mutation.ValidationErrorCleared() {
 		_spec.ClearField(paymentorderfulfillment.FieldValidationError, field.TypeString)
 	}
-	if pofuo.mutation.OrderCleared() {
+	if _u.mutation.OrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -496,7 +496,7 @@ func (pofuo *PaymentOrderFulfillmentUpdateOne) sqlSave(ctx context.Context) (_no
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pofuo.mutation.OrderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.OrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -512,10 +512,10 @@ func (pofuo *PaymentOrderFulfillmentUpdateOne) sqlSave(ctx context.Context) (_no
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &PaymentOrderFulfillment{config: pofuo.config}
+	_node = &PaymentOrderFulfillment{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, pofuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentorderfulfillment.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -523,6 +523,6 @@ func (pofuo *PaymentOrderFulfillmentUpdateOne) sqlSave(ctx context.Context) (_no
 		}
 		return nil, err
 	}
-	pofuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

@@ -22,90 +22,90 @@ type TransactionLogUpdate struct {
 }
 
 // Where appends a list predicates to the TransactionLogUpdate builder.
-func (tlu *TransactionLogUpdate) Where(ps ...predicate.TransactionLog) *TransactionLogUpdate {
-	tlu.mutation.Where(ps...)
-	return tlu
+func (_u *TransactionLogUpdate) Where(ps ...predicate.TransactionLog) *TransactionLogUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetGatewayID sets the "gateway_id" field.
-func (tlu *TransactionLogUpdate) SetGatewayID(s string) *TransactionLogUpdate {
-	tlu.mutation.SetGatewayID(s)
-	return tlu
+func (_u *TransactionLogUpdate) SetGatewayID(v string) *TransactionLogUpdate {
+	_u.mutation.SetGatewayID(v)
+	return _u
 }
 
 // SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (tlu *TransactionLogUpdate) SetNillableGatewayID(s *string) *TransactionLogUpdate {
-	if s != nil {
-		tlu.SetGatewayID(*s)
+func (_u *TransactionLogUpdate) SetNillableGatewayID(v *string) *TransactionLogUpdate {
+	if v != nil {
+		_u.SetGatewayID(*v)
 	}
-	return tlu
+	return _u
 }
 
 // ClearGatewayID clears the value of the "gateway_id" field.
-func (tlu *TransactionLogUpdate) ClearGatewayID() *TransactionLogUpdate {
-	tlu.mutation.ClearGatewayID()
-	return tlu
+func (_u *TransactionLogUpdate) ClearGatewayID() *TransactionLogUpdate {
+	_u.mutation.ClearGatewayID()
+	return _u
 }
 
 // SetNetwork sets the "network" field.
-func (tlu *TransactionLogUpdate) SetNetwork(s string) *TransactionLogUpdate {
-	tlu.mutation.SetNetwork(s)
-	return tlu
+func (_u *TransactionLogUpdate) SetNetwork(v string) *TransactionLogUpdate {
+	_u.mutation.SetNetwork(v)
+	return _u
 }
 
 // SetNillableNetwork sets the "network" field if the given value is not nil.
-func (tlu *TransactionLogUpdate) SetNillableNetwork(s *string) *TransactionLogUpdate {
-	if s != nil {
-		tlu.SetNetwork(*s)
+func (_u *TransactionLogUpdate) SetNillableNetwork(v *string) *TransactionLogUpdate {
+	if v != nil {
+		_u.SetNetwork(*v)
 	}
-	return tlu
+	return _u
 }
 
 // ClearNetwork clears the value of the "network" field.
-func (tlu *TransactionLogUpdate) ClearNetwork() *TransactionLogUpdate {
-	tlu.mutation.ClearNetwork()
-	return tlu
+func (_u *TransactionLogUpdate) ClearNetwork() *TransactionLogUpdate {
+	_u.mutation.ClearNetwork()
+	return _u
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (tlu *TransactionLogUpdate) SetTxHash(s string) *TransactionLogUpdate {
-	tlu.mutation.SetTxHash(s)
-	return tlu
+func (_u *TransactionLogUpdate) SetTxHash(v string) *TransactionLogUpdate {
+	_u.mutation.SetTxHash(v)
+	return _u
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (tlu *TransactionLogUpdate) SetNillableTxHash(s *string) *TransactionLogUpdate {
-	if s != nil {
-		tlu.SetTxHash(*s)
+func (_u *TransactionLogUpdate) SetNillableTxHash(v *string) *TransactionLogUpdate {
+	if v != nil {
+		_u.SetTxHash(*v)
 	}
-	return tlu
+	return _u
 }
 
 // ClearTxHash clears the value of the "tx_hash" field.
-func (tlu *TransactionLogUpdate) ClearTxHash() *TransactionLogUpdate {
-	tlu.mutation.ClearTxHash()
-	return tlu
+func (_u *TransactionLogUpdate) ClearTxHash() *TransactionLogUpdate {
+	_u.mutation.ClearTxHash()
+	return _u
 }
 
 // SetMetadata sets the "metadata" field.
-func (tlu *TransactionLogUpdate) SetMetadata(m map[string]interface{}) *TransactionLogUpdate {
-	tlu.mutation.SetMetadata(m)
-	return tlu
+func (_u *TransactionLogUpdate) SetMetadata(v map[string]interface{}) *TransactionLogUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
 }
 
 // Mutation returns the TransactionLogMutation object of the builder.
-func (tlu *TransactionLogUpdate) Mutation() *TransactionLogMutation {
-	return tlu.mutation
+func (_u *TransactionLogUpdate) Mutation() *TransactionLogMutation {
+	return _u.mutation
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (tlu *TransactionLogUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks(ctx, tlu.sqlSave, tlu.mutation, tlu.hooks)
+func (_u *TransactionLogUpdate) Save(ctx context.Context) (int, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (tlu *TransactionLogUpdate) SaveX(ctx context.Context) int {
-	affected, err := tlu.Save(ctx)
+func (_u *TransactionLogUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -113,49 +113,49 @@ func (tlu *TransactionLogUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (tlu *TransactionLogUpdate) Exec(ctx context.Context) error {
-	_, err := tlu.Save(ctx)
+func (_u *TransactionLogUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tlu *TransactionLogUpdate) ExecX(ctx context.Context) {
-	if err := tlu.Exec(ctx); err != nil {
+func (_u *TransactionLogUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
-func (tlu *TransactionLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
+func (_u *TransactionLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	_spec := sqlgraph.NewUpdateSpec(transactionlog.Table, transactionlog.Columns, sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID))
-	if ps := tlu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := tlu.mutation.GatewayID(); ok {
+	if value, ok := _u.mutation.GatewayID(); ok {
 		_spec.SetField(transactionlog.FieldGatewayID, field.TypeString, value)
 	}
-	if tlu.mutation.GatewayIDCleared() {
+	if _u.mutation.GatewayIDCleared() {
 		_spec.ClearField(transactionlog.FieldGatewayID, field.TypeString)
 	}
-	if value, ok := tlu.mutation.Network(); ok {
+	if value, ok := _u.mutation.Network(); ok {
 		_spec.SetField(transactionlog.FieldNetwork, field.TypeString, value)
 	}
-	if tlu.mutation.NetworkCleared() {
+	if _u.mutation.NetworkCleared() {
 		_spec.ClearField(transactionlog.FieldNetwork, field.TypeString)
 	}
-	if value, ok := tlu.mutation.TxHash(); ok {
+	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(transactionlog.FieldTxHash, field.TypeString, value)
 	}
-	if tlu.mutation.TxHashCleared() {
+	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(transactionlog.FieldTxHash, field.TypeString)
 	}
-	if value, ok := tlu.mutation.Metadata(); ok {
+	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(transactionlog.FieldMetadata, field.TypeJSON, value)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, tlu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{transactionlog.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -163,8 +163,8 @@ func (tlu *TransactionLogUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		return 0, err
 	}
-	tlu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // TransactionLogUpdateOne is the builder for updating a single TransactionLog entity.
@@ -176,97 +176,97 @@ type TransactionLogUpdateOne struct {
 }
 
 // SetGatewayID sets the "gateway_id" field.
-func (tluo *TransactionLogUpdateOne) SetGatewayID(s string) *TransactionLogUpdateOne {
-	tluo.mutation.SetGatewayID(s)
-	return tluo
+func (_u *TransactionLogUpdateOne) SetGatewayID(v string) *TransactionLogUpdateOne {
+	_u.mutation.SetGatewayID(v)
+	return _u
 }
 
 // SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (tluo *TransactionLogUpdateOne) SetNillableGatewayID(s *string) *TransactionLogUpdateOne {
-	if s != nil {
-		tluo.SetGatewayID(*s)
+func (_u *TransactionLogUpdateOne) SetNillableGatewayID(v *string) *TransactionLogUpdateOne {
+	if v != nil {
+		_u.SetGatewayID(*v)
 	}
-	return tluo
+	return _u
 }
 
 // ClearGatewayID clears the value of the "gateway_id" field.
-func (tluo *TransactionLogUpdateOne) ClearGatewayID() *TransactionLogUpdateOne {
-	tluo.mutation.ClearGatewayID()
-	return tluo
+func (_u *TransactionLogUpdateOne) ClearGatewayID() *TransactionLogUpdateOne {
+	_u.mutation.ClearGatewayID()
+	return _u
 }
 
 // SetNetwork sets the "network" field.
-func (tluo *TransactionLogUpdateOne) SetNetwork(s string) *TransactionLogUpdateOne {
-	tluo.mutation.SetNetwork(s)
-	return tluo
+func (_u *TransactionLogUpdateOne) SetNetwork(v string) *TransactionLogUpdateOne {
+	_u.mutation.SetNetwork(v)
+	return _u
 }
 
 // SetNillableNetwork sets the "network" field if the given value is not nil.
-func (tluo *TransactionLogUpdateOne) SetNillableNetwork(s *string) *TransactionLogUpdateOne {
-	if s != nil {
-		tluo.SetNetwork(*s)
+func (_u *TransactionLogUpdateOne) SetNillableNetwork(v *string) *TransactionLogUpdateOne {
+	if v != nil {
+		_u.SetNetwork(*v)
 	}
-	return tluo
+	return _u
 }
 
 // ClearNetwork clears the value of the "network" field.
-func (tluo *TransactionLogUpdateOne) ClearNetwork() *TransactionLogUpdateOne {
-	tluo.mutation.ClearNetwork()
-	return tluo
+func (_u *TransactionLogUpdateOne) ClearNetwork() *TransactionLogUpdateOne {
+	_u.mutation.ClearNetwork()
+	return _u
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (tluo *TransactionLogUpdateOne) SetTxHash(s string) *TransactionLogUpdateOne {
-	tluo.mutation.SetTxHash(s)
-	return tluo
+func (_u *TransactionLogUpdateOne) SetTxHash(v string) *TransactionLogUpdateOne {
+	_u.mutation.SetTxHash(v)
+	return _u
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (tluo *TransactionLogUpdateOne) SetNillableTxHash(s *string) *TransactionLogUpdateOne {
-	if s != nil {
-		tluo.SetTxHash(*s)
+func (_u *TransactionLogUpdateOne) SetNillableTxHash(v *string) *TransactionLogUpdateOne {
+	if v != nil {
+		_u.SetTxHash(*v)
 	}
-	return tluo
+	return _u
 }
 
 // ClearTxHash clears the value of the "tx_hash" field.
-func (tluo *TransactionLogUpdateOne) ClearTxHash() *TransactionLogUpdateOne {
-	tluo.mutation.ClearTxHash()
-	return tluo
+func (_u *TransactionLogUpdateOne) ClearTxHash() *TransactionLogUpdateOne {
+	_u.mutation.ClearTxHash()
+	return _u
 }
 
 // SetMetadata sets the "metadata" field.
-func (tluo *TransactionLogUpdateOne) SetMetadata(m map[string]interface{}) *TransactionLogUpdateOne {
-	tluo.mutation.SetMetadata(m)
-	return tluo
+func (_u *TransactionLogUpdateOne) SetMetadata(v map[string]interface{}) *TransactionLogUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
 }
 
 // Mutation returns the TransactionLogMutation object of the builder.
-func (tluo *TransactionLogUpdateOne) Mutation() *TransactionLogMutation {
-	return tluo.mutation
+func (_u *TransactionLogUpdateOne) Mutation() *TransactionLogMutation {
+	return _u.mutation
 }
 
 // Where appends a list predicates to the TransactionLogUpdate builder.
-func (tluo *TransactionLogUpdateOne) Where(ps ...predicate.TransactionLog) *TransactionLogUpdateOne {
-	tluo.mutation.Where(ps...)
-	return tluo
+func (_u *TransactionLogUpdateOne) Where(ps ...predicate.TransactionLog) *TransactionLogUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (tluo *TransactionLogUpdateOne) Select(field string, fields ...string) *TransactionLogUpdateOne {
-	tluo.fields = append([]string{field}, fields...)
-	return tluo
+func (_u *TransactionLogUpdateOne) Select(field string, fields ...string) *TransactionLogUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated TransactionLog entity.
-func (tluo *TransactionLogUpdateOne) Save(ctx context.Context) (*TransactionLog, error) {
-	return withHooks(ctx, tluo.sqlSave, tluo.mutation, tluo.hooks)
+func (_u *TransactionLogUpdateOne) Save(ctx context.Context) (*TransactionLog, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (tluo *TransactionLogUpdateOne) SaveX(ctx context.Context) *TransactionLog {
-	node, err := tluo.Save(ctx)
+func (_u *TransactionLogUpdateOne) SaveX(ctx context.Context) *TransactionLog {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -274,26 +274,26 @@ func (tluo *TransactionLogUpdateOne) SaveX(ctx context.Context) *TransactionLog 
 }
 
 // Exec executes the query on the entity.
-func (tluo *TransactionLogUpdateOne) Exec(ctx context.Context) error {
-	_, err := tluo.Save(ctx)
+func (_u *TransactionLogUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tluo *TransactionLogUpdateOne) ExecX(ctx context.Context) {
-	if err := tluo.Exec(ctx); err != nil {
+func (_u *TransactionLogUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
-func (tluo *TransactionLogUpdateOne) sqlSave(ctx context.Context) (_node *TransactionLog, err error) {
+func (_u *TransactionLogUpdateOne) sqlSave(ctx context.Context) (_node *TransactionLog, err error) {
 	_spec := sqlgraph.NewUpdateSpec(transactionlog.Table, transactionlog.Columns, sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID))
-	id, ok := tluo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "TransactionLog.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := tluo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, transactionlog.FieldID)
 		for _, f := range fields {
@@ -305,38 +305,38 @@ func (tluo *TransactionLogUpdateOne) sqlSave(ctx context.Context) (_node *Transa
 			}
 		}
 	}
-	if ps := tluo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := tluo.mutation.GatewayID(); ok {
+	if value, ok := _u.mutation.GatewayID(); ok {
 		_spec.SetField(transactionlog.FieldGatewayID, field.TypeString, value)
 	}
-	if tluo.mutation.GatewayIDCleared() {
+	if _u.mutation.GatewayIDCleared() {
 		_spec.ClearField(transactionlog.FieldGatewayID, field.TypeString)
 	}
-	if value, ok := tluo.mutation.Network(); ok {
+	if value, ok := _u.mutation.Network(); ok {
 		_spec.SetField(transactionlog.FieldNetwork, field.TypeString, value)
 	}
-	if tluo.mutation.NetworkCleared() {
+	if _u.mutation.NetworkCleared() {
 		_spec.ClearField(transactionlog.FieldNetwork, field.TypeString)
 	}
-	if value, ok := tluo.mutation.TxHash(); ok {
+	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(transactionlog.FieldTxHash, field.TypeString, value)
 	}
-	if tluo.mutation.TxHashCleared() {
+	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(transactionlog.FieldTxHash, field.TypeString)
 	}
-	if value, ok := tluo.mutation.Metadata(); ok {
+	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(transactionlog.FieldMetadata, field.TypeJSON, value)
 	}
-	_node = &TransactionLog{config: tluo.config}
+	_node = &TransactionLog{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, tluo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{transactionlog.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -344,6 +344,6 @@ func (tluo *TransactionLogUpdateOne) sqlSave(ctx context.Context) (_node *Transa
 		}
 		return nil, err
 	}
-	tluo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

@@ -97,7 +97,7 @@ func (*ProvisionBucket) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ProvisionBucket fields.
-func (pb *ProvisionBucket) assignValues(columns []string, values []any) error {
+func (_m *ProvisionBucket) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -108,34 +108,34 @@ func (pb *ProvisionBucket) assignValues(columns []string, values []any) error {
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			pb.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case provisionbucket.FieldMinAmount:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field min_amount", values[i])
 			} else if value != nil {
-				pb.MinAmount = *value
+				_m.MinAmount = *value
 			}
 		case provisionbucket.FieldMaxAmount:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field max_amount", values[i])
 			} else if value != nil {
-				pb.MaxAmount = *value
+				_m.MaxAmount = *value
 			}
 		case provisionbucket.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				pb.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case provisionbucket.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field fiat_currency_provision_buckets", values[i])
 			} else if value.Valid {
-				pb.fiat_currency_provision_buckets = new(uuid.UUID)
-				*pb.fiat_currency_provision_buckets = *value.S.(*uuid.UUID)
+				_m.fiat_currency_provision_buckets = new(uuid.UUID)
+				*_m.fiat_currency_provision_buckets = *value.S.(*uuid.UUID)
 			}
 		default:
-			pb.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -143,56 +143,56 @@ func (pb *ProvisionBucket) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the ProvisionBucket.
 // This includes values selected through modifiers, order, etc.
-func (pb *ProvisionBucket) Value(name string) (ent.Value, error) {
-	return pb.selectValues.Get(name)
+func (_m *ProvisionBucket) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryCurrency queries the "currency" edge of the ProvisionBucket entity.
-func (pb *ProvisionBucket) QueryCurrency() *FiatCurrencyQuery {
-	return NewProvisionBucketClient(pb.config).QueryCurrency(pb)
+func (_m *ProvisionBucket) QueryCurrency() *FiatCurrencyQuery {
+	return NewProvisionBucketClient(_m.config).QueryCurrency(_m)
 }
 
 // QueryPaymentOrders queries the "payment_orders" edge of the ProvisionBucket entity.
-func (pb *ProvisionBucket) QueryPaymentOrders() *PaymentOrderQuery {
-	return NewProvisionBucketClient(pb.config).QueryPaymentOrders(pb)
+func (_m *ProvisionBucket) QueryPaymentOrders() *PaymentOrderQuery {
+	return NewProvisionBucketClient(_m.config).QueryPaymentOrders(_m)
 }
 
 // QueryProviderProfiles queries the "provider_profiles" edge of the ProvisionBucket entity.
-func (pb *ProvisionBucket) QueryProviderProfiles() *ProviderProfileQuery {
-	return NewProvisionBucketClient(pb.config).QueryProviderProfiles(pb)
+func (_m *ProvisionBucket) QueryProviderProfiles() *ProviderProfileQuery {
+	return NewProvisionBucketClient(_m.config).QueryProviderProfiles(_m)
 }
 
 // Update returns a builder for updating this ProvisionBucket.
 // Note that you need to call ProvisionBucket.Unwrap() before calling this method if this ProvisionBucket
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (pb *ProvisionBucket) Update() *ProvisionBucketUpdateOne {
-	return NewProvisionBucketClient(pb.config).UpdateOne(pb)
+func (_m *ProvisionBucket) Update() *ProvisionBucketUpdateOne {
+	return NewProvisionBucketClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the ProvisionBucket entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (pb *ProvisionBucket) Unwrap() *ProvisionBucket {
-	_tx, ok := pb.config.driver.(*txDriver)
+func (_m *ProvisionBucket) Unwrap() *ProvisionBucket {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ProvisionBucket is not a transactional entity")
 	}
-	pb.config.driver = _tx.drv
-	return pb
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (pb *ProvisionBucket) String() string {
+func (_m *ProvisionBucket) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProvisionBucket(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", pb.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("min_amount=")
-	builder.WriteString(fmt.Sprintf("%v", pb.MinAmount))
+	builder.WriteString(fmt.Sprintf("%v", _m.MinAmount))
 	builder.WriteString(", ")
 	builder.WriteString("max_amount=")
-	builder.WriteString(fmt.Sprintf("%v", pb.MaxAmount))
+	builder.WriteString(fmt.Sprintf("%v", _m.MaxAmount))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
-	builder.WriteString(pb.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

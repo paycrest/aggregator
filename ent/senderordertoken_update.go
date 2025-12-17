@@ -27,135 +27,135 @@ type SenderOrderTokenUpdate struct {
 }
 
 // Where appends a list predicates to the SenderOrderTokenUpdate builder.
-func (sotu *SenderOrderTokenUpdate) Where(ps ...predicate.SenderOrderToken) *SenderOrderTokenUpdate {
-	sotu.mutation.Where(ps...)
-	return sotu
+func (_u *SenderOrderTokenUpdate) Where(ps ...predicate.SenderOrderToken) *SenderOrderTokenUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (sotu *SenderOrderTokenUpdate) SetUpdatedAt(t time.Time) *SenderOrderTokenUpdate {
-	sotu.mutation.SetUpdatedAt(t)
-	return sotu
+func (_u *SenderOrderTokenUpdate) SetUpdatedAt(v time.Time) *SenderOrderTokenUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetFeePercent sets the "fee_percent" field.
-func (sotu *SenderOrderTokenUpdate) SetFeePercent(d decimal.Decimal) *SenderOrderTokenUpdate {
-	sotu.mutation.ResetFeePercent()
-	sotu.mutation.SetFeePercent(d)
-	return sotu
+func (_u *SenderOrderTokenUpdate) SetFeePercent(v decimal.Decimal) *SenderOrderTokenUpdate {
+	_u.mutation.ResetFeePercent()
+	_u.mutation.SetFeePercent(v)
+	return _u
 }
 
 // SetNillableFeePercent sets the "fee_percent" field if the given value is not nil.
-func (sotu *SenderOrderTokenUpdate) SetNillableFeePercent(d *decimal.Decimal) *SenderOrderTokenUpdate {
-	if d != nil {
-		sotu.SetFeePercent(*d)
+func (_u *SenderOrderTokenUpdate) SetNillableFeePercent(v *decimal.Decimal) *SenderOrderTokenUpdate {
+	if v != nil {
+		_u.SetFeePercent(*v)
 	}
-	return sotu
+	return _u
 }
 
-// AddFeePercent adds d to the "fee_percent" field.
-func (sotu *SenderOrderTokenUpdate) AddFeePercent(d decimal.Decimal) *SenderOrderTokenUpdate {
-	sotu.mutation.AddFeePercent(d)
-	return sotu
+// AddFeePercent adds value to the "fee_percent" field.
+func (_u *SenderOrderTokenUpdate) AddFeePercent(v decimal.Decimal) *SenderOrderTokenUpdate {
+	_u.mutation.AddFeePercent(v)
+	return _u
 }
 
 // SetMaxFeeCap sets the "max_fee_cap" field.
-func (sotu *SenderOrderTokenUpdate) SetMaxFeeCap(d decimal.Decimal) *SenderOrderTokenUpdate {
-	sotu.mutation.ResetMaxFeeCap()
-	sotu.mutation.SetMaxFeeCap(d)
-	return sotu
+func (_u *SenderOrderTokenUpdate) SetMaxFeeCap(v decimal.Decimal) *SenderOrderTokenUpdate {
+	_u.mutation.ResetMaxFeeCap()
+	_u.mutation.SetMaxFeeCap(v)
+	return _u
 }
 
 // SetNillableMaxFeeCap sets the "max_fee_cap" field if the given value is not nil.
-func (sotu *SenderOrderTokenUpdate) SetNillableMaxFeeCap(d *decimal.Decimal) *SenderOrderTokenUpdate {
-	if d != nil {
-		sotu.SetMaxFeeCap(*d)
+func (_u *SenderOrderTokenUpdate) SetNillableMaxFeeCap(v *decimal.Decimal) *SenderOrderTokenUpdate {
+	if v != nil {
+		_u.SetMaxFeeCap(*v)
 	}
-	return sotu
+	return _u
 }
 
-// AddMaxFeeCap adds d to the "max_fee_cap" field.
-func (sotu *SenderOrderTokenUpdate) AddMaxFeeCap(d decimal.Decimal) *SenderOrderTokenUpdate {
-	sotu.mutation.AddMaxFeeCap(d)
-	return sotu
+// AddMaxFeeCap adds value to the "max_fee_cap" field.
+func (_u *SenderOrderTokenUpdate) AddMaxFeeCap(v decimal.Decimal) *SenderOrderTokenUpdate {
+	_u.mutation.AddMaxFeeCap(v)
+	return _u
 }
 
 // SetFeeAddress sets the "fee_address" field.
-func (sotu *SenderOrderTokenUpdate) SetFeeAddress(s string) *SenderOrderTokenUpdate {
-	sotu.mutation.SetFeeAddress(s)
-	return sotu
+func (_u *SenderOrderTokenUpdate) SetFeeAddress(v string) *SenderOrderTokenUpdate {
+	_u.mutation.SetFeeAddress(v)
+	return _u
 }
 
 // SetNillableFeeAddress sets the "fee_address" field if the given value is not nil.
-func (sotu *SenderOrderTokenUpdate) SetNillableFeeAddress(s *string) *SenderOrderTokenUpdate {
-	if s != nil {
-		sotu.SetFeeAddress(*s)
+func (_u *SenderOrderTokenUpdate) SetNillableFeeAddress(v *string) *SenderOrderTokenUpdate {
+	if v != nil {
+		_u.SetFeeAddress(*v)
 	}
-	return sotu
+	return _u
 }
 
 // SetRefundAddress sets the "refund_address" field.
-func (sotu *SenderOrderTokenUpdate) SetRefundAddress(s string) *SenderOrderTokenUpdate {
-	sotu.mutation.SetRefundAddress(s)
-	return sotu
+func (_u *SenderOrderTokenUpdate) SetRefundAddress(v string) *SenderOrderTokenUpdate {
+	_u.mutation.SetRefundAddress(v)
+	return _u
 }
 
 // SetNillableRefundAddress sets the "refund_address" field if the given value is not nil.
-func (sotu *SenderOrderTokenUpdate) SetNillableRefundAddress(s *string) *SenderOrderTokenUpdate {
-	if s != nil {
-		sotu.SetRefundAddress(*s)
+func (_u *SenderOrderTokenUpdate) SetNillableRefundAddress(v *string) *SenderOrderTokenUpdate {
+	if v != nil {
+		_u.SetRefundAddress(*v)
 	}
-	return sotu
+	return _u
 }
 
 // SetSenderID sets the "sender" edge to the SenderProfile entity by ID.
-func (sotu *SenderOrderTokenUpdate) SetSenderID(id uuid.UUID) *SenderOrderTokenUpdate {
-	sotu.mutation.SetSenderID(id)
-	return sotu
+func (_u *SenderOrderTokenUpdate) SetSenderID(id uuid.UUID) *SenderOrderTokenUpdate {
+	_u.mutation.SetSenderID(id)
+	return _u
 }
 
 // SetSender sets the "sender" edge to the SenderProfile entity.
-func (sotu *SenderOrderTokenUpdate) SetSender(s *SenderProfile) *SenderOrderTokenUpdate {
-	return sotu.SetSenderID(s.ID)
+func (_u *SenderOrderTokenUpdate) SetSender(v *SenderProfile) *SenderOrderTokenUpdate {
+	return _u.SetSenderID(v.ID)
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (sotu *SenderOrderTokenUpdate) SetTokenID(id int) *SenderOrderTokenUpdate {
-	sotu.mutation.SetTokenID(id)
-	return sotu
+func (_u *SenderOrderTokenUpdate) SetTokenID(id int) *SenderOrderTokenUpdate {
+	_u.mutation.SetTokenID(id)
+	return _u
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (sotu *SenderOrderTokenUpdate) SetToken(t *Token) *SenderOrderTokenUpdate {
-	return sotu.SetTokenID(t.ID)
+func (_u *SenderOrderTokenUpdate) SetToken(v *Token) *SenderOrderTokenUpdate {
+	return _u.SetTokenID(v.ID)
 }
 
 // Mutation returns the SenderOrderTokenMutation object of the builder.
-func (sotu *SenderOrderTokenUpdate) Mutation() *SenderOrderTokenMutation {
-	return sotu.mutation
+func (_u *SenderOrderTokenUpdate) Mutation() *SenderOrderTokenMutation {
+	return _u.mutation
 }
 
 // ClearSender clears the "sender" edge to the SenderProfile entity.
-func (sotu *SenderOrderTokenUpdate) ClearSender() *SenderOrderTokenUpdate {
-	sotu.mutation.ClearSender()
-	return sotu
+func (_u *SenderOrderTokenUpdate) ClearSender() *SenderOrderTokenUpdate {
+	_u.mutation.ClearSender()
+	return _u
 }
 
 // ClearToken clears the "token" edge to the Token entity.
-func (sotu *SenderOrderTokenUpdate) ClearToken() *SenderOrderTokenUpdate {
-	sotu.mutation.ClearToken()
-	return sotu
+func (_u *SenderOrderTokenUpdate) ClearToken() *SenderOrderTokenUpdate {
+	_u.mutation.ClearToken()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (sotu *SenderOrderTokenUpdate) Save(ctx context.Context) (int, error) {
-	sotu.defaults()
-	return withHooks(ctx, sotu.sqlSave, sotu.mutation, sotu.hooks)
+func (_u *SenderOrderTokenUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (sotu *SenderOrderTokenUpdate) SaveX(ctx context.Context) int {
-	affected, err := sotu.Save(ctx)
+func (_u *SenderOrderTokenUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -163,81 +163,81 @@ func (sotu *SenderOrderTokenUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (sotu *SenderOrderTokenUpdate) Exec(ctx context.Context) error {
-	_, err := sotu.Save(ctx)
+func (_u *SenderOrderTokenUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (sotu *SenderOrderTokenUpdate) ExecX(ctx context.Context) {
-	if err := sotu.Exec(ctx); err != nil {
+func (_u *SenderOrderTokenUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (sotu *SenderOrderTokenUpdate) defaults() {
-	if _, ok := sotu.mutation.UpdatedAt(); !ok {
+func (_u *SenderOrderTokenUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := senderordertoken.UpdateDefaultUpdatedAt()
-		sotu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (sotu *SenderOrderTokenUpdate) check() error {
-	if v, ok := sotu.mutation.FeeAddress(); ok {
+func (_u *SenderOrderTokenUpdate) check() error {
+	if v, ok := _u.mutation.FeeAddress(); ok {
 		if err := senderordertoken.FeeAddressValidator(v); err != nil {
 			return &ValidationError{Name: "fee_address", err: fmt.Errorf(`ent: validator failed for field "SenderOrderToken.fee_address": %w`, err)}
 		}
 	}
-	if v, ok := sotu.mutation.RefundAddress(); ok {
+	if v, ok := _u.mutation.RefundAddress(); ok {
 		if err := senderordertoken.RefundAddressValidator(v); err != nil {
 			return &ValidationError{Name: "refund_address", err: fmt.Errorf(`ent: validator failed for field "SenderOrderToken.refund_address": %w`, err)}
 		}
 	}
-	if sotu.mutation.SenderCleared() && len(sotu.mutation.SenderIDs()) > 0 {
+	if _u.mutation.SenderCleared() && len(_u.mutation.SenderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "SenderOrderToken.sender"`)
 	}
-	if sotu.mutation.TokenCleared() && len(sotu.mutation.TokenIDs()) > 0 {
+	if _u.mutation.TokenCleared() && len(_u.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "SenderOrderToken.token"`)
 	}
 	return nil
 }
 
-func (sotu *SenderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := sotu.check(); err != nil {
-		return n, err
+func (_u *SenderOrderTokenUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(senderordertoken.Table, senderordertoken.Columns, sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt))
-	if ps := sotu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := sotu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(senderordertoken.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := sotu.mutation.FeePercent(); ok {
+	if value, ok := _u.mutation.FeePercent(); ok {
 		_spec.SetField(senderordertoken.FieldFeePercent, field.TypeFloat64, value)
 	}
-	if value, ok := sotu.mutation.AddedFeePercent(); ok {
+	if value, ok := _u.mutation.AddedFeePercent(); ok {
 		_spec.AddField(senderordertoken.FieldFeePercent, field.TypeFloat64, value)
 	}
-	if value, ok := sotu.mutation.MaxFeeCap(); ok {
+	if value, ok := _u.mutation.MaxFeeCap(); ok {
 		_spec.SetField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64, value)
 	}
-	if value, ok := sotu.mutation.AddedMaxFeeCap(); ok {
+	if value, ok := _u.mutation.AddedMaxFeeCap(); ok {
 		_spec.AddField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64, value)
 	}
-	if value, ok := sotu.mutation.FeeAddress(); ok {
+	if value, ok := _u.mutation.FeeAddress(); ok {
 		_spec.SetField(senderordertoken.FieldFeeAddress, field.TypeString, value)
 	}
-	if value, ok := sotu.mutation.RefundAddress(); ok {
+	if value, ok := _u.mutation.RefundAddress(); ok {
 		_spec.SetField(senderordertoken.FieldRefundAddress, field.TypeString, value)
 	}
-	if sotu.mutation.SenderCleared() {
+	if _u.mutation.SenderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -250,7 +250,7 @@ func (sotu *SenderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := sotu.mutation.SenderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SenderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -266,7 +266,7 @@ func (sotu *SenderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if sotu.mutation.TokenCleared() {
+	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -279,7 +279,7 @@ func (sotu *SenderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := sotu.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -295,7 +295,7 @@ func (sotu *SenderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, sotu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{senderordertoken.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -303,8 +303,8 @@ func (sotu *SenderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err err
 		}
 		return 0, err
 	}
-	sotu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // SenderOrderTokenUpdateOne is the builder for updating a single SenderOrderToken entity.
@@ -316,142 +316,142 @@ type SenderOrderTokenUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (sotuo *SenderOrderTokenUpdateOne) SetUpdatedAt(t time.Time) *SenderOrderTokenUpdateOne {
-	sotuo.mutation.SetUpdatedAt(t)
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) SetUpdatedAt(v time.Time) *SenderOrderTokenUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetFeePercent sets the "fee_percent" field.
-func (sotuo *SenderOrderTokenUpdateOne) SetFeePercent(d decimal.Decimal) *SenderOrderTokenUpdateOne {
-	sotuo.mutation.ResetFeePercent()
-	sotuo.mutation.SetFeePercent(d)
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) SetFeePercent(v decimal.Decimal) *SenderOrderTokenUpdateOne {
+	_u.mutation.ResetFeePercent()
+	_u.mutation.SetFeePercent(v)
+	return _u
 }
 
 // SetNillableFeePercent sets the "fee_percent" field if the given value is not nil.
-func (sotuo *SenderOrderTokenUpdateOne) SetNillableFeePercent(d *decimal.Decimal) *SenderOrderTokenUpdateOne {
-	if d != nil {
-		sotuo.SetFeePercent(*d)
+func (_u *SenderOrderTokenUpdateOne) SetNillableFeePercent(v *decimal.Decimal) *SenderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetFeePercent(*v)
 	}
-	return sotuo
+	return _u
 }
 
-// AddFeePercent adds d to the "fee_percent" field.
-func (sotuo *SenderOrderTokenUpdateOne) AddFeePercent(d decimal.Decimal) *SenderOrderTokenUpdateOne {
-	sotuo.mutation.AddFeePercent(d)
-	return sotuo
+// AddFeePercent adds value to the "fee_percent" field.
+func (_u *SenderOrderTokenUpdateOne) AddFeePercent(v decimal.Decimal) *SenderOrderTokenUpdateOne {
+	_u.mutation.AddFeePercent(v)
+	return _u
 }
 
 // SetMaxFeeCap sets the "max_fee_cap" field.
-func (sotuo *SenderOrderTokenUpdateOne) SetMaxFeeCap(d decimal.Decimal) *SenderOrderTokenUpdateOne {
-	sotuo.mutation.ResetMaxFeeCap()
-	sotuo.mutation.SetMaxFeeCap(d)
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) SetMaxFeeCap(v decimal.Decimal) *SenderOrderTokenUpdateOne {
+	_u.mutation.ResetMaxFeeCap()
+	_u.mutation.SetMaxFeeCap(v)
+	return _u
 }
 
 // SetNillableMaxFeeCap sets the "max_fee_cap" field if the given value is not nil.
-func (sotuo *SenderOrderTokenUpdateOne) SetNillableMaxFeeCap(d *decimal.Decimal) *SenderOrderTokenUpdateOne {
-	if d != nil {
-		sotuo.SetMaxFeeCap(*d)
+func (_u *SenderOrderTokenUpdateOne) SetNillableMaxFeeCap(v *decimal.Decimal) *SenderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetMaxFeeCap(*v)
 	}
-	return sotuo
+	return _u
 }
 
-// AddMaxFeeCap adds d to the "max_fee_cap" field.
-func (sotuo *SenderOrderTokenUpdateOne) AddMaxFeeCap(d decimal.Decimal) *SenderOrderTokenUpdateOne {
-	sotuo.mutation.AddMaxFeeCap(d)
-	return sotuo
+// AddMaxFeeCap adds value to the "max_fee_cap" field.
+func (_u *SenderOrderTokenUpdateOne) AddMaxFeeCap(v decimal.Decimal) *SenderOrderTokenUpdateOne {
+	_u.mutation.AddMaxFeeCap(v)
+	return _u
 }
 
 // SetFeeAddress sets the "fee_address" field.
-func (sotuo *SenderOrderTokenUpdateOne) SetFeeAddress(s string) *SenderOrderTokenUpdateOne {
-	sotuo.mutation.SetFeeAddress(s)
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) SetFeeAddress(v string) *SenderOrderTokenUpdateOne {
+	_u.mutation.SetFeeAddress(v)
+	return _u
 }
 
 // SetNillableFeeAddress sets the "fee_address" field if the given value is not nil.
-func (sotuo *SenderOrderTokenUpdateOne) SetNillableFeeAddress(s *string) *SenderOrderTokenUpdateOne {
-	if s != nil {
-		sotuo.SetFeeAddress(*s)
+func (_u *SenderOrderTokenUpdateOne) SetNillableFeeAddress(v *string) *SenderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetFeeAddress(*v)
 	}
-	return sotuo
+	return _u
 }
 
 // SetRefundAddress sets the "refund_address" field.
-func (sotuo *SenderOrderTokenUpdateOne) SetRefundAddress(s string) *SenderOrderTokenUpdateOne {
-	sotuo.mutation.SetRefundAddress(s)
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) SetRefundAddress(v string) *SenderOrderTokenUpdateOne {
+	_u.mutation.SetRefundAddress(v)
+	return _u
 }
 
 // SetNillableRefundAddress sets the "refund_address" field if the given value is not nil.
-func (sotuo *SenderOrderTokenUpdateOne) SetNillableRefundAddress(s *string) *SenderOrderTokenUpdateOne {
-	if s != nil {
-		sotuo.SetRefundAddress(*s)
+func (_u *SenderOrderTokenUpdateOne) SetNillableRefundAddress(v *string) *SenderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetRefundAddress(*v)
 	}
-	return sotuo
+	return _u
 }
 
 // SetSenderID sets the "sender" edge to the SenderProfile entity by ID.
-func (sotuo *SenderOrderTokenUpdateOne) SetSenderID(id uuid.UUID) *SenderOrderTokenUpdateOne {
-	sotuo.mutation.SetSenderID(id)
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) SetSenderID(id uuid.UUID) *SenderOrderTokenUpdateOne {
+	_u.mutation.SetSenderID(id)
+	return _u
 }
 
 // SetSender sets the "sender" edge to the SenderProfile entity.
-func (sotuo *SenderOrderTokenUpdateOne) SetSender(s *SenderProfile) *SenderOrderTokenUpdateOne {
-	return sotuo.SetSenderID(s.ID)
+func (_u *SenderOrderTokenUpdateOne) SetSender(v *SenderProfile) *SenderOrderTokenUpdateOne {
+	return _u.SetSenderID(v.ID)
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (sotuo *SenderOrderTokenUpdateOne) SetTokenID(id int) *SenderOrderTokenUpdateOne {
-	sotuo.mutation.SetTokenID(id)
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) SetTokenID(id int) *SenderOrderTokenUpdateOne {
+	_u.mutation.SetTokenID(id)
+	return _u
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (sotuo *SenderOrderTokenUpdateOne) SetToken(t *Token) *SenderOrderTokenUpdateOne {
-	return sotuo.SetTokenID(t.ID)
+func (_u *SenderOrderTokenUpdateOne) SetToken(v *Token) *SenderOrderTokenUpdateOne {
+	return _u.SetTokenID(v.ID)
 }
 
 // Mutation returns the SenderOrderTokenMutation object of the builder.
-func (sotuo *SenderOrderTokenUpdateOne) Mutation() *SenderOrderTokenMutation {
-	return sotuo.mutation
+func (_u *SenderOrderTokenUpdateOne) Mutation() *SenderOrderTokenMutation {
+	return _u.mutation
 }
 
 // ClearSender clears the "sender" edge to the SenderProfile entity.
-func (sotuo *SenderOrderTokenUpdateOne) ClearSender() *SenderOrderTokenUpdateOne {
-	sotuo.mutation.ClearSender()
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) ClearSender() *SenderOrderTokenUpdateOne {
+	_u.mutation.ClearSender()
+	return _u
 }
 
 // ClearToken clears the "token" edge to the Token entity.
-func (sotuo *SenderOrderTokenUpdateOne) ClearToken() *SenderOrderTokenUpdateOne {
-	sotuo.mutation.ClearToken()
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) ClearToken() *SenderOrderTokenUpdateOne {
+	_u.mutation.ClearToken()
+	return _u
 }
 
 // Where appends a list predicates to the SenderOrderTokenUpdate builder.
-func (sotuo *SenderOrderTokenUpdateOne) Where(ps ...predicate.SenderOrderToken) *SenderOrderTokenUpdateOne {
-	sotuo.mutation.Where(ps...)
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) Where(ps ...predicate.SenderOrderToken) *SenderOrderTokenUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (sotuo *SenderOrderTokenUpdateOne) Select(field string, fields ...string) *SenderOrderTokenUpdateOne {
-	sotuo.fields = append([]string{field}, fields...)
-	return sotuo
+func (_u *SenderOrderTokenUpdateOne) Select(field string, fields ...string) *SenderOrderTokenUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated SenderOrderToken entity.
-func (sotuo *SenderOrderTokenUpdateOne) Save(ctx context.Context) (*SenderOrderToken, error) {
-	sotuo.defaults()
-	return withHooks(ctx, sotuo.sqlSave, sotuo.mutation, sotuo.hooks)
+func (_u *SenderOrderTokenUpdateOne) Save(ctx context.Context) (*SenderOrderToken, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (sotuo *SenderOrderTokenUpdateOne) SaveX(ctx context.Context) *SenderOrderToken {
-	node, err := sotuo.Save(ctx)
+func (_u *SenderOrderTokenUpdateOne) SaveX(ctx context.Context) *SenderOrderToken {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -459,58 +459,58 @@ func (sotuo *SenderOrderTokenUpdateOne) SaveX(ctx context.Context) *SenderOrderT
 }
 
 // Exec executes the query on the entity.
-func (sotuo *SenderOrderTokenUpdateOne) Exec(ctx context.Context) error {
-	_, err := sotuo.Save(ctx)
+func (_u *SenderOrderTokenUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (sotuo *SenderOrderTokenUpdateOne) ExecX(ctx context.Context) {
-	if err := sotuo.Exec(ctx); err != nil {
+func (_u *SenderOrderTokenUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (sotuo *SenderOrderTokenUpdateOne) defaults() {
-	if _, ok := sotuo.mutation.UpdatedAt(); !ok {
+func (_u *SenderOrderTokenUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := senderordertoken.UpdateDefaultUpdatedAt()
-		sotuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (sotuo *SenderOrderTokenUpdateOne) check() error {
-	if v, ok := sotuo.mutation.FeeAddress(); ok {
+func (_u *SenderOrderTokenUpdateOne) check() error {
+	if v, ok := _u.mutation.FeeAddress(); ok {
 		if err := senderordertoken.FeeAddressValidator(v); err != nil {
 			return &ValidationError{Name: "fee_address", err: fmt.Errorf(`ent: validator failed for field "SenderOrderToken.fee_address": %w`, err)}
 		}
 	}
-	if v, ok := sotuo.mutation.RefundAddress(); ok {
+	if v, ok := _u.mutation.RefundAddress(); ok {
 		if err := senderordertoken.RefundAddressValidator(v); err != nil {
 			return &ValidationError{Name: "refund_address", err: fmt.Errorf(`ent: validator failed for field "SenderOrderToken.refund_address": %w`, err)}
 		}
 	}
-	if sotuo.mutation.SenderCleared() && len(sotuo.mutation.SenderIDs()) > 0 {
+	if _u.mutation.SenderCleared() && len(_u.mutation.SenderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "SenderOrderToken.sender"`)
 	}
-	if sotuo.mutation.TokenCleared() && len(sotuo.mutation.TokenIDs()) > 0 {
+	if _u.mutation.TokenCleared() && len(_u.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "SenderOrderToken.token"`)
 	}
 	return nil
 }
 
-func (sotuo *SenderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *SenderOrderToken, err error) {
-	if err := sotuo.check(); err != nil {
+func (_u *SenderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *SenderOrderToken, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(senderordertoken.Table, senderordertoken.Columns, sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt))
-	id, ok := sotuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "SenderOrderToken.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := sotuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, senderordertoken.FieldID)
 		for _, f := range fields {
@@ -522,35 +522,35 @@ func (sotuo *SenderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Sen
 			}
 		}
 	}
-	if ps := sotuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := sotuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(senderordertoken.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := sotuo.mutation.FeePercent(); ok {
+	if value, ok := _u.mutation.FeePercent(); ok {
 		_spec.SetField(senderordertoken.FieldFeePercent, field.TypeFloat64, value)
 	}
-	if value, ok := sotuo.mutation.AddedFeePercent(); ok {
+	if value, ok := _u.mutation.AddedFeePercent(); ok {
 		_spec.AddField(senderordertoken.FieldFeePercent, field.TypeFloat64, value)
 	}
-	if value, ok := sotuo.mutation.MaxFeeCap(); ok {
+	if value, ok := _u.mutation.MaxFeeCap(); ok {
 		_spec.SetField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64, value)
 	}
-	if value, ok := sotuo.mutation.AddedMaxFeeCap(); ok {
+	if value, ok := _u.mutation.AddedMaxFeeCap(); ok {
 		_spec.AddField(senderordertoken.FieldMaxFeeCap, field.TypeFloat64, value)
 	}
-	if value, ok := sotuo.mutation.FeeAddress(); ok {
+	if value, ok := _u.mutation.FeeAddress(); ok {
 		_spec.SetField(senderordertoken.FieldFeeAddress, field.TypeString, value)
 	}
-	if value, ok := sotuo.mutation.RefundAddress(); ok {
+	if value, ok := _u.mutation.RefundAddress(); ok {
 		_spec.SetField(senderordertoken.FieldRefundAddress, field.TypeString, value)
 	}
-	if sotuo.mutation.SenderCleared() {
+	if _u.mutation.SenderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -563,7 +563,7 @@ func (sotuo *SenderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Sen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := sotuo.mutation.SenderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SenderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -579,7 +579,7 @@ func (sotuo *SenderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Sen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if sotuo.mutation.TokenCleared() {
+	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -592,7 +592,7 @@ func (sotuo *SenderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Sen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := sotuo.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -608,10 +608,10 @@ func (sotuo *SenderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Sen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &SenderOrderToken{config: sotuo.config}
+	_node = &SenderOrderToken{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, sotuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{senderordertoken.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -619,6 +619,6 @@ func (sotuo *SenderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Sen
 		}
 		return nil, err
 	}
-	sotuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

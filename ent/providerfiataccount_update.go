@@ -24,90 +24,90 @@ type ProviderFiatAccountUpdate struct {
 }
 
 // Where appends a list predicates to the ProviderFiatAccountUpdate builder.
-func (pfau *ProviderFiatAccountUpdate) Where(ps ...predicate.ProviderFiatAccount) *ProviderFiatAccountUpdate {
-	pfau.mutation.Where(ps...)
-	return pfau
+func (_u *ProviderFiatAccountUpdate) Where(ps ...predicate.ProviderFiatAccount) *ProviderFiatAccountUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pfau *ProviderFiatAccountUpdate) SetUpdatedAt(t time.Time) *ProviderFiatAccountUpdate {
-	pfau.mutation.SetUpdatedAt(t)
-	return pfau
+func (_u *ProviderFiatAccountUpdate) SetUpdatedAt(v time.Time) *ProviderFiatAccountUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetInstitution sets the "institution" field.
-func (pfau *ProviderFiatAccountUpdate) SetInstitution(s string) *ProviderFiatAccountUpdate {
-	pfau.mutation.SetInstitution(s)
-	return pfau
+func (_u *ProviderFiatAccountUpdate) SetInstitution(v string) *ProviderFiatAccountUpdate {
+	_u.mutation.SetInstitution(v)
+	return _u
 }
 
 // SetNillableInstitution sets the "institution" field if the given value is not nil.
-func (pfau *ProviderFiatAccountUpdate) SetNillableInstitution(s *string) *ProviderFiatAccountUpdate {
-	if s != nil {
-		pfau.SetInstitution(*s)
+func (_u *ProviderFiatAccountUpdate) SetNillableInstitution(v *string) *ProviderFiatAccountUpdate {
+	if v != nil {
+		_u.SetInstitution(*v)
 	}
-	return pfau
+	return _u
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (pfau *ProviderFiatAccountUpdate) SetAccountIdentifier(s string) *ProviderFiatAccountUpdate {
-	pfau.mutation.SetAccountIdentifier(s)
-	return pfau
+func (_u *ProviderFiatAccountUpdate) SetAccountIdentifier(v string) *ProviderFiatAccountUpdate {
+	_u.mutation.SetAccountIdentifier(v)
+	return _u
 }
 
 // SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
-func (pfau *ProviderFiatAccountUpdate) SetNillableAccountIdentifier(s *string) *ProviderFiatAccountUpdate {
-	if s != nil {
-		pfau.SetAccountIdentifier(*s)
+func (_u *ProviderFiatAccountUpdate) SetNillableAccountIdentifier(v *string) *ProviderFiatAccountUpdate {
+	if v != nil {
+		_u.SetAccountIdentifier(*v)
 	}
-	return pfau
+	return _u
 }
 
 // SetAccountName sets the "account_name" field.
-func (pfau *ProviderFiatAccountUpdate) SetAccountName(s string) *ProviderFiatAccountUpdate {
-	pfau.mutation.SetAccountName(s)
-	return pfau
+func (_u *ProviderFiatAccountUpdate) SetAccountName(v string) *ProviderFiatAccountUpdate {
+	_u.mutation.SetAccountName(v)
+	return _u
 }
 
 // SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (pfau *ProviderFiatAccountUpdate) SetNillableAccountName(s *string) *ProviderFiatAccountUpdate {
-	if s != nil {
-		pfau.SetAccountName(*s)
+func (_u *ProviderFiatAccountUpdate) SetNillableAccountName(v *string) *ProviderFiatAccountUpdate {
+	if v != nil {
+		_u.SetAccountName(*v)
 	}
-	return pfau
+	return _u
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (pfau *ProviderFiatAccountUpdate) SetProviderID(id string) *ProviderFiatAccountUpdate {
-	pfau.mutation.SetProviderID(id)
-	return pfau
+func (_u *ProviderFiatAccountUpdate) SetProviderID(id string) *ProviderFiatAccountUpdate {
+	_u.mutation.SetProviderID(id)
+	return _u
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (pfau *ProviderFiatAccountUpdate) SetProvider(p *ProviderProfile) *ProviderFiatAccountUpdate {
-	return pfau.SetProviderID(p.ID)
+func (_u *ProviderFiatAccountUpdate) SetProvider(v *ProviderProfile) *ProviderFiatAccountUpdate {
+	return _u.SetProviderID(v.ID)
 }
 
 // Mutation returns the ProviderFiatAccountMutation object of the builder.
-func (pfau *ProviderFiatAccountUpdate) Mutation() *ProviderFiatAccountMutation {
-	return pfau.mutation
+func (_u *ProviderFiatAccountUpdate) Mutation() *ProviderFiatAccountMutation {
+	return _u.mutation
 }
 
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
-func (pfau *ProviderFiatAccountUpdate) ClearProvider() *ProviderFiatAccountUpdate {
-	pfau.mutation.ClearProvider()
-	return pfau
+func (_u *ProviderFiatAccountUpdate) ClearProvider() *ProviderFiatAccountUpdate {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (pfau *ProviderFiatAccountUpdate) Save(ctx context.Context) (int, error) {
-	pfau.defaults()
-	return withHooks(ctx, pfau.sqlSave, pfau.mutation, pfau.hooks)
+func (_u *ProviderFiatAccountUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pfau *ProviderFiatAccountUpdate) SaveX(ctx context.Context) int {
-	affected, err := pfau.Save(ctx)
+func (_u *ProviderFiatAccountUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -115,74 +115,74 @@ func (pfau *ProviderFiatAccountUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (pfau *ProviderFiatAccountUpdate) Exec(ctx context.Context) error {
-	_, err := pfau.Save(ctx)
+func (_u *ProviderFiatAccountUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pfau *ProviderFiatAccountUpdate) ExecX(ctx context.Context) {
-	if err := pfau.Exec(ctx); err != nil {
+func (_u *ProviderFiatAccountUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pfau *ProviderFiatAccountUpdate) defaults() {
-	if _, ok := pfau.mutation.UpdatedAt(); !ok {
+func (_u *ProviderFiatAccountUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := providerfiataccount.UpdateDefaultUpdatedAt()
-		pfau.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pfau *ProviderFiatAccountUpdate) check() error {
-	if v, ok := pfau.mutation.Institution(); ok {
+func (_u *ProviderFiatAccountUpdate) check() error {
+	if v, ok := _u.mutation.Institution(); ok {
 		if err := providerfiataccount.InstitutionValidator(v); err != nil {
 			return &ValidationError{Name: "institution", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.institution": %w`, err)}
 		}
 	}
-	if v, ok := pfau.mutation.AccountIdentifier(); ok {
+	if v, ok := _u.mutation.AccountIdentifier(); ok {
 		if err := providerfiataccount.AccountIdentifierValidator(v); err != nil {
 			return &ValidationError{Name: "account_identifier", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.account_identifier": %w`, err)}
 		}
 	}
-	if v, ok := pfau.mutation.AccountName(); ok {
+	if v, ok := _u.mutation.AccountName(); ok {
 		if err := providerfiataccount.AccountNameValidator(v); err != nil {
 			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.account_name": %w`, err)}
 		}
 	}
-	if pfau.mutation.ProviderCleared() && len(pfau.mutation.ProviderIDs()) > 0 {
+	if _u.mutation.ProviderCleared() && len(_u.mutation.ProviderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderFiatAccount.provider"`)
 	}
 	return nil
 }
 
-func (pfau *ProviderFiatAccountUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := pfau.check(); err != nil {
-		return n, err
+func (_u *ProviderFiatAccountUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(providerfiataccount.Table, providerfiataccount.Columns, sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID))
-	if ps := pfau.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pfau.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerfiataccount.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := pfau.mutation.Institution(); ok {
+	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(providerfiataccount.FieldInstitution, field.TypeString, value)
 	}
-	if value, ok := pfau.mutation.AccountIdentifier(); ok {
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
 		_spec.SetField(providerfiataccount.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := pfau.mutation.AccountName(); ok {
+	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(providerfiataccount.FieldAccountName, field.TypeString, value)
 	}
-	if pfau.mutation.ProviderCleared() {
+	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -195,7 +195,7 @@ func (pfau *ProviderFiatAccountUpdate) sqlSave(ctx context.Context) (n int, err 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pfau.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -211,7 +211,7 @@ func (pfau *ProviderFiatAccountUpdate) sqlSave(ctx context.Context) (n int, err 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, pfau.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{providerfiataccount.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -219,8 +219,8 @@ func (pfau *ProviderFiatAccountUpdate) sqlSave(ctx context.Context) (n int, err 
 		}
 		return 0, err
 	}
-	pfau.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // ProviderFiatAccountUpdateOne is the builder for updating a single ProviderFiatAccount entity.
@@ -232,97 +232,97 @@ type ProviderFiatAccountUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pfauo *ProviderFiatAccountUpdateOne) SetUpdatedAt(t time.Time) *ProviderFiatAccountUpdateOne {
-	pfauo.mutation.SetUpdatedAt(t)
-	return pfauo
+func (_u *ProviderFiatAccountUpdateOne) SetUpdatedAt(v time.Time) *ProviderFiatAccountUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetInstitution sets the "institution" field.
-func (pfauo *ProviderFiatAccountUpdateOne) SetInstitution(s string) *ProviderFiatAccountUpdateOne {
-	pfauo.mutation.SetInstitution(s)
-	return pfauo
+func (_u *ProviderFiatAccountUpdateOne) SetInstitution(v string) *ProviderFiatAccountUpdateOne {
+	_u.mutation.SetInstitution(v)
+	return _u
 }
 
 // SetNillableInstitution sets the "institution" field if the given value is not nil.
-func (pfauo *ProviderFiatAccountUpdateOne) SetNillableInstitution(s *string) *ProviderFiatAccountUpdateOne {
-	if s != nil {
-		pfauo.SetInstitution(*s)
+func (_u *ProviderFiatAccountUpdateOne) SetNillableInstitution(v *string) *ProviderFiatAccountUpdateOne {
+	if v != nil {
+		_u.SetInstitution(*v)
 	}
-	return pfauo
+	return _u
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (pfauo *ProviderFiatAccountUpdateOne) SetAccountIdentifier(s string) *ProviderFiatAccountUpdateOne {
-	pfauo.mutation.SetAccountIdentifier(s)
-	return pfauo
+func (_u *ProviderFiatAccountUpdateOne) SetAccountIdentifier(v string) *ProviderFiatAccountUpdateOne {
+	_u.mutation.SetAccountIdentifier(v)
+	return _u
 }
 
 // SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
-func (pfauo *ProviderFiatAccountUpdateOne) SetNillableAccountIdentifier(s *string) *ProviderFiatAccountUpdateOne {
-	if s != nil {
-		pfauo.SetAccountIdentifier(*s)
+func (_u *ProviderFiatAccountUpdateOne) SetNillableAccountIdentifier(v *string) *ProviderFiatAccountUpdateOne {
+	if v != nil {
+		_u.SetAccountIdentifier(*v)
 	}
-	return pfauo
+	return _u
 }
 
 // SetAccountName sets the "account_name" field.
-func (pfauo *ProviderFiatAccountUpdateOne) SetAccountName(s string) *ProviderFiatAccountUpdateOne {
-	pfauo.mutation.SetAccountName(s)
-	return pfauo
+func (_u *ProviderFiatAccountUpdateOne) SetAccountName(v string) *ProviderFiatAccountUpdateOne {
+	_u.mutation.SetAccountName(v)
+	return _u
 }
 
 // SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (pfauo *ProviderFiatAccountUpdateOne) SetNillableAccountName(s *string) *ProviderFiatAccountUpdateOne {
-	if s != nil {
-		pfauo.SetAccountName(*s)
+func (_u *ProviderFiatAccountUpdateOne) SetNillableAccountName(v *string) *ProviderFiatAccountUpdateOne {
+	if v != nil {
+		_u.SetAccountName(*v)
 	}
-	return pfauo
+	return _u
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (pfauo *ProviderFiatAccountUpdateOne) SetProviderID(id string) *ProviderFiatAccountUpdateOne {
-	pfauo.mutation.SetProviderID(id)
-	return pfauo
+func (_u *ProviderFiatAccountUpdateOne) SetProviderID(id string) *ProviderFiatAccountUpdateOne {
+	_u.mutation.SetProviderID(id)
+	return _u
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (pfauo *ProviderFiatAccountUpdateOne) SetProvider(p *ProviderProfile) *ProviderFiatAccountUpdateOne {
-	return pfauo.SetProviderID(p.ID)
+func (_u *ProviderFiatAccountUpdateOne) SetProvider(v *ProviderProfile) *ProviderFiatAccountUpdateOne {
+	return _u.SetProviderID(v.ID)
 }
 
 // Mutation returns the ProviderFiatAccountMutation object of the builder.
-func (pfauo *ProviderFiatAccountUpdateOne) Mutation() *ProviderFiatAccountMutation {
-	return pfauo.mutation
+func (_u *ProviderFiatAccountUpdateOne) Mutation() *ProviderFiatAccountMutation {
+	return _u.mutation
 }
 
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
-func (pfauo *ProviderFiatAccountUpdateOne) ClearProvider() *ProviderFiatAccountUpdateOne {
-	pfauo.mutation.ClearProvider()
-	return pfauo
+func (_u *ProviderFiatAccountUpdateOne) ClearProvider() *ProviderFiatAccountUpdateOne {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // Where appends a list predicates to the ProviderFiatAccountUpdate builder.
-func (pfauo *ProviderFiatAccountUpdateOne) Where(ps ...predicate.ProviderFiatAccount) *ProviderFiatAccountUpdateOne {
-	pfauo.mutation.Where(ps...)
-	return pfauo
+func (_u *ProviderFiatAccountUpdateOne) Where(ps ...predicate.ProviderFiatAccount) *ProviderFiatAccountUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (pfauo *ProviderFiatAccountUpdateOne) Select(field string, fields ...string) *ProviderFiatAccountUpdateOne {
-	pfauo.fields = append([]string{field}, fields...)
-	return pfauo
+func (_u *ProviderFiatAccountUpdateOne) Select(field string, fields ...string) *ProviderFiatAccountUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated ProviderFiatAccount entity.
-func (pfauo *ProviderFiatAccountUpdateOne) Save(ctx context.Context) (*ProviderFiatAccount, error) {
-	pfauo.defaults()
-	return withHooks(ctx, pfauo.sqlSave, pfauo.mutation, pfauo.hooks)
+func (_u *ProviderFiatAccountUpdateOne) Save(ctx context.Context) (*ProviderFiatAccount, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pfauo *ProviderFiatAccountUpdateOne) SaveX(ctx context.Context) *ProviderFiatAccount {
-	node, err := pfauo.Save(ctx)
+func (_u *ProviderFiatAccountUpdateOne) SaveX(ctx context.Context) *ProviderFiatAccount {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -330,60 +330,60 @@ func (pfauo *ProviderFiatAccountUpdateOne) SaveX(ctx context.Context) *ProviderF
 }
 
 // Exec executes the query on the entity.
-func (pfauo *ProviderFiatAccountUpdateOne) Exec(ctx context.Context) error {
-	_, err := pfauo.Save(ctx)
+func (_u *ProviderFiatAccountUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pfauo *ProviderFiatAccountUpdateOne) ExecX(ctx context.Context) {
-	if err := pfauo.Exec(ctx); err != nil {
+func (_u *ProviderFiatAccountUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pfauo *ProviderFiatAccountUpdateOne) defaults() {
-	if _, ok := pfauo.mutation.UpdatedAt(); !ok {
+func (_u *ProviderFiatAccountUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := providerfiataccount.UpdateDefaultUpdatedAt()
-		pfauo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pfauo *ProviderFiatAccountUpdateOne) check() error {
-	if v, ok := pfauo.mutation.Institution(); ok {
+func (_u *ProviderFiatAccountUpdateOne) check() error {
+	if v, ok := _u.mutation.Institution(); ok {
 		if err := providerfiataccount.InstitutionValidator(v); err != nil {
 			return &ValidationError{Name: "institution", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.institution": %w`, err)}
 		}
 	}
-	if v, ok := pfauo.mutation.AccountIdentifier(); ok {
+	if v, ok := _u.mutation.AccountIdentifier(); ok {
 		if err := providerfiataccount.AccountIdentifierValidator(v); err != nil {
 			return &ValidationError{Name: "account_identifier", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.account_identifier": %w`, err)}
 		}
 	}
-	if v, ok := pfauo.mutation.AccountName(); ok {
+	if v, ok := _u.mutation.AccountName(); ok {
 		if err := providerfiataccount.AccountNameValidator(v); err != nil {
 			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.account_name": %w`, err)}
 		}
 	}
-	if pfauo.mutation.ProviderCleared() && len(pfauo.mutation.ProviderIDs()) > 0 {
+	if _u.mutation.ProviderCleared() && len(_u.mutation.ProviderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderFiatAccount.provider"`)
 	}
 	return nil
 }
 
-func (pfauo *ProviderFiatAccountUpdateOne) sqlSave(ctx context.Context) (_node *ProviderFiatAccount, err error) {
-	if err := pfauo.check(); err != nil {
+func (_u *ProviderFiatAccountUpdateOne) sqlSave(ctx context.Context) (_node *ProviderFiatAccount, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(providerfiataccount.Table, providerfiataccount.Columns, sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID))
-	id, ok := pfauo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProviderFiatAccount.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := pfauo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, providerfiataccount.FieldID)
 		for _, f := range fields {
@@ -395,26 +395,26 @@ func (pfauo *ProviderFiatAccountUpdateOne) sqlSave(ctx context.Context) (_node *
 			}
 		}
 	}
-	if ps := pfauo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pfauo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerfiataccount.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := pfauo.mutation.Institution(); ok {
+	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(providerfiataccount.FieldInstitution, field.TypeString, value)
 	}
-	if value, ok := pfauo.mutation.AccountIdentifier(); ok {
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
 		_spec.SetField(providerfiataccount.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := pfauo.mutation.AccountName(); ok {
+	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(providerfiataccount.FieldAccountName, field.TypeString, value)
 	}
-	if pfauo.mutation.ProviderCleared() {
+	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -427,7 +427,7 @@ func (pfauo *ProviderFiatAccountUpdateOne) sqlSave(ctx context.Context) (_node *
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pfauo.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -443,10 +443,10 @@ func (pfauo *ProviderFiatAccountUpdateOne) sqlSave(ctx context.Context) (_node *
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &ProviderFiatAccount{config: pfauo.config}
+	_node = &ProviderFiatAccount{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, pfauo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{providerfiataccount.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -454,6 +454,6 @@ func (pfauo *ProviderFiatAccountUpdateOne) sqlSave(ctx context.Context) (_node *
 		}
 		return nil, err
 	}
-	pfauo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

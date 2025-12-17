@@ -28,148 +28,148 @@ type ProviderOrderTokenCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (potc *ProviderOrderTokenCreate) SetCreatedAt(t time.Time) *ProviderOrderTokenCreate {
-	potc.mutation.SetCreatedAt(t)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetCreatedAt(v time.Time) *ProviderOrderTokenCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (potc *ProviderOrderTokenCreate) SetNillableCreatedAt(t *time.Time) *ProviderOrderTokenCreate {
-	if t != nil {
-		potc.SetCreatedAt(*t)
+func (_c *ProviderOrderTokenCreate) SetNillableCreatedAt(v *time.Time) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return potc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (potc *ProviderOrderTokenCreate) SetUpdatedAt(t time.Time) *ProviderOrderTokenCreate {
-	potc.mutation.SetUpdatedAt(t)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetUpdatedAt(v time.Time) *ProviderOrderTokenCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (potc *ProviderOrderTokenCreate) SetNillableUpdatedAt(t *time.Time) *ProviderOrderTokenCreate {
-	if t != nil {
-		potc.SetUpdatedAt(*t)
+func (_c *ProviderOrderTokenCreate) SetNillableUpdatedAt(v *time.Time) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return potc
+	return _c
 }
 
 // SetFixedConversionRate sets the "fixed_conversion_rate" field.
-func (potc *ProviderOrderTokenCreate) SetFixedConversionRate(d decimal.Decimal) *ProviderOrderTokenCreate {
-	potc.mutation.SetFixedConversionRate(d)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetFixedConversionRate(v)
+	return _c
 }
 
 // SetFloatingConversionRate sets the "floating_conversion_rate" field.
-func (potc *ProviderOrderTokenCreate) SetFloatingConversionRate(d decimal.Decimal) *ProviderOrderTokenCreate {
-	potc.mutation.SetFloatingConversionRate(d)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetFloatingConversionRate(v)
+	return _c
 }
 
 // SetConversionRateType sets the "conversion_rate_type" field.
-func (potc *ProviderOrderTokenCreate) SetConversionRateType(prt providerordertoken.ConversionRateType) *ProviderOrderTokenCreate {
-	potc.mutation.SetConversionRateType(prt)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetConversionRateType(v providerordertoken.ConversionRateType) *ProviderOrderTokenCreate {
+	_c.mutation.SetConversionRateType(v)
+	return _c
 }
 
 // SetMaxOrderAmount sets the "max_order_amount" field.
-func (potc *ProviderOrderTokenCreate) SetMaxOrderAmount(d decimal.Decimal) *ProviderOrderTokenCreate {
-	potc.mutation.SetMaxOrderAmount(d)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetMaxOrderAmount(v)
+	return _c
 }
 
 // SetMinOrderAmount sets the "min_order_amount" field.
-func (potc *ProviderOrderTokenCreate) SetMinOrderAmount(d decimal.Decimal) *ProviderOrderTokenCreate {
-	potc.mutation.SetMinOrderAmount(d)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetMinOrderAmount(v)
+	return _c
 }
 
 // SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
-func (potc *ProviderOrderTokenCreate) SetMaxOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenCreate {
-	potc.mutation.SetMaxOrderAmountOtc(d)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetMaxOrderAmountOtc(v)
+	return _c
 }
 
 // SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
-func (potc *ProviderOrderTokenCreate) SetMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenCreate {
-	potc.mutation.SetMinOrderAmountOtc(d)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetMinOrderAmountOtc(v)
+	return _c
 }
 
 // SetRateSlippage sets the "rate_slippage" field.
-func (potc *ProviderOrderTokenCreate) SetRateSlippage(d decimal.Decimal) *ProviderOrderTokenCreate {
-	potc.mutation.SetRateSlippage(d)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetRateSlippage(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetRateSlippage(v)
+	return _c
 }
 
 // SetAddress sets the "address" field.
-func (potc *ProviderOrderTokenCreate) SetAddress(s string) *ProviderOrderTokenCreate {
-	potc.mutation.SetAddress(s)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetAddress(v string) *ProviderOrderTokenCreate {
+	_c.mutation.SetAddress(v)
+	return _c
 }
 
 // SetNillableAddress sets the "address" field if the given value is not nil.
-func (potc *ProviderOrderTokenCreate) SetNillableAddress(s *string) *ProviderOrderTokenCreate {
-	if s != nil {
-		potc.SetAddress(*s)
+func (_c *ProviderOrderTokenCreate) SetNillableAddress(v *string) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetAddress(*v)
 	}
-	return potc
+	return _c
 }
 
 // SetNetwork sets the "network" field.
-func (potc *ProviderOrderTokenCreate) SetNetwork(s string) *ProviderOrderTokenCreate {
-	potc.mutation.SetNetwork(s)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetNetwork(v string) *ProviderOrderTokenCreate {
+	_c.mutation.SetNetwork(v)
+	return _c
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (potc *ProviderOrderTokenCreate) SetProviderID(id string) *ProviderOrderTokenCreate {
-	potc.mutation.SetProviderID(id)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetProviderID(id string) *ProviderOrderTokenCreate {
+	_c.mutation.SetProviderID(id)
+	return _c
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (potc *ProviderOrderTokenCreate) SetProvider(p *ProviderProfile) *ProviderOrderTokenCreate {
-	return potc.SetProviderID(p.ID)
+func (_c *ProviderOrderTokenCreate) SetProvider(v *ProviderProfile) *ProviderOrderTokenCreate {
+	return _c.SetProviderID(v.ID)
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (potc *ProviderOrderTokenCreate) SetTokenID(id int) *ProviderOrderTokenCreate {
-	potc.mutation.SetTokenID(id)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetTokenID(id int) *ProviderOrderTokenCreate {
+	_c.mutation.SetTokenID(id)
+	return _c
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (potc *ProviderOrderTokenCreate) SetToken(t *Token) *ProviderOrderTokenCreate {
-	return potc.SetTokenID(t.ID)
+func (_c *ProviderOrderTokenCreate) SetToken(v *Token) *ProviderOrderTokenCreate {
+	return _c.SetTokenID(v.ID)
 }
 
 // SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (potc *ProviderOrderTokenCreate) SetCurrencyID(id uuid.UUID) *ProviderOrderTokenCreate {
-	potc.mutation.SetCurrencyID(id)
-	return potc
+func (_c *ProviderOrderTokenCreate) SetCurrencyID(id uuid.UUID) *ProviderOrderTokenCreate {
+	_c.mutation.SetCurrencyID(id)
+	return _c
 }
 
 // SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (potc *ProviderOrderTokenCreate) SetCurrency(f *FiatCurrency) *ProviderOrderTokenCreate {
-	return potc.SetCurrencyID(f.ID)
+func (_c *ProviderOrderTokenCreate) SetCurrency(v *FiatCurrency) *ProviderOrderTokenCreate {
+	return _c.SetCurrencyID(v.ID)
 }
 
 // Mutation returns the ProviderOrderTokenMutation object of the builder.
-func (potc *ProviderOrderTokenCreate) Mutation() *ProviderOrderTokenMutation {
-	return potc.mutation
+func (_c *ProviderOrderTokenCreate) Mutation() *ProviderOrderTokenMutation {
+	return _c.mutation
 }
 
 // Save creates the ProviderOrderToken in the database.
-func (potc *ProviderOrderTokenCreate) Save(ctx context.Context) (*ProviderOrderToken, error) {
-	potc.defaults()
-	return withHooks(ctx, potc.sqlSave, potc.mutation, potc.hooks)
+func (_c *ProviderOrderTokenCreate) Save(ctx context.Context) (*ProviderOrderToken, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (potc *ProviderOrderTokenCreate) SaveX(ctx context.Context) *ProviderOrderToken {
-	v, err := potc.Save(ctx)
+func (_c *ProviderOrderTokenCreate) SaveX(ctx context.Context) *ProviderOrderToken {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -177,88 +177,88 @@ func (potc *ProviderOrderTokenCreate) SaveX(ctx context.Context) *ProviderOrderT
 }
 
 // Exec executes the query.
-func (potc *ProviderOrderTokenCreate) Exec(ctx context.Context) error {
-	_, err := potc.Save(ctx)
+func (_c *ProviderOrderTokenCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (potc *ProviderOrderTokenCreate) ExecX(ctx context.Context) {
-	if err := potc.Exec(ctx); err != nil {
+func (_c *ProviderOrderTokenCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (potc *ProviderOrderTokenCreate) defaults() {
-	if _, ok := potc.mutation.CreatedAt(); !ok {
+func (_c *ProviderOrderTokenCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := providerordertoken.DefaultCreatedAt()
-		potc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := potc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := providerordertoken.DefaultUpdatedAt()
-		potc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (potc *ProviderOrderTokenCreate) check() error {
-	if _, ok := potc.mutation.CreatedAt(); !ok {
+func (_c *ProviderOrderTokenCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ProviderOrderToken.created_at"`)}
 	}
-	if _, ok := potc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderOrderToken.updated_at"`)}
 	}
-	if _, ok := potc.mutation.FixedConversionRate(); !ok {
+	if _, ok := _c.mutation.FixedConversionRate(); !ok {
 		return &ValidationError{Name: "fixed_conversion_rate", err: errors.New(`ent: missing required field "ProviderOrderToken.fixed_conversion_rate"`)}
 	}
-	if _, ok := potc.mutation.FloatingConversionRate(); !ok {
+	if _, ok := _c.mutation.FloatingConversionRate(); !ok {
 		return &ValidationError{Name: "floating_conversion_rate", err: errors.New(`ent: missing required field "ProviderOrderToken.floating_conversion_rate"`)}
 	}
-	if _, ok := potc.mutation.ConversionRateType(); !ok {
+	if _, ok := _c.mutation.ConversionRateType(); !ok {
 		return &ValidationError{Name: "conversion_rate_type", err: errors.New(`ent: missing required field "ProviderOrderToken.conversion_rate_type"`)}
 	}
-	if v, ok := potc.mutation.ConversionRateType(); ok {
+	if v, ok := _c.mutation.ConversionRateType(); ok {
 		if err := providerordertoken.ConversionRateTypeValidator(v); err != nil {
 			return &ValidationError{Name: "conversion_rate_type", err: fmt.Errorf(`ent: validator failed for field "ProviderOrderToken.conversion_rate_type": %w`, err)}
 		}
 	}
-	if _, ok := potc.mutation.MaxOrderAmount(); !ok {
+	if _, ok := _c.mutation.MaxOrderAmount(); !ok {
 		return &ValidationError{Name: "max_order_amount", err: errors.New(`ent: missing required field "ProviderOrderToken.max_order_amount"`)}
 	}
-	if _, ok := potc.mutation.MinOrderAmount(); !ok {
+	if _, ok := _c.mutation.MinOrderAmount(); !ok {
 		return &ValidationError{Name: "min_order_amount", err: errors.New(`ent: missing required field "ProviderOrderToken.min_order_amount"`)}
 	}
-	if _, ok := potc.mutation.MaxOrderAmountOtc(); !ok {
+	if _, ok := _c.mutation.MaxOrderAmountOtc(); !ok {
 		return &ValidationError{Name: "max_order_amount_otc", err: errors.New(`ent: missing required field "ProviderOrderToken.max_order_amount_otc"`)}
 	}
-	if _, ok := potc.mutation.MinOrderAmountOtc(); !ok {
+	if _, ok := _c.mutation.MinOrderAmountOtc(); !ok {
 		return &ValidationError{Name: "min_order_amount_otc", err: errors.New(`ent: missing required field "ProviderOrderToken.min_order_amount_otc"`)}
 	}
-	if _, ok := potc.mutation.RateSlippage(); !ok {
+	if _, ok := _c.mutation.RateSlippage(); !ok {
 		return &ValidationError{Name: "rate_slippage", err: errors.New(`ent: missing required field "ProviderOrderToken.rate_slippage"`)}
 	}
-	if _, ok := potc.mutation.Network(); !ok {
+	if _, ok := _c.mutation.Network(); !ok {
 		return &ValidationError{Name: "network", err: errors.New(`ent: missing required field "ProviderOrderToken.network"`)}
 	}
-	if len(potc.mutation.ProviderIDs()) == 0 {
+	if len(_c.mutation.ProviderIDs()) == 0 {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderOrderToken.provider"`)}
 	}
-	if len(potc.mutation.TokenIDs()) == 0 {
+	if len(_c.mutation.TokenIDs()) == 0 {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required edge "ProviderOrderToken.token"`)}
 	}
-	if len(potc.mutation.CurrencyIDs()) == 0 {
+	if len(_c.mutation.CurrencyIDs()) == 0 {
 		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required edge "ProviderOrderToken.currency"`)}
 	}
 	return nil
 }
 
-func (potc *ProviderOrderTokenCreate) sqlSave(ctx context.Context) (*ProviderOrderToken, error) {
-	if err := potc.check(); err != nil {
+func (_c *ProviderOrderTokenCreate) sqlSave(ctx context.Context) (*ProviderOrderToken, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := potc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, potc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -266,66 +266,66 @@ func (potc *ProviderOrderTokenCreate) sqlSave(ctx context.Context) (*ProviderOrd
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	potc.mutation.id = &_node.ID
-	potc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgraph.CreateSpec) {
+func (_c *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgraph.CreateSpec) {
 	var (
-		_node = &ProviderOrderToken{config: potc.config}
+		_node = &ProviderOrderToken{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(providerordertoken.Table, sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = potc.conflict
-	if value, ok := potc.mutation.CreatedAt(); ok {
+	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(providerordertoken.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := potc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerordertoken.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := potc.mutation.FixedConversionRate(); ok {
+	if value, ok := _c.mutation.FixedConversionRate(); ok {
 		_spec.SetField(providerordertoken.FieldFixedConversionRate, field.TypeFloat64, value)
 		_node.FixedConversionRate = value
 	}
-	if value, ok := potc.mutation.FloatingConversionRate(); ok {
+	if value, ok := _c.mutation.FloatingConversionRate(); ok {
 		_spec.SetField(providerordertoken.FieldFloatingConversionRate, field.TypeFloat64, value)
 		_node.FloatingConversionRate = value
 	}
-	if value, ok := potc.mutation.ConversionRateType(); ok {
+	if value, ok := _c.mutation.ConversionRateType(); ok {
 		_spec.SetField(providerordertoken.FieldConversionRateType, field.TypeEnum, value)
 		_node.ConversionRateType = value
 	}
-	if value, ok := potc.mutation.MaxOrderAmount(); ok {
+	if value, ok := _c.mutation.MaxOrderAmount(); ok {
 		_spec.SetField(providerordertoken.FieldMaxOrderAmount, field.TypeFloat64, value)
 		_node.MaxOrderAmount = value
 	}
-	if value, ok := potc.mutation.MinOrderAmount(); ok {
+	if value, ok := _c.mutation.MinOrderAmount(); ok {
 		_spec.SetField(providerordertoken.FieldMinOrderAmount, field.TypeFloat64, value)
 		_node.MinOrderAmount = value
 	}
-	if value, ok := potc.mutation.MaxOrderAmountOtc(); ok {
+	if value, ok := _c.mutation.MaxOrderAmountOtc(); ok {
 		_spec.SetField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
 		_node.MaxOrderAmountOtc = value
 	}
-	if value, ok := potc.mutation.MinOrderAmountOtc(); ok {
+	if value, ok := _c.mutation.MinOrderAmountOtc(); ok {
 		_spec.SetField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
 		_node.MinOrderAmountOtc = value
 	}
-	if value, ok := potc.mutation.RateSlippage(); ok {
+	if value, ok := _c.mutation.RateSlippage(); ok {
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 		_node.RateSlippage = value
 	}
-	if value, ok := potc.mutation.Address(); ok {
+	if value, ok := _c.mutation.Address(); ok {
 		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)
 		_node.Address = value
 	}
-	if value, ok := potc.mutation.Network(); ok {
+	if value, ok := _c.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
 		_node.Network = value
 	}
-	if nodes := potc.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -342,7 +342,7 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 		_node.provider_profile_order_tokens = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := potc.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -359,7 +359,7 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 		_node.token_provider_order_tokens = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := potc.mutation.CurrencyIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.CurrencyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -395,10 +395,10 @@ func (potc *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgra
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (potc *ProviderOrderTokenCreate) OnConflict(opts ...sql.ConflictOption) *ProviderOrderTokenUpsertOne {
-	potc.conflict = opts
+func (_c *ProviderOrderTokenCreate) OnConflict(opts ...sql.ConflictOption) *ProviderOrderTokenUpsertOne {
+	_c.conflict = opts
 	return &ProviderOrderTokenUpsertOne{
-		create: potc,
+		create: _c,
 	}
 }
 
@@ -408,10 +408,10 @@ func (potc *ProviderOrderTokenCreate) OnConflict(opts ...sql.ConflictOption) *Pr
 //	client.ProviderOrderToken.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (potc *ProviderOrderTokenCreate) OnConflictColumns(columns ...string) *ProviderOrderTokenUpsertOne {
-	potc.conflict = append(potc.conflict, sql.ConflictColumns(columns...))
+func (_c *ProviderOrderTokenCreate) OnConflictColumns(columns ...string) *ProviderOrderTokenUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProviderOrderTokenUpsertOne{
-		create: potc,
+		create: _c,
 	}
 }
 
@@ -905,16 +905,16 @@ type ProviderOrderTokenCreateBulk struct {
 }
 
 // Save creates the ProviderOrderToken entities in the database.
-func (potcb *ProviderOrderTokenCreateBulk) Save(ctx context.Context) ([]*ProviderOrderToken, error) {
-	if potcb.err != nil {
-		return nil, potcb.err
+func (_c *ProviderOrderTokenCreateBulk) Save(ctx context.Context) ([]*ProviderOrderToken, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(potcb.builders))
-	nodes := make([]*ProviderOrderToken, len(potcb.builders))
-	mutators := make([]Mutator, len(potcb.builders))
-	for i := range potcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*ProviderOrderToken, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := potcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*ProviderOrderTokenMutation)
@@ -928,12 +928,12 @@ func (potcb *ProviderOrderTokenCreateBulk) Save(ctx context.Context) ([]*Provide
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, potcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = potcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, potcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -957,7 +957,7 @@ func (potcb *ProviderOrderTokenCreateBulk) Save(ctx context.Context) ([]*Provide
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, potcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -965,8 +965,8 @@ func (potcb *ProviderOrderTokenCreateBulk) Save(ctx context.Context) ([]*Provide
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (potcb *ProviderOrderTokenCreateBulk) SaveX(ctx context.Context) []*ProviderOrderToken {
-	v, err := potcb.Save(ctx)
+func (_c *ProviderOrderTokenCreateBulk) SaveX(ctx context.Context) []*ProviderOrderToken {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -974,14 +974,14 @@ func (potcb *ProviderOrderTokenCreateBulk) SaveX(ctx context.Context) []*Provide
 }
 
 // Exec executes the query.
-func (potcb *ProviderOrderTokenCreateBulk) Exec(ctx context.Context) error {
-	_, err := potcb.Save(ctx)
+func (_c *ProviderOrderTokenCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (potcb *ProviderOrderTokenCreateBulk) ExecX(ctx context.Context) {
-	if err := potcb.Exec(ctx); err != nil {
+func (_c *ProviderOrderTokenCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -1001,10 +1001,10 @@ func (potcb *ProviderOrderTokenCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (potcb *ProviderOrderTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderOrderTokenUpsertBulk {
-	potcb.conflict = opts
+func (_c *ProviderOrderTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderOrderTokenUpsertBulk {
+	_c.conflict = opts
 	return &ProviderOrderTokenUpsertBulk{
-		create: potcb,
+		create: _c,
 	}
 }
 
@@ -1014,10 +1014,10 @@ func (potcb *ProviderOrderTokenCreateBulk) OnConflict(opts ...sql.ConflictOption
 //	client.ProviderOrderToken.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (potcb *ProviderOrderTokenCreateBulk) OnConflictColumns(columns ...string) *ProviderOrderTokenUpsertBulk {
-	potcb.conflict = append(potcb.conflict, sql.ConflictColumns(columns...))
+func (_c *ProviderOrderTokenCreateBulk) OnConflictColumns(columns ...string) *ProviderOrderTokenUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProviderOrderTokenUpsertBulk{
-		create: potcb,
+		create: _c,
 	}
 }
 

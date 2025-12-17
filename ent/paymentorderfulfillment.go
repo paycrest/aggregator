@@ -80,7 +80,7 @@ func (*PaymentOrderFulfillment) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the PaymentOrderFulfillment fields.
-func (pof *PaymentOrderFulfillment) assignValues(columns []string, values []any) error {
+func (_m *PaymentOrderFulfillment) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -90,53 +90,53 @@ func (pof *PaymentOrderFulfillment) assignValues(columns []string, values []any)
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				pof.ID = *value
+				_m.ID = *value
 			}
 		case paymentorderfulfillment.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				pof.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case paymentorderfulfillment.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				pof.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case paymentorderfulfillment.FieldTxID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tx_id", values[i])
 			} else if value.Valid {
-				pof.TxID = value.String
+				_m.TxID = value.String
 			}
 		case paymentorderfulfillment.FieldPsp:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field psp", values[i])
 			} else if value.Valid {
-				pof.Psp = value.String
+				_m.Psp = value.String
 			}
 		case paymentorderfulfillment.FieldValidationStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field validation_status", values[i])
 			} else if value.Valid {
-				pof.ValidationStatus = paymentorderfulfillment.ValidationStatus(value.String)
+				_m.ValidationStatus = paymentorderfulfillment.ValidationStatus(value.String)
 			}
 		case paymentorderfulfillment.FieldValidationError:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field validation_error", values[i])
 			} else if value.Valid {
-				pof.ValidationError = value.String
+				_m.ValidationError = value.String
 			}
 		case paymentorderfulfillment.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field payment_order_fulfillments", values[i])
 			} else if value.Valid {
-				pof.payment_order_fulfillments = new(uuid.UUID)
-				*pof.payment_order_fulfillments = *value.S.(*uuid.UUID)
+				_m.payment_order_fulfillments = new(uuid.UUID)
+				*_m.payment_order_fulfillments = *value.S.(*uuid.UUID)
 			}
 		default:
-			pof.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -144,55 +144,55 @@ func (pof *PaymentOrderFulfillment) assignValues(columns []string, values []any)
 
 // Value returns the ent.Value that was dynamically selected and assigned to the PaymentOrderFulfillment.
 // This includes values selected through modifiers, order, etc.
-func (pof *PaymentOrderFulfillment) Value(name string) (ent.Value, error) {
-	return pof.selectValues.Get(name)
+func (_m *PaymentOrderFulfillment) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryOrder queries the "order" edge of the PaymentOrderFulfillment entity.
-func (pof *PaymentOrderFulfillment) QueryOrder() *PaymentOrderQuery {
-	return NewPaymentOrderFulfillmentClient(pof.config).QueryOrder(pof)
+func (_m *PaymentOrderFulfillment) QueryOrder() *PaymentOrderQuery {
+	return NewPaymentOrderFulfillmentClient(_m.config).QueryOrder(_m)
 }
 
 // Update returns a builder for updating this PaymentOrderFulfillment.
 // Note that you need to call PaymentOrderFulfillment.Unwrap() before calling this method if this PaymentOrderFulfillment
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (pof *PaymentOrderFulfillment) Update() *PaymentOrderFulfillmentUpdateOne {
-	return NewPaymentOrderFulfillmentClient(pof.config).UpdateOne(pof)
+func (_m *PaymentOrderFulfillment) Update() *PaymentOrderFulfillmentUpdateOne {
+	return NewPaymentOrderFulfillmentClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the PaymentOrderFulfillment entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (pof *PaymentOrderFulfillment) Unwrap() *PaymentOrderFulfillment {
-	_tx, ok := pof.config.driver.(*txDriver)
+func (_m *PaymentOrderFulfillment) Unwrap() *PaymentOrderFulfillment {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: PaymentOrderFulfillment is not a transactional entity")
 	}
-	pof.config.driver = _tx.drv
-	return pof
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (pof *PaymentOrderFulfillment) String() string {
+func (_m *PaymentOrderFulfillment) String() string {
 	var builder strings.Builder
 	builder.WriteString("PaymentOrderFulfillment(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", pof.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(pof.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(pof.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("tx_id=")
-	builder.WriteString(pof.TxID)
+	builder.WriteString(_m.TxID)
 	builder.WriteString(", ")
 	builder.WriteString("psp=")
-	builder.WriteString(pof.Psp)
+	builder.WriteString(_m.Psp)
 	builder.WriteString(", ")
 	builder.WriteString("validation_status=")
-	builder.WriteString(fmt.Sprintf("%v", pof.ValidationStatus))
+	builder.WriteString(fmt.Sprintf("%v", _m.ValidationStatus))
 	builder.WriteString(", ")
 	builder.WriteString("validation_error=")
-	builder.WriteString(pof.ValidationError)
+	builder.WriteString(_m.ValidationError)
 	builder.WriteByte(')')
 	return builder.String()
 }

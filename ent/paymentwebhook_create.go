@@ -27,117 +27,117 @@ type PaymentWebhookCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (pwc *PaymentWebhookCreate) SetCreatedAt(t time.Time) *PaymentWebhookCreate {
-	pwc.mutation.SetCreatedAt(t)
-	return pwc
+func (_c *PaymentWebhookCreate) SetCreatedAt(v time.Time) *PaymentWebhookCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (pwc *PaymentWebhookCreate) SetNillableCreatedAt(t *time.Time) *PaymentWebhookCreate {
-	if t != nil {
-		pwc.SetCreatedAt(*t)
+func (_c *PaymentWebhookCreate) SetNillableCreatedAt(v *time.Time) *PaymentWebhookCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return pwc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pwc *PaymentWebhookCreate) SetUpdatedAt(t time.Time) *PaymentWebhookCreate {
-	pwc.mutation.SetUpdatedAt(t)
-	return pwc
+func (_c *PaymentWebhookCreate) SetUpdatedAt(v time.Time) *PaymentWebhookCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (pwc *PaymentWebhookCreate) SetNillableUpdatedAt(t *time.Time) *PaymentWebhookCreate {
-	if t != nil {
-		pwc.SetUpdatedAt(*t)
+func (_c *PaymentWebhookCreate) SetNillableUpdatedAt(v *time.Time) *PaymentWebhookCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return pwc
+	return _c
 }
 
 // SetWebhookID sets the "webhook_id" field.
-func (pwc *PaymentWebhookCreate) SetWebhookID(s string) *PaymentWebhookCreate {
-	pwc.mutation.SetWebhookID(s)
-	return pwc
+func (_c *PaymentWebhookCreate) SetWebhookID(v string) *PaymentWebhookCreate {
+	_c.mutation.SetWebhookID(v)
+	return _c
 }
 
 // SetWebhookSecret sets the "webhook_secret" field.
-func (pwc *PaymentWebhookCreate) SetWebhookSecret(s string) *PaymentWebhookCreate {
-	pwc.mutation.SetWebhookSecret(s)
-	return pwc
+func (_c *PaymentWebhookCreate) SetWebhookSecret(v string) *PaymentWebhookCreate {
+	_c.mutation.SetWebhookSecret(v)
+	return _c
 }
 
 // SetCallbackURL sets the "callback_url" field.
-func (pwc *PaymentWebhookCreate) SetCallbackURL(s string) *PaymentWebhookCreate {
-	pwc.mutation.SetCallbackURL(s)
-	return pwc
+func (_c *PaymentWebhookCreate) SetCallbackURL(v string) *PaymentWebhookCreate {
+	_c.mutation.SetCallbackURL(v)
+	return _c
 }
 
 // SetID sets the "id" field.
-func (pwc *PaymentWebhookCreate) SetID(u uuid.UUID) *PaymentWebhookCreate {
-	pwc.mutation.SetID(u)
-	return pwc
+func (_c *PaymentWebhookCreate) SetID(v uuid.UUID) *PaymentWebhookCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (pwc *PaymentWebhookCreate) SetNillableID(u *uuid.UUID) *PaymentWebhookCreate {
-	if u != nil {
-		pwc.SetID(*u)
+func (_c *PaymentWebhookCreate) SetNillableID(v *uuid.UUID) *PaymentWebhookCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return pwc
+	return _c
 }
 
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
-func (pwc *PaymentWebhookCreate) SetPaymentOrderID(id uuid.UUID) *PaymentWebhookCreate {
-	pwc.mutation.SetPaymentOrderID(id)
-	return pwc
+func (_c *PaymentWebhookCreate) SetPaymentOrderID(id uuid.UUID) *PaymentWebhookCreate {
+	_c.mutation.SetPaymentOrderID(id)
+	return _c
 }
 
 // SetNillablePaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID if the given value is not nil.
-func (pwc *PaymentWebhookCreate) SetNillablePaymentOrderID(id *uuid.UUID) *PaymentWebhookCreate {
+func (_c *PaymentWebhookCreate) SetNillablePaymentOrderID(id *uuid.UUID) *PaymentWebhookCreate {
 	if id != nil {
-		pwc = pwc.SetPaymentOrderID(*id)
+		_c = _c.SetPaymentOrderID(*id)
 	}
-	return pwc
+	return _c
 }
 
 // SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
-func (pwc *PaymentWebhookCreate) SetPaymentOrder(p *PaymentOrder) *PaymentWebhookCreate {
-	return pwc.SetPaymentOrderID(p.ID)
+func (_c *PaymentWebhookCreate) SetPaymentOrder(v *PaymentOrder) *PaymentWebhookCreate {
+	return _c.SetPaymentOrderID(v.ID)
 }
 
 // SetNetworkID sets the "network" edge to the Network entity by ID.
-func (pwc *PaymentWebhookCreate) SetNetworkID(id int) *PaymentWebhookCreate {
-	pwc.mutation.SetNetworkID(id)
-	return pwc
+func (_c *PaymentWebhookCreate) SetNetworkID(id int) *PaymentWebhookCreate {
+	_c.mutation.SetNetworkID(id)
+	return _c
 }
 
 // SetNillableNetworkID sets the "network" edge to the Network entity by ID if the given value is not nil.
-func (pwc *PaymentWebhookCreate) SetNillableNetworkID(id *int) *PaymentWebhookCreate {
+func (_c *PaymentWebhookCreate) SetNillableNetworkID(id *int) *PaymentWebhookCreate {
 	if id != nil {
-		pwc = pwc.SetNetworkID(*id)
+		_c = _c.SetNetworkID(*id)
 	}
-	return pwc
+	return _c
 }
 
 // SetNetwork sets the "network" edge to the Network entity.
-func (pwc *PaymentWebhookCreate) SetNetwork(n *Network) *PaymentWebhookCreate {
-	return pwc.SetNetworkID(n.ID)
+func (_c *PaymentWebhookCreate) SetNetwork(v *Network) *PaymentWebhookCreate {
+	return _c.SetNetworkID(v.ID)
 }
 
 // Mutation returns the PaymentWebhookMutation object of the builder.
-func (pwc *PaymentWebhookCreate) Mutation() *PaymentWebhookMutation {
-	return pwc.mutation
+func (_c *PaymentWebhookCreate) Mutation() *PaymentWebhookMutation {
+	return _c.mutation
 }
 
 // Save creates the PaymentWebhook in the database.
-func (pwc *PaymentWebhookCreate) Save(ctx context.Context) (*PaymentWebhook, error) {
-	pwc.defaults()
-	return withHooks(ctx, pwc.sqlSave, pwc.mutation, pwc.hooks)
+func (_c *PaymentWebhookCreate) Save(ctx context.Context) (*PaymentWebhook, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (pwc *PaymentWebhookCreate) SaveX(ctx context.Context) *PaymentWebhook {
-	v, err := pwc.Save(ctx)
+func (_c *PaymentWebhookCreate) SaveX(ctx context.Context) *PaymentWebhook {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -145,62 +145,62 @@ func (pwc *PaymentWebhookCreate) SaveX(ctx context.Context) *PaymentWebhook {
 }
 
 // Exec executes the query.
-func (pwc *PaymentWebhookCreate) Exec(ctx context.Context) error {
-	_, err := pwc.Save(ctx)
+func (_c *PaymentWebhookCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pwc *PaymentWebhookCreate) ExecX(ctx context.Context) {
-	if err := pwc.Exec(ctx); err != nil {
+func (_c *PaymentWebhookCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pwc *PaymentWebhookCreate) defaults() {
-	if _, ok := pwc.mutation.CreatedAt(); !ok {
+func (_c *PaymentWebhookCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := paymentwebhook.DefaultCreatedAt()
-		pwc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := pwc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := paymentwebhook.DefaultUpdatedAt()
-		pwc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := pwc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := paymentwebhook.DefaultID()
-		pwc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pwc *PaymentWebhookCreate) check() error {
-	if _, ok := pwc.mutation.CreatedAt(); !ok {
+func (_c *PaymentWebhookCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "PaymentWebhook.created_at"`)}
 	}
-	if _, ok := pwc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "PaymentWebhook.updated_at"`)}
 	}
-	if _, ok := pwc.mutation.WebhookID(); !ok {
+	if _, ok := _c.mutation.WebhookID(); !ok {
 		return &ValidationError{Name: "webhook_id", err: errors.New(`ent: missing required field "PaymentWebhook.webhook_id"`)}
 	}
-	if v, ok := pwc.mutation.WebhookID(); ok {
+	if v, ok := _c.mutation.WebhookID(); ok {
 		if err := paymentwebhook.WebhookIDValidator(v); err != nil {
 			return &ValidationError{Name: "webhook_id", err: fmt.Errorf(`ent: validator failed for field "PaymentWebhook.webhook_id": %w`, err)}
 		}
 	}
-	if _, ok := pwc.mutation.WebhookSecret(); !ok {
+	if _, ok := _c.mutation.WebhookSecret(); !ok {
 		return &ValidationError{Name: "webhook_secret", err: errors.New(`ent: missing required field "PaymentWebhook.webhook_secret"`)}
 	}
-	if v, ok := pwc.mutation.WebhookSecret(); ok {
+	if v, ok := _c.mutation.WebhookSecret(); ok {
 		if err := paymentwebhook.WebhookSecretValidator(v); err != nil {
 			return &ValidationError{Name: "webhook_secret", err: fmt.Errorf(`ent: validator failed for field "PaymentWebhook.webhook_secret": %w`, err)}
 		}
 	}
-	if _, ok := pwc.mutation.CallbackURL(); !ok {
+	if _, ok := _c.mutation.CallbackURL(); !ok {
 		return &ValidationError{Name: "callback_url", err: errors.New(`ent: missing required field "PaymentWebhook.callback_url"`)}
 	}
-	if v, ok := pwc.mutation.CallbackURL(); ok {
+	if v, ok := _c.mutation.CallbackURL(); ok {
 		if err := paymentwebhook.CallbackURLValidator(v); err != nil {
 			return &ValidationError{Name: "callback_url", err: fmt.Errorf(`ent: validator failed for field "PaymentWebhook.callback_url": %w`, err)}
 		}
@@ -208,12 +208,12 @@ func (pwc *PaymentWebhookCreate) check() error {
 	return nil
 }
 
-func (pwc *PaymentWebhookCreate) sqlSave(ctx context.Context) (*PaymentWebhook, error) {
-	if err := pwc.check(); err != nil {
+func (_c *PaymentWebhookCreate) sqlSave(ctx context.Context) (*PaymentWebhook, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := pwc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, pwc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -226,42 +226,42 @@ func (pwc *PaymentWebhookCreate) sqlSave(ctx context.Context) (*PaymentWebhook, 
 			return nil, err
 		}
 	}
-	pwc.mutation.id = &_node.ID
-	pwc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (pwc *PaymentWebhookCreate) createSpec() (*PaymentWebhook, *sqlgraph.CreateSpec) {
+func (_c *PaymentWebhookCreate) createSpec() (*PaymentWebhook, *sqlgraph.CreateSpec) {
 	var (
-		_node = &PaymentWebhook{config: pwc.config}
+		_node = &PaymentWebhook{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(paymentwebhook.Table, sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = pwc.conflict
-	if id, ok := pwc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := pwc.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(paymentwebhook.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := pwc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentwebhook.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := pwc.mutation.WebhookID(); ok {
+	if value, ok := _c.mutation.WebhookID(); ok {
 		_spec.SetField(paymentwebhook.FieldWebhookID, field.TypeString, value)
 		_node.WebhookID = value
 	}
-	if value, ok := pwc.mutation.WebhookSecret(); ok {
+	if value, ok := _c.mutation.WebhookSecret(); ok {
 		_spec.SetField(paymentwebhook.FieldWebhookSecret, field.TypeString, value)
 		_node.WebhookSecret = value
 	}
-	if value, ok := pwc.mutation.CallbackURL(); ok {
+	if value, ok := _c.mutation.CallbackURL(); ok {
 		_spec.SetField(paymentwebhook.FieldCallbackURL, field.TypeString, value)
 		_node.CallbackURL = value
 	}
-	if nodes := pwc.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -278,7 +278,7 @@ func (pwc *PaymentWebhookCreate) createSpec() (*PaymentWebhook, *sqlgraph.Create
 		_node.payment_order_payment_webhook = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pwc.mutation.NetworkIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.NetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -314,10 +314,10 @@ func (pwc *PaymentWebhookCreate) createSpec() (*PaymentWebhook, *sqlgraph.Create
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (pwc *PaymentWebhookCreate) OnConflict(opts ...sql.ConflictOption) *PaymentWebhookUpsertOne {
-	pwc.conflict = opts
+func (_c *PaymentWebhookCreate) OnConflict(opts ...sql.ConflictOption) *PaymentWebhookUpsertOne {
+	_c.conflict = opts
 	return &PaymentWebhookUpsertOne{
-		create: pwc,
+		create: _c,
 	}
 }
 
@@ -327,10 +327,10 @@ func (pwc *PaymentWebhookCreate) OnConflict(opts ...sql.ConflictOption) *Payment
 //	client.PaymentWebhook.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pwc *PaymentWebhookCreate) OnConflictColumns(columns ...string) *PaymentWebhookUpsertOne {
-	pwc.conflict = append(pwc.conflict, sql.ConflictColumns(columns...))
+func (_c *PaymentWebhookCreate) OnConflictColumns(columns ...string) *PaymentWebhookUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &PaymentWebhookUpsertOne{
-		create: pwc,
+		create: _c,
 	}
 }
 
@@ -549,16 +549,16 @@ type PaymentWebhookCreateBulk struct {
 }
 
 // Save creates the PaymentWebhook entities in the database.
-func (pwcb *PaymentWebhookCreateBulk) Save(ctx context.Context) ([]*PaymentWebhook, error) {
-	if pwcb.err != nil {
-		return nil, pwcb.err
+func (_c *PaymentWebhookCreateBulk) Save(ctx context.Context) ([]*PaymentWebhook, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(pwcb.builders))
-	nodes := make([]*PaymentWebhook, len(pwcb.builders))
-	mutators := make([]Mutator, len(pwcb.builders))
-	for i := range pwcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*PaymentWebhook, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := pwcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*PaymentWebhookMutation)
@@ -572,12 +572,12 @@ func (pwcb *PaymentWebhookCreateBulk) Save(ctx context.Context) ([]*PaymentWebho
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, pwcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = pwcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, pwcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -597,7 +597,7 @@ func (pwcb *PaymentWebhookCreateBulk) Save(ctx context.Context) ([]*PaymentWebho
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, pwcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -605,8 +605,8 @@ func (pwcb *PaymentWebhookCreateBulk) Save(ctx context.Context) ([]*PaymentWebho
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pwcb *PaymentWebhookCreateBulk) SaveX(ctx context.Context) []*PaymentWebhook {
-	v, err := pwcb.Save(ctx)
+func (_c *PaymentWebhookCreateBulk) SaveX(ctx context.Context) []*PaymentWebhook {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -614,14 +614,14 @@ func (pwcb *PaymentWebhookCreateBulk) SaveX(ctx context.Context) []*PaymentWebho
 }
 
 // Exec executes the query.
-func (pwcb *PaymentWebhookCreateBulk) Exec(ctx context.Context) error {
-	_, err := pwcb.Save(ctx)
+func (_c *PaymentWebhookCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pwcb *PaymentWebhookCreateBulk) ExecX(ctx context.Context) {
-	if err := pwcb.Exec(ctx); err != nil {
+func (_c *PaymentWebhookCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -641,10 +641,10 @@ func (pwcb *PaymentWebhookCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (pwcb *PaymentWebhookCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentWebhookUpsertBulk {
-	pwcb.conflict = opts
+func (_c *PaymentWebhookCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentWebhookUpsertBulk {
+	_c.conflict = opts
 	return &PaymentWebhookUpsertBulk{
-		create: pwcb,
+		create: _c,
 	}
 }
 
@@ -654,10 +654,10 @@ func (pwcb *PaymentWebhookCreateBulk) OnConflict(opts ...sql.ConflictOption) *Pa
 //	client.PaymentWebhook.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pwcb *PaymentWebhookCreateBulk) OnConflictColumns(columns ...string) *PaymentWebhookUpsertBulk {
-	pwcb.conflict = append(pwcb.conflict, sql.ConflictColumns(columns...))
+func (_c *PaymentWebhookCreateBulk) OnConflictColumns(columns ...string) *PaymentWebhookUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &PaymentWebhookUpsertBulk{
-		create: pwcb,
+		create: _c,
 	}
 }
 

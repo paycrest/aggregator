@@ -24,152 +24,152 @@ type BeneficialOwnerUpdate struct {
 }
 
 // Where appends a list predicates to the BeneficialOwnerUpdate builder.
-func (bou *BeneficialOwnerUpdate) Where(ps ...predicate.BeneficialOwner) *BeneficialOwnerUpdate {
-	bou.mutation.Where(ps...)
-	return bou
+func (_u *BeneficialOwnerUpdate) Where(ps ...predicate.BeneficialOwner) *BeneficialOwnerUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetFullName sets the "full_name" field.
-func (bou *BeneficialOwnerUpdate) SetFullName(s string) *BeneficialOwnerUpdate {
-	bou.mutation.SetFullName(s)
-	return bou
+func (_u *BeneficialOwnerUpdate) SetFullName(v string) *BeneficialOwnerUpdate {
+	_u.mutation.SetFullName(v)
+	return _u
 }
 
 // SetNillableFullName sets the "full_name" field if the given value is not nil.
-func (bou *BeneficialOwnerUpdate) SetNillableFullName(s *string) *BeneficialOwnerUpdate {
-	if s != nil {
-		bou.SetFullName(*s)
+func (_u *BeneficialOwnerUpdate) SetNillableFullName(v *string) *BeneficialOwnerUpdate {
+	if v != nil {
+		_u.SetFullName(*v)
 	}
-	return bou
+	return _u
 }
 
 // SetResidentialAddress sets the "residential_address" field.
-func (bou *BeneficialOwnerUpdate) SetResidentialAddress(s string) *BeneficialOwnerUpdate {
-	bou.mutation.SetResidentialAddress(s)
-	return bou
+func (_u *BeneficialOwnerUpdate) SetResidentialAddress(v string) *BeneficialOwnerUpdate {
+	_u.mutation.SetResidentialAddress(v)
+	return _u
 }
 
 // SetNillableResidentialAddress sets the "residential_address" field if the given value is not nil.
-func (bou *BeneficialOwnerUpdate) SetNillableResidentialAddress(s *string) *BeneficialOwnerUpdate {
-	if s != nil {
-		bou.SetResidentialAddress(*s)
+func (_u *BeneficialOwnerUpdate) SetNillableResidentialAddress(v *string) *BeneficialOwnerUpdate {
+	if v != nil {
+		_u.SetResidentialAddress(*v)
 	}
-	return bou
+	return _u
 }
 
 // SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
-func (bou *BeneficialOwnerUpdate) SetProofOfResidentialAddressURL(s string) *BeneficialOwnerUpdate {
-	bou.mutation.SetProofOfResidentialAddressURL(s)
-	return bou
+func (_u *BeneficialOwnerUpdate) SetProofOfResidentialAddressURL(v string) *BeneficialOwnerUpdate {
+	_u.mutation.SetProofOfResidentialAddressURL(v)
+	return _u
 }
 
 // SetNillableProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field if the given value is not nil.
-func (bou *BeneficialOwnerUpdate) SetNillableProofOfResidentialAddressURL(s *string) *BeneficialOwnerUpdate {
-	if s != nil {
-		bou.SetProofOfResidentialAddressURL(*s)
+func (_u *BeneficialOwnerUpdate) SetNillableProofOfResidentialAddressURL(v *string) *BeneficialOwnerUpdate {
+	if v != nil {
+		_u.SetProofOfResidentialAddressURL(*v)
 	}
-	return bou
+	return _u
 }
 
 // SetGovernmentIssuedIDURL sets the "government_issued_id_url" field.
-func (bou *BeneficialOwnerUpdate) SetGovernmentIssuedIDURL(s string) *BeneficialOwnerUpdate {
-	bou.mutation.SetGovernmentIssuedIDURL(s)
-	return bou
+func (_u *BeneficialOwnerUpdate) SetGovernmentIssuedIDURL(v string) *BeneficialOwnerUpdate {
+	_u.mutation.SetGovernmentIssuedIDURL(v)
+	return _u
 }
 
 // SetNillableGovernmentIssuedIDURL sets the "government_issued_id_url" field if the given value is not nil.
-func (bou *BeneficialOwnerUpdate) SetNillableGovernmentIssuedIDURL(s *string) *BeneficialOwnerUpdate {
-	if s != nil {
-		bou.SetGovernmentIssuedIDURL(*s)
+func (_u *BeneficialOwnerUpdate) SetNillableGovernmentIssuedIDURL(v *string) *BeneficialOwnerUpdate {
+	if v != nil {
+		_u.SetGovernmentIssuedIDURL(*v)
 	}
-	return bou
+	return _u
 }
 
 // SetDateOfBirth sets the "date_of_birth" field.
-func (bou *BeneficialOwnerUpdate) SetDateOfBirth(s string) *BeneficialOwnerUpdate {
-	bou.mutation.SetDateOfBirth(s)
-	return bou
+func (_u *BeneficialOwnerUpdate) SetDateOfBirth(v string) *BeneficialOwnerUpdate {
+	_u.mutation.SetDateOfBirth(v)
+	return _u
 }
 
 // SetNillableDateOfBirth sets the "date_of_birth" field if the given value is not nil.
-func (bou *BeneficialOwnerUpdate) SetNillableDateOfBirth(s *string) *BeneficialOwnerUpdate {
-	if s != nil {
-		bou.SetDateOfBirth(*s)
+func (_u *BeneficialOwnerUpdate) SetNillableDateOfBirth(v *string) *BeneficialOwnerUpdate {
+	if v != nil {
+		_u.SetDateOfBirth(*v)
 	}
-	return bou
+	return _u
 }
 
 // SetOwnershipPercentage sets the "ownership_percentage" field.
-func (bou *BeneficialOwnerUpdate) SetOwnershipPercentage(f float64) *BeneficialOwnerUpdate {
-	bou.mutation.ResetOwnershipPercentage()
-	bou.mutation.SetOwnershipPercentage(f)
-	return bou
+func (_u *BeneficialOwnerUpdate) SetOwnershipPercentage(v float64) *BeneficialOwnerUpdate {
+	_u.mutation.ResetOwnershipPercentage()
+	_u.mutation.SetOwnershipPercentage(v)
+	return _u
 }
 
 // SetNillableOwnershipPercentage sets the "ownership_percentage" field if the given value is not nil.
-func (bou *BeneficialOwnerUpdate) SetNillableOwnershipPercentage(f *float64) *BeneficialOwnerUpdate {
-	if f != nil {
-		bou.SetOwnershipPercentage(*f)
+func (_u *BeneficialOwnerUpdate) SetNillableOwnershipPercentage(v *float64) *BeneficialOwnerUpdate {
+	if v != nil {
+		_u.SetOwnershipPercentage(*v)
 	}
-	return bou
+	return _u
 }
 
-// AddOwnershipPercentage adds f to the "ownership_percentage" field.
-func (bou *BeneficialOwnerUpdate) AddOwnershipPercentage(f float64) *BeneficialOwnerUpdate {
-	bou.mutation.AddOwnershipPercentage(f)
-	return bou
+// AddOwnershipPercentage adds value to the "ownership_percentage" field.
+func (_u *BeneficialOwnerUpdate) AddOwnershipPercentage(v float64) *BeneficialOwnerUpdate {
+	_u.mutation.AddOwnershipPercentage(v)
+	return _u
 }
 
 // SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
-func (bou *BeneficialOwnerUpdate) SetGovernmentIssuedIDType(biit beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdate {
-	bou.mutation.SetGovernmentIssuedIDType(biit)
-	return bou
+func (_u *BeneficialOwnerUpdate) SetGovernmentIssuedIDType(v beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdate {
+	_u.mutation.SetGovernmentIssuedIDType(v)
+	return _u
 }
 
 // SetNillableGovernmentIssuedIDType sets the "government_issued_id_type" field if the given value is not nil.
-func (bou *BeneficialOwnerUpdate) SetNillableGovernmentIssuedIDType(biit *beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdate {
-	if biit != nil {
-		bou.SetGovernmentIssuedIDType(*biit)
+func (_u *BeneficialOwnerUpdate) SetNillableGovernmentIssuedIDType(v *beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdate {
+	if v != nil {
+		_u.SetGovernmentIssuedIDType(*v)
 	}
-	return bou
+	return _u
 }
 
 // ClearGovernmentIssuedIDType clears the value of the "government_issued_id_type" field.
-func (bou *BeneficialOwnerUpdate) ClearGovernmentIssuedIDType() *BeneficialOwnerUpdate {
-	bou.mutation.ClearGovernmentIssuedIDType()
-	return bou
+func (_u *BeneficialOwnerUpdate) ClearGovernmentIssuedIDType() *BeneficialOwnerUpdate {
+	_u.mutation.ClearGovernmentIssuedIDType()
+	return _u
 }
 
 // SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
-func (bou *BeneficialOwnerUpdate) SetKybProfileID(id uuid.UUID) *BeneficialOwnerUpdate {
-	bou.mutation.SetKybProfileID(id)
-	return bou
+func (_u *BeneficialOwnerUpdate) SetKybProfileID(id uuid.UUID) *BeneficialOwnerUpdate {
+	_u.mutation.SetKybProfileID(id)
+	return _u
 }
 
 // SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
-func (bou *BeneficialOwnerUpdate) SetKybProfile(k *KYBProfile) *BeneficialOwnerUpdate {
-	return bou.SetKybProfileID(k.ID)
+func (_u *BeneficialOwnerUpdate) SetKybProfile(v *KYBProfile) *BeneficialOwnerUpdate {
+	return _u.SetKybProfileID(v.ID)
 }
 
 // Mutation returns the BeneficialOwnerMutation object of the builder.
-func (bou *BeneficialOwnerUpdate) Mutation() *BeneficialOwnerMutation {
-	return bou.mutation
+func (_u *BeneficialOwnerUpdate) Mutation() *BeneficialOwnerMutation {
+	return _u.mutation
 }
 
 // ClearKybProfile clears the "kyb_profile" edge to the KYBProfile entity.
-func (bou *BeneficialOwnerUpdate) ClearKybProfile() *BeneficialOwnerUpdate {
-	bou.mutation.ClearKybProfile()
-	return bou
+func (_u *BeneficialOwnerUpdate) ClearKybProfile() *BeneficialOwnerUpdate {
+	_u.mutation.ClearKybProfile()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (bou *BeneficialOwnerUpdate) Save(ctx context.Context) (int, error) {
-	return withHooks(ctx, bou.sqlSave, bou.mutation, bou.hooks)
+func (_u *BeneficialOwnerUpdate) Save(ctx context.Context) (int, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (bou *BeneficialOwnerUpdate) SaveX(ctx context.Context) int {
-	affected, err := bou.Save(ctx)
+func (_u *BeneficialOwnerUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -177,76 +177,76 @@ func (bou *BeneficialOwnerUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (bou *BeneficialOwnerUpdate) Exec(ctx context.Context) error {
-	_, err := bou.Save(ctx)
+func (_u *BeneficialOwnerUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (bou *BeneficialOwnerUpdate) ExecX(ctx context.Context) {
-	if err := bou.Exec(ctx); err != nil {
+func (_u *BeneficialOwnerUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (bou *BeneficialOwnerUpdate) check() error {
-	if v, ok := bou.mutation.FullName(); ok {
+func (_u *BeneficialOwnerUpdate) check() error {
+	if v, ok := _u.mutation.FullName(); ok {
 		if err := beneficialowner.FullNameValidator(v); err != nil {
 			return &ValidationError{Name: "full_name", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.full_name": %w`, err)}
 		}
 	}
-	if v, ok := bou.mutation.GovernmentIssuedIDType(); ok {
+	if v, ok := _u.mutation.GovernmentIssuedIDType(); ok {
 		if err := beneficialowner.GovernmentIssuedIDTypeValidator(v); err != nil {
 			return &ValidationError{Name: "government_issued_id_type", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.government_issued_id_type": %w`, err)}
 		}
 	}
-	if bou.mutation.KybProfileCleared() && len(bou.mutation.KybProfileIDs()) > 0 {
+	if _u.mutation.KybProfileCleared() && len(_u.mutation.KybProfileIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "BeneficialOwner.kyb_profile"`)
 	}
 	return nil
 }
 
-func (bou *BeneficialOwnerUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := bou.check(); err != nil {
-		return n, err
+func (_u *BeneficialOwnerUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(beneficialowner.Table, beneficialowner.Columns, sqlgraph.NewFieldSpec(beneficialowner.FieldID, field.TypeUUID))
-	if ps := bou.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := bou.mutation.FullName(); ok {
+	if value, ok := _u.mutation.FullName(); ok {
 		_spec.SetField(beneficialowner.FieldFullName, field.TypeString, value)
 	}
-	if value, ok := bou.mutation.ResidentialAddress(); ok {
+	if value, ok := _u.mutation.ResidentialAddress(); ok {
 		_spec.SetField(beneficialowner.FieldResidentialAddress, field.TypeString, value)
 	}
-	if value, ok := bou.mutation.ProofOfResidentialAddressURL(); ok {
+	if value, ok := _u.mutation.ProofOfResidentialAddressURL(); ok {
 		_spec.SetField(beneficialowner.FieldProofOfResidentialAddressURL, field.TypeString, value)
 	}
-	if value, ok := bou.mutation.GovernmentIssuedIDURL(); ok {
+	if value, ok := _u.mutation.GovernmentIssuedIDURL(); ok {
 		_spec.SetField(beneficialowner.FieldGovernmentIssuedIDURL, field.TypeString, value)
 	}
-	if value, ok := bou.mutation.DateOfBirth(); ok {
+	if value, ok := _u.mutation.DateOfBirth(); ok {
 		_spec.SetField(beneficialowner.FieldDateOfBirth, field.TypeString, value)
 	}
-	if value, ok := bou.mutation.OwnershipPercentage(); ok {
+	if value, ok := _u.mutation.OwnershipPercentage(); ok {
 		_spec.SetField(beneficialowner.FieldOwnershipPercentage, field.TypeFloat64, value)
 	}
-	if value, ok := bou.mutation.AddedOwnershipPercentage(); ok {
+	if value, ok := _u.mutation.AddedOwnershipPercentage(); ok {
 		_spec.AddField(beneficialowner.FieldOwnershipPercentage, field.TypeFloat64, value)
 	}
-	if value, ok := bou.mutation.GovernmentIssuedIDType(); ok {
+	if value, ok := _u.mutation.GovernmentIssuedIDType(); ok {
 		_spec.SetField(beneficialowner.FieldGovernmentIssuedIDType, field.TypeEnum, value)
 	}
-	if bou.mutation.GovernmentIssuedIDTypeCleared() {
+	if _u.mutation.GovernmentIssuedIDTypeCleared() {
 		_spec.ClearField(beneficialowner.FieldGovernmentIssuedIDType, field.TypeEnum)
 	}
-	if bou.mutation.KybProfileCleared() {
+	if _u.mutation.KybProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -259,7 +259,7 @@ func (bou *BeneficialOwnerUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := bou.mutation.KybProfileIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.KybProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -275,7 +275,7 @@ func (bou *BeneficialOwnerUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, bou.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{beneficialowner.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -283,8 +283,8 @@ func (bou *BeneficialOwnerUpdate) sqlSave(ctx context.Context) (n int, err error
 		}
 		return 0, err
 	}
-	bou.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // BeneficialOwnerUpdateOne is the builder for updating a single BeneficialOwner entity.
@@ -296,159 +296,159 @@ type BeneficialOwnerUpdateOne struct {
 }
 
 // SetFullName sets the "full_name" field.
-func (bouo *BeneficialOwnerUpdateOne) SetFullName(s string) *BeneficialOwnerUpdateOne {
-	bouo.mutation.SetFullName(s)
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) SetFullName(v string) *BeneficialOwnerUpdateOne {
+	_u.mutation.SetFullName(v)
+	return _u
 }
 
 // SetNillableFullName sets the "full_name" field if the given value is not nil.
-func (bouo *BeneficialOwnerUpdateOne) SetNillableFullName(s *string) *BeneficialOwnerUpdateOne {
-	if s != nil {
-		bouo.SetFullName(*s)
+func (_u *BeneficialOwnerUpdateOne) SetNillableFullName(v *string) *BeneficialOwnerUpdateOne {
+	if v != nil {
+		_u.SetFullName(*v)
 	}
-	return bouo
+	return _u
 }
 
 // SetResidentialAddress sets the "residential_address" field.
-func (bouo *BeneficialOwnerUpdateOne) SetResidentialAddress(s string) *BeneficialOwnerUpdateOne {
-	bouo.mutation.SetResidentialAddress(s)
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) SetResidentialAddress(v string) *BeneficialOwnerUpdateOne {
+	_u.mutation.SetResidentialAddress(v)
+	return _u
 }
 
 // SetNillableResidentialAddress sets the "residential_address" field if the given value is not nil.
-func (bouo *BeneficialOwnerUpdateOne) SetNillableResidentialAddress(s *string) *BeneficialOwnerUpdateOne {
-	if s != nil {
-		bouo.SetResidentialAddress(*s)
+func (_u *BeneficialOwnerUpdateOne) SetNillableResidentialAddress(v *string) *BeneficialOwnerUpdateOne {
+	if v != nil {
+		_u.SetResidentialAddress(*v)
 	}
-	return bouo
+	return _u
 }
 
 // SetProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field.
-func (bouo *BeneficialOwnerUpdateOne) SetProofOfResidentialAddressURL(s string) *BeneficialOwnerUpdateOne {
-	bouo.mutation.SetProofOfResidentialAddressURL(s)
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) SetProofOfResidentialAddressURL(v string) *BeneficialOwnerUpdateOne {
+	_u.mutation.SetProofOfResidentialAddressURL(v)
+	return _u
 }
 
 // SetNillableProofOfResidentialAddressURL sets the "proof_of_residential_address_url" field if the given value is not nil.
-func (bouo *BeneficialOwnerUpdateOne) SetNillableProofOfResidentialAddressURL(s *string) *BeneficialOwnerUpdateOne {
-	if s != nil {
-		bouo.SetProofOfResidentialAddressURL(*s)
+func (_u *BeneficialOwnerUpdateOne) SetNillableProofOfResidentialAddressURL(v *string) *BeneficialOwnerUpdateOne {
+	if v != nil {
+		_u.SetProofOfResidentialAddressURL(*v)
 	}
-	return bouo
+	return _u
 }
 
 // SetGovernmentIssuedIDURL sets the "government_issued_id_url" field.
-func (bouo *BeneficialOwnerUpdateOne) SetGovernmentIssuedIDURL(s string) *BeneficialOwnerUpdateOne {
-	bouo.mutation.SetGovernmentIssuedIDURL(s)
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) SetGovernmentIssuedIDURL(v string) *BeneficialOwnerUpdateOne {
+	_u.mutation.SetGovernmentIssuedIDURL(v)
+	return _u
 }
 
 // SetNillableGovernmentIssuedIDURL sets the "government_issued_id_url" field if the given value is not nil.
-func (bouo *BeneficialOwnerUpdateOne) SetNillableGovernmentIssuedIDURL(s *string) *BeneficialOwnerUpdateOne {
-	if s != nil {
-		bouo.SetGovernmentIssuedIDURL(*s)
+func (_u *BeneficialOwnerUpdateOne) SetNillableGovernmentIssuedIDURL(v *string) *BeneficialOwnerUpdateOne {
+	if v != nil {
+		_u.SetGovernmentIssuedIDURL(*v)
 	}
-	return bouo
+	return _u
 }
 
 // SetDateOfBirth sets the "date_of_birth" field.
-func (bouo *BeneficialOwnerUpdateOne) SetDateOfBirth(s string) *BeneficialOwnerUpdateOne {
-	bouo.mutation.SetDateOfBirth(s)
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) SetDateOfBirth(v string) *BeneficialOwnerUpdateOne {
+	_u.mutation.SetDateOfBirth(v)
+	return _u
 }
 
 // SetNillableDateOfBirth sets the "date_of_birth" field if the given value is not nil.
-func (bouo *BeneficialOwnerUpdateOne) SetNillableDateOfBirth(s *string) *BeneficialOwnerUpdateOne {
-	if s != nil {
-		bouo.SetDateOfBirth(*s)
+func (_u *BeneficialOwnerUpdateOne) SetNillableDateOfBirth(v *string) *BeneficialOwnerUpdateOne {
+	if v != nil {
+		_u.SetDateOfBirth(*v)
 	}
-	return bouo
+	return _u
 }
 
 // SetOwnershipPercentage sets the "ownership_percentage" field.
-func (bouo *BeneficialOwnerUpdateOne) SetOwnershipPercentage(f float64) *BeneficialOwnerUpdateOne {
-	bouo.mutation.ResetOwnershipPercentage()
-	bouo.mutation.SetOwnershipPercentage(f)
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) SetOwnershipPercentage(v float64) *BeneficialOwnerUpdateOne {
+	_u.mutation.ResetOwnershipPercentage()
+	_u.mutation.SetOwnershipPercentage(v)
+	return _u
 }
 
 // SetNillableOwnershipPercentage sets the "ownership_percentage" field if the given value is not nil.
-func (bouo *BeneficialOwnerUpdateOne) SetNillableOwnershipPercentage(f *float64) *BeneficialOwnerUpdateOne {
-	if f != nil {
-		bouo.SetOwnershipPercentage(*f)
+func (_u *BeneficialOwnerUpdateOne) SetNillableOwnershipPercentage(v *float64) *BeneficialOwnerUpdateOne {
+	if v != nil {
+		_u.SetOwnershipPercentage(*v)
 	}
-	return bouo
+	return _u
 }
 
-// AddOwnershipPercentage adds f to the "ownership_percentage" field.
-func (bouo *BeneficialOwnerUpdateOne) AddOwnershipPercentage(f float64) *BeneficialOwnerUpdateOne {
-	bouo.mutation.AddOwnershipPercentage(f)
-	return bouo
+// AddOwnershipPercentage adds value to the "ownership_percentage" field.
+func (_u *BeneficialOwnerUpdateOne) AddOwnershipPercentage(v float64) *BeneficialOwnerUpdateOne {
+	_u.mutation.AddOwnershipPercentage(v)
+	return _u
 }
 
 // SetGovernmentIssuedIDType sets the "government_issued_id_type" field.
-func (bouo *BeneficialOwnerUpdateOne) SetGovernmentIssuedIDType(biit beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdateOne {
-	bouo.mutation.SetGovernmentIssuedIDType(biit)
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) SetGovernmentIssuedIDType(v beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdateOne {
+	_u.mutation.SetGovernmentIssuedIDType(v)
+	return _u
 }
 
 // SetNillableGovernmentIssuedIDType sets the "government_issued_id_type" field if the given value is not nil.
-func (bouo *BeneficialOwnerUpdateOne) SetNillableGovernmentIssuedIDType(biit *beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdateOne {
-	if biit != nil {
-		bouo.SetGovernmentIssuedIDType(*biit)
+func (_u *BeneficialOwnerUpdateOne) SetNillableGovernmentIssuedIDType(v *beneficialowner.GovernmentIssuedIDType) *BeneficialOwnerUpdateOne {
+	if v != nil {
+		_u.SetGovernmentIssuedIDType(*v)
 	}
-	return bouo
+	return _u
 }
 
 // ClearGovernmentIssuedIDType clears the value of the "government_issued_id_type" field.
-func (bouo *BeneficialOwnerUpdateOne) ClearGovernmentIssuedIDType() *BeneficialOwnerUpdateOne {
-	bouo.mutation.ClearGovernmentIssuedIDType()
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) ClearGovernmentIssuedIDType() *BeneficialOwnerUpdateOne {
+	_u.mutation.ClearGovernmentIssuedIDType()
+	return _u
 }
 
 // SetKybProfileID sets the "kyb_profile" edge to the KYBProfile entity by ID.
-func (bouo *BeneficialOwnerUpdateOne) SetKybProfileID(id uuid.UUID) *BeneficialOwnerUpdateOne {
-	bouo.mutation.SetKybProfileID(id)
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) SetKybProfileID(id uuid.UUID) *BeneficialOwnerUpdateOne {
+	_u.mutation.SetKybProfileID(id)
+	return _u
 }
 
 // SetKybProfile sets the "kyb_profile" edge to the KYBProfile entity.
-func (bouo *BeneficialOwnerUpdateOne) SetKybProfile(k *KYBProfile) *BeneficialOwnerUpdateOne {
-	return bouo.SetKybProfileID(k.ID)
+func (_u *BeneficialOwnerUpdateOne) SetKybProfile(v *KYBProfile) *BeneficialOwnerUpdateOne {
+	return _u.SetKybProfileID(v.ID)
 }
 
 // Mutation returns the BeneficialOwnerMutation object of the builder.
-func (bouo *BeneficialOwnerUpdateOne) Mutation() *BeneficialOwnerMutation {
-	return bouo.mutation
+func (_u *BeneficialOwnerUpdateOne) Mutation() *BeneficialOwnerMutation {
+	return _u.mutation
 }
 
 // ClearKybProfile clears the "kyb_profile" edge to the KYBProfile entity.
-func (bouo *BeneficialOwnerUpdateOne) ClearKybProfile() *BeneficialOwnerUpdateOne {
-	bouo.mutation.ClearKybProfile()
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) ClearKybProfile() *BeneficialOwnerUpdateOne {
+	_u.mutation.ClearKybProfile()
+	return _u
 }
 
 // Where appends a list predicates to the BeneficialOwnerUpdate builder.
-func (bouo *BeneficialOwnerUpdateOne) Where(ps ...predicate.BeneficialOwner) *BeneficialOwnerUpdateOne {
-	bouo.mutation.Where(ps...)
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) Where(ps ...predicate.BeneficialOwner) *BeneficialOwnerUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (bouo *BeneficialOwnerUpdateOne) Select(field string, fields ...string) *BeneficialOwnerUpdateOne {
-	bouo.fields = append([]string{field}, fields...)
-	return bouo
+func (_u *BeneficialOwnerUpdateOne) Select(field string, fields ...string) *BeneficialOwnerUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated BeneficialOwner entity.
-func (bouo *BeneficialOwnerUpdateOne) Save(ctx context.Context) (*BeneficialOwner, error) {
-	return withHooks(ctx, bouo.sqlSave, bouo.mutation, bouo.hooks)
+func (_u *BeneficialOwnerUpdateOne) Save(ctx context.Context) (*BeneficialOwner, error) {
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (bouo *BeneficialOwnerUpdateOne) SaveX(ctx context.Context) *BeneficialOwner {
-	node, err := bouo.Save(ctx)
+func (_u *BeneficialOwnerUpdateOne) SaveX(ctx context.Context) *BeneficialOwner {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -456,47 +456,47 @@ func (bouo *BeneficialOwnerUpdateOne) SaveX(ctx context.Context) *BeneficialOwne
 }
 
 // Exec executes the query on the entity.
-func (bouo *BeneficialOwnerUpdateOne) Exec(ctx context.Context) error {
-	_, err := bouo.Save(ctx)
+func (_u *BeneficialOwnerUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (bouo *BeneficialOwnerUpdateOne) ExecX(ctx context.Context) {
-	if err := bouo.Exec(ctx); err != nil {
+func (_u *BeneficialOwnerUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (bouo *BeneficialOwnerUpdateOne) check() error {
-	if v, ok := bouo.mutation.FullName(); ok {
+func (_u *BeneficialOwnerUpdateOne) check() error {
+	if v, ok := _u.mutation.FullName(); ok {
 		if err := beneficialowner.FullNameValidator(v); err != nil {
 			return &ValidationError{Name: "full_name", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.full_name": %w`, err)}
 		}
 	}
-	if v, ok := bouo.mutation.GovernmentIssuedIDType(); ok {
+	if v, ok := _u.mutation.GovernmentIssuedIDType(); ok {
 		if err := beneficialowner.GovernmentIssuedIDTypeValidator(v); err != nil {
 			return &ValidationError{Name: "government_issued_id_type", err: fmt.Errorf(`ent: validator failed for field "BeneficialOwner.government_issued_id_type": %w`, err)}
 		}
 	}
-	if bouo.mutation.KybProfileCleared() && len(bouo.mutation.KybProfileIDs()) > 0 {
+	if _u.mutation.KybProfileCleared() && len(_u.mutation.KybProfileIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "BeneficialOwner.kyb_profile"`)
 	}
 	return nil
 }
 
-func (bouo *BeneficialOwnerUpdateOne) sqlSave(ctx context.Context) (_node *BeneficialOwner, err error) {
-	if err := bouo.check(); err != nil {
+func (_u *BeneficialOwnerUpdateOne) sqlSave(ctx context.Context) (_node *BeneficialOwner, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(beneficialowner.Table, beneficialowner.Columns, sqlgraph.NewFieldSpec(beneficialowner.FieldID, field.TypeUUID))
-	id, ok := bouo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "BeneficialOwner.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := bouo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, beneficialowner.FieldID)
 		for _, f := range fields {
@@ -508,41 +508,41 @@ func (bouo *BeneficialOwnerUpdateOne) sqlSave(ctx context.Context) (_node *Benef
 			}
 		}
 	}
-	if ps := bouo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := bouo.mutation.FullName(); ok {
+	if value, ok := _u.mutation.FullName(); ok {
 		_spec.SetField(beneficialowner.FieldFullName, field.TypeString, value)
 	}
-	if value, ok := bouo.mutation.ResidentialAddress(); ok {
+	if value, ok := _u.mutation.ResidentialAddress(); ok {
 		_spec.SetField(beneficialowner.FieldResidentialAddress, field.TypeString, value)
 	}
-	if value, ok := bouo.mutation.ProofOfResidentialAddressURL(); ok {
+	if value, ok := _u.mutation.ProofOfResidentialAddressURL(); ok {
 		_spec.SetField(beneficialowner.FieldProofOfResidentialAddressURL, field.TypeString, value)
 	}
-	if value, ok := bouo.mutation.GovernmentIssuedIDURL(); ok {
+	if value, ok := _u.mutation.GovernmentIssuedIDURL(); ok {
 		_spec.SetField(beneficialowner.FieldGovernmentIssuedIDURL, field.TypeString, value)
 	}
-	if value, ok := bouo.mutation.DateOfBirth(); ok {
+	if value, ok := _u.mutation.DateOfBirth(); ok {
 		_spec.SetField(beneficialowner.FieldDateOfBirth, field.TypeString, value)
 	}
-	if value, ok := bouo.mutation.OwnershipPercentage(); ok {
+	if value, ok := _u.mutation.OwnershipPercentage(); ok {
 		_spec.SetField(beneficialowner.FieldOwnershipPercentage, field.TypeFloat64, value)
 	}
-	if value, ok := bouo.mutation.AddedOwnershipPercentage(); ok {
+	if value, ok := _u.mutation.AddedOwnershipPercentage(); ok {
 		_spec.AddField(beneficialowner.FieldOwnershipPercentage, field.TypeFloat64, value)
 	}
-	if value, ok := bouo.mutation.GovernmentIssuedIDType(); ok {
+	if value, ok := _u.mutation.GovernmentIssuedIDType(); ok {
 		_spec.SetField(beneficialowner.FieldGovernmentIssuedIDType, field.TypeEnum, value)
 	}
-	if bouo.mutation.GovernmentIssuedIDTypeCleared() {
+	if _u.mutation.GovernmentIssuedIDTypeCleared() {
 		_spec.ClearField(beneficialowner.FieldGovernmentIssuedIDType, field.TypeEnum)
 	}
-	if bouo.mutation.KybProfileCleared() {
+	if _u.mutation.KybProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -555,7 +555,7 @@ func (bouo *BeneficialOwnerUpdateOne) sqlSave(ctx context.Context) (_node *Benef
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := bouo.mutation.KybProfileIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.KybProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -571,10 +571,10 @@ func (bouo *BeneficialOwnerUpdateOne) sqlSave(ctx context.Context) (_node *Benef
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &BeneficialOwner{config: bouo.config}
+	_node = &BeneficialOwner{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, bouo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{beneficialowner.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -582,6 +582,6 @@ func (bouo *BeneficialOwnerUpdateOne) sqlSave(ctx context.Context) (_node *Benef
 		}
 		return nil, err
 	}
-	bouo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

@@ -28,277 +28,277 @@ type ProviderOrderTokenUpdate struct {
 }
 
 // Where appends a list predicates to the ProviderOrderTokenUpdate builder.
-func (potu *ProviderOrderTokenUpdate) Where(ps ...predicate.ProviderOrderToken) *ProviderOrderTokenUpdate {
-	potu.mutation.Where(ps...)
-	return potu
+func (_u *ProviderOrderTokenUpdate) Where(ps ...predicate.ProviderOrderToken) *ProviderOrderTokenUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (potu *ProviderOrderTokenUpdate) SetUpdatedAt(t time.Time) *ProviderOrderTokenUpdate {
-	potu.mutation.SetUpdatedAt(t)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetUpdatedAt(v time.Time) *ProviderOrderTokenUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetFixedConversionRate sets the "fixed_conversion_rate" field.
-func (potu *ProviderOrderTokenUpdate) SetFixedConversionRate(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.ResetFixedConversionRate()
-	potu.mutation.SetFixedConversionRate(d)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetFixedConversionRate()
+	_u.mutation.SetFixedConversionRate(v)
+	return _u
 }
 
 // SetNillableFixedConversionRate sets the "fixed_conversion_rate" field if the given value is not nil.
-func (potu *ProviderOrderTokenUpdate) SetNillableFixedConversionRate(d *decimal.Decimal) *ProviderOrderTokenUpdate {
-	if d != nil {
-		potu.SetFixedConversionRate(*d)
+func (_u *ProviderOrderTokenUpdate) SetNillableFixedConversionRate(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetFixedConversionRate(*v)
 	}
-	return potu
+	return _u
 }
 
-// AddFixedConversionRate adds d to the "fixed_conversion_rate" field.
-func (potu *ProviderOrderTokenUpdate) AddFixedConversionRate(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.AddFixedConversionRate(d)
-	return potu
+// AddFixedConversionRate adds value to the "fixed_conversion_rate" field.
+func (_u *ProviderOrderTokenUpdate) AddFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddFixedConversionRate(v)
+	return _u
 }
 
 // SetFloatingConversionRate sets the "floating_conversion_rate" field.
-func (potu *ProviderOrderTokenUpdate) SetFloatingConversionRate(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.ResetFloatingConversionRate()
-	potu.mutation.SetFloatingConversionRate(d)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetFloatingConversionRate()
+	_u.mutation.SetFloatingConversionRate(v)
+	return _u
 }
 
 // SetNillableFloatingConversionRate sets the "floating_conversion_rate" field if the given value is not nil.
-func (potu *ProviderOrderTokenUpdate) SetNillableFloatingConversionRate(d *decimal.Decimal) *ProviderOrderTokenUpdate {
-	if d != nil {
-		potu.SetFloatingConversionRate(*d)
+func (_u *ProviderOrderTokenUpdate) SetNillableFloatingConversionRate(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetFloatingConversionRate(*v)
 	}
-	return potu
+	return _u
 }
 
-// AddFloatingConversionRate adds d to the "floating_conversion_rate" field.
-func (potu *ProviderOrderTokenUpdate) AddFloatingConversionRate(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.AddFloatingConversionRate(d)
-	return potu
+// AddFloatingConversionRate adds value to the "floating_conversion_rate" field.
+func (_u *ProviderOrderTokenUpdate) AddFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddFloatingConversionRate(v)
+	return _u
 }
 
 // SetConversionRateType sets the "conversion_rate_type" field.
-func (potu *ProviderOrderTokenUpdate) SetConversionRateType(prt providerordertoken.ConversionRateType) *ProviderOrderTokenUpdate {
-	potu.mutation.SetConversionRateType(prt)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetConversionRateType(v providerordertoken.ConversionRateType) *ProviderOrderTokenUpdate {
+	_u.mutation.SetConversionRateType(v)
+	return _u
 }
 
 // SetNillableConversionRateType sets the "conversion_rate_type" field if the given value is not nil.
-func (potu *ProviderOrderTokenUpdate) SetNillableConversionRateType(prt *providerordertoken.ConversionRateType) *ProviderOrderTokenUpdate {
-	if prt != nil {
-		potu.SetConversionRateType(*prt)
+func (_u *ProviderOrderTokenUpdate) SetNillableConversionRateType(v *providerordertoken.ConversionRateType) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetConversionRateType(*v)
 	}
-	return potu
+	return _u
 }
 
 // SetMaxOrderAmount sets the "max_order_amount" field.
-func (potu *ProviderOrderTokenUpdate) SetMaxOrderAmount(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.ResetMaxOrderAmount()
-	potu.mutation.SetMaxOrderAmount(d)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetMaxOrderAmount()
+	_u.mutation.SetMaxOrderAmount(v)
+	return _u
 }
 
 // SetNillableMaxOrderAmount sets the "max_order_amount" field if the given value is not nil.
-func (potu *ProviderOrderTokenUpdate) SetNillableMaxOrderAmount(d *decimal.Decimal) *ProviderOrderTokenUpdate {
-	if d != nil {
-		potu.SetMaxOrderAmount(*d)
+func (_u *ProviderOrderTokenUpdate) SetNillableMaxOrderAmount(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetMaxOrderAmount(*v)
 	}
-	return potu
+	return _u
 }
 
-// AddMaxOrderAmount adds d to the "max_order_amount" field.
-func (potu *ProviderOrderTokenUpdate) AddMaxOrderAmount(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.AddMaxOrderAmount(d)
-	return potu
+// AddMaxOrderAmount adds value to the "max_order_amount" field.
+func (_u *ProviderOrderTokenUpdate) AddMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddMaxOrderAmount(v)
+	return _u
 }
 
 // SetMinOrderAmount sets the "min_order_amount" field.
-func (potu *ProviderOrderTokenUpdate) SetMinOrderAmount(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.ResetMinOrderAmount()
-	potu.mutation.SetMinOrderAmount(d)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetMinOrderAmount()
+	_u.mutation.SetMinOrderAmount(v)
+	return _u
 }
 
 // SetNillableMinOrderAmount sets the "min_order_amount" field if the given value is not nil.
-func (potu *ProviderOrderTokenUpdate) SetNillableMinOrderAmount(d *decimal.Decimal) *ProviderOrderTokenUpdate {
-	if d != nil {
-		potu.SetMinOrderAmount(*d)
+func (_u *ProviderOrderTokenUpdate) SetNillableMinOrderAmount(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetMinOrderAmount(*v)
 	}
-	return potu
+	return _u
 }
 
-// AddMinOrderAmount adds d to the "min_order_amount" field.
-func (potu *ProviderOrderTokenUpdate) AddMinOrderAmount(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.AddMinOrderAmount(d)
-	return potu
+// AddMinOrderAmount adds value to the "min_order_amount" field.
+func (_u *ProviderOrderTokenUpdate) AddMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddMinOrderAmount(v)
+	return _u
 }
 
 // SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
-func (potu *ProviderOrderTokenUpdate) SetMaxOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.ResetMaxOrderAmountOtc()
-	potu.mutation.SetMaxOrderAmountOtc(d)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetMaxOrderAmountOtc()
+	_u.mutation.SetMaxOrderAmountOtc(v)
+	return _u
 }
 
 // SetNillableMaxOrderAmountOtc sets the "max_order_amount_otc" field if the given value is not nil.
-func (potu *ProviderOrderTokenUpdate) SetNillableMaxOrderAmountOtc(d *decimal.Decimal) *ProviderOrderTokenUpdate {
-	if d != nil {
-		potu.SetMaxOrderAmountOtc(*d)
+func (_u *ProviderOrderTokenUpdate) SetNillableMaxOrderAmountOtc(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetMaxOrderAmountOtc(*v)
 	}
-	return potu
+	return _u
 }
 
-// AddMaxOrderAmountOtc adds d to the "max_order_amount_otc" field.
-func (potu *ProviderOrderTokenUpdate) AddMaxOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.AddMaxOrderAmountOtc(d)
-	return potu
+// AddMaxOrderAmountOtc adds value to the "max_order_amount_otc" field.
+func (_u *ProviderOrderTokenUpdate) AddMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddMaxOrderAmountOtc(v)
+	return _u
 }
 
 // SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
-func (potu *ProviderOrderTokenUpdate) SetMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.ResetMinOrderAmountOtc()
-	potu.mutation.SetMinOrderAmountOtc(d)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetMinOrderAmountOtc()
+	_u.mutation.SetMinOrderAmountOtc(v)
+	return _u
 }
 
 // SetNillableMinOrderAmountOtc sets the "min_order_amount_otc" field if the given value is not nil.
-func (potu *ProviderOrderTokenUpdate) SetNillableMinOrderAmountOtc(d *decimal.Decimal) *ProviderOrderTokenUpdate {
-	if d != nil {
-		potu.SetMinOrderAmountOtc(*d)
+func (_u *ProviderOrderTokenUpdate) SetNillableMinOrderAmountOtc(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetMinOrderAmountOtc(*v)
 	}
-	return potu
+	return _u
 }
 
-// AddMinOrderAmountOtc adds d to the "min_order_amount_otc" field.
-func (potu *ProviderOrderTokenUpdate) AddMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.AddMinOrderAmountOtc(d)
-	return potu
+// AddMinOrderAmountOtc adds value to the "min_order_amount_otc" field.
+func (_u *ProviderOrderTokenUpdate) AddMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddMinOrderAmountOtc(v)
+	return _u
 }
 
 // SetRateSlippage sets the "rate_slippage" field.
-func (potu *ProviderOrderTokenUpdate) SetRateSlippage(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.ResetRateSlippage()
-	potu.mutation.SetRateSlippage(d)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetRateSlippage(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetRateSlippage()
+	_u.mutation.SetRateSlippage(v)
+	return _u
 }
 
 // SetNillableRateSlippage sets the "rate_slippage" field if the given value is not nil.
-func (potu *ProviderOrderTokenUpdate) SetNillableRateSlippage(d *decimal.Decimal) *ProviderOrderTokenUpdate {
-	if d != nil {
-		potu.SetRateSlippage(*d)
+func (_u *ProviderOrderTokenUpdate) SetNillableRateSlippage(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetRateSlippage(*v)
 	}
-	return potu
+	return _u
 }
 
-// AddRateSlippage adds d to the "rate_slippage" field.
-func (potu *ProviderOrderTokenUpdate) AddRateSlippage(d decimal.Decimal) *ProviderOrderTokenUpdate {
-	potu.mutation.AddRateSlippage(d)
-	return potu
+// AddRateSlippage adds value to the "rate_slippage" field.
+func (_u *ProviderOrderTokenUpdate) AddRateSlippage(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddRateSlippage(v)
+	return _u
 }
 
 // SetAddress sets the "address" field.
-func (potu *ProviderOrderTokenUpdate) SetAddress(s string) *ProviderOrderTokenUpdate {
-	potu.mutation.SetAddress(s)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetAddress(v string) *ProviderOrderTokenUpdate {
+	_u.mutation.SetAddress(v)
+	return _u
 }
 
 // SetNillableAddress sets the "address" field if the given value is not nil.
-func (potu *ProviderOrderTokenUpdate) SetNillableAddress(s *string) *ProviderOrderTokenUpdate {
-	if s != nil {
-		potu.SetAddress(*s)
+func (_u *ProviderOrderTokenUpdate) SetNillableAddress(v *string) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetAddress(*v)
 	}
-	return potu
+	return _u
 }
 
 // ClearAddress clears the value of the "address" field.
-func (potu *ProviderOrderTokenUpdate) ClearAddress() *ProviderOrderTokenUpdate {
-	potu.mutation.ClearAddress()
-	return potu
+func (_u *ProviderOrderTokenUpdate) ClearAddress() *ProviderOrderTokenUpdate {
+	_u.mutation.ClearAddress()
+	return _u
 }
 
 // SetNetwork sets the "network" field.
-func (potu *ProviderOrderTokenUpdate) SetNetwork(s string) *ProviderOrderTokenUpdate {
-	potu.mutation.SetNetwork(s)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetNetwork(v string) *ProviderOrderTokenUpdate {
+	_u.mutation.SetNetwork(v)
+	return _u
 }
 
 // SetNillableNetwork sets the "network" field if the given value is not nil.
-func (potu *ProviderOrderTokenUpdate) SetNillableNetwork(s *string) *ProviderOrderTokenUpdate {
-	if s != nil {
-		potu.SetNetwork(*s)
+func (_u *ProviderOrderTokenUpdate) SetNillableNetwork(v *string) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetNetwork(*v)
 	}
-	return potu
+	return _u
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (potu *ProviderOrderTokenUpdate) SetProviderID(id string) *ProviderOrderTokenUpdate {
-	potu.mutation.SetProviderID(id)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetProviderID(id string) *ProviderOrderTokenUpdate {
+	_u.mutation.SetProviderID(id)
+	return _u
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (potu *ProviderOrderTokenUpdate) SetProvider(p *ProviderProfile) *ProviderOrderTokenUpdate {
-	return potu.SetProviderID(p.ID)
+func (_u *ProviderOrderTokenUpdate) SetProvider(v *ProviderProfile) *ProviderOrderTokenUpdate {
+	return _u.SetProviderID(v.ID)
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (potu *ProviderOrderTokenUpdate) SetTokenID(id int) *ProviderOrderTokenUpdate {
-	potu.mutation.SetTokenID(id)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetTokenID(id int) *ProviderOrderTokenUpdate {
+	_u.mutation.SetTokenID(id)
+	return _u
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (potu *ProviderOrderTokenUpdate) SetToken(t *Token) *ProviderOrderTokenUpdate {
-	return potu.SetTokenID(t.ID)
+func (_u *ProviderOrderTokenUpdate) SetToken(v *Token) *ProviderOrderTokenUpdate {
+	return _u.SetTokenID(v.ID)
 }
 
 // SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (potu *ProviderOrderTokenUpdate) SetCurrencyID(id uuid.UUID) *ProviderOrderTokenUpdate {
-	potu.mutation.SetCurrencyID(id)
-	return potu
+func (_u *ProviderOrderTokenUpdate) SetCurrencyID(id uuid.UUID) *ProviderOrderTokenUpdate {
+	_u.mutation.SetCurrencyID(id)
+	return _u
 }
 
 // SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (potu *ProviderOrderTokenUpdate) SetCurrency(f *FiatCurrency) *ProviderOrderTokenUpdate {
-	return potu.SetCurrencyID(f.ID)
+func (_u *ProviderOrderTokenUpdate) SetCurrency(v *FiatCurrency) *ProviderOrderTokenUpdate {
+	return _u.SetCurrencyID(v.ID)
 }
 
 // Mutation returns the ProviderOrderTokenMutation object of the builder.
-func (potu *ProviderOrderTokenUpdate) Mutation() *ProviderOrderTokenMutation {
-	return potu.mutation
+func (_u *ProviderOrderTokenUpdate) Mutation() *ProviderOrderTokenMutation {
+	return _u.mutation
 }
 
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
-func (potu *ProviderOrderTokenUpdate) ClearProvider() *ProviderOrderTokenUpdate {
-	potu.mutation.ClearProvider()
-	return potu
+func (_u *ProviderOrderTokenUpdate) ClearProvider() *ProviderOrderTokenUpdate {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // ClearToken clears the "token" edge to the Token entity.
-func (potu *ProviderOrderTokenUpdate) ClearToken() *ProviderOrderTokenUpdate {
-	potu.mutation.ClearToken()
-	return potu
+func (_u *ProviderOrderTokenUpdate) ClearToken() *ProviderOrderTokenUpdate {
+	_u.mutation.ClearToken()
+	return _u
 }
 
 // ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (potu *ProviderOrderTokenUpdate) ClearCurrency() *ProviderOrderTokenUpdate {
-	potu.mutation.ClearCurrency()
-	return potu
+func (_u *ProviderOrderTokenUpdate) ClearCurrency() *ProviderOrderTokenUpdate {
+	_u.mutation.ClearCurrency()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (potu *ProviderOrderTokenUpdate) Save(ctx context.Context) (int, error) {
-	potu.defaults()
-	return withHooks(ctx, potu.sqlSave, potu.mutation, potu.hooks)
+func (_u *ProviderOrderTokenUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (potu *ProviderOrderTokenUpdate) SaveX(ctx context.Context) int {
-	affected, err := potu.Save(ctx)
+func (_u *ProviderOrderTokenUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -306,115 +306,115 @@ func (potu *ProviderOrderTokenUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (potu *ProviderOrderTokenUpdate) Exec(ctx context.Context) error {
-	_, err := potu.Save(ctx)
+func (_u *ProviderOrderTokenUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (potu *ProviderOrderTokenUpdate) ExecX(ctx context.Context) {
-	if err := potu.Exec(ctx); err != nil {
+func (_u *ProviderOrderTokenUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (potu *ProviderOrderTokenUpdate) defaults() {
-	if _, ok := potu.mutation.UpdatedAt(); !ok {
+func (_u *ProviderOrderTokenUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := providerordertoken.UpdateDefaultUpdatedAt()
-		potu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (potu *ProviderOrderTokenUpdate) check() error {
-	if v, ok := potu.mutation.ConversionRateType(); ok {
+func (_u *ProviderOrderTokenUpdate) check() error {
+	if v, ok := _u.mutation.ConversionRateType(); ok {
 		if err := providerordertoken.ConversionRateTypeValidator(v); err != nil {
 			return &ValidationError{Name: "conversion_rate_type", err: fmt.Errorf(`ent: validator failed for field "ProviderOrderToken.conversion_rate_type": %w`, err)}
 		}
 	}
-	if potu.mutation.ProviderCleared() && len(potu.mutation.ProviderIDs()) > 0 {
+	if _u.mutation.ProviderCleared() && len(_u.mutation.ProviderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderOrderToken.provider"`)
 	}
-	if potu.mutation.TokenCleared() && len(potu.mutation.TokenIDs()) > 0 {
+	if _u.mutation.TokenCleared() && len(_u.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderOrderToken.token"`)
 	}
-	if potu.mutation.CurrencyCleared() && len(potu.mutation.CurrencyIDs()) > 0 {
+	if _u.mutation.CurrencyCleared() && len(_u.mutation.CurrencyIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderOrderToken.currency"`)
 	}
 	return nil
 }
 
-func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := potu.check(); err != nil {
-		return n, err
+func (_u *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(providerordertoken.Table, providerordertoken.Columns, sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt))
-	if ps := potu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := potu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerordertoken.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := potu.mutation.FixedConversionRate(); ok {
+	if value, ok := _u.mutation.FixedConversionRate(); ok {
 		_spec.SetField(providerordertoken.FieldFixedConversionRate, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.AddedFixedConversionRate(); ok {
+	if value, ok := _u.mutation.AddedFixedConversionRate(); ok {
 		_spec.AddField(providerordertoken.FieldFixedConversionRate, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.FloatingConversionRate(); ok {
+	if value, ok := _u.mutation.FloatingConversionRate(); ok {
 		_spec.SetField(providerordertoken.FieldFloatingConversionRate, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.AddedFloatingConversionRate(); ok {
+	if value, ok := _u.mutation.AddedFloatingConversionRate(); ok {
 		_spec.AddField(providerordertoken.FieldFloatingConversionRate, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.ConversionRateType(); ok {
+	if value, ok := _u.mutation.ConversionRateType(); ok {
 		_spec.SetField(providerordertoken.FieldConversionRateType, field.TypeEnum, value)
 	}
-	if value, ok := potu.mutation.MaxOrderAmount(); ok {
+	if value, ok := _u.mutation.MaxOrderAmount(); ok {
 		_spec.SetField(providerordertoken.FieldMaxOrderAmount, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.AddedMaxOrderAmount(); ok {
+	if value, ok := _u.mutation.AddedMaxOrderAmount(); ok {
 		_spec.AddField(providerordertoken.FieldMaxOrderAmount, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.MinOrderAmount(); ok {
+	if value, ok := _u.mutation.MinOrderAmount(); ok {
 		_spec.SetField(providerordertoken.FieldMinOrderAmount, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.AddedMinOrderAmount(); ok {
+	if value, ok := _u.mutation.AddedMinOrderAmount(); ok {
 		_spec.AddField(providerordertoken.FieldMinOrderAmount, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.MaxOrderAmountOtc(); ok {
+	if value, ok := _u.mutation.MaxOrderAmountOtc(); ok {
 		_spec.SetField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.AddedMaxOrderAmountOtc(); ok {
+	if value, ok := _u.mutation.AddedMaxOrderAmountOtc(); ok {
 		_spec.AddField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.MinOrderAmountOtc(); ok {
+	if value, ok := _u.mutation.MinOrderAmountOtc(); ok {
 		_spec.SetField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.AddedMinOrderAmountOtc(); ok {
+	if value, ok := _u.mutation.AddedMinOrderAmountOtc(); ok {
 		_spec.AddField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.RateSlippage(); ok {
+	if value, ok := _u.mutation.RateSlippage(); ok {
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.AddedRateSlippage(); ok {
+	if value, ok := _u.mutation.AddedRateSlippage(); ok {
 		_spec.AddField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 	}
-	if value, ok := potu.mutation.Address(); ok {
+	if value, ok := _u.mutation.Address(); ok {
 		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)
 	}
-	if potu.mutation.AddressCleared() {
+	if _u.mutation.AddressCleared() {
 		_spec.ClearField(providerordertoken.FieldAddress, field.TypeString)
 	}
-	if value, ok := potu.mutation.Network(); ok {
+	if value, ok := _u.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
 	}
-	if potu.mutation.ProviderCleared() {
+	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -427,7 +427,7 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := potu.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -443,7 +443,7 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if potu.mutation.TokenCleared() {
+	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -456,7 +456,7 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := potu.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -472,7 +472,7 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if potu.mutation.CurrencyCleared() {
+	if _u.mutation.CurrencyCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -485,7 +485,7 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := potu.mutation.CurrencyIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.CurrencyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -501,7 +501,7 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, potu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{providerordertoken.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -509,8 +509,8 @@ func (potu *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (n int, err e
 		}
 		return 0, err
 	}
-	potu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // ProviderOrderTokenUpdateOne is the builder for updating a single ProviderOrderToken entity.
@@ -522,284 +522,284 @@ type ProviderOrderTokenUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetUpdatedAt(t time.Time) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.SetUpdatedAt(t)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetUpdatedAt(v time.Time) *ProviderOrderTokenUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetFixedConversionRate sets the "fixed_conversion_rate" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetFixedConversionRate(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ResetFixedConversionRate()
-	potuo.mutation.SetFixedConversionRate(d)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetFixedConversionRate()
+	_u.mutation.SetFixedConversionRate(v)
+	return _u
 }
 
 // SetNillableFixedConversionRate sets the "fixed_conversion_rate" field if the given value is not nil.
-func (potuo *ProviderOrderTokenUpdateOne) SetNillableFixedConversionRate(d *decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	if d != nil {
-		potuo.SetFixedConversionRate(*d)
+func (_u *ProviderOrderTokenUpdateOne) SetNillableFixedConversionRate(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetFixedConversionRate(*v)
 	}
-	return potuo
+	return _u
 }
 
-// AddFixedConversionRate adds d to the "fixed_conversion_rate" field.
-func (potuo *ProviderOrderTokenUpdateOne) AddFixedConversionRate(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.AddFixedConversionRate(d)
-	return potuo
+// AddFixedConversionRate adds value to the "fixed_conversion_rate" field.
+func (_u *ProviderOrderTokenUpdateOne) AddFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddFixedConversionRate(v)
+	return _u
 }
 
 // SetFloatingConversionRate sets the "floating_conversion_rate" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetFloatingConversionRate(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ResetFloatingConversionRate()
-	potuo.mutation.SetFloatingConversionRate(d)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetFloatingConversionRate()
+	_u.mutation.SetFloatingConversionRate(v)
+	return _u
 }
 
 // SetNillableFloatingConversionRate sets the "floating_conversion_rate" field if the given value is not nil.
-func (potuo *ProviderOrderTokenUpdateOne) SetNillableFloatingConversionRate(d *decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	if d != nil {
-		potuo.SetFloatingConversionRate(*d)
+func (_u *ProviderOrderTokenUpdateOne) SetNillableFloatingConversionRate(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetFloatingConversionRate(*v)
 	}
-	return potuo
+	return _u
 }
 
-// AddFloatingConversionRate adds d to the "floating_conversion_rate" field.
-func (potuo *ProviderOrderTokenUpdateOne) AddFloatingConversionRate(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.AddFloatingConversionRate(d)
-	return potuo
+// AddFloatingConversionRate adds value to the "floating_conversion_rate" field.
+func (_u *ProviderOrderTokenUpdateOne) AddFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddFloatingConversionRate(v)
+	return _u
 }
 
 // SetConversionRateType sets the "conversion_rate_type" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetConversionRateType(prt providerordertoken.ConversionRateType) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.SetConversionRateType(prt)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetConversionRateType(v providerordertoken.ConversionRateType) *ProviderOrderTokenUpdateOne {
+	_u.mutation.SetConversionRateType(v)
+	return _u
 }
 
 // SetNillableConversionRateType sets the "conversion_rate_type" field if the given value is not nil.
-func (potuo *ProviderOrderTokenUpdateOne) SetNillableConversionRateType(prt *providerordertoken.ConversionRateType) *ProviderOrderTokenUpdateOne {
-	if prt != nil {
-		potuo.SetConversionRateType(*prt)
+func (_u *ProviderOrderTokenUpdateOne) SetNillableConversionRateType(v *providerordertoken.ConversionRateType) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetConversionRateType(*v)
 	}
-	return potuo
+	return _u
 }
 
 // SetMaxOrderAmount sets the "max_order_amount" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetMaxOrderAmount(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ResetMaxOrderAmount()
-	potuo.mutation.SetMaxOrderAmount(d)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetMaxOrderAmount()
+	_u.mutation.SetMaxOrderAmount(v)
+	return _u
 }
 
 // SetNillableMaxOrderAmount sets the "max_order_amount" field if the given value is not nil.
-func (potuo *ProviderOrderTokenUpdateOne) SetNillableMaxOrderAmount(d *decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	if d != nil {
-		potuo.SetMaxOrderAmount(*d)
+func (_u *ProviderOrderTokenUpdateOne) SetNillableMaxOrderAmount(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetMaxOrderAmount(*v)
 	}
-	return potuo
+	return _u
 }
 
-// AddMaxOrderAmount adds d to the "max_order_amount" field.
-func (potuo *ProviderOrderTokenUpdateOne) AddMaxOrderAmount(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.AddMaxOrderAmount(d)
-	return potuo
+// AddMaxOrderAmount adds value to the "max_order_amount" field.
+func (_u *ProviderOrderTokenUpdateOne) AddMaxOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddMaxOrderAmount(v)
+	return _u
 }
 
 // SetMinOrderAmount sets the "min_order_amount" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetMinOrderAmount(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ResetMinOrderAmount()
-	potuo.mutation.SetMinOrderAmount(d)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetMinOrderAmount()
+	_u.mutation.SetMinOrderAmount(v)
+	return _u
 }
 
 // SetNillableMinOrderAmount sets the "min_order_amount" field if the given value is not nil.
-func (potuo *ProviderOrderTokenUpdateOne) SetNillableMinOrderAmount(d *decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	if d != nil {
-		potuo.SetMinOrderAmount(*d)
+func (_u *ProviderOrderTokenUpdateOne) SetNillableMinOrderAmount(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetMinOrderAmount(*v)
 	}
-	return potuo
+	return _u
 }
 
-// AddMinOrderAmount adds d to the "min_order_amount" field.
-func (potuo *ProviderOrderTokenUpdateOne) AddMinOrderAmount(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.AddMinOrderAmount(d)
-	return potuo
+// AddMinOrderAmount adds value to the "min_order_amount" field.
+func (_u *ProviderOrderTokenUpdateOne) AddMinOrderAmount(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddMinOrderAmount(v)
+	return _u
 }
 
 // SetMaxOrderAmountOtc sets the "max_order_amount_otc" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetMaxOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ResetMaxOrderAmountOtc()
-	potuo.mutation.SetMaxOrderAmountOtc(d)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetMaxOrderAmountOtc()
+	_u.mutation.SetMaxOrderAmountOtc(v)
+	return _u
 }
 
 // SetNillableMaxOrderAmountOtc sets the "max_order_amount_otc" field if the given value is not nil.
-func (potuo *ProviderOrderTokenUpdateOne) SetNillableMaxOrderAmountOtc(d *decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	if d != nil {
-		potuo.SetMaxOrderAmountOtc(*d)
+func (_u *ProviderOrderTokenUpdateOne) SetNillableMaxOrderAmountOtc(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetMaxOrderAmountOtc(*v)
 	}
-	return potuo
+	return _u
 }
 
-// AddMaxOrderAmountOtc adds d to the "max_order_amount_otc" field.
-func (potuo *ProviderOrderTokenUpdateOne) AddMaxOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.AddMaxOrderAmountOtc(d)
-	return potuo
+// AddMaxOrderAmountOtc adds value to the "max_order_amount_otc" field.
+func (_u *ProviderOrderTokenUpdateOne) AddMaxOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddMaxOrderAmountOtc(v)
+	return _u
 }
 
 // SetMinOrderAmountOtc sets the "min_order_amount_otc" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ResetMinOrderAmountOtc()
-	potuo.mutation.SetMinOrderAmountOtc(d)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetMinOrderAmountOtc()
+	_u.mutation.SetMinOrderAmountOtc(v)
+	return _u
 }
 
 // SetNillableMinOrderAmountOtc sets the "min_order_amount_otc" field if the given value is not nil.
-func (potuo *ProviderOrderTokenUpdateOne) SetNillableMinOrderAmountOtc(d *decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	if d != nil {
-		potuo.SetMinOrderAmountOtc(*d)
+func (_u *ProviderOrderTokenUpdateOne) SetNillableMinOrderAmountOtc(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetMinOrderAmountOtc(*v)
 	}
-	return potuo
+	return _u
 }
 
-// AddMinOrderAmountOtc adds d to the "min_order_amount_otc" field.
-func (potuo *ProviderOrderTokenUpdateOne) AddMinOrderAmountOtc(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.AddMinOrderAmountOtc(d)
-	return potuo
+// AddMinOrderAmountOtc adds value to the "min_order_amount_otc" field.
+func (_u *ProviderOrderTokenUpdateOne) AddMinOrderAmountOtc(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddMinOrderAmountOtc(v)
+	return _u
 }
 
 // SetRateSlippage sets the "rate_slippage" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetRateSlippage(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ResetRateSlippage()
-	potuo.mutation.SetRateSlippage(d)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetRateSlippage(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetRateSlippage()
+	_u.mutation.SetRateSlippage(v)
+	return _u
 }
 
 // SetNillableRateSlippage sets the "rate_slippage" field if the given value is not nil.
-func (potuo *ProviderOrderTokenUpdateOne) SetNillableRateSlippage(d *decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	if d != nil {
-		potuo.SetRateSlippage(*d)
+func (_u *ProviderOrderTokenUpdateOne) SetNillableRateSlippage(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetRateSlippage(*v)
 	}
-	return potuo
+	return _u
 }
 
-// AddRateSlippage adds d to the "rate_slippage" field.
-func (potuo *ProviderOrderTokenUpdateOne) AddRateSlippage(d decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.AddRateSlippage(d)
-	return potuo
+// AddRateSlippage adds value to the "rate_slippage" field.
+func (_u *ProviderOrderTokenUpdateOne) AddRateSlippage(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddRateSlippage(v)
+	return _u
 }
 
 // SetAddress sets the "address" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetAddress(s string) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.SetAddress(s)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetAddress(v string) *ProviderOrderTokenUpdateOne {
+	_u.mutation.SetAddress(v)
+	return _u
 }
 
 // SetNillableAddress sets the "address" field if the given value is not nil.
-func (potuo *ProviderOrderTokenUpdateOne) SetNillableAddress(s *string) *ProviderOrderTokenUpdateOne {
-	if s != nil {
-		potuo.SetAddress(*s)
+func (_u *ProviderOrderTokenUpdateOne) SetNillableAddress(v *string) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetAddress(*v)
 	}
-	return potuo
+	return _u
 }
 
 // ClearAddress clears the value of the "address" field.
-func (potuo *ProviderOrderTokenUpdateOne) ClearAddress() *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ClearAddress()
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) ClearAddress() *ProviderOrderTokenUpdateOne {
+	_u.mutation.ClearAddress()
+	return _u
 }
 
 // SetNetwork sets the "network" field.
-func (potuo *ProviderOrderTokenUpdateOne) SetNetwork(s string) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.SetNetwork(s)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetNetwork(v string) *ProviderOrderTokenUpdateOne {
+	_u.mutation.SetNetwork(v)
+	return _u
 }
 
 // SetNillableNetwork sets the "network" field if the given value is not nil.
-func (potuo *ProviderOrderTokenUpdateOne) SetNillableNetwork(s *string) *ProviderOrderTokenUpdateOne {
-	if s != nil {
-		potuo.SetNetwork(*s)
+func (_u *ProviderOrderTokenUpdateOne) SetNillableNetwork(v *string) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetNetwork(*v)
 	}
-	return potuo
+	return _u
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (potuo *ProviderOrderTokenUpdateOne) SetProviderID(id string) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.SetProviderID(id)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetProviderID(id string) *ProviderOrderTokenUpdateOne {
+	_u.mutation.SetProviderID(id)
+	return _u
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (potuo *ProviderOrderTokenUpdateOne) SetProvider(p *ProviderProfile) *ProviderOrderTokenUpdateOne {
-	return potuo.SetProviderID(p.ID)
+func (_u *ProviderOrderTokenUpdateOne) SetProvider(v *ProviderProfile) *ProviderOrderTokenUpdateOne {
+	return _u.SetProviderID(v.ID)
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (potuo *ProviderOrderTokenUpdateOne) SetTokenID(id int) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.SetTokenID(id)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetTokenID(id int) *ProviderOrderTokenUpdateOne {
+	_u.mutation.SetTokenID(id)
+	return _u
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (potuo *ProviderOrderTokenUpdateOne) SetToken(t *Token) *ProviderOrderTokenUpdateOne {
-	return potuo.SetTokenID(t.ID)
+func (_u *ProviderOrderTokenUpdateOne) SetToken(v *Token) *ProviderOrderTokenUpdateOne {
+	return _u.SetTokenID(v.ID)
 }
 
 // SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (potuo *ProviderOrderTokenUpdateOne) SetCurrencyID(id uuid.UUID) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.SetCurrencyID(id)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) SetCurrencyID(id uuid.UUID) *ProviderOrderTokenUpdateOne {
+	_u.mutation.SetCurrencyID(id)
+	return _u
 }
 
 // SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (potuo *ProviderOrderTokenUpdateOne) SetCurrency(f *FiatCurrency) *ProviderOrderTokenUpdateOne {
-	return potuo.SetCurrencyID(f.ID)
+func (_u *ProviderOrderTokenUpdateOne) SetCurrency(v *FiatCurrency) *ProviderOrderTokenUpdateOne {
+	return _u.SetCurrencyID(v.ID)
 }
 
 // Mutation returns the ProviderOrderTokenMutation object of the builder.
-func (potuo *ProviderOrderTokenUpdateOne) Mutation() *ProviderOrderTokenMutation {
-	return potuo.mutation
+func (_u *ProviderOrderTokenUpdateOne) Mutation() *ProviderOrderTokenMutation {
+	return _u.mutation
 }
 
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
-func (potuo *ProviderOrderTokenUpdateOne) ClearProvider() *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ClearProvider()
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) ClearProvider() *ProviderOrderTokenUpdateOne {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // ClearToken clears the "token" edge to the Token entity.
-func (potuo *ProviderOrderTokenUpdateOne) ClearToken() *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ClearToken()
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) ClearToken() *ProviderOrderTokenUpdateOne {
+	_u.mutation.ClearToken()
+	return _u
 }
 
 // ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (potuo *ProviderOrderTokenUpdateOne) ClearCurrency() *ProviderOrderTokenUpdateOne {
-	potuo.mutation.ClearCurrency()
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) ClearCurrency() *ProviderOrderTokenUpdateOne {
+	_u.mutation.ClearCurrency()
+	return _u
 }
 
 // Where appends a list predicates to the ProviderOrderTokenUpdate builder.
-func (potuo *ProviderOrderTokenUpdateOne) Where(ps ...predicate.ProviderOrderToken) *ProviderOrderTokenUpdateOne {
-	potuo.mutation.Where(ps...)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) Where(ps ...predicate.ProviderOrderToken) *ProviderOrderTokenUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (potuo *ProviderOrderTokenUpdateOne) Select(field string, fields ...string) *ProviderOrderTokenUpdateOne {
-	potuo.fields = append([]string{field}, fields...)
-	return potuo
+func (_u *ProviderOrderTokenUpdateOne) Select(field string, fields ...string) *ProviderOrderTokenUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated ProviderOrderToken entity.
-func (potuo *ProviderOrderTokenUpdateOne) Save(ctx context.Context) (*ProviderOrderToken, error) {
-	potuo.defaults()
-	return withHooks(ctx, potuo.sqlSave, potuo.mutation, potuo.hooks)
+func (_u *ProviderOrderTokenUpdateOne) Save(ctx context.Context) (*ProviderOrderToken, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (potuo *ProviderOrderTokenUpdateOne) SaveX(ctx context.Context) *ProviderOrderToken {
-	node, err := potuo.Save(ctx)
+func (_u *ProviderOrderTokenUpdateOne) SaveX(ctx context.Context) *ProviderOrderToken {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -807,56 +807,56 @@ func (potuo *ProviderOrderTokenUpdateOne) SaveX(ctx context.Context) *ProviderOr
 }
 
 // Exec executes the query on the entity.
-func (potuo *ProviderOrderTokenUpdateOne) Exec(ctx context.Context) error {
-	_, err := potuo.Save(ctx)
+func (_u *ProviderOrderTokenUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (potuo *ProviderOrderTokenUpdateOne) ExecX(ctx context.Context) {
-	if err := potuo.Exec(ctx); err != nil {
+func (_u *ProviderOrderTokenUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (potuo *ProviderOrderTokenUpdateOne) defaults() {
-	if _, ok := potuo.mutation.UpdatedAt(); !ok {
+func (_u *ProviderOrderTokenUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := providerordertoken.UpdateDefaultUpdatedAt()
-		potuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (potuo *ProviderOrderTokenUpdateOne) check() error {
-	if v, ok := potuo.mutation.ConversionRateType(); ok {
+func (_u *ProviderOrderTokenUpdateOne) check() error {
+	if v, ok := _u.mutation.ConversionRateType(); ok {
 		if err := providerordertoken.ConversionRateTypeValidator(v); err != nil {
 			return &ValidationError{Name: "conversion_rate_type", err: fmt.Errorf(`ent: validator failed for field "ProviderOrderToken.conversion_rate_type": %w`, err)}
 		}
 	}
-	if potuo.mutation.ProviderCleared() && len(potuo.mutation.ProviderIDs()) > 0 {
+	if _u.mutation.ProviderCleared() && len(_u.mutation.ProviderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderOrderToken.provider"`)
 	}
-	if potuo.mutation.TokenCleared() && len(potuo.mutation.TokenIDs()) > 0 {
+	if _u.mutation.TokenCleared() && len(_u.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderOrderToken.token"`)
 	}
-	if potuo.mutation.CurrencyCleared() && len(potuo.mutation.CurrencyIDs()) > 0 {
+	if _u.mutation.CurrencyCleared() && len(_u.mutation.CurrencyIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderOrderToken.currency"`)
 	}
 	return nil
 }
 
-func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *ProviderOrderToken, err error) {
-	if err := potuo.check(); err != nil {
+func (_u *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *ProviderOrderToken, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(providerordertoken.Table, providerordertoken.Columns, sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt))
-	id, ok := potuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ProviderOrderToken.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := potuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, providerordertoken.FieldID)
 		for _, f := range fields {
@@ -868,71 +868,71 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 			}
 		}
 	}
-	if ps := potuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := potuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerordertoken.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := potuo.mutation.FixedConversionRate(); ok {
+	if value, ok := _u.mutation.FixedConversionRate(); ok {
 		_spec.SetField(providerordertoken.FieldFixedConversionRate, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.AddedFixedConversionRate(); ok {
+	if value, ok := _u.mutation.AddedFixedConversionRate(); ok {
 		_spec.AddField(providerordertoken.FieldFixedConversionRate, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.FloatingConversionRate(); ok {
+	if value, ok := _u.mutation.FloatingConversionRate(); ok {
 		_spec.SetField(providerordertoken.FieldFloatingConversionRate, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.AddedFloatingConversionRate(); ok {
+	if value, ok := _u.mutation.AddedFloatingConversionRate(); ok {
 		_spec.AddField(providerordertoken.FieldFloatingConversionRate, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.ConversionRateType(); ok {
+	if value, ok := _u.mutation.ConversionRateType(); ok {
 		_spec.SetField(providerordertoken.FieldConversionRateType, field.TypeEnum, value)
 	}
-	if value, ok := potuo.mutation.MaxOrderAmount(); ok {
+	if value, ok := _u.mutation.MaxOrderAmount(); ok {
 		_spec.SetField(providerordertoken.FieldMaxOrderAmount, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.AddedMaxOrderAmount(); ok {
+	if value, ok := _u.mutation.AddedMaxOrderAmount(); ok {
 		_spec.AddField(providerordertoken.FieldMaxOrderAmount, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.MinOrderAmount(); ok {
+	if value, ok := _u.mutation.MinOrderAmount(); ok {
 		_spec.SetField(providerordertoken.FieldMinOrderAmount, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.AddedMinOrderAmount(); ok {
+	if value, ok := _u.mutation.AddedMinOrderAmount(); ok {
 		_spec.AddField(providerordertoken.FieldMinOrderAmount, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.MaxOrderAmountOtc(); ok {
+	if value, ok := _u.mutation.MaxOrderAmountOtc(); ok {
 		_spec.SetField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.AddedMaxOrderAmountOtc(); ok {
+	if value, ok := _u.mutation.AddedMaxOrderAmountOtc(); ok {
 		_spec.AddField(providerordertoken.FieldMaxOrderAmountOtc, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.MinOrderAmountOtc(); ok {
+	if value, ok := _u.mutation.MinOrderAmountOtc(); ok {
 		_spec.SetField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.AddedMinOrderAmountOtc(); ok {
+	if value, ok := _u.mutation.AddedMinOrderAmountOtc(); ok {
 		_spec.AddField(providerordertoken.FieldMinOrderAmountOtc, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.RateSlippage(); ok {
+	if value, ok := _u.mutation.RateSlippage(); ok {
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.AddedRateSlippage(); ok {
+	if value, ok := _u.mutation.AddedRateSlippage(); ok {
 		_spec.AddField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 	}
-	if value, ok := potuo.mutation.Address(); ok {
+	if value, ok := _u.mutation.Address(); ok {
 		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)
 	}
-	if potuo.mutation.AddressCleared() {
+	if _u.mutation.AddressCleared() {
 		_spec.ClearField(providerordertoken.FieldAddress, field.TypeString)
 	}
-	if value, ok := potuo.mutation.Network(); ok {
+	if value, ok := _u.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
 	}
-	if potuo.mutation.ProviderCleared() {
+	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -945,7 +945,7 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := potuo.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -961,7 +961,7 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if potuo.mutation.TokenCleared() {
+	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -974,7 +974,7 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := potuo.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -990,7 +990,7 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if potuo.mutation.CurrencyCleared() {
+	if _u.mutation.CurrencyCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1003,7 +1003,7 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := potuo.mutation.CurrencyIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.CurrencyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1019,10 +1019,10 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &ProviderOrderToken{config: potuo.config}
+	_node = &ProviderOrderToken{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, potuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{providerordertoken.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -1030,6 +1030,6 @@ func (potuo *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *P
 		}
 		return nil, err
 	}
-	potuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

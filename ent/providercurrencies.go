@@ -98,7 +98,7 @@ func (*ProviderCurrencies) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ProviderCurrencies fields.
-func (pc *ProviderCurrencies) assignValues(columns []string, values []any) error {
+func (_m *ProviderCurrencies) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -108,54 +108,54 @@ func (pc *ProviderCurrencies) assignValues(columns []string, values []any) error
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				pc.ID = *value
+				_m.ID = *value
 			}
 		case providercurrencies.FieldAvailableBalance:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field available_balance", values[i])
 			} else if value != nil {
-				pc.AvailableBalance = *value
+				_m.AvailableBalance = *value
 			}
 		case providercurrencies.FieldTotalBalance:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field total_balance", values[i])
 			} else if value != nil {
-				pc.TotalBalance = *value
+				_m.TotalBalance = *value
 			}
 		case providercurrencies.FieldReservedBalance:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field reserved_balance", values[i])
 			} else if value != nil {
-				pc.ReservedBalance = *value
+				_m.ReservedBalance = *value
 			}
 		case providercurrencies.FieldIsAvailable:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_available", values[i])
 			} else if value.Valid {
-				pc.IsAvailable = value.Bool
+				_m.IsAvailable = value.Bool
 			}
 		case providercurrencies.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				pc.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case providercurrencies.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field fiat_currency_provider_currencies", values[i])
 			} else if value.Valid {
-				pc.fiat_currency_provider_currencies = new(uuid.UUID)
-				*pc.fiat_currency_provider_currencies = *value.S.(*uuid.UUID)
+				_m.fiat_currency_provider_currencies = new(uuid.UUID)
+				*_m.fiat_currency_provider_currencies = *value.S.(*uuid.UUID)
 			}
 		case providercurrencies.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_profile_provider_currencies", values[i])
 			} else if value.Valid {
-				pc.provider_profile_provider_currencies = new(string)
-				*pc.provider_profile_provider_currencies = value.String
+				_m.provider_profile_provider_currencies = new(string)
+				*_m.provider_profile_provider_currencies = value.String
 			}
 		default:
-			pc.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -163,57 +163,57 @@ func (pc *ProviderCurrencies) assignValues(columns []string, values []any) error
 
 // Value returns the ent.Value that was dynamically selected and assigned to the ProviderCurrencies.
 // This includes values selected through modifiers, order, etc.
-func (pc *ProviderCurrencies) Value(name string) (ent.Value, error) {
-	return pc.selectValues.Get(name)
+func (_m *ProviderCurrencies) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryProvider queries the "provider" edge of the ProviderCurrencies entity.
-func (pc *ProviderCurrencies) QueryProvider() *ProviderProfileQuery {
-	return NewProviderCurrenciesClient(pc.config).QueryProvider(pc)
+func (_m *ProviderCurrencies) QueryProvider() *ProviderProfileQuery {
+	return NewProviderCurrenciesClient(_m.config).QueryProvider(_m)
 }
 
 // QueryCurrency queries the "currency" edge of the ProviderCurrencies entity.
-func (pc *ProviderCurrencies) QueryCurrency() *FiatCurrencyQuery {
-	return NewProviderCurrenciesClient(pc.config).QueryCurrency(pc)
+func (_m *ProviderCurrencies) QueryCurrency() *FiatCurrencyQuery {
+	return NewProviderCurrenciesClient(_m.config).QueryCurrency(_m)
 }
 
 // Update returns a builder for updating this ProviderCurrencies.
 // Note that you need to call ProviderCurrencies.Unwrap() before calling this method if this ProviderCurrencies
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (pc *ProviderCurrencies) Update() *ProviderCurrenciesUpdateOne {
-	return NewProviderCurrenciesClient(pc.config).UpdateOne(pc)
+func (_m *ProviderCurrencies) Update() *ProviderCurrenciesUpdateOne {
+	return NewProviderCurrenciesClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the ProviderCurrencies entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (pc *ProviderCurrencies) Unwrap() *ProviderCurrencies {
-	_tx, ok := pc.config.driver.(*txDriver)
+func (_m *ProviderCurrencies) Unwrap() *ProviderCurrencies {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ProviderCurrencies is not a transactional entity")
 	}
-	pc.config.driver = _tx.drv
-	return pc
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (pc *ProviderCurrencies) String() string {
+func (_m *ProviderCurrencies) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProviderCurrencies(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", pc.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("available_balance=")
-	builder.WriteString(fmt.Sprintf("%v", pc.AvailableBalance))
+	builder.WriteString(fmt.Sprintf("%v", _m.AvailableBalance))
 	builder.WriteString(", ")
 	builder.WriteString("total_balance=")
-	builder.WriteString(fmt.Sprintf("%v", pc.TotalBalance))
+	builder.WriteString(fmt.Sprintf("%v", _m.TotalBalance))
 	builder.WriteString(", ")
 	builder.WriteString("reserved_balance=")
-	builder.WriteString(fmt.Sprintf("%v", pc.ReservedBalance))
+	builder.WriteString(fmt.Sprintf("%v", _m.ReservedBalance))
 	builder.WriteString(", ")
 	builder.WriteString("is_available=")
-	builder.WriteString(fmt.Sprintf("%v", pc.IsAvailable))
+	builder.WriteString(fmt.Sprintf("%v", _m.IsAvailable))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(pc.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

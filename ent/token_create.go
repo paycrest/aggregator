@@ -28,149 +28,149 @@ type TokenCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (tc *TokenCreate) SetCreatedAt(t time.Time) *TokenCreate {
-	tc.mutation.SetCreatedAt(t)
-	return tc
+func (_c *TokenCreate) SetCreatedAt(v time.Time) *TokenCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (tc *TokenCreate) SetNillableCreatedAt(t *time.Time) *TokenCreate {
-	if t != nil {
-		tc.SetCreatedAt(*t)
+func (_c *TokenCreate) SetNillableCreatedAt(v *time.Time) *TokenCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return tc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (tc *TokenCreate) SetUpdatedAt(t time.Time) *TokenCreate {
-	tc.mutation.SetUpdatedAt(t)
-	return tc
+func (_c *TokenCreate) SetUpdatedAt(v time.Time) *TokenCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (tc *TokenCreate) SetNillableUpdatedAt(t *time.Time) *TokenCreate {
-	if t != nil {
-		tc.SetUpdatedAt(*t)
+func (_c *TokenCreate) SetNillableUpdatedAt(v *time.Time) *TokenCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return tc
+	return _c
 }
 
 // SetSymbol sets the "symbol" field.
-func (tc *TokenCreate) SetSymbol(s string) *TokenCreate {
-	tc.mutation.SetSymbol(s)
-	return tc
+func (_c *TokenCreate) SetSymbol(v string) *TokenCreate {
+	_c.mutation.SetSymbol(v)
+	return _c
 }
 
 // SetContractAddress sets the "contract_address" field.
-func (tc *TokenCreate) SetContractAddress(s string) *TokenCreate {
-	tc.mutation.SetContractAddress(s)
-	return tc
+func (_c *TokenCreate) SetContractAddress(v string) *TokenCreate {
+	_c.mutation.SetContractAddress(v)
+	return _c
 }
 
 // SetDecimals sets the "decimals" field.
-func (tc *TokenCreate) SetDecimals(i int8) *TokenCreate {
-	tc.mutation.SetDecimals(i)
-	return tc
+func (_c *TokenCreate) SetDecimals(v int8) *TokenCreate {
+	_c.mutation.SetDecimals(v)
+	return _c
 }
 
 // SetIsEnabled sets the "is_enabled" field.
-func (tc *TokenCreate) SetIsEnabled(b bool) *TokenCreate {
-	tc.mutation.SetIsEnabled(b)
-	return tc
+func (_c *TokenCreate) SetIsEnabled(v bool) *TokenCreate {
+	_c.mutation.SetIsEnabled(v)
+	return _c
 }
 
 // SetNillableIsEnabled sets the "is_enabled" field if the given value is not nil.
-func (tc *TokenCreate) SetNillableIsEnabled(b *bool) *TokenCreate {
-	if b != nil {
-		tc.SetIsEnabled(*b)
+func (_c *TokenCreate) SetNillableIsEnabled(v *bool) *TokenCreate {
+	if v != nil {
+		_c.SetIsEnabled(*v)
 	}
-	return tc
+	return _c
 }
 
 // SetBaseCurrency sets the "base_currency" field.
-func (tc *TokenCreate) SetBaseCurrency(s string) *TokenCreate {
-	tc.mutation.SetBaseCurrency(s)
-	return tc
+func (_c *TokenCreate) SetBaseCurrency(v string) *TokenCreate {
+	_c.mutation.SetBaseCurrency(v)
+	return _c
 }
 
 // SetNillableBaseCurrency sets the "base_currency" field if the given value is not nil.
-func (tc *TokenCreate) SetNillableBaseCurrency(s *string) *TokenCreate {
-	if s != nil {
-		tc.SetBaseCurrency(*s)
+func (_c *TokenCreate) SetNillableBaseCurrency(v *string) *TokenCreate {
+	if v != nil {
+		_c.SetBaseCurrency(*v)
 	}
-	return tc
+	return _c
 }
 
 // SetNetworkID sets the "network" edge to the Network entity by ID.
-func (tc *TokenCreate) SetNetworkID(id int) *TokenCreate {
-	tc.mutation.SetNetworkID(id)
-	return tc
+func (_c *TokenCreate) SetNetworkID(id int) *TokenCreate {
+	_c.mutation.SetNetworkID(id)
+	return _c
 }
 
 // SetNetwork sets the "network" edge to the Network entity.
-func (tc *TokenCreate) SetNetwork(n *Network) *TokenCreate {
-	return tc.SetNetworkID(n.ID)
+func (_c *TokenCreate) SetNetwork(v *Network) *TokenCreate {
+	return _c.SetNetworkID(v.ID)
 }
 
 // AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (tc *TokenCreate) AddPaymentOrderIDs(ids ...uuid.UUID) *TokenCreate {
-	tc.mutation.AddPaymentOrderIDs(ids...)
-	return tc
+func (_c *TokenCreate) AddPaymentOrderIDs(ids ...uuid.UUID) *TokenCreate {
+	_c.mutation.AddPaymentOrderIDs(ids...)
+	return _c
 }
 
 // AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (tc *TokenCreate) AddPaymentOrders(p ...*PaymentOrder) *TokenCreate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *TokenCreate) AddPaymentOrders(v ...*PaymentOrder) *TokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tc.AddPaymentOrderIDs(ids...)
+	return _c.AddPaymentOrderIDs(ids...)
 }
 
 // AddSenderOrderTokenIDs adds the "sender_order_tokens" edge to the SenderOrderToken entity by IDs.
-func (tc *TokenCreate) AddSenderOrderTokenIDs(ids ...int) *TokenCreate {
-	tc.mutation.AddSenderOrderTokenIDs(ids...)
-	return tc
+func (_c *TokenCreate) AddSenderOrderTokenIDs(ids ...int) *TokenCreate {
+	_c.mutation.AddSenderOrderTokenIDs(ids...)
+	return _c
 }
 
 // AddSenderOrderTokens adds the "sender_order_tokens" edges to the SenderOrderToken entity.
-func (tc *TokenCreate) AddSenderOrderTokens(s ...*SenderOrderToken) *TokenCreate {
-	ids := make([]int, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
+func (_c *TokenCreate) AddSenderOrderTokens(v ...*SenderOrderToken) *TokenCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tc.AddSenderOrderTokenIDs(ids...)
+	return _c.AddSenderOrderTokenIDs(ids...)
 }
 
 // AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
-func (tc *TokenCreate) AddProviderOrderTokenIDs(ids ...int) *TokenCreate {
-	tc.mutation.AddProviderOrderTokenIDs(ids...)
-	return tc
+func (_c *TokenCreate) AddProviderOrderTokenIDs(ids ...int) *TokenCreate {
+	_c.mutation.AddProviderOrderTokenIDs(ids...)
+	return _c
 }
 
 // AddProviderOrderTokens adds the "provider_order_tokens" edges to the ProviderOrderToken entity.
-func (tc *TokenCreate) AddProviderOrderTokens(p ...*ProviderOrderToken) *TokenCreate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *TokenCreate) AddProviderOrderTokens(v ...*ProviderOrderToken) *TokenCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tc.AddProviderOrderTokenIDs(ids...)
+	return _c.AddProviderOrderTokenIDs(ids...)
 }
 
 // Mutation returns the TokenMutation object of the builder.
-func (tc *TokenCreate) Mutation() *TokenMutation {
-	return tc.mutation
+func (_c *TokenCreate) Mutation() *TokenMutation {
+	return _c.mutation
 }
 
 // Save creates the Token in the database.
-func (tc *TokenCreate) Save(ctx context.Context) (*Token, error) {
-	tc.defaults()
-	return withHooks(ctx, tc.sqlSave, tc.mutation, tc.hooks)
+func (_c *TokenCreate) Save(ctx context.Context) (*Token, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (tc *TokenCreate) SaveX(ctx context.Context) *Token {
-	v, err := tc.Save(ctx)
+func (_c *TokenCreate) SaveX(ctx context.Context) *Token {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -178,83 +178,83 @@ func (tc *TokenCreate) SaveX(ctx context.Context) *Token {
 }
 
 // Exec executes the query.
-func (tc *TokenCreate) Exec(ctx context.Context) error {
-	_, err := tc.Save(ctx)
+func (_c *TokenCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tc *TokenCreate) ExecX(ctx context.Context) {
-	if err := tc.Exec(ctx); err != nil {
+func (_c *TokenCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (tc *TokenCreate) defaults() {
-	if _, ok := tc.mutation.CreatedAt(); !ok {
+func (_c *TokenCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := token.DefaultCreatedAt()
-		tc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := tc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := token.DefaultUpdatedAt()
-		tc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := tc.mutation.IsEnabled(); !ok {
+	if _, ok := _c.mutation.IsEnabled(); !ok {
 		v := token.DefaultIsEnabled
-		tc.mutation.SetIsEnabled(v)
+		_c.mutation.SetIsEnabled(v)
 	}
-	if _, ok := tc.mutation.BaseCurrency(); !ok {
+	if _, ok := _c.mutation.BaseCurrency(); !ok {
 		v := token.DefaultBaseCurrency
-		tc.mutation.SetBaseCurrency(v)
+		_c.mutation.SetBaseCurrency(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (tc *TokenCreate) check() error {
-	if _, ok := tc.mutation.CreatedAt(); !ok {
+func (_c *TokenCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Token.created_at"`)}
 	}
-	if _, ok := tc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Token.updated_at"`)}
 	}
-	if _, ok := tc.mutation.Symbol(); !ok {
+	if _, ok := _c.mutation.Symbol(); !ok {
 		return &ValidationError{Name: "symbol", err: errors.New(`ent: missing required field "Token.symbol"`)}
 	}
-	if v, ok := tc.mutation.Symbol(); ok {
+	if v, ok := _c.mutation.Symbol(); ok {
 		if err := token.SymbolValidator(v); err != nil {
 			return &ValidationError{Name: "symbol", err: fmt.Errorf(`ent: validator failed for field "Token.symbol": %w`, err)}
 		}
 	}
-	if _, ok := tc.mutation.ContractAddress(); !ok {
+	if _, ok := _c.mutation.ContractAddress(); !ok {
 		return &ValidationError{Name: "contract_address", err: errors.New(`ent: missing required field "Token.contract_address"`)}
 	}
-	if v, ok := tc.mutation.ContractAddress(); ok {
+	if v, ok := _c.mutation.ContractAddress(); ok {
 		if err := token.ContractAddressValidator(v); err != nil {
 			return &ValidationError{Name: "contract_address", err: fmt.Errorf(`ent: validator failed for field "Token.contract_address": %w`, err)}
 		}
 	}
-	if _, ok := tc.mutation.Decimals(); !ok {
+	if _, ok := _c.mutation.Decimals(); !ok {
 		return &ValidationError{Name: "decimals", err: errors.New(`ent: missing required field "Token.decimals"`)}
 	}
-	if _, ok := tc.mutation.IsEnabled(); !ok {
+	if _, ok := _c.mutation.IsEnabled(); !ok {
 		return &ValidationError{Name: "is_enabled", err: errors.New(`ent: missing required field "Token.is_enabled"`)}
 	}
-	if _, ok := tc.mutation.BaseCurrency(); !ok {
+	if _, ok := _c.mutation.BaseCurrency(); !ok {
 		return &ValidationError{Name: "base_currency", err: errors.New(`ent: missing required field "Token.base_currency"`)}
 	}
-	if len(tc.mutation.NetworkIDs()) == 0 {
+	if len(_c.mutation.NetworkIDs()) == 0 {
 		return &ValidationError{Name: "network", err: errors.New(`ent: missing required edge "Token.network"`)}
 	}
 	return nil
 }
 
-func (tc *TokenCreate) sqlSave(ctx context.Context) (*Token, error) {
-	if err := tc.check(); err != nil {
+func (_c *TokenCreate) sqlSave(ctx context.Context) (*Token, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := tc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, tc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -262,46 +262,46 @@ func (tc *TokenCreate) sqlSave(ctx context.Context) (*Token, error) {
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	tc.mutation.id = &_node.ID
-	tc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
+func (_c *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 	var (
-		_node = &Token{config: tc.config}
+		_node = &Token{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(token.Table, sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = tc.conflict
-	if value, ok := tc.mutation.CreatedAt(); ok {
+	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(token.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := tc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(token.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := tc.mutation.Symbol(); ok {
+	if value, ok := _c.mutation.Symbol(); ok {
 		_spec.SetField(token.FieldSymbol, field.TypeString, value)
 		_node.Symbol = value
 	}
-	if value, ok := tc.mutation.ContractAddress(); ok {
+	if value, ok := _c.mutation.ContractAddress(); ok {
 		_spec.SetField(token.FieldContractAddress, field.TypeString, value)
 		_node.ContractAddress = value
 	}
-	if value, ok := tc.mutation.Decimals(); ok {
+	if value, ok := _c.mutation.Decimals(); ok {
 		_spec.SetField(token.FieldDecimals, field.TypeInt8, value)
 		_node.Decimals = value
 	}
-	if value, ok := tc.mutation.IsEnabled(); ok {
+	if value, ok := _c.mutation.IsEnabled(); ok {
 		_spec.SetField(token.FieldIsEnabled, field.TypeBool, value)
 		_node.IsEnabled = value
 	}
-	if value, ok := tc.mutation.BaseCurrency(); ok {
+	if value, ok := _c.mutation.BaseCurrency(); ok {
 		_spec.SetField(token.FieldBaseCurrency, field.TypeString, value)
 		_node.BaseCurrency = value
 	}
-	if nodes := tc.mutation.NetworkIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.NetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -318,7 +318,7 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		_node.network_tokens = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := tc.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -334,7 +334,7 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := tc.mutation.SenderOrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.SenderOrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -350,7 +350,7 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := tc.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -385,10 +385,10 @@ func (tc *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (tc *TokenCreate) OnConflict(opts ...sql.ConflictOption) *TokenUpsertOne {
-	tc.conflict = opts
+func (_c *TokenCreate) OnConflict(opts ...sql.ConflictOption) *TokenUpsertOne {
+	_c.conflict = opts
 	return &TokenUpsertOne{
-		create: tc,
+		create: _c,
 	}
 }
 
@@ -398,10 +398,10 @@ func (tc *TokenCreate) OnConflict(opts ...sql.ConflictOption) *TokenUpsertOne {
 //	client.Token.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (tc *TokenCreate) OnConflictColumns(columns ...string) *TokenUpsertOne {
-	tc.conflict = append(tc.conflict, sql.ConflictColumns(columns...))
+func (_c *TokenCreate) OnConflictColumns(columns ...string) *TokenUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &TokenUpsertOne{
-		create: tc,
+		create: _c,
 	}
 }
 
@@ -674,16 +674,16 @@ type TokenCreateBulk struct {
 }
 
 // Save creates the Token entities in the database.
-func (tcb *TokenCreateBulk) Save(ctx context.Context) ([]*Token, error) {
-	if tcb.err != nil {
-		return nil, tcb.err
+func (_c *TokenCreateBulk) Save(ctx context.Context) ([]*Token, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(tcb.builders))
-	nodes := make([]*Token, len(tcb.builders))
-	mutators := make([]Mutator, len(tcb.builders))
-	for i := range tcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*Token, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := tcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*TokenMutation)
@@ -697,12 +697,12 @@ func (tcb *TokenCreateBulk) Save(ctx context.Context) ([]*Token, error) {
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, tcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = tcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, tcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -726,7 +726,7 @@ func (tcb *TokenCreateBulk) Save(ctx context.Context) ([]*Token, error) {
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, tcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -734,8 +734,8 @@ func (tcb *TokenCreateBulk) Save(ctx context.Context) ([]*Token, error) {
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (tcb *TokenCreateBulk) SaveX(ctx context.Context) []*Token {
-	v, err := tcb.Save(ctx)
+func (_c *TokenCreateBulk) SaveX(ctx context.Context) []*Token {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -743,14 +743,14 @@ func (tcb *TokenCreateBulk) SaveX(ctx context.Context) []*Token {
 }
 
 // Exec executes the query.
-func (tcb *TokenCreateBulk) Exec(ctx context.Context) error {
-	_, err := tcb.Save(ctx)
+func (_c *TokenCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tcb *TokenCreateBulk) ExecX(ctx context.Context) {
-	if err := tcb.Exec(ctx); err != nil {
+func (_c *TokenCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -770,10 +770,10 @@ func (tcb *TokenCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (tcb *TokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *TokenUpsertBulk {
-	tcb.conflict = opts
+func (_c *TokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *TokenUpsertBulk {
+	_c.conflict = opts
 	return &TokenUpsertBulk{
-		create: tcb,
+		create: _c,
 	}
 }
 
@@ -783,10 +783,10 @@ func (tcb *TokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *TokenUpsertB
 //	client.Token.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (tcb *TokenCreateBulk) OnConflictColumns(columns ...string) *TokenUpsertBulk {
-	tcb.conflict = append(tcb.conflict, sql.ConflictColumns(columns...))
+func (_c *TokenCreateBulk) OnConflictColumns(columns ...string) *TokenUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &TokenUpsertBulk{
-		create: tcb,
+		create: _c,
 	}
 }
 

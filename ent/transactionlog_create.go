@@ -25,109 +25,109 @@ type TransactionLogCreate struct {
 }
 
 // SetGatewayID sets the "gateway_id" field.
-func (tlc *TransactionLogCreate) SetGatewayID(s string) *TransactionLogCreate {
-	tlc.mutation.SetGatewayID(s)
-	return tlc
+func (_c *TransactionLogCreate) SetGatewayID(v string) *TransactionLogCreate {
+	_c.mutation.SetGatewayID(v)
+	return _c
 }
 
 // SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (tlc *TransactionLogCreate) SetNillableGatewayID(s *string) *TransactionLogCreate {
-	if s != nil {
-		tlc.SetGatewayID(*s)
+func (_c *TransactionLogCreate) SetNillableGatewayID(v *string) *TransactionLogCreate {
+	if v != nil {
+		_c.SetGatewayID(*v)
 	}
-	return tlc
+	return _c
 }
 
 // SetStatus sets the "status" field.
-func (tlc *TransactionLogCreate) SetStatus(t transactionlog.Status) *TransactionLogCreate {
-	tlc.mutation.SetStatus(t)
-	return tlc
+func (_c *TransactionLogCreate) SetStatus(v transactionlog.Status) *TransactionLogCreate {
+	_c.mutation.SetStatus(v)
+	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (tlc *TransactionLogCreate) SetNillableStatus(t *transactionlog.Status) *TransactionLogCreate {
-	if t != nil {
-		tlc.SetStatus(*t)
+func (_c *TransactionLogCreate) SetNillableStatus(v *transactionlog.Status) *TransactionLogCreate {
+	if v != nil {
+		_c.SetStatus(*v)
 	}
-	return tlc
+	return _c
 }
 
 // SetNetwork sets the "network" field.
-func (tlc *TransactionLogCreate) SetNetwork(s string) *TransactionLogCreate {
-	tlc.mutation.SetNetwork(s)
-	return tlc
+func (_c *TransactionLogCreate) SetNetwork(v string) *TransactionLogCreate {
+	_c.mutation.SetNetwork(v)
+	return _c
 }
 
 // SetNillableNetwork sets the "network" field if the given value is not nil.
-func (tlc *TransactionLogCreate) SetNillableNetwork(s *string) *TransactionLogCreate {
-	if s != nil {
-		tlc.SetNetwork(*s)
+func (_c *TransactionLogCreate) SetNillableNetwork(v *string) *TransactionLogCreate {
+	if v != nil {
+		_c.SetNetwork(*v)
 	}
-	return tlc
+	return _c
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (tlc *TransactionLogCreate) SetTxHash(s string) *TransactionLogCreate {
-	tlc.mutation.SetTxHash(s)
-	return tlc
+func (_c *TransactionLogCreate) SetTxHash(v string) *TransactionLogCreate {
+	_c.mutation.SetTxHash(v)
+	return _c
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (tlc *TransactionLogCreate) SetNillableTxHash(s *string) *TransactionLogCreate {
-	if s != nil {
-		tlc.SetTxHash(*s)
+func (_c *TransactionLogCreate) SetNillableTxHash(v *string) *TransactionLogCreate {
+	if v != nil {
+		_c.SetTxHash(*v)
 	}
-	return tlc
+	return _c
 }
 
 // SetMetadata sets the "metadata" field.
-func (tlc *TransactionLogCreate) SetMetadata(m map[string]interface{}) *TransactionLogCreate {
-	tlc.mutation.SetMetadata(m)
-	return tlc
+func (_c *TransactionLogCreate) SetMetadata(v map[string]interface{}) *TransactionLogCreate {
+	_c.mutation.SetMetadata(v)
+	return _c
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (tlc *TransactionLogCreate) SetCreatedAt(t time.Time) *TransactionLogCreate {
-	tlc.mutation.SetCreatedAt(t)
-	return tlc
+func (_c *TransactionLogCreate) SetCreatedAt(v time.Time) *TransactionLogCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (tlc *TransactionLogCreate) SetNillableCreatedAt(t *time.Time) *TransactionLogCreate {
-	if t != nil {
-		tlc.SetCreatedAt(*t)
+func (_c *TransactionLogCreate) SetNillableCreatedAt(v *time.Time) *TransactionLogCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return tlc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (tlc *TransactionLogCreate) SetID(u uuid.UUID) *TransactionLogCreate {
-	tlc.mutation.SetID(u)
-	return tlc
+func (_c *TransactionLogCreate) SetID(v uuid.UUID) *TransactionLogCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (tlc *TransactionLogCreate) SetNillableID(u *uuid.UUID) *TransactionLogCreate {
-	if u != nil {
-		tlc.SetID(*u)
+func (_c *TransactionLogCreate) SetNillableID(v *uuid.UUID) *TransactionLogCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return tlc
+	return _c
 }
 
 // Mutation returns the TransactionLogMutation object of the builder.
-func (tlc *TransactionLogCreate) Mutation() *TransactionLogMutation {
-	return tlc.mutation
+func (_c *TransactionLogCreate) Mutation() *TransactionLogMutation {
+	return _c.mutation
 }
 
 // Save creates the TransactionLog in the database.
-func (tlc *TransactionLogCreate) Save(ctx context.Context) (*TransactionLog, error) {
-	tlc.defaults()
-	return withHooks(ctx, tlc.sqlSave, tlc.mutation, tlc.hooks)
+func (_c *TransactionLogCreate) Save(ctx context.Context) (*TransactionLog, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (tlc *TransactionLogCreate) SaveX(ctx context.Context) *TransactionLog {
-	v, err := tlc.Save(ctx)
+func (_c *TransactionLogCreate) SaveX(ctx context.Context) *TransactionLog {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -135,59 +135,59 @@ func (tlc *TransactionLogCreate) SaveX(ctx context.Context) *TransactionLog {
 }
 
 // Exec executes the query.
-func (tlc *TransactionLogCreate) Exec(ctx context.Context) error {
-	_, err := tlc.Save(ctx)
+func (_c *TransactionLogCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tlc *TransactionLogCreate) ExecX(ctx context.Context) {
-	if err := tlc.Exec(ctx); err != nil {
+func (_c *TransactionLogCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (tlc *TransactionLogCreate) defaults() {
-	if _, ok := tlc.mutation.Status(); !ok {
+func (_c *TransactionLogCreate) defaults() {
+	if _, ok := _c.mutation.Status(); !ok {
 		v := transactionlog.DefaultStatus
-		tlc.mutation.SetStatus(v)
+		_c.mutation.SetStatus(v)
 	}
-	if _, ok := tlc.mutation.CreatedAt(); !ok {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := transactionlog.DefaultCreatedAt()
-		tlc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := tlc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := transactionlog.DefaultID()
-		tlc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (tlc *TransactionLogCreate) check() error {
-	if _, ok := tlc.mutation.Status(); !ok {
+func (_c *TransactionLogCreate) check() error {
+	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "TransactionLog.status"`)}
 	}
-	if v, ok := tlc.mutation.Status(); ok {
+	if v, ok := _c.mutation.Status(); ok {
 		if err := transactionlog.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "TransactionLog.status": %w`, err)}
 		}
 	}
-	if _, ok := tlc.mutation.Metadata(); !ok {
+	if _, ok := _c.mutation.Metadata(); !ok {
 		return &ValidationError{Name: "metadata", err: errors.New(`ent: missing required field "TransactionLog.metadata"`)}
 	}
-	if _, ok := tlc.mutation.CreatedAt(); !ok {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "TransactionLog.created_at"`)}
 	}
 	return nil
 }
 
-func (tlc *TransactionLogCreate) sqlSave(ctx context.Context) (*TransactionLog, error) {
-	if err := tlc.check(); err != nil {
+func (_c *TransactionLogCreate) sqlSave(ctx context.Context) (*TransactionLog, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := tlc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, tlc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -200,42 +200,42 @@ func (tlc *TransactionLogCreate) sqlSave(ctx context.Context) (*TransactionLog, 
 			return nil, err
 		}
 	}
-	tlc.mutation.id = &_node.ID
-	tlc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (tlc *TransactionLogCreate) createSpec() (*TransactionLog, *sqlgraph.CreateSpec) {
+func (_c *TransactionLogCreate) createSpec() (*TransactionLog, *sqlgraph.CreateSpec) {
 	var (
-		_node = &TransactionLog{config: tlc.config}
+		_node = &TransactionLog{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(transactionlog.Table, sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = tlc.conflict
-	if id, ok := tlc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := tlc.mutation.GatewayID(); ok {
+	if value, ok := _c.mutation.GatewayID(); ok {
 		_spec.SetField(transactionlog.FieldGatewayID, field.TypeString, value)
 		_node.GatewayID = value
 	}
-	if value, ok := tlc.mutation.Status(); ok {
+	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(transactionlog.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
-	if value, ok := tlc.mutation.Network(); ok {
+	if value, ok := _c.mutation.Network(); ok {
 		_spec.SetField(transactionlog.FieldNetwork, field.TypeString, value)
 		_node.Network = value
 	}
-	if value, ok := tlc.mutation.TxHash(); ok {
+	if value, ok := _c.mutation.TxHash(); ok {
 		_spec.SetField(transactionlog.FieldTxHash, field.TypeString, value)
 		_node.TxHash = value
 	}
-	if value, ok := tlc.mutation.Metadata(); ok {
+	if value, ok := _c.mutation.Metadata(); ok {
 		_spec.SetField(transactionlog.FieldMetadata, field.TypeJSON, value)
 		_node.Metadata = value
 	}
-	if value, ok := tlc.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(transactionlog.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
@@ -258,10 +258,10 @@ func (tlc *TransactionLogCreate) createSpec() (*TransactionLog, *sqlgraph.Create
 //			SetGatewayID(v+v).
 //		}).
 //		Exec(ctx)
-func (tlc *TransactionLogCreate) OnConflict(opts ...sql.ConflictOption) *TransactionLogUpsertOne {
-	tlc.conflict = opts
+func (_c *TransactionLogCreate) OnConflict(opts ...sql.ConflictOption) *TransactionLogUpsertOne {
+	_c.conflict = opts
 	return &TransactionLogUpsertOne{
-		create: tlc,
+		create: _c,
 	}
 }
 
@@ -271,10 +271,10 @@ func (tlc *TransactionLogCreate) OnConflict(opts ...sql.ConflictOption) *Transac
 //	client.TransactionLog.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (tlc *TransactionLogCreate) OnConflictColumns(columns ...string) *TransactionLogUpsertOne {
-	tlc.conflict = append(tlc.conflict, sql.ConflictColumns(columns...))
+func (_c *TransactionLogCreate) OnConflictColumns(columns ...string) *TransactionLogUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &TransactionLogUpsertOne{
-		create: tlc,
+		create: _c,
 	}
 }
 
@@ -535,16 +535,16 @@ type TransactionLogCreateBulk struct {
 }
 
 // Save creates the TransactionLog entities in the database.
-func (tlcb *TransactionLogCreateBulk) Save(ctx context.Context) ([]*TransactionLog, error) {
-	if tlcb.err != nil {
-		return nil, tlcb.err
+func (_c *TransactionLogCreateBulk) Save(ctx context.Context) ([]*TransactionLog, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(tlcb.builders))
-	nodes := make([]*TransactionLog, len(tlcb.builders))
-	mutators := make([]Mutator, len(tlcb.builders))
-	for i := range tlcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*TransactionLog, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := tlcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*TransactionLogMutation)
@@ -558,12 +558,12 @@ func (tlcb *TransactionLogCreateBulk) Save(ctx context.Context) ([]*TransactionL
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, tlcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = tlcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, tlcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -583,7 +583,7 @@ func (tlcb *TransactionLogCreateBulk) Save(ctx context.Context) ([]*TransactionL
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, tlcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -591,8 +591,8 @@ func (tlcb *TransactionLogCreateBulk) Save(ctx context.Context) ([]*TransactionL
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (tlcb *TransactionLogCreateBulk) SaveX(ctx context.Context) []*TransactionLog {
-	v, err := tlcb.Save(ctx)
+func (_c *TransactionLogCreateBulk) SaveX(ctx context.Context) []*TransactionLog {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -600,14 +600,14 @@ func (tlcb *TransactionLogCreateBulk) SaveX(ctx context.Context) []*TransactionL
 }
 
 // Exec executes the query.
-func (tlcb *TransactionLogCreateBulk) Exec(ctx context.Context) error {
-	_, err := tlcb.Save(ctx)
+func (_c *TransactionLogCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tlcb *TransactionLogCreateBulk) ExecX(ctx context.Context) {
-	if err := tlcb.Exec(ctx); err != nil {
+func (_c *TransactionLogCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -627,10 +627,10 @@ func (tlcb *TransactionLogCreateBulk) ExecX(ctx context.Context) {
 //			SetGatewayID(v+v).
 //		}).
 //		Exec(ctx)
-func (tlcb *TransactionLogCreateBulk) OnConflict(opts ...sql.ConflictOption) *TransactionLogUpsertBulk {
-	tlcb.conflict = opts
+func (_c *TransactionLogCreateBulk) OnConflict(opts ...sql.ConflictOption) *TransactionLogUpsertBulk {
+	_c.conflict = opts
 	return &TransactionLogUpsertBulk{
-		create: tlcb,
+		create: _c,
 	}
 }
 
@@ -640,10 +640,10 @@ func (tlcb *TransactionLogCreateBulk) OnConflict(opts ...sql.ConflictOption) *Tr
 //	client.TransactionLog.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (tlcb *TransactionLogCreateBulk) OnConflictColumns(columns ...string) *TransactionLogUpsertBulk {
-	tlcb.conflict = append(tlcb.conflict, sql.ConflictColumns(columns...))
+func (_c *TransactionLogCreateBulk) OnConflictColumns(columns ...string) *TransactionLogUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &TransactionLogUpsertBulk{
-		create: tlcb,
+		create: _c,
 	}
 }
 

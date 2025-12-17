@@ -78,7 +78,7 @@ func (*VerificationToken) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the VerificationToken fields.
-func (vt *VerificationToken) assignValues(columns []string, values []any) error {
+func (_m *VerificationToken) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -88,47 +88,47 @@ func (vt *VerificationToken) assignValues(columns []string, values []any) error 
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				vt.ID = *value
+				_m.ID = *value
 			}
 		case verificationtoken.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				vt.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case verificationtoken.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				vt.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case verificationtoken.FieldToken:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field token", values[i])
 			} else if value.Valid {
-				vt.Token = value.String
+				_m.Token = value.String
 			}
 		case verificationtoken.FieldScope:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field scope", values[i])
 			} else if value.Valid {
-				vt.Scope = verificationtoken.Scope(value.String)
+				_m.Scope = verificationtoken.Scope(value.String)
 			}
 		case verificationtoken.FieldExpiryAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field expiry_at", values[i])
 			} else if value.Valid {
-				vt.ExpiryAt = value.Time
+				_m.ExpiryAt = value.Time
 			}
 		case verificationtoken.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field user_verification_token", values[i])
 			} else if value.Valid {
-				vt.user_verification_token = new(uuid.UUID)
-				*vt.user_verification_token = *value.S.(*uuid.UUID)
+				_m.user_verification_token = new(uuid.UUID)
+				*_m.user_verification_token = *value.S.(*uuid.UUID)
 			}
 		default:
-			vt.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -136,52 +136,52 @@ func (vt *VerificationToken) assignValues(columns []string, values []any) error 
 
 // Value returns the ent.Value that was dynamically selected and assigned to the VerificationToken.
 // This includes values selected through modifiers, order, etc.
-func (vt *VerificationToken) Value(name string) (ent.Value, error) {
-	return vt.selectValues.Get(name)
+func (_m *VerificationToken) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryOwner queries the "owner" edge of the VerificationToken entity.
-func (vt *VerificationToken) QueryOwner() *UserQuery {
-	return NewVerificationTokenClient(vt.config).QueryOwner(vt)
+func (_m *VerificationToken) QueryOwner() *UserQuery {
+	return NewVerificationTokenClient(_m.config).QueryOwner(_m)
 }
 
 // Update returns a builder for updating this VerificationToken.
 // Note that you need to call VerificationToken.Unwrap() before calling this method if this VerificationToken
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (vt *VerificationToken) Update() *VerificationTokenUpdateOne {
-	return NewVerificationTokenClient(vt.config).UpdateOne(vt)
+func (_m *VerificationToken) Update() *VerificationTokenUpdateOne {
+	return NewVerificationTokenClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the VerificationToken entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (vt *VerificationToken) Unwrap() *VerificationToken {
-	_tx, ok := vt.config.driver.(*txDriver)
+func (_m *VerificationToken) Unwrap() *VerificationToken {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: VerificationToken is not a transactional entity")
 	}
-	vt.config.driver = _tx.drv
-	return vt
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (vt *VerificationToken) String() string {
+func (_m *VerificationToken) String() string {
 	var builder strings.Builder
 	builder.WriteString("VerificationToken(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", vt.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(vt.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(vt.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("token=")
-	builder.WriteString(vt.Token)
+	builder.WriteString(_m.Token)
 	builder.WriteString(", ")
 	builder.WriteString("scope=")
-	builder.WriteString(fmt.Sprintf("%v", vt.Scope))
+	builder.WriteString(fmt.Sprintf("%v", _m.Scope))
 	builder.WriteString(", ")
 	builder.WriteString("expiry_at=")
-	builder.WriteString(vt.ExpiryAt.Format(time.ANSIC))
+	builder.WriteString(_m.ExpiryAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

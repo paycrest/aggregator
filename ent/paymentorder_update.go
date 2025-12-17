@@ -33,831 +33,831 @@ type PaymentOrderUpdate struct {
 }
 
 // Where appends a list predicates to the PaymentOrderUpdate builder.
-func (pou *PaymentOrderUpdate) Where(ps ...predicate.PaymentOrder) *PaymentOrderUpdate {
-	pou.mutation.Where(ps...)
-	return pou
+func (_u *PaymentOrderUpdate) Where(ps ...predicate.PaymentOrder) *PaymentOrderUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pou *PaymentOrderUpdate) SetUpdatedAt(t time.Time) *PaymentOrderUpdate {
-	pou.mutation.SetUpdatedAt(t)
-	return pou
+func (_u *PaymentOrderUpdate) SetUpdatedAt(v time.Time) *PaymentOrderUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetAmount sets the "amount" field.
-func (pou *PaymentOrderUpdate) SetAmount(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetAmount()
-	pou.mutation.SetAmount(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetAmount(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetAmount()
+	_u.mutation.SetAmount(v)
+	return _u
 }
 
 // SetNillableAmount sets the "amount" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableAmount(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetAmount(*d)
+func (_u *PaymentOrderUpdate) SetNillableAmount(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetAmount(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddAmount adds d to the "amount" field.
-func (pou *PaymentOrderUpdate) AddAmount(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddAmount(d)
-	return pou
+// AddAmount adds value to the "amount" field.
+func (_u *PaymentOrderUpdate) AddAmount(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddAmount(v)
+	return _u
 }
 
 // SetRate sets the "rate" field.
-func (pou *PaymentOrderUpdate) SetRate(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetRate()
-	pou.mutation.SetRate(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetRate(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetRate()
+	_u.mutation.SetRate(v)
+	return _u
 }
 
 // SetNillableRate sets the "rate" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableRate(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetRate(*d)
+func (_u *PaymentOrderUpdate) SetNillableRate(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetRate(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddRate adds d to the "rate" field.
-func (pou *PaymentOrderUpdate) AddRate(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddRate(d)
-	return pou
+// AddRate adds value to the "rate" field.
+func (_u *PaymentOrderUpdate) AddRate(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddRate(v)
+	return _u
 }
 
 // SetAmountInUsd sets the "amount_in_usd" field.
-func (pou *PaymentOrderUpdate) SetAmountInUsd(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetAmountInUsd()
-	pou.mutation.SetAmountInUsd(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetAmountInUsd()
+	_u.mutation.SetAmountInUsd(v)
+	return _u
 }
 
 // SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableAmountInUsd(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetAmountInUsd(*d)
+func (_u *PaymentOrderUpdate) SetNillableAmountInUsd(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetAmountInUsd(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddAmountInUsd adds d to the "amount_in_usd" field.
-func (pou *PaymentOrderUpdate) AddAmountInUsd(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddAmountInUsd(d)
-	return pou
+// AddAmountInUsd adds value to the "amount_in_usd" field.
+func (_u *PaymentOrderUpdate) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddAmountInUsd(v)
+	return _u
 }
 
 // SetAmountPaid sets the "amount_paid" field.
-func (pou *PaymentOrderUpdate) SetAmountPaid(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetAmountPaid()
-	pou.mutation.SetAmountPaid(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetAmountPaid(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetAmountPaid()
+	_u.mutation.SetAmountPaid(v)
+	return _u
 }
 
 // SetNillableAmountPaid sets the "amount_paid" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableAmountPaid(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetAmountPaid(*d)
+func (_u *PaymentOrderUpdate) SetNillableAmountPaid(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetAmountPaid(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddAmountPaid adds d to the "amount_paid" field.
-func (pou *PaymentOrderUpdate) AddAmountPaid(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddAmountPaid(d)
-	return pou
+// AddAmountPaid adds value to the "amount_paid" field.
+func (_u *PaymentOrderUpdate) AddAmountPaid(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddAmountPaid(v)
+	return _u
 }
 
 // SetAmountReturned sets the "amount_returned" field.
-func (pou *PaymentOrderUpdate) SetAmountReturned(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetAmountReturned()
-	pou.mutation.SetAmountReturned(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetAmountReturned(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetAmountReturned()
+	_u.mutation.SetAmountReturned(v)
+	return _u
 }
 
 // SetNillableAmountReturned sets the "amount_returned" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableAmountReturned(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetAmountReturned(*d)
+func (_u *PaymentOrderUpdate) SetNillableAmountReturned(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetAmountReturned(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddAmountReturned adds d to the "amount_returned" field.
-func (pou *PaymentOrderUpdate) AddAmountReturned(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddAmountReturned(d)
-	return pou
+// AddAmountReturned adds value to the "amount_returned" field.
+func (_u *PaymentOrderUpdate) AddAmountReturned(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddAmountReturned(v)
+	return _u
 }
 
 // SetPercentSettled sets the "percent_settled" field.
-func (pou *PaymentOrderUpdate) SetPercentSettled(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetPercentSettled()
-	pou.mutation.SetPercentSettled(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetPercentSettled(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetPercentSettled()
+	_u.mutation.SetPercentSettled(v)
+	return _u
 }
 
 // SetNillablePercentSettled sets the "percent_settled" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillablePercentSettled(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetPercentSettled(*d)
+func (_u *PaymentOrderUpdate) SetNillablePercentSettled(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetPercentSettled(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddPercentSettled adds d to the "percent_settled" field.
-func (pou *PaymentOrderUpdate) AddPercentSettled(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddPercentSettled(d)
-	return pou
+// AddPercentSettled adds value to the "percent_settled" field.
+func (_u *PaymentOrderUpdate) AddPercentSettled(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddPercentSettled(v)
+	return _u
 }
 
 // SetSenderFee sets the "sender_fee" field.
-func (pou *PaymentOrderUpdate) SetSenderFee(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetSenderFee()
-	pou.mutation.SetSenderFee(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetSenderFee(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetSenderFee()
+	_u.mutation.SetSenderFee(v)
+	return _u
 }
 
 // SetNillableSenderFee sets the "sender_fee" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableSenderFee(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetSenderFee(*d)
+func (_u *PaymentOrderUpdate) SetNillableSenderFee(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetSenderFee(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddSenderFee adds d to the "sender_fee" field.
-func (pou *PaymentOrderUpdate) AddSenderFee(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddSenderFee(d)
-	return pou
+// AddSenderFee adds value to the "sender_fee" field.
+func (_u *PaymentOrderUpdate) AddSenderFee(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddSenderFee(v)
+	return _u
 }
 
 // SetNetworkFee sets the "network_fee" field.
-func (pou *PaymentOrderUpdate) SetNetworkFee(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetNetworkFee()
-	pou.mutation.SetNetworkFee(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetNetworkFee(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetNetworkFee()
+	_u.mutation.SetNetworkFee(v)
+	return _u
 }
 
 // SetNillableNetworkFee sets the "network_fee" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableNetworkFee(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetNetworkFee(*d)
+func (_u *PaymentOrderUpdate) SetNillableNetworkFee(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetNetworkFee(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddNetworkFee adds d to the "network_fee" field.
-func (pou *PaymentOrderUpdate) AddNetworkFee(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddNetworkFee(d)
-	return pou
+// AddNetworkFee adds value to the "network_fee" field.
+func (_u *PaymentOrderUpdate) AddNetworkFee(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddNetworkFee(v)
+	return _u
 }
 
 // SetProtocolFee sets the "protocol_fee" field.
-func (pou *PaymentOrderUpdate) SetProtocolFee(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetProtocolFee()
-	pou.mutation.SetProtocolFee(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetProtocolFee()
+	_u.mutation.SetProtocolFee(v)
+	return _u
 }
 
 // SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableProtocolFee(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetProtocolFee(*d)
+func (_u *PaymentOrderUpdate) SetNillableProtocolFee(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetProtocolFee(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddProtocolFee adds d to the "protocol_fee" field.
-func (pou *PaymentOrderUpdate) AddProtocolFee(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddProtocolFee(d)
-	return pou
+// AddProtocolFee adds value to the "protocol_fee" field.
+func (_u *PaymentOrderUpdate) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddProtocolFee(v)
+	return _u
 }
 
 // SetOrderPercent sets the "order_percent" field.
-func (pou *PaymentOrderUpdate) SetOrderPercent(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetOrderPercent()
-	pou.mutation.SetOrderPercent(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetOrderPercent(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetOrderPercent()
+	_u.mutation.SetOrderPercent(v)
+	return _u
 }
 
 // SetNillableOrderPercent sets the "order_percent" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableOrderPercent(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetOrderPercent(*d)
+func (_u *PaymentOrderUpdate) SetNillableOrderPercent(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetOrderPercent(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddOrderPercent adds d to the "order_percent" field.
-func (pou *PaymentOrderUpdate) AddOrderPercent(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddOrderPercent(d)
-	return pou
+// AddOrderPercent adds value to the "order_percent" field.
+func (_u *PaymentOrderUpdate) AddOrderPercent(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddOrderPercent(v)
+	return _u
 }
 
 // SetFeePercent sets the "fee_percent" field.
-func (pou *PaymentOrderUpdate) SetFeePercent(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.ResetFeePercent()
-	pou.mutation.SetFeePercent(d)
-	return pou
+func (_u *PaymentOrderUpdate) SetFeePercent(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetFeePercent()
+	_u.mutation.SetFeePercent(v)
+	return _u
 }
 
 // SetNillableFeePercent sets the "fee_percent" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableFeePercent(d *decimal.Decimal) *PaymentOrderUpdate {
-	if d != nil {
-		pou.SetFeePercent(*d)
+func (_u *PaymentOrderUpdate) SetNillableFeePercent(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetFeePercent(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddFeePercent adds d to the "fee_percent" field.
-func (pou *PaymentOrderUpdate) AddFeePercent(d decimal.Decimal) *PaymentOrderUpdate {
-	pou.mutation.AddFeePercent(d)
-	return pou
+// AddFeePercent adds value to the "fee_percent" field.
+func (_u *PaymentOrderUpdate) AddFeePercent(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddFeePercent(v)
+	return _u
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (pou *PaymentOrderUpdate) SetTxHash(s string) *PaymentOrderUpdate {
-	pou.mutation.SetTxHash(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetTxHash(v string) *PaymentOrderUpdate {
+	_u.mutation.SetTxHash(v)
+	return _u
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableTxHash(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetTxHash(*s)
+func (_u *PaymentOrderUpdate) SetNillableTxHash(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetTxHash(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearTxHash clears the value of the "tx_hash" field.
-func (pou *PaymentOrderUpdate) ClearTxHash() *PaymentOrderUpdate {
-	pou.mutation.ClearTxHash()
-	return pou
+func (_u *PaymentOrderUpdate) ClearTxHash() *PaymentOrderUpdate {
+	_u.mutation.ClearTxHash()
+	return _u
 }
 
 // SetBlockNumber sets the "block_number" field.
-func (pou *PaymentOrderUpdate) SetBlockNumber(i int64) *PaymentOrderUpdate {
-	pou.mutation.ResetBlockNumber()
-	pou.mutation.SetBlockNumber(i)
-	return pou
+func (_u *PaymentOrderUpdate) SetBlockNumber(v int64) *PaymentOrderUpdate {
+	_u.mutation.ResetBlockNumber()
+	_u.mutation.SetBlockNumber(v)
+	return _u
 }
 
 // SetNillableBlockNumber sets the "block_number" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableBlockNumber(i *int64) *PaymentOrderUpdate {
-	if i != nil {
-		pou.SetBlockNumber(*i)
+func (_u *PaymentOrderUpdate) SetNillableBlockNumber(v *int64) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetBlockNumber(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddBlockNumber adds i to the "block_number" field.
-func (pou *PaymentOrderUpdate) AddBlockNumber(i int64) *PaymentOrderUpdate {
-	pou.mutation.AddBlockNumber(i)
-	return pou
+// AddBlockNumber adds value to the "block_number" field.
+func (_u *PaymentOrderUpdate) AddBlockNumber(v int64) *PaymentOrderUpdate {
+	_u.mutation.AddBlockNumber(v)
+	return _u
 }
 
 // SetMessageHash sets the "message_hash" field.
-func (pou *PaymentOrderUpdate) SetMessageHash(s string) *PaymentOrderUpdate {
-	pou.mutation.SetMessageHash(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetMessageHash(v string) *PaymentOrderUpdate {
+	_u.mutation.SetMessageHash(v)
+	return _u
 }
 
 // SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableMessageHash(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetMessageHash(*s)
+func (_u *PaymentOrderUpdate) SetNillableMessageHash(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetMessageHash(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearMessageHash clears the value of the "message_hash" field.
-func (pou *PaymentOrderUpdate) ClearMessageHash() *PaymentOrderUpdate {
-	pou.mutation.ClearMessageHash()
-	return pou
+func (_u *PaymentOrderUpdate) ClearMessageHash() *PaymentOrderUpdate {
+	_u.mutation.ClearMessageHash()
+	return _u
 }
 
 // SetGatewayID sets the "gateway_id" field.
-func (pou *PaymentOrderUpdate) SetGatewayID(s string) *PaymentOrderUpdate {
-	pou.mutation.SetGatewayID(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetGatewayID(v string) *PaymentOrderUpdate {
+	_u.mutation.SetGatewayID(v)
+	return _u
 }
 
 // SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableGatewayID(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetGatewayID(*s)
+func (_u *PaymentOrderUpdate) SetNillableGatewayID(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetGatewayID(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearGatewayID clears the value of the "gateway_id" field.
-func (pou *PaymentOrderUpdate) ClearGatewayID() *PaymentOrderUpdate {
-	pou.mutation.ClearGatewayID()
-	return pou
+func (_u *PaymentOrderUpdate) ClearGatewayID() *PaymentOrderUpdate {
+	_u.mutation.ClearGatewayID()
+	return _u
 }
 
 // SetFromAddress sets the "from_address" field.
-func (pou *PaymentOrderUpdate) SetFromAddress(s string) *PaymentOrderUpdate {
-	pou.mutation.SetFromAddress(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetFromAddress(v string) *PaymentOrderUpdate {
+	_u.mutation.SetFromAddress(v)
+	return _u
 }
 
 // SetNillableFromAddress sets the "from_address" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableFromAddress(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetFromAddress(*s)
+func (_u *PaymentOrderUpdate) SetNillableFromAddress(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetFromAddress(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearFromAddress clears the value of the "from_address" field.
-func (pou *PaymentOrderUpdate) ClearFromAddress() *PaymentOrderUpdate {
-	pou.mutation.ClearFromAddress()
-	return pou
+func (_u *PaymentOrderUpdate) ClearFromAddress() *PaymentOrderUpdate {
+	_u.mutation.ClearFromAddress()
+	return _u
 }
 
 // SetReturnAddress sets the "return_address" field.
-func (pou *PaymentOrderUpdate) SetReturnAddress(s string) *PaymentOrderUpdate {
-	pou.mutation.SetReturnAddress(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetReturnAddress(v string) *PaymentOrderUpdate {
+	_u.mutation.SetReturnAddress(v)
+	return _u
 }
 
 // SetNillableReturnAddress sets the "return_address" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableReturnAddress(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetReturnAddress(*s)
+func (_u *PaymentOrderUpdate) SetNillableReturnAddress(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetReturnAddress(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearReturnAddress clears the value of the "return_address" field.
-func (pou *PaymentOrderUpdate) ClearReturnAddress() *PaymentOrderUpdate {
-	pou.mutation.ClearReturnAddress()
-	return pou
+func (_u *PaymentOrderUpdate) ClearReturnAddress() *PaymentOrderUpdate {
+	_u.mutation.ClearReturnAddress()
+	return _u
 }
 
 // SetReceiveAddress sets the "receive_address" field.
-func (pou *PaymentOrderUpdate) SetReceiveAddress(s string) *PaymentOrderUpdate {
-	pou.mutation.SetReceiveAddress(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetReceiveAddress(v string) *PaymentOrderUpdate {
+	_u.mutation.SetReceiveAddress(v)
+	return _u
 }
 
 // SetNillableReceiveAddress sets the "receive_address" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableReceiveAddress(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetReceiveAddress(*s)
+func (_u *PaymentOrderUpdate) SetNillableReceiveAddress(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetReceiveAddress(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearReceiveAddress clears the value of the "receive_address" field.
-func (pou *PaymentOrderUpdate) ClearReceiveAddress() *PaymentOrderUpdate {
-	pou.mutation.ClearReceiveAddress()
-	return pou
+func (_u *PaymentOrderUpdate) ClearReceiveAddress() *PaymentOrderUpdate {
+	_u.mutation.ClearReceiveAddress()
+	return _u
 }
 
 // SetReceiveAddressSalt sets the "receive_address_salt" field.
-func (pou *PaymentOrderUpdate) SetReceiveAddressSalt(b []byte) *PaymentOrderUpdate {
-	pou.mutation.SetReceiveAddressSalt(b)
-	return pou
+func (_u *PaymentOrderUpdate) SetReceiveAddressSalt(v []byte) *PaymentOrderUpdate {
+	_u.mutation.SetReceiveAddressSalt(v)
+	return _u
 }
 
 // ClearReceiveAddressSalt clears the value of the "receive_address_salt" field.
-func (pou *PaymentOrderUpdate) ClearReceiveAddressSalt() *PaymentOrderUpdate {
-	pou.mutation.ClearReceiveAddressSalt()
-	return pou
+func (_u *PaymentOrderUpdate) ClearReceiveAddressSalt() *PaymentOrderUpdate {
+	_u.mutation.ClearReceiveAddressSalt()
+	return _u
 }
 
 // SetReceiveAddressExpiry sets the "receive_address_expiry" field.
-func (pou *PaymentOrderUpdate) SetReceiveAddressExpiry(t time.Time) *PaymentOrderUpdate {
-	pou.mutation.SetReceiveAddressExpiry(t)
-	return pou
+func (_u *PaymentOrderUpdate) SetReceiveAddressExpiry(v time.Time) *PaymentOrderUpdate {
+	_u.mutation.SetReceiveAddressExpiry(v)
+	return _u
 }
 
 // SetNillableReceiveAddressExpiry sets the "receive_address_expiry" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableReceiveAddressExpiry(t *time.Time) *PaymentOrderUpdate {
-	if t != nil {
-		pou.SetReceiveAddressExpiry(*t)
+func (_u *PaymentOrderUpdate) SetNillableReceiveAddressExpiry(v *time.Time) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetReceiveAddressExpiry(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearReceiveAddressExpiry clears the value of the "receive_address_expiry" field.
-func (pou *PaymentOrderUpdate) ClearReceiveAddressExpiry() *PaymentOrderUpdate {
-	pou.mutation.ClearReceiveAddressExpiry()
-	return pou
+func (_u *PaymentOrderUpdate) ClearReceiveAddressExpiry() *PaymentOrderUpdate {
+	_u.mutation.ClearReceiveAddressExpiry()
+	return _u
 }
 
 // SetFeeAddress sets the "fee_address" field.
-func (pou *PaymentOrderUpdate) SetFeeAddress(s string) *PaymentOrderUpdate {
-	pou.mutation.SetFeeAddress(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetFeeAddress(v string) *PaymentOrderUpdate {
+	_u.mutation.SetFeeAddress(v)
+	return _u
 }
 
 // SetNillableFeeAddress sets the "fee_address" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableFeeAddress(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetFeeAddress(*s)
+func (_u *PaymentOrderUpdate) SetNillableFeeAddress(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetFeeAddress(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearFeeAddress clears the value of the "fee_address" field.
-func (pou *PaymentOrderUpdate) ClearFeeAddress() *PaymentOrderUpdate {
-	pou.mutation.ClearFeeAddress()
-	return pou
+func (_u *PaymentOrderUpdate) ClearFeeAddress() *PaymentOrderUpdate {
+	_u.mutation.ClearFeeAddress()
+	return _u
 }
 
 // SetInstitution sets the "institution" field.
-func (pou *PaymentOrderUpdate) SetInstitution(s string) *PaymentOrderUpdate {
-	pou.mutation.SetInstitution(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetInstitution(v string) *PaymentOrderUpdate {
+	_u.mutation.SetInstitution(v)
+	return _u
 }
 
 // SetNillableInstitution sets the "institution" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableInstitution(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetInstitution(*s)
+func (_u *PaymentOrderUpdate) SetNillableInstitution(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetInstitution(*v)
 	}
-	return pou
+	return _u
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (pou *PaymentOrderUpdate) SetAccountIdentifier(s string) *PaymentOrderUpdate {
-	pou.mutation.SetAccountIdentifier(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetAccountIdentifier(v string) *PaymentOrderUpdate {
+	_u.mutation.SetAccountIdentifier(v)
+	return _u
 }
 
 // SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableAccountIdentifier(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetAccountIdentifier(*s)
+func (_u *PaymentOrderUpdate) SetNillableAccountIdentifier(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetAccountIdentifier(*v)
 	}
-	return pou
+	return _u
 }
 
 // SetAccountName sets the "account_name" field.
-func (pou *PaymentOrderUpdate) SetAccountName(s string) *PaymentOrderUpdate {
-	pou.mutation.SetAccountName(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetAccountName(v string) *PaymentOrderUpdate {
+	_u.mutation.SetAccountName(v)
+	return _u
 }
 
 // SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableAccountName(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetAccountName(*s)
+func (_u *PaymentOrderUpdate) SetNillableAccountName(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetAccountName(*v)
 	}
-	return pou
+	return _u
 }
 
 // SetMemo sets the "memo" field.
-func (pou *PaymentOrderUpdate) SetMemo(s string) *PaymentOrderUpdate {
-	pou.mutation.SetMemo(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetMemo(v string) *PaymentOrderUpdate {
+	_u.mutation.SetMemo(v)
+	return _u
 }
 
 // SetNillableMemo sets the "memo" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableMemo(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetMemo(*s)
+func (_u *PaymentOrderUpdate) SetNillableMemo(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetMemo(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearMemo clears the value of the "memo" field.
-func (pou *PaymentOrderUpdate) ClearMemo() *PaymentOrderUpdate {
-	pou.mutation.ClearMemo()
-	return pou
+func (_u *PaymentOrderUpdate) ClearMemo() *PaymentOrderUpdate {
+	_u.mutation.ClearMemo()
+	return _u
 }
 
 // SetMetadata sets the "metadata" field.
-func (pou *PaymentOrderUpdate) SetMetadata(m map[string]interface{}) *PaymentOrderUpdate {
-	pou.mutation.SetMetadata(m)
-	return pou
+func (_u *PaymentOrderUpdate) SetMetadata(v map[string]interface{}) *PaymentOrderUpdate {
+	_u.mutation.SetMetadata(v)
+	return _u
 }
 
 // ClearMetadata clears the value of the "metadata" field.
-func (pou *PaymentOrderUpdate) ClearMetadata() *PaymentOrderUpdate {
-	pou.mutation.ClearMetadata()
-	return pou
+func (_u *PaymentOrderUpdate) ClearMetadata() *PaymentOrderUpdate {
+	_u.mutation.ClearMetadata()
+	return _u
 }
 
 // SetSender sets the "sender" field.
-func (pou *PaymentOrderUpdate) SetSender(s string) *PaymentOrderUpdate {
-	pou.mutation.SetSender(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetSender(v string) *PaymentOrderUpdate {
+	_u.mutation.SetSender(v)
+	return _u
 }
 
 // SetNillableSender sets the "sender" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableSender(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetSender(*s)
+func (_u *PaymentOrderUpdate) SetNillableSender(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetSender(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearSender clears the value of the "sender" field.
-func (pou *PaymentOrderUpdate) ClearSender() *PaymentOrderUpdate {
-	pou.mutation.ClearSender()
-	return pou
+func (_u *PaymentOrderUpdate) ClearSender() *PaymentOrderUpdate {
+	_u.mutation.ClearSender()
+	return _u
 }
 
 // SetReference sets the "reference" field.
-func (pou *PaymentOrderUpdate) SetReference(s string) *PaymentOrderUpdate {
-	pou.mutation.SetReference(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetReference(v string) *PaymentOrderUpdate {
+	_u.mutation.SetReference(v)
+	return _u
 }
 
 // SetNillableReference sets the "reference" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableReference(s *string) *PaymentOrderUpdate {
-	if s != nil {
-		pou.SetReference(*s)
+func (_u *PaymentOrderUpdate) SetNillableReference(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetReference(*v)
 	}
-	return pou
+	return _u
 }
 
 // ClearReference clears the value of the "reference" field.
-func (pou *PaymentOrderUpdate) ClearReference() *PaymentOrderUpdate {
-	pou.mutation.ClearReference()
-	return pou
+func (_u *PaymentOrderUpdate) ClearReference() *PaymentOrderUpdate {
+	_u.mutation.ClearReference()
+	return _u
 }
 
 // SetCancellationCount sets the "cancellation_count" field.
-func (pou *PaymentOrderUpdate) SetCancellationCount(i int) *PaymentOrderUpdate {
-	pou.mutation.ResetCancellationCount()
-	pou.mutation.SetCancellationCount(i)
-	return pou
+func (_u *PaymentOrderUpdate) SetCancellationCount(v int) *PaymentOrderUpdate {
+	_u.mutation.ResetCancellationCount()
+	_u.mutation.SetCancellationCount(v)
+	return _u
 }
 
 // SetNillableCancellationCount sets the "cancellation_count" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableCancellationCount(i *int) *PaymentOrderUpdate {
-	if i != nil {
-		pou.SetCancellationCount(*i)
+func (_u *PaymentOrderUpdate) SetNillableCancellationCount(v *int) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetCancellationCount(*v)
 	}
-	return pou
+	return _u
 }
 
-// AddCancellationCount adds i to the "cancellation_count" field.
-func (pou *PaymentOrderUpdate) AddCancellationCount(i int) *PaymentOrderUpdate {
-	pou.mutation.AddCancellationCount(i)
-	return pou
+// AddCancellationCount adds value to the "cancellation_count" field.
+func (_u *PaymentOrderUpdate) AddCancellationCount(v int) *PaymentOrderUpdate {
+	_u.mutation.AddCancellationCount(v)
+	return _u
 }
 
 // ClearCancellationCount clears the value of the "cancellation_count" field.
-func (pou *PaymentOrderUpdate) ClearCancellationCount() *PaymentOrderUpdate {
-	pou.mutation.ClearCancellationCount()
-	return pou
+func (_u *PaymentOrderUpdate) ClearCancellationCount() *PaymentOrderUpdate {
+	_u.mutation.ClearCancellationCount()
+	return _u
 }
 
 // SetCancellationReasons sets the "cancellation_reasons" field.
-func (pou *PaymentOrderUpdate) SetCancellationReasons(s []string) *PaymentOrderUpdate {
-	pou.mutation.SetCancellationReasons(s)
-	return pou
+func (_u *PaymentOrderUpdate) SetCancellationReasons(v []string) *PaymentOrderUpdate {
+	_u.mutation.SetCancellationReasons(v)
+	return _u
 }
 
-// AppendCancellationReasons appends s to the "cancellation_reasons" field.
-func (pou *PaymentOrderUpdate) AppendCancellationReasons(s []string) *PaymentOrderUpdate {
-	pou.mutation.AppendCancellationReasons(s)
-	return pou
+// AppendCancellationReasons appends value to the "cancellation_reasons" field.
+func (_u *PaymentOrderUpdate) AppendCancellationReasons(v []string) *PaymentOrderUpdate {
+	_u.mutation.AppendCancellationReasons(v)
+	return _u
 }
 
 // ClearCancellationReasons clears the value of the "cancellation_reasons" field.
-func (pou *PaymentOrderUpdate) ClearCancellationReasons() *PaymentOrderUpdate {
-	pou.mutation.ClearCancellationReasons()
-	return pou
+func (_u *PaymentOrderUpdate) ClearCancellationReasons() *PaymentOrderUpdate {
+	_u.mutation.ClearCancellationReasons()
+	return _u
 }
 
 // SetStatus sets the "status" field.
-func (pou *PaymentOrderUpdate) SetStatus(pa paymentorder.Status) *PaymentOrderUpdate {
-	pou.mutation.SetStatus(pa)
-	return pou
+func (_u *PaymentOrderUpdate) SetStatus(v paymentorder.Status) *PaymentOrderUpdate {
+	_u.mutation.SetStatus(v)
+	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableStatus(pa *paymentorder.Status) *PaymentOrderUpdate {
-	if pa != nil {
-		pou.SetStatus(*pa)
+func (_u *PaymentOrderUpdate) SetNillableStatus(v *paymentorder.Status) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetStatus(*v)
 	}
-	return pou
+	return _u
 }
 
 // SetOrderType sets the "order_type" field.
-func (pou *PaymentOrderUpdate) SetOrderType(pt paymentorder.OrderType) *PaymentOrderUpdate {
-	pou.mutation.SetOrderType(pt)
-	return pou
+func (_u *PaymentOrderUpdate) SetOrderType(v paymentorder.OrderType) *PaymentOrderUpdate {
+	_u.mutation.SetOrderType(v)
+	return _u
 }
 
 // SetNillableOrderType sets the "order_type" field if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableOrderType(pt *paymentorder.OrderType) *PaymentOrderUpdate {
-	if pt != nil {
-		pou.SetOrderType(*pt)
+func (_u *PaymentOrderUpdate) SetNillableOrderType(v *paymentorder.OrderType) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetOrderType(*v)
 	}
-	return pou
+	return _u
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (pou *PaymentOrderUpdate) SetTokenID(id int) *PaymentOrderUpdate {
-	pou.mutation.SetTokenID(id)
-	return pou
+func (_u *PaymentOrderUpdate) SetTokenID(id int) *PaymentOrderUpdate {
+	_u.mutation.SetTokenID(id)
+	return _u
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (pou *PaymentOrderUpdate) SetToken(t *Token) *PaymentOrderUpdate {
-	return pou.SetTokenID(t.ID)
+func (_u *PaymentOrderUpdate) SetToken(v *Token) *PaymentOrderUpdate {
+	return _u.SetTokenID(v.ID)
 }
 
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
-func (pou *PaymentOrderUpdate) SetSenderProfileID(id uuid.UUID) *PaymentOrderUpdate {
-	pou.mutation.SetSenderProfileID(id)
-	return pou
+func (_u *PaymentOrderUpdate) SetSenderProfileID(id uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.SetSenderProfileID(id)
+	return _u
 }
 
 // SetNillableSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableSenderProfileID(id *uuid.UUID) *PaymentOrderUpdate {
+func (_u *PaymentOrderUpdate) SetNillableSenderProfileID(id *uuid.UUID) *PaymentOrderUpdate {
 	if id != nil {
-		pou = pou.SetSenderProfileID(*id)
+		_u = _u.SetSenderProfileID(*id)
 	}
-	return pou
+	return _u
 }
 
 // SetSenderProfile sets the "sender_profile" edge to the SenderProfile entity.
-func (pou *PaymentOrderUpdate) SetSenderProfile(s *SenderProfile) *PaymentOrderUpdate {
-	return pou.SetSenderProfileID(s.ID)
+func (_u *PaymentOrderUpdate) SetSenderProfile(v *SenderProfile) *PaymentOrderUpdate {
+	return _u.SetSenderProfileID(v.ID)
 }
 
 // SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
-func (pou *PaymentOrderUpdate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderUpdate {
-	pou.mutation.SetPaymentWebhookID(id)
-	return pou
+func (_u *PaymentOrderUpdate) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.SetPaymentWebhookID(id)
+	return _u
 }
 
 // SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderUpdate {
+func (_u *PaymentOrderUpdate) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderUpdate {
 	if id != nil {
-		pou = pou.SetPaymentWebhookID(*id)
+		_u = _u.SetPaymentWebhookID(*id)
 	}
-	return pou
+	return _u
 }
 
 // SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
-func (pou *PaymentOrderUpdate) SetPaymentWebhook(p *PaymentWebhook) *PaymentOrderUpdate {
-	return pou.SetPaymentWebhookID(p.ID)
+func (_u *PaymentOrderUpdate) SetPaymentWebhook(v *PaymentWebhook) *PaymentOrderUpdate {
+	return _u.SetPaymentWebhookID(v.ID)
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (pou *PaymentOrderUpdate) SetProviderID(id string) *PaymentOrderUpdate {
-	pou.mutation.SetProviderID(id)
-	return pou
+func (_u *PaymentOrderUpdate) SetProviderID(id string) *PaymentOrderUpdate {
+	_u.mutation.SetProviderID(id)
+	return _u
 }
 
 // SetNillableProviderID sets the "provider" edge to the ProviderProfile entity by ID if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableProviderID(id *string) *PaymentOrderUpdate {
+func (_u *PaymentOrderUpdate) SetNillableProviderID(id *string) *PaymentOrderUpdate {
 	if id != nil {
-		pou = pou.SetProviderID(*id)
+		_u = _u.SetProviderID(*id)
 	}
-	return pou
+	return _u
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (pou *PaymentOrderUpdate) SetProvider(p *ProviderProfile) *PaymentOrderUpdate {
-	return pou.SetProviderID(p.ID)
+func (_u *PaymentOrderUpdate) SetProvider(v *ProviderProfile) *PaymentOrderUpdate {
+	return _u.SetProviderID(v.ID)
 }
 
 // SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
-func (pou *PaymentOrderUpdate) SetProvisionBucketID(id int) *PaymentOrderUpdate {
-	pou.mutation.SetProvisionBucketID(id)
-	return pou
+func (_u *PaymentOrderUpdate) SetProvisionBucketID(id int) *PaymentOrderUpdate {
+	_u.mutation.SetProvisionBucketID(id)
+	return _u
 }
 
 // SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
-func (pou *PaymentOrderUpdate) SetNillableProvisionBucketID(id *int) *PaymentOrderUpdate {
+func (_u *PaymentOrderUpdate) SetNillableProvisionBucketID(id *int) *PaymentOrderUpdate {
 	if id != nil {
-		pou = pou.SetProvisionBucketID(*id)
+		_u = _u.SetProvisionBucketID(*id)
 	}
-	return pou
+	return _u
 }
 
 // SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
-func (pou *PaymentOrderUpdate) SetProvisionBucket(p *ProvisionBucket) *PaymentOrderUpdate {
-	return pou.SetProvisionBucketID(p.ID)
+func (_u *PaymentOrderUpdate) SetProvisionBucket(v *ProvisionBucket) *PaymentOrderUpdate {
+	return _u.SetProvisionBucketID(v.ID)
 }
 
 // AddFulfillmentIDs adds the "fulfillments" edge to the PaymentOrderFulfillment entity by IDs.
-func (pou *PaymentOrderUpdate) AddFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
-	pou.mutation.AddFulfillmentIDs(ids...)
-	return pou
+func (_u *PaymentOrderUpdate) AddFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.AddFulfillmentIDs(ids...)
+	return _u
 }
 
 // AddFulfillments adds the "fulfillments" edges to the PaymentOrderFulfillment entity.
-func (pou *PaymentOrderUpdate) AddFulfillments(p ...*PaymentOrderFulfillment) *PaymentOrderUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *PaymentOrderUpdate) AddFulfillments(v ...*PaymentOrderFulfillment) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pou.AddFulfillmentIDs(ids...)
+	return _u.AddFulfillmentIDs(ids...)
 }
 
 // AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
-func (pou *PaymentOrderUpdate) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
-	pou.mutation.AddTransactionIDs(ids...)
-	return pou
+func (_u *PaymentOrderUpdate) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.AddTransactionIDs(ids...)
+	return _u
 }
 
 // AddTransactions adds the "transactions" edges to the TransactionLog entity.
-func (pou *PaymentOrderUpdate) AddTransactions(t ...*TransactionLog) *PaymentOrderUpdate {
-	ids := make([]uuid.UUID, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *PaymentOrderUpdate) AddTransactions(v ...*TransactionLog) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pou.AddTransactionIDs(ids...)
+	return _u.AddTransactionIDs(ids...)
 }
 
 // Mutation returns the PaymentOrderMutation object of the builder.
-func (pou *PaymentOrderUpdate) Mutation() *PaymentOrderMutation {
-	return pou.mutation
+func (_u *PaymentOrderUpdate) Mutation() *PaymentOrderMutation {
+	return _u.mutation
 }
 
 // ClearToken clears the "token" edge to the Token entity.
-func (pou *PaymentOrderUpdate) ClearToken() *PaymentOrderUpdate {
-	pou.mutation.ClearToken()
-	return pou
+func (_u *PaymentOrderUpdate) ClearToken() *PaymentOrderUpdate {
+	_u.mutation.ClearToken()
+	return _u
 }
 
 // ClearSenderProfile clears the "sender_profile" edge to the SenderProfile entity.
-func (pou *PaymentOrderUpdate) ClearSenderProfile() *PaymentOrderUpdate {
-	pou.mutation.ClearSenderProfile()
-	return pou
+func (_u *PaymentOrderUpdate) ClearSenderProfile() *PaymentOrderUpdate {
+	_u.mutation.ClearSenderProfile()
+	return _u
 }
 
 // ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
-func (pou *PaymentOrderUpdate) ClearPaymentWebhook() *PaymentOrderUpdate {
-	pou.mutation.ClearPaymentWebhook()
-	return pou
+func (_u *PaymentOrderUpdate) ClearPaymentWebhook() *PaymentOrderUpdate {
+	_u.mutation.ClearPaymentWebhook()
+	return _u
 }
 
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
-func (pou *PaymentOrderUpdate) ClearProvider() *PaymentOrderUpdate {
-	pou.mutation.ClearProvider()
-	return pou
+func (_u *PaymentOrderUpdate) ClearProvider() *PaymentOrderUpdate {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // ClearProvisionBucket clears the "provision_bucket" edge to the ProvisionBucket entity.
-func (pou *PaymentOrderUpdate) ClearProvisionBucket() *PaymentOrderUpdate {
-	pou.mutation.ClearProvisionBucket()
-	return pou
+func (_u *PaymentOrderUpdate) ClearProvisionBucket() *PaymentOrderUpdate {
+	_u.mutation.ClearProvisionBucket()
+	return _u
 }
 
 // ClearFulfillments clears all "fulfillments" edges to the PaymentOrderFulfillment entity.
-func (pou *PaymentOrderUpdate) ClearFulfillments() *PaymentOrderUpdate {
-	pou.mutation.ClearFulfillments()
-	return pou
+func (_u *PaymentOrderUpdate) ClearFulfillments() *PaymentOrderUpdate {
+	_u.mutation.ClearFulfillments()
+	return _u
 }
 
 // RemoveFulfillmentIDs removes the "fulfillments" edge to PaymentOrderFulfillment entities by IDs.
-func (pou *PaymentOrderUpdate) RemoveFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
-	pou.mutation.RemoveFulfillmentIDs(ids...)
-	return pou
+func (_u *PaymentOrderUpdate) RemoveFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.RemoveFulfillmentIDs(ids...)
+	return _u
 }
 
 // RemoveFulfillments removes "fulfillments" edges to PaymentOrderFulfillment entities.
-func (pou *PaymentOrderUpdate) RemoveFulfillments(p ...*PaymentOrderFulfillment) *PaymentOrderUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *PaymentOrderUpdate) RemoveFulfillments(v ...*PaymentOrderFulfillment) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pou.RemoveFulfillmentIDs(ids...)
+	return _u.RemoveFulfillmentIDs(ids...)
 }
 
 // ClearTransactions clears all "transactions" edges to the TransactionLog entity.
-func (pou *PaymentOrderUpdate) ClearTransactions() *PaymentOrderUpdate {
-	pou.mutation.ClearTransactions()
-	return pou
+func (_u *PaymentOrderUpdate) ClearTransactions() *PaymentOrderUpdate {
+	_u.mutation.ClearTransactions()
+	return _u
 }
 
 // RemoveTransactionIDs removes the "transactions" edge to TransactionLog entities by IDs.
-func (pou *PaymentOrderUpdate) RemoveTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
-	pou.mutation.RemoveTransactionIDs(ids...)
-	return pou
+func (_u *PaymentOrderUpdate) RemoveTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.RemoveTransactionIDs(ids...)
+	return _u
 }
 
 // RemoveTransactions removes "transactions" edges to TransactionLog entities.
-func (pou *PaymentOrderUpdate) RemoveTransactions(t ...*TransactionLog) *PaymentOrderUpdate {
-	ids := make([]uuid.UUID, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *PaymentOrderUpdate) RemoveTransactions(v ...*TransactionLog) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pou.RemoveTransactionIDs(ids...)
+	return _u.RemoveTransactionIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (pou *PaymentOrderUpdate) Save(ctx context.Context) (int, error) {
-	pou.defaults()
-	return withHooks(ctx, pou.sqlSave, pou.mutation, pou.hooks)
+func (_u *PaymentOrderUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pou *PaymentOrderUpdate) SaveX(ctx context.Context) int {
-	affected, err := pou.Save(ctx)
+func (_u *PaymentOrderUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -865,305 +865,305 @@ func (pou *PaymentOrderUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (pou *PaymentOrderUpdate) Exec(ctx context.Context) error {
-	_, err := pou.Save(ctx)
+func (_u *PaymentOrderUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pou *PaymentOrderUpdate) ExecX(ctx context.Context) {
-	if err := pou.Exec(ctx); err != nil {
+func (_u *PaymentOrderUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pou *PaymentOrderUpdate) defaults() {
-	if _, ok := pou.mutation.UpdatedAt(); !ok {
+func (_u *PaymentOrderUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := paymentorder.UpdateDefaultUpdatedAt()
-		pou.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pou *PaymentOrderUpdate) check() error {
-	if v, ok := pou.mutation.TxHash(); ok {
+func (_u *PaymentOrderUpdate) check() error {
+	if v, ok := _u.mutation.TxHash(); ok {
 		if err := paymentorder.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.tx_hash": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.GatewayID(); ok {
+	if v, ok := _u.mutation.GatewayID(); ok {
 		if err := paymentorder.GatewayIDValidator(v); err != nil {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.FromAddress(); ok {
+	if v, ok := _u.mutation.FromAddress(); ok {
 		if err := paymentorder.FromAddressValidator(v); err != nil {
 			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.from_address": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.ReturnAddress(); ok {
+	if v, ok := _u.mutation.ReturnAddress(); ok {
 		if err := paymentorder.ReturnAddressValidator(v); err != nil {
 			return &ValidationError{Name: "return_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.return_address": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.ReceiveAddress(); ok {
+	if v, ok := _u.mutation.ReceiveAddress(); ok {
 		if err := paymentorder.ReceiveAddressValidator(v); err != nil {
 			return &ValidationError{Name: "receive_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.receive_address": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.FeeAddress(); ok {
+	if v, ok := _u.mutation.FeeAddress(); ok {
 		if err := paymentorder.FeeAddressValidator(v); err != nil {
 			return &ValidationError{Name: "fee_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.fee_address": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.Institution(); ok {
+	if v, ok := _u.mutation.Institution(); ok {
 		if err := paymentorder.InstitutionValidator(v); err != nil {
 			return &ValidationError{Name: "institution", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.institution": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.AccountIdentifier(); ok {
+	if v, ok := _u.mutation.AccountIdentifier(); ok {
 		if err := paymentorder.AccountIdentifierValidator(v); err != nil {
 			return &ValidationError{Name: "account_identifier", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_identifier": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.AccountName(); ok {
+	if v, ok := _u.mutation.AccountName(); ok {
 		if err := paymentorder.AccountNameValidator(v); err != nil {
 			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_name": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.Memo(); ok {
+	if v, ok := _u.mutation.Memo(); ok {
 		if err := paymentorder.MemoValidator(v); err != nil {
 			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.Sender(); ok {
+	if v, ok := _u.mutation.Sender(); ok {
 		if err := paymentorder.SenderValidator(v); err != nil {
 			return &ValidationError{Name: "sender", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.sender": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.Reference(); ok {
+	if v, ok := _u.mutation.Reference(); ok {
 		if err := paymentorder.ReferenceValidator(v); err != nil {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.Status(); ok {
+	if v, ok := _u.mutation.Status(); ok {
 		if err := paymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
 		}
 	}
-	if v, ok := pou.mutation.OrderType(); ok {
+	if v, ok := _u.mutation.OrderType(); ok {
 		if err := paymentorder.OrderTypeValidator(v); err != nil {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
 		}
 	}
-	if pou.mutation.TokenCleared() && len(pou.mutation.TokenIDs()) > 0 {
+	if _u.mutation.TokenCleared() && len(_u.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrder.token"`)
 	}
 	return nil
 }
 
-func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := pou.check(); err != nil {
-		return n, err
+func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(paymentorder.Table, paymentorder.Columns, sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID))
-	if ps := pou.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pou.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentorder.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := pou.mutation.Amount(); ok {
+	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(paymentorder.FieldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedAmount(); ok {
+	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(paymentorder.FieldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.Rate(); ok {
+	if value, ok := _u.mutation.Rate(); ok {
 		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedRate(); ok {
+	if value, ok := _u.mutation.AddedRate(); ok {
 		_spec.AddField(paymentorder.FieldRate, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AmountInUsd(); ok {
+	if value, ok := _u.mutation.AmountInUsd(); ok {
 		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedAmountInUsd(); ok {
+	if value, ok := _u.mutation.AddedAmountInUsd(); ok {
 		_spec.AddField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AmountPaid(); ok {
+	if value, ok := _u.mutation.AmountPaid(); ok {
 		_spec.SetField(paymentorder.FieldAmountPaid, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedAmountPaid(); ok {
+	if value, ok := _u.mutation.AddedAmountPaid(); ok {
 		_spec.AddField(paymentorder.FieldAmountPaid, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AmountReturned(); ok {
+	if value, ok := _u.mutation.AmountReturned(); ok {
 		_spec.SetField(paymentorder.FieldAmountReturned, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedAmountReturned(); ok {
+	if value, ok := _u.mutation.AddedAmountReturned(); ok {
 		_spec.AddField(paymentorder.FieldAmountReturned, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.PercentSettled(); ok {
+	if value, ok := _u.mutation.PercentSettled(); ok {
 		_spec.SetField(paymentorder.FieldPercentSettled, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedPercentSettled(); ok {
+	if value, ok := _u.mutation.AddedPercentSettled(); ok {
 		_spec.AddField(paymentorder.FieldPercentSettled, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.SenderFee(); ok {
+	if value, ok := _u.mutation.SenderFee(); ok {
 		_spec.SetField(paymentorder.FieldSenderFee, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedSenderFee(); ok {
+	if value, ok := _u.mutation.AddedSenderFee(); ok {
 		_spec.AddField(paymentorder.FieldSenderFee, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.NetworkFee(); ok {
+	if value, ok := _u.mutation.NetworkFee(); ok {
 		_spec.SetField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedNetworkFee(); ok {
+	if value, ok := _u.mutation.AddedNetworkFee(); ok {
 		_spec.AddField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.ProtocolFee(); ok {
+	if value, ok := _u.mutation.ProtocolFee(); ok {
 		_spec.SetField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedProtocolFee(); ok {
+	if value, ok := _u.mutation.AddedProtocolFee(); ok {
 		_spec.AddField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.OrderPercent(); ok {
+	if value, ok := _u.mutation.OrderPercent(); ok {
 		_spec.SetField(paymentorder.FieldOrderPercent, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedOrderPercent(); ok {
+	if value, ok := _u.mutation.AddedOrderPercent(); ok {
 		_spec.AddField(paymentorder.FieldOrderPercent, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.FeePercent(); ok {
+	if value, ok := _u.mutation.FeePercent(); ok {
 		_spec.SetField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.AddedFeePercent(); ok {
+	if value, ok := _u.mutation.AddedFeePercent(); ok {
 		_spec.AddField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
 	}
-	if value, ok := pou.mutation.TxHash(); ok {
+	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(paymentorder.FieldTxHash, field.TypeString, value)
 	}
-	if pou.mutation.TxHashCleared() {
+	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(paymentorder.FieldTxHash, field.TypeString)
 	}
-	if value, ok := pou.mutation.BlockNumber(); ok {
+	if value, ok := _u.mutation.BlockNumber(); ok {
 		_spec.SetField(paymentorder.FieldBlockNumber, field.TypeInt64, value)
 	}
-	if value, ok := pou.mutation.AddedBlockNumber(); ok {
+	if value, ok := _u.mutation.AddedBlockNumber(); ok {
 		_spec.AddField(paymentorder.FieldBlockNumber, field.TypeInt64, value)
 	}
-	if value, ok := pou.mutation.MessageHash(); ok {
+	if value, ok := _u.mutation.MessageHash(); ok {
 		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
 	}
-	if pou.mutation.MessageHashCleared() {
+	if _u.mutation.MessageHashCleared() {
 		_spec.ClearField(paymentorder.FieldMessageHash, field.TypeString)
 	}
-	if value, ok := pou.mutation.GatewayID(); ok {
+	if value, ok := _u.mutation.GatewayID(); ok {
 		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
 	}
-	if pou.mutation.GatewayIDCleared() {
+	if _u.mutation.GatewayIDCleared() {
 		_spec.ClearField(paymentorder.FieldGatewayID, field.TypeString)
 	}
-	if value, ok := pou.mutation.FromAddress(); ok {
+	if value, ok := _u.mutation.FromAddress(); ok {
 		_spec.SetField(paymentorder.FieldFromAddress, field.TypeString, value)
 	}
-	if pou.mutation.FromAddressCleared() {
+	if _u.mutation.FromAddressCleared() {
 		_spec.ClearField(paymentorder.FieldFromAddress, field.TypeString)
 	}
-	if value, ok := pou.mutation.ReturnAddress(); ok {
+	if value, ok := _u.mutation.ReturnAddress(); ok {
 		_spec.SetField(paymentorder.FieldReturnAddress, field.TypeString, value)
 	}
-	if pou.mutation.ReturnAddressCleared() {
+	if _u.mutation.ReturnAddressCleared() {
 		_spec.ClearField(paymentorder.FieldReturnAddress, field.TypeString)
 	}
-	if value, ok := pou.mutation.ReceiveAddress(); ok {
+	if value, ok := _u.mutation.ReceiveAddress(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddress, field.TypeString, value)
 	}
-	if pou.mutation.ReceiveAddressCleared() {
+	if _u.mutation.ReceiveAddressCleared() {
 		_spec.ClearField(paymentorder.FieldReceiveAddress, field.TypeString)
 	}
-	if value, ok := pou.mutation.ReceiveAddressSalt(); ok {
+	if value, ok := _u.mutation.ReceiveAddressSalt(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes, value)
 	}
-	if pou.mutation.ReceiveAddressSaltCleared() {
+	if _u.mutation.ReceiveAddressSaltCleared() {
 		_spec.ClearField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes)
 	}
-	if value, ok := pou.mutation.ReceiveAddressExpiry(); ok {
+	if value, ok := _u.mutation.ReceiveAddressExpiry(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddressExpiry, field.TypeTime, value)
 	}
-	if pou.mutation.ReceiveAddressExpiryCleared() {
+	if _u.mutation.ReceiveAddressExpiryCleared() {
 		_spec.ClearField(paymentorder.FieldReceiveAddressExpiry, field.TypeTime)
 	}
-	if value, ok := pou.mutation.FeeAddress(); ok {
+	if value, ok := _u.mutation.FeeAddress(); ok {
 		_spec.SetField(paymentorder.FieldFeeAddress, field.TypeString, value)
 	}
-	if pou.mutation.FeeAddressCleared() {
+	if _u.mutation.FeeAddressCleared() {
 		_spec.ClearField(paymentorder.FieldFeeAddress, field.TypeString)
 	}
-	if value, ok := pou.mutation.Institution(); ok {
+	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(paymentorder.FieldInstitution, field.TypeString, value)
 	}
-	if value, ok := pou.mutation.AccountIdentifier(); ok {
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
 		_spec.SetField(paymentorder.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := pou.mutation.AccountName(); ok {
+	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(paymentorder.FieldAccountName, field.TypeString, value)
 	}
-	if value, ok := pou.mutation.Memo(); ok {
+	if value, ok := _u.mutation.Memo(); ok {
 		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
 	}
-	if pou.mutation.MemoCleared() {
+	if _u.mutation.MemoCleared() {
 		_spec.ClearField(paymentorder.FieldMemo, field.TypeString)
 	}
-	if value, ok := pou.mutation.Metadata(); ok {
+	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(paymentorder.FieldMetadata, field.TypeJSON, value)
 	}
-	if pou.mutation.MetadataCleared() {
+	if _u.mutation.MetadataCleared() {
 		_spec.ClearField(paymentorder.FieldMetadata, field.TypeJSON)
 	}
-	if value, ok := pou.mutation.Sender(); ok {
+	if value, ok := _u.mutation.Sender(); ok {
 		_spec.SetField(paymentorder.FieldSender, field.TypeString, value)
 	}
-	if pou.mutation.SenderCleared() {
+	if _u.mutation.SenderCleared() {
 		_spec.ClearField(paymentorder.FieldSender, field.TypeString)
 	}
-	if value, ok := pou.mutation.Reference(); ok {
+	if value, ok := _u.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
 	}
-	if pou.mutation.ReferenceCleared() {
+	if _u.mutation.ReferenceCleared() {
 		_spec.ClearField(paymentorder.FieldReference, field.TypeString)
 	}
-	if value, ok := pou.mutation.CancellationCount(); ok {
+	if value, ok := _u.mutation.CancellationCount(); ok {
 		_spec.SetField(paymentorder.FieldCancellationCount, field.TypeInt, value)
 	}
-	if value, ok := pou.mutation.AddedCancellationCount(); ok {
+	if value, ok := _u.mutation.AddedCancellationCount(); ok {
 		_spec.AddField(paymentorder.FieldCancellationCount, field.TypeInt, value)
 	}
-	if pou.mutation.CancellationCountCleared() {
+	if _u.mutation.CancellationCountCleared() {
 		_spec.ClearField(paymentorder.FieldCancellationCount, field.TypeInt)
 	}
-	if value, ok := pou.mutation.CancellationReasons(); ok {
+	if value, ok := _u.mutation.CancellationReasons(); ok {
 		_spec.SetField(paymentorder.FieldCancellationReasons, field.TypeJSON, value)
 	}
-	if value, ok := pou.mutation.AppendedCancellationReasons(); ok {
+	if value, ok := _u.mutation.AppendedCancellationReasons(); ok {
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, paymentorder.FieldCancellationReasons, value)
 		})
 	}
-	if pou.mutation.CancellationReasonsCleared() {
+	if _u.mutation.CancellationReasonsCleared() {
 		_spec.ClearField(paymentorder.FieldCancellationReasons, field.TypeJSON)
 	}
-	if value, ok := pou.mutation.Status(); ok {
+	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
 	}
-	if value, ok := pou.mutation.OrderType(); ok {
+	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
 	}
-	if pou.mutation.TokenCleared() {
+	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1176,7 +1176,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pou.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1192,7 +1192,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pou.mutation.SenderProfileCleared() {
+	if _u.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1205,7 +1205,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pou.mutation.SenderProfileIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1221,7 +1221,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pou.mutation.PaymentWebhookCleared() {
+	if _u.mutation.PaymentWebhookCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -1234,7 +1234,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pou.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -1250,7 +1250,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pou.mutation.ProviderCleared() {
+	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1263,7 +1263,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pou.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1279,7 +1279,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pou.mutation.ProvisionBucketCleared() {
+	if _u.mutation.ProvisionBucketCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1292,7 +1292,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pou.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -1308,7 +1308,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pou.mutation.FulfillmentsCleared() {
+	if _u.mutation.FulfillmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1321,7 +1321,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pou.mutation.RemovedFulfillmentsIDs(); len(nodes) > 0 && !pou.mutation.FulfillmentsCleared() {
+	if nodes := _u.mutation.RemovedFulfillmentsIDs(); len(nodes) > 0 && !_u.mutation.FulfillmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1337,7 +1337,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pou.mutation.FulfillmentsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.FulfillmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1353,7 +1353,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pou.mutation.TransactionsCleared() {
+	if _u.mutation.TransactionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1366,7 +1366,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pou.mutation.RemovedTransactionsIDs(); len(nodes) > 0 && !pou.mutation.TransactionsCleared() {
+	if nodes := _u.mutation.RemovedTransactionsIDs(); len(nodes) > 0 && !_u.mutation.TransactionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1382,7 +1382,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pou.mutation.TransactionsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TransactionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1398,7 +1398,7 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, pou.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentorder.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -1406,8 +1406,8 @@ func (pou *PaymentOrderUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
-	pou.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // PaymentOrderUpdateOne is the builder for updating a single PaymentOrder entity.
@@ -1419,838 +1419,838 @@ type PaymentOrderUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pouo *PaymentOrderUpdateOne) SetUpdatedAt(t time.Time) *PaymentOrderUpdateOne {
-	pouo.mutation.SetUpdatedAt(t)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetUpdatedAt(v time.Time) *PaymentOrderUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetAmount sets the "amount" field.
-func (pouo *PaymentOrderUpdateOne) SetAmount(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetAmount()
-	pouo.mutation.SetAmount(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetAmount(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetAmount()
+	_u.mutation.SetAmount(v)
+	return _u
 }
 
 // SetNillableAmount sets the "amount" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableAmount(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetAmount(*d)
+func (_u *PaymentOrderUpdateOne) SetNillableAmount(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAmount(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddAmount adds d to the "amount" field.
-func (pouo *PaymentOrderUpdateOne) AddAmount(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddAmount(d)
-	return pouo
+// AddAmount adds value to the "amount" field.
+func (_u *PaymentOrderUpdateOne) AddAmount(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddAmount(v)
+	return _u
 }
 
 // SetRate sets the "rate" field.
-func (pouo *PaymentOrderUpdateOne) SetRate(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetRate()
-	pouo.mutation.SetRate(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetRate(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetRate()
+	_u.mutation.SetRate(v)
+	return _u
 }
 
 // SetNillableRate sets the "rate" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableRate(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetRate(*d)
+func (_u *PaymentOrderUpdateOne) SetNillableRate(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetRate(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddRate adds d to the "rate" field.
-func (pouo *PaymentOrderUpdateOne) AddRate(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddRate(d)
-	return pouo
+// AddRate adds value to the "rate" field.
+func (_u *PaymentOrderUpdateOne) AddRate(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddRate(v)
+	return _u
 }
 
 // SetAmountInUsd sets the "amount_in_usd" field.
-func (pouo *PaymentOrderUpdateOne) SetAmountInUsd(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetAmountInUsd()
-	pouo.mutation.SetAmountInUsd(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetAmountInUsd(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetAmountInUsd()
+	_u.mutation.SetAmountInUsd(v)
+	return _u
 }
 
 // SetNillableAmountInUsd sets the "amount_in_usd" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableAmountInUsd(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetAmountInUsd(*d)
+func (_u *PaymentOrderUpdateOne) SetNillableAmountInUsd(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAmountInUsd(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddAmountInUsd adds d to the "amount_in_usd" field.
-func (pouo *PaymentOrderUpdateOne) AddAmountInUsd(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddAmountInUsd(d)
-	return pouo
+// AddAmountInUsd adds value to the "amount_in_usd" field.
+func (_u *PaymentOrderUpdateOne) AddAmountInUsd(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddAmountInUsd(v)
+	return _u
 }
 
 // SetAmountPaid sets the "amount_paid" field.
-func (pouo *PaymentOrderUpdateOne) SetAmountPaid(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetAmountPaid()
-	pouo.mutation.SetAmountPaid(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetAmountPaid(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetAmountPaid()
+	_u.mutation.SetAmountPaid(v)
+	return _u
 }
 
 // SetNillableAmountPaid sets the "amount_paid" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableAmountPaid(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetAmountPaid(*d)
+func (_u *PaymentOrderUpdateOne) SetNillableAmountPaid(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAmountPaid(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddAmountPaid adds d to the "amount_paid" field.
-func (pouo *PaymentOrderUpdateOne) AddAmountPaid(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddAmountPaid(d)
-	return pouo
+// AddAmountPaid adds value to the "amount_paid" field.
+func (_u *PaymentOrderUpdateOne) AddAmountPaid(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddAmountPaid(v)
+	return _u
 }
 
 // SetAmountReturned sets the "amount_returned" field.
-func (pouo *PaymentOrderUpdateOne) SetAmountReturned(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetAmountReturned()
-	pouo.mutation.SetAmountReturned(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetAmountReturned(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetAmountReturned()
+	_u.mutation.SetAmountReturned(v)
+	return _u
 }
 
 // SetNillableAmountReturned sets the "amount_returned" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableAmountReturned(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetAmountReturned(*d)
+func (_u *PaymentOrderUpdateOne) SetNillableAmountReturned(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAmountReturned(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddAmountReturned adds d to the "amount_returned" field.
-func (pouo *PaymentOrderUpdateOne) AddAmountReturned(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddAmountReturned(d)
-	return pouo
+// AddAmountReturned adds value to the "amount_returned" field.
+func (_u *PaymentOrderUpdateOne) AddAmountReturned(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddAmountReturned(v)
+	return _u
 }
 
 // SetPercentSettled sets the "percent_settled" field.
-func (pouo *PaymentOrderUpdateOne) SetPercentSettled(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetPercentSettled()
-	pouo.mutation.SetPercentSettled(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetPercentSettled(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetPercentSettled()
+	_u.mutation.SetPercentSettled(v)
+	return _u
 }
 
 // SetNillablePercentSettled sets the "percent_settled" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillablePercentSettled(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetPercentSettled(*d)
+func (_u *PaymentOrderUpdateOne) SetNillablePercentSettled(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetPercentSettled(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddPercentSettled adds d to the "percent_settled" field.
-func (pouo *PaymentOrderUpdateOne) AddPercentSettled(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddPercentSettled(d)
-	return pouo
+// AddPercentSettled adds value to the "percent_settled" field.
+func (_u *PaymentOrderUpdateOne) AddPercentSettled(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddPercentSettled(v)
+	return _u
 }
 
 // SetSenderFee sets the "sender_fee" field.
-func (pouo *PaymentOrderUpdateOne) SetSenderFee(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetSenderFee()
-	pouo.mutation.SetSenderFee(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetSenderFee(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetSenderFee()
+	_u.mutation.SetSenderFee(v)
+	return _u
 }
 
 // SetNillableSenderFee sets the "sender_fee" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableSenderFee(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetSenderFee(*d)
+func (_u *PaymentOrderUpdateOne) SetNillableSenderFee(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetSenderFee(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddSenderFee adds d to the "sender_fee" field.
-func (pouo *PaymentOrderUpdateOne) AddSenderFee(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddSenderFee(d)
-	return pouo
+// AddSenderFee adds value to the "sender_fee" field.
+func (_u *PaymentOrderUpdateOne) AddSenderFee(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddSenderFee(v)
+	return _u
 }
 
 // SetNetworkFee sets the "network_fee" field.
-func (pouo *PaymentOrderUpdateOne) SetNetworkFee(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetNetworkFee()
-	pouo.mutation.SetNetworkFee(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetNetworkFee(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetNetworkFee()
+	_u.mutation.SetNetworkFee(v)
+	return _u
 }
 
 // SetNillableNetworkFee sets the "network_fee" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableNetworkFee(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetNetworkFee(*d)
+func (_u *PaymentOrderUpdateOne) SetNillableNetworkFee(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetNetworkFee(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddNetworkFee adds d to the "network_fee" field.
-func (pouo *PaymentOrderUpdateOne) AddNetworkFee(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddNetworkFee(d)
-	return pouo
+// AddNetworkFee adds value to the "network_fee" field.
+func (_u *PaymentOrderUpdateOne) AddNetworkFee(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddNetworkFee(v)
+	return _u
 }
 
 // SetProtocolFee sets the "protocol_fee" field.
-func (pouo *PaymentOrderUpdateOne) SetProtocolFee(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetProtocolFee()
-	pouo.mutation.SetProtocolFee(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetProtocolFee(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetProtocolFee()
+	_u.mutation.SetProtocolFee(v)
+	return _u
 }
 
 // SetNillableProtocolFee sets the "protocol_fee" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableProtocolFee(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetProtocolFee(*d)
+func (_u *PaymentOrderUpdateOne) SetNillableProtocolFee(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetProtocolFee(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddProtocolFee adds d to the "protocol_fee" field.
-func (pouo *PaymentOrderUpdateOne) AddProtocolFee(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddProtocolFee(d)
-	return pouo
+// AddProtocolFee adds value to the "protocol_fee" field.
+func (_u *PaymentOrderUpdateOne) AddProtocolFee(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddProtocolFee(v)
+	return _u
 }
 
 // SetOrderPercent sets the "order_percent" field.
-func (pouo *PaymentOrderUpdateOne) SetOrderPercent(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetOrderPercent()
-	pouo.mutation.SetOrderPercent(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetOrderPercent(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetOrderPercent()
+	_u.mutation.SetOrderPercent(v)
+	return _u
 }
 
 // SetNillableOrderPercent sets the "order_percent" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableOrderPercent(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetOrderPercent(*d)
+func (_u *PaymentOrderUpdateOne) SetNillableOrderPercent(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetOrderPercent(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddOrderPercent adds d to the "order_percent" field.
-func (pouo *PaymentOrderUpdateOne) AddOrderPercent(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddOrderPercent(d)
-	return pouo
+// AddOrderPercent adds value to the "order_percent" field.
+func (_u *PaymentOrderUpdateOne) AddOrderPercent(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddOrderPercent(v)
+	return _u
 }
 
 // SetFeePercent sets the "fee_percent" field.
-func (pouo *PaymentOrderUpdateOne) SetFeePercent(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetFeePercent()
-	pouo.mutation.SetFeePercent(d)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetFeePercent(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetFeePercent()
+	_u.mutation.SetFeePercent(v)
+	return _u
 }
 
 // SetNillableFeePercent sets the "fee_percent" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableFeePercent(d *decimal.Decimal) *PaymentOrderUpdateOne {
-	if d != nil {
-		pouo.SetFeePercent(*d)
+func (_u *PaymentOrderUpdateOne) SetNillableFeePercent(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetFeePercent(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddFeePercent adds d to the "fee_percent" field.
-func (pouo *PaymentOrderUpdateOne) AddFeePercent(d decimal.Decimal) *PaymentOrderUpdateOne {
-	pouo.mutation.AddFeePercent(d)
-	return pouo
+// AddFeePercent adds value to the "fee_percent" field.
+func (_u *PaymentOrderUpdateOne) AddFeePercent(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddFeePercent(v)
+	return _u
 }
 
 // SetTxHash sets the "tx_hash" field.
-func (pouo *PaymentOrderUpdateOne) SetTxHash(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetTxHash(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetTxHash(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetTxHash(v)
+	return _u
 }
 
 // SetNillableTxHash sets the "tx_hash" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableTxHash(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetTxHash(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableTxHash(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetTxHash(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearTxHash clears the value of the "tx_hash" field.
-func (pouo *PaymentOrderUpdateOne) ClearTxHash() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearTxHash()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearTxHash() *PaymentOrderUpdateOne {
+	_u.mutation.ClearTxHash()
+	return _u
 }
 
 // SetBlockNumber sets the "block_number" field.
-func (pouo *PaymentOrderUpdateOne) SetBlockNumber(i int64) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetBlockNumber()
-	pouo.mutation.SetBlockNumber(i)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetBlockNumber(v int64) *PaymentOrderUpdateOne {
+	_u.mutation.ResetBlockNumber()
+	_u.mutation.SetBlockNumber(v)
+	return _u
 }
 
 // SetNillableBlockNumber sets the "block_number" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableBlockNumber(i *int64) *PaymentOrderUpdateOne {
-	if i != nil {
-		pouo.SetBlockNumber(*i)
+func (_u *PaymentOrderUpdateOne) SetNillableBlockNumber(v *int64) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetBlockNumber(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddBlockNumber adds i to the "block_number" field.
-func (pouo *PaymentOrderUpdateOne) AddBlockNumber(i int64) *PaymentOrderUpdateOne {
-	pouo.mutation.AddBlockNumber(i)
-	return pouo
+// AddBlockNumber adds value to the "block_number" field.
+func (_u *PaymentOrderUpdateOne) AddBlockNumber(v int64) *PaymentOrderUpdateOne {
+	_u.mutation.AddBlockNumber(v)
+	return _u
 }
 
 // SetMessageHash sets the "message_hash" field.
-func (pouo *PaymentOrderUpdateOne) SetMessageHash(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetMessageHash(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetMessageHash(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetMessageHash(v)
+	return _u
 }
 
 // SetNillableMessageHash sets the "message_hash" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableMessageHash(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetMessageHash(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableMessageHash(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetMessageHash(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearMessageHash clears the value of the "message_hash" field.
-func (pouo *PaymentOrderUpdateOne) ClearMessageHash() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearMessageHash()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearMessageHash() *PaymentOrderUpdateOne {
+	_u.mutation.ClearMessageHash()
+	return _u
 }
 
 // SetGatewayID sets the "gateway_id" field.
-func (pouo *PaymentOrderUpdateOne) SetGatewayID(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetGatewayID(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetGatewayID(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetGatewayID(v)
+	return _u
 }
 
 // SetNillableGatewayID sets the "gateway_id" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableGatewayID(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetGatewayID(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableGatewayID(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetGatewayID(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearGatewayID clears the value of the "gateway_id" field.
-func (pouo *PaymentOrderUpdateOne) ClearGatewayID() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearGatewayID()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearGatewayID() *PaymentOrderUpdateOne {
+	_u.mutation.ClearGatewayID()
+	return _u
 }
 
 // SetFromAddress sets the "from_address" field.
-func (pouo *PaymentOrderUpdateOne) SetFromAddress(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetFromAddress(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetFromAddress(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetFromAddress(v)
+	return _u
 }
 
 // SetNillableFromAddress sets the "from_address" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableFromAddress(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetFromAddress(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableFromAddress(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetFromAddress(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearFromAddress clears the value of the "from_address" field.
-func (pouo *PaymentOrderUpdateOne) ClearFromAddress() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearFromAddress()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearFromAddress() *PaymentOrderUpdateOne {
+	_u.mutation.ClearFromAddress()
+	return _u
 }
 
 // SetReturnAddress sets the "return_address" field.
-func (pouo *PaymentOrderUpdateOne) SetReturnAddress(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetReturnAddress(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetReturnAddress(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetReturnAddress(v)
+	return _u
 }
 
 // SetNillableReturnAddress sets the "return_address" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableReturnAddress(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetReturnAddress(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableReturnAddress(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetReturnAddress(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearReturnAddress clears the value of the "return_address" field.
-func (pouo *PaymentOrderUpdateOne) ClearReturnAddress() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearReturnAddress()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearReturnAddress() *PaymentOrderUpdateOne {
+	_u.mutation.ClearReturnAddress()
+	return _u
 }
 
 // SetReceiveAddress sets the "receive_address" field.
-func (pouo *PaymentOrderUpdateOne) SetReceiveAddress(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetReceiveAddress(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetReceiveAddress(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetReceiveAddress(v)
+	return _u
 }
 
 // SetNillableReceiveAddress sets the "receive_address" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableReceiveAddress(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetReceiveAddress(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableReceiveAddress(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetReceiveAddress(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearReceiveAddress clears the value of the "receive_address" field.
-func (pouo *PaymentOrderUpdateOne) ClearReceiveAddress() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearReceiveAddress()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearReceiveAddress() *PaymentOrderUpdateOne {
+	_u.mutation.ClearReceiveAddress()
+	return _u
 }
 
 // SetReceiveAddressSalt sets the "receive_address_salt" field.
-func (pouo *PaymentOrderUpdateOne) SetReceiveAddressSalt(b []byte) *PaymentOrderUpdateOne {
-	pouo.mutation.SetReceiveAddressSalt(b)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetReceiveAddressSalt(v []byte) *PaymentOrderUpdateOne {
+	_u.mutation.SetReceiveAddressSalt(v)
+	return _u
 }
 
 // ClearReceiveAddressSalt clears the value of the "receive_address_salt" field.
-func (pouo *PaymentOrderUpdateOne) ClearReceiveAddressSalt() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearReceiveAddressSalt()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearReceiveAddressSalt() *PaymentOrderUpdateOne {
+	_u.mutation.ClearReceiveAddressSalt()
+	return _u
 }
 
 // SetReceiveAddressExpiry sets the "receive_address_expiry" field.
-func (pouo *PaymentOrderUpdateOne) SetReceiveAddressExpiry(t time.Time) *PaymentOrderUpdateOne {
-	pouo.mutation.SetReceiveAddressExpiry(t)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetReceiveAddressExpiry(v time.Time) *PaymentOrderUpdateOne {
+	_u.mutation.SetReceiveAddressExpiry(v)
+	return _u
 }
 
 // SetNillableReceiveAddressExpiry sets the "receive_address_expiry" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableReceiveAddressExpiry(t *time.Time) *PaymentOrderUpdateOne {
-	if t != nil {
-		pouo.SetReceiveAddressExpiry(*t)
+func (_u *PaymentOrderUpdateOne) SetNillableReceiveAddressExpiry(v *time.Time) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetReceiveAddressExpiry(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearReceiveAddressExpiry clears the value of the "receive_address_expiry" field.
-func (pouo *PaymentOrderUpdateOne) ClearReceiveAddressExpiry() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearReceiveAddressExpiry()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearReceiveAddressExpiry() *PaymentOrderUpdateOne {
+	_u.mutation.ClearReceiveAddressExpiry()
+	return _u
 }
 
 // SetFeeAddress sets the "fee_address" field.
-func (pouo *PaymentOrderUpdateOne) SetFeeAddress(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetFeeAddress(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetFeeAddress(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetFeeAddress(v)
+	return _u
 }
 
 // SetNillableFeeAddress sets the "fee_address" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableFeeAddress(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetFeeAddress(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableFeeAddress(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetFeeAddress(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearFeeAddress clears the value of the "fee_address" field.
-func (pouo *PaymentOrderUpdateOne) ClearFeeAddress() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearFeeAddress()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearFeeAddress() *PaymentOrderUpdateOne {
+	_u.mutation.ClearFeeAddress()
+	return _u
 }
 
 // SetInstitution sets the "institution" field.
-func (pouo *PaymentOrderUpdateOne) SetInstitution(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetInstitution(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetInstitution(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetInstitution(v)
+	return _u
 }
 
 // SetNillableInstitution sets the "institution" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableInstitution(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetInstitution(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableInstitution(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetInstitution(*v)
 	}
-	return pouo
+	return _u
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (pouo *PaymentOrderUpdateOne) SetAccountIdentifier(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetAccountIdentifier(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetAccountIdentifier(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetAccountIdentifier(v)
+	return _u
 }
 
 // SetNillableAccountIdentifier sets the "account_identifier" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableAccountIdentifier(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetAccountIdentifier(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableAccountIdentifier(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAccountIdentifier(*v)
 	}
-	return pouo
+	return _u
 }
 
 // SetAccountName sets the "account_name" field.
-func (pouo *PaymentOrderUpdateOne) SetAccountName(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetAccountName(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetAccountName(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetAccountName(v)
+	return _u
 }
 
 // SetNillableAccountName sets the "account_name" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableAccountName(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetAccountName(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableAccountName(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAccountName(*v)
 	}
-	return pouo
+	return _u
 }
 
 // SetMemo sets the "memo" field.
-func (pouo *PaymentOrderUpdateOne) SetMemo(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetMemo(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetMemo(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetMemo(v)
+	return _u
 }
 
 // SetNillableMemo sets the "memo" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableMemo(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetMemo(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableMemo(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetMemo(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearMemo clears the value of the "memo" field.
-func (pouo *PaymentOrderUpdateOne) ClearMemo() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearMemo()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearMemo() *PaymentOrderUpdateOne {
+	_u.mutation.ClearMemo()
+	return _u
 }
 
 // SetMetadata sets the "metadata" field.
-func (pouo *PaymentOrderUpdateOne) SetMetadata(m map[string]interface{}) *PaymentOrderUpdateOne {
-	pouo.mutation.SetMetadata(m)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetMetadata(v map[string]interface{}) *PaymentOrderUpdateOne {
+	_u.mutation.SetMetadata(v)
+	return _u
 }
 
 // ClearMetadata clears the value of the "metadata" field.
-func (pouo *PaymentOrderUpdateOne) ClearMetadata() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearMetadata()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearMetadata() *PaymentOrderUpdateOne {
+	_u.mutation.ClearMetadata()
+	return _u
 }
 
 // SetSender sets the "sender" field.
-func (pouo *PaymentOrderUpdateOne) SetSender(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetSender(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetSender(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetSender(v)
+	return _u
 }
 
 // SetNillableSender sets the "sender" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableSender(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetSender(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableSender(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetSender(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearSender clears the value of the "sender" field.
-func (pouo *PaymentOrderUpdateOne) ClearSender() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearSender()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearSender() *PaymentOrderUpdateOne {
+	_u.mutation.ClearSender()
+	return _u
 }
 
 // SetReference sets the "reference" field.
-func (pouo *PaymentOrderUpdateOne) SetReference(s string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetReference(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetReference(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetReference(v)
+	return _u
 }
 
 // SetNillableReference sets the "reference" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableReference(s *string) *PaymentOrderUpdateOne {
-	if s != nil {
-		pouo.SetReference(*s)
+func (_u *PaymentOrderUpdateOne) SetNillableReference(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetReference(*v)
 	}
-	return pouo
+	return _u
 }
 
 // ClearReference clears the value of the "reference" field.
-func (pouo *PaymentOrderUpdateOne) ClearReference() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearReference()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearReference() *PaymentOrderUpdateOne {
+	_u.mutation.ClearReference()
+	return _u
 }
 
 // SetCancellationCount sets the "cancellation_count" field.
-func (pouo *PaymentOrderUpdateOne) SetCancellationCount(i int) *PaymentOrderUpdateOne {
-	pouo.mutation.ResetCancellationCount()
-	pouo.mutation.SetCancellationCount(i)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetCancellationCount(v int) *PaymentOrderUpdateOne {
+	_u.mutation.ResetCancellationCount()
+	_u.mutation.SetCancellationCount(v)
+	return _u
 }
 
 // SetNillableCancellationCount sets the "cancellation_count" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableCancellationCount(i *int) *PaymentOrderUpdateOne {
-	if i != nil {
-		pouo.SetCancellationCount(*i)
+func (_u *PaymentOrderUpdateOne) SetNillableCancellationCount(v *int) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetCancellationCount(*v)
 	}
-	return pouo
+	return _u
 }
 
-// AddCancellationCount adds i to the "cancellation_count" field.
-func (pouo *PaymentOrderUpdateOne) AddCancellationCount(i int) *PaymentOrderUpdateOne {
-	pouo.mutation.AddCancellationCount(i)
-	return pouo
+// AddCancellationCount adds value to the "cancellation_count" field.
+func (_u *PaymentOrderUpdateOne) AddCancellationCount(v int) *PaymentOrderUpdateOne {
+	_u.mutation.AddCancellationCount(v)
+	return _u
 }
 
 // ClearCancellationCount clears the value of the "cancellation_count" field.
-func (pouo *PaymentOrderUpdateOne) ClearCancellationCount() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearCancellationCount()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearCancellationCount() *PaymentOrderUpdateOne {
+	_u.mutation.ClearCancellationCount()
+	return _u
 }
 
 // SetCancellationReasons sets the "cancellation_reasons" field.
-func (pouo *PaymentOrderUpdateOne) SetCancellationReasons(s []string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetCancellationReasons(s)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetCancellationReasons(v []string) *PaymentOrderUpdateOne {
+	_u.mutation.SetCancellationReasons(v)
+	return _u
 }
 
-// AppendCancellationReasons appends s to the "cancellation_reasons" field.
-func (pouo *PaymentOrderUpdateOne) AppendCancellationReasons(s []string) *PaymentOrderUpdateOne {
-	pouo.mutation.AppendCancellationReasons(s)
-	return pouo
+// AppendCancellationReasons appends value to the "cancellation_reasons" field.
+func (_u *PaymentOrderUpdateOne) AppendCancellationReasons(v []string) *PaymentOrderUpdateOne {
+	_u.mutation.AppendCancellationReasons(v)
+	return _u
 }
 
 // ClearCancellationReasons clears the value of the "cancellation_reasons" field.
-func (pouo *PaymentOrderUpdateOne) ClearCancellationReasons() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearCancellationReasons()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearCancellationReasons() *PaymentOrderUpdateOne {
+	_u.mutation.ClearCancellationReasons()
+	return _u
 }
 
 // SetStatus sets the "status" field.
-func (pouo *PaymentOrderUpdateOne) SetStatus(pa paymentorder.Status) *PaymentOrderUpdateOne {
-	pouo.mutation.SetStatus(pa)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetStatus(v paymentorder.Status) *PaymentOrderUpdateOne {
+	_u.mutation.SetStatus(v)
+	return _u
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableStatus(pa *paymentorder.Status) *PaymentOrderUpdateOne {
-	if pa != nil {
-		pouo.SetStatus(*pa)
+func (_u *PaymentOrderUpdateOne) SetNillableStatus(v *paymentorder.Status) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetStatus(*v)
 	}
-	return pouo
+	return _u
 }
 
 // SetOrderType sets the "order_type" field.
-func (pouo *PaymentOrderUpdateOne) SetOrderType(pt paymentorder.OrderType) *PaymentOrderUpdateOne {
-	pouo.mutation.SetOrderType(pt)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetOrderType(v paymentorder.OrderType) *PaymentOrderUpdateOne {
+	_u.mutation.SetOrderType(v)
+	return _u
 }
 
 // SetNillableOrderType sets the "order_type" field if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableOrderType(pt *paymentorder.OrderType) *PaymentOrderUpdateOne {
-	if pt != nil {
-		pouo.SetOrderType(*pt)
+func (_u *PaymentOrderUpdateOne) SetNillableOrderType(v *paymentorder.OrderType) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetOrderType(*v)
 	}
-	return pouo
+	return _u
 }
 
 // SetTokenID sets the "token" edge to the Token entity by ID.
-func (pouo *PaymentOrderUpdateOne) SetTokenID(id int) *PaymentOrderUpdateOne {
-	pouo.mutation.SetTokenID(id)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetTokenID(id int) *PaymentOrderUpdateOne {
+	_u.mutation.SetTokenID(id)
+	return _u
 }
 
 // SetToken sets the "token" edge to the Token entity.
-func (pouo *PaymentOrderUpdateOne) SetToken(t *Token) *PaymentOrderUpdateOne {
-	return pouo.SetTokenID(t.ID)
+func (_u *PaymentOrderUpdateOne) SetToken(v *Token) *PaymentOrderUpdateOne {
+	return _u.SetTokenID(v.ID)
 }
 
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
-func (pouo *PaymentOrderUpdateOne) SetSenderProfileID(id uuid.UUID) *PaymentOrderUpdateOne {
-	pouo.mutation.SetSenderProfileID(id)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetSenderProfileID(id uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.SetSenderProfileID(id)
+	return _u
 }
 
 // SetNillableSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableSenderProfileID(id *uuid.UUID) *PaymentOrderUpdateOne {
+func (_u *PaymentOrderUpdateOne) SetNillableSenderProfileID(id *uuid.UUID) *PaymentOrderUpdateOne {
 	if id != nil {
-		pouo = pouo.SetSenderProfileID(*id)
+		_u = _u.SetSenderProfileID(*id)
 	}
-	return pouo
+	return _u
 }
 
 // SetSenderProfile sets the "sender_profile" edge to the SenderProfile entity.
-func (pouo *PaymentOrderUpdateOne) SetSenderProfile(s *SenderProfile) *PaymentOrderUpdateOne {
-	return pouo.SetSenderProfileID(s.ID)
+func (_u *PaymentOrderUpdateOne) SetSenderProfile(v *SenderProfile) *PaymentOrderUpdateOne {
+	return _u.SetSenderProfileID(v.ID)
 }
 
 // SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
-func (pouo *PaymentOrderUpdateOne) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderUpdateOne {
-	pouo.mutation.SetPaymentWebhookID(id)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetPaymentWebhookID(id uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.SetPaymentWebhookID(id)
+	return _u
 }
 
 // SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderUpdateOne {
+func (_u *PaymentOrderUpdateOne) SetNillablePaymentWebhookID(id *uuid.UUID) *PaymentOrderUpdateOne {
 	if id != nil {
-		pouo = pouo.SetPaymentWebhookID(*id)
+		_u = _u.SetPaymentWebhookID(*id)
 	}
-	return pouo
+	return _u
 }
 
 // SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
-func (pouo *PaymentOrderUpdateOne) SetPaymentWebhook(p *PaymentWebhook) *PaymentOrderUpdateOne {
-	return pouo.SetPaymentWebhookID(p.ID)
+func (_u *PaymentOrderUpdateOne) SetPaymentWebhook(v *PaymentWebhook) *PaymentOrderUpdateOne {
+	return _u.SetPaymentWebhookID(v.ID)
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (pouo *PaymentOrderUpdateOne) SetProviderID(id string) *PaymentOrderUpdateOne {
-	pouo.mutation.SetProviderID(id)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetProviderID(id string) *PaymentOrderUpdateOne {
+	_u.mutation.SetProviderID(id)
+	return _u
 }
 
 // SetNillableProviderID sets the "provider" edge to the ProviderProfile entity by ID if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableProviderID(id *string) *PaymentOrderUpdateOne {
+func (_u *PaymentOrderUpdateOne) SetNillableProviderID(id *string) *PaymentOrderUpdateOne {
 	if id != nil {
-		pouo = pouo.SetProviderID(*id)
+		_u = _u.SetProviderID(*id)
 	}
-	return pouo
+	return _u
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (pouo *PaymentOrderUpdateOne) SetProvider(p *ProviderProfile) *PaymentOrderUpdateOne {
-	return pouo.SetProviderID(p.ID)
+func (_u *PaymentOrderUpdateOne) SetProvider(v *ProviderProfile) *PaymentOrderUpdateOne {
+	return _u.SetProviderID(v.ID)
 }
 
 // SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
-func (pouo *PaymentOrderUpdateOne) SetProvisionBucketID(id int) *PaymentOrderUpdateOne {
-	pouo.mutation.SetProvisionBucketID(id)
-	return pouo
+func (_u *PaymentOrderUpdateOne) SetProvisionBucketID(id int) *PaymentOrderUpdateOne {
+	_u.mutation.SetProvisionBucketID(id)
+	return _u
 }
 
 // SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
-func (pouo *PaymentOrderUpdateOne) SetNillableProvisionBucketID(id *int) *PaymentOrderUpdateOne {
+func (_u *PaymentOrderUpdateOne) SetNillableProvisionBucketID(id *int) *PaymentOrderUpdateOne {
 	if id != nil {
-		pouo = pouo.SetProvisionBucketID(*id)
+		_u = _u.SetProvisionBucketID(*id)
 	}
-	return pouo
+	return _u
 }
 
 // SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
-func (pouo *PaymentOrderUpdateOne) SetProvisionBucket(p *ProvisionBucket) *PaymentOrderUpdateOne {
-	return pouo.SetProvisionBucketID(p.ID)
+func (_u *PaymentOrderUpdateOne) SetProvisionBucket(v *ProvisionBucket) *PaymentOrderUpdateOne {
+	return _u.SetProvisionBucketID(v.ID)
 }
 
 // AddFulfillmentIDs adds the "fulfillments" edge to the PaymentOrderFulfillment entity by IDs.
-func (pouo *PaymentOrderUpdateOne) AddFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
-	pouo.mutation.AddFulfillmentIDs(ids...)
-	return pouo
+func (_u *PaymentOrderUpdateOne) AddFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.AddFulfillmentIDs(ids...)
+	return _u
 }
 
 // AddFulfillments adds the "fulfillments" edges to the PaymentOrderFulfillment entity.
-func (pouo *PaymentOrderUpdateOne) AddFulfillments(p ...*PaymentOrderFulfillment) *PaymentOrderUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *PaymentOrderUpdateOne) AddFulfillments(v ...*PaymentOrderFulfillment) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pouo.AddFulfillmentIDs(ids...)
+	return _u.AddFulfillmentIDs(ids...)
 }
 
 // AddTransactionIDs adds the "transactions" edge to the TransactionLog entity by IDs.
-func (pouo *PaymentOrderUpdateOne) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
-	pouo.mutation.AddTransactionIDs(ids...)
-	return pouo
+func (_u *PaymentOrderUpdateOne) AddTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.AddTransactionIDs(ids...)
+	return _u
 }
 
 // AddTransactions adds the "transactions" edges to the TransactionLog entity.
-func (pouo *PaymentOrderUpdateOne) AddTransactions(t ...*TransactionLog) *PaymentOrderUpdateOne {
-	ids := make([]uuid.UUID, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *PaymentOrderUpdateOne) AddTransactions(v ...*TransactionLog) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pouo.AddTransactionIDs(ids...)
+	return _u.AddTransactionIDs(ids...)
 }
 
 // Mutation returns the PaymentOrderMutation object of the builder.
-func (pouo *PaymentOrderUpdateOne) Mutation() *PaymentOrderMutation {
-	return pouo.mutation
+func (_u *PaymentOrderUpdateOne) Mutation() *PaymentOrderMutation {
+	return _u.mutation
 }
 
 // ClearToken clears the "token" edge to the Token entity.
-func (pouo *PaymentOrderUpdateOne) ClearToken() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearToken()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearToken() *PaymentOrderUpdateOne {
+	_u.mutation.ClearToken()
+	return _u
 }
 
 // ClearSenderProfile clears the "sender_profile" edge to the SenderProfile entity.
-func (pouo *PaymentOrderUpdateOne) ClearSenderProfile() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearSenderProfile()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearSenderProfile() *PaymentOrderUpdateOne {
+	_u.mutation.ClearSenderProfile()
+	return _u
 }
 
 // ClearPaymentWebhook clears the "payment_webhook" edge to the PaymentWebhook entity.
-func (pouo *PaymentOrderUpdateOne) ClearPaymentWebhook() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearPaymentWebhook()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearPaymentWebhook() *PaymentOrderUpdateOne {
+	_u.mutation.ClearPaymentWebhook()
+	return _u
 }
 
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
-func (pouo *PaymentOrderUpdateOne) ClearProvider() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearProvider()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearProvider() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProvider()
+	return _u
 }
 
 // ClearProvisionBucket clears the "provision_bucket" edge to the ProvisionBucket entity.
-func (pouo *PaymentOrderUpdateOne) ClearProvisionBucket() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearProvisionBucket()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearProvisionBucket() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProvisionBucket()
+	return _u
 }
 
 // ClearFulfillments clears all "fulfillments" edges to the PaymentOrderFulfillment entity.
-func (pouo *PaymentOrderUpdateOne) ClearFulfillments() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearFulfillments()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearFulfillments() *PaymentOrderUpdateOne {
+	_u.mutation.ClearFulfillments()
+	return _u
 }
 
 // RemoveFulfillmentIDs removes the "fulfillments" edge to PaymentOrderFulfillment entities by IDs.
-func (pouo *PaymentOrderUpdateOne) RemoveFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
-	pouo.mutation.RemoveFulfillmentIDs(ids...)
-	return pouo
+func (_u *PaymentOrderUpdateOne) RemoveFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.RemoveFulfillmentIDs(ids...)
+	return _u
 }
 
 // RemoveFulfillments removes "fulfillments" edges to PaymentOrderFulfillment entities.
-func (pouo *PaymentOrderUpdateOne) RemoveFulfillments(p ...*PaymentOrderFulfillment) *PaymentOrderUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *PaymentOrderUpdateOne) RemoveFulfillments(v ...*PaymentOrderFulfillment) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pouo.RemoveFulfillmentIDs(ids...)
+	return _u.RemoveFulfillmentIDs(ids...)
 }
 
 // ClearTransactions clears all "transactions" edges to the TransactionLog entity.
-func (pouo *PaymentOrderUpdateOne) ClearTransactions() *PaymentOrderUpdateOne {
-	pouo.mutation.ClearTransactions()
-	return pouo
+func (_u *PaymentOrderUpdateOne) ClearTransactions() *PaymentOrderUpdateOne {
+	_u.mutation.ClearTransactions()
+	return _u
 }
 
 // RemoveTransactionIDs removes the "transactions" edge to TransactionLog entities by IDs.
-func (pouo *PaymentOrderUpdateOne) RemoveTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
-	pouo.mutation.RemoveTransactionIDs(ids...)
-	return pouo
+func (_u *PaymentOrderUpdateOne) RemoveTransactionIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.RemoveTransactionIDs(ids...)
+	return _u
 }
 
 // RemoveTransactions removes "transactions" edges to TransactionLog entities.
-func (pouo *PaymentOrderUpdateOne) RemoveTransactions(t ...*TransactionLog) *PaymentOrderUpdateOne {
-	ids := make([]uuid.UUID, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_u *PaymentOrderUpdateOne) RemoveTransactions(v ...*TransactionLog) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pouo.RemoveTransactionIDs(ids...)
+	return _u.RemoveTransactionIDs(ids...)
 }
 
 // Where appends a list predicates to the PaymentOrderUpdate builder.
-func (pouo *PaymentOrderUpdateOne) Where(ps ...predicate.PaymentOrder) *PaymentOrderUpdateOne {
-	pouo.mutation.Where(ps...)
-	return pouo
+func (_u *PaymentOrderUpdateOne) Where(ps ...predicate.PaymentOrder) *PaymentOrderUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (pouo *PaymentOrderUpdateOne) Select(field string, fields ...string) *PaymentOrderUpdateOne {
-	pouo.fields = append([]string{field}, fields...)
-	return pouo
+func (_u *PaymentOrderUpdateOne) Select(field string, fields ...string) *PaymentOrderUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated PaymentOrder entity.
-func (pouo *PaymentOrderUpdateOne) Save(ctx context.Context) (*PaymentOrder, error) {
-	pouo.defaults()
-	return withHooks(ctx, pouo.sqlSave, pouo.mutation, pouo.hooks)
+func (_u *PaymentOrderUpdateOne) Save(ctx context.Context) (*PaymentOrder, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pouo *PaymentOrderUpdateOne) SaveX(ctx context.Context) *PaymentOrder {
-	node, err := pouo.Save(ctx)
+func (_u *PaymentOrderUpdateOne) SaveX(ctx context.Context) *PaymentOrder {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -2258,115 +2258,115 @@ func (pouo *PaymentOrderUpdateOne) SaveX(ctx context.Context) *PaymentOrder {
 }
 
 // Exec executes the query on the entity.
-func (pouo *PaymentOrderUpdateOne) Exec(ctx context.Context) error {
-	_, err := pouo.Save(ctx)
+func (_u *PaymentOrderUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pouo *PaymentOrderUpdateOne) ExecX(ctx context.Context) {
-	if err := pouo.Exec(ctx); err != nil {
+func (_u *PaymentOrderUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pouo *PaymentOrderUpdateOne) defaults() {
-	if _, ok := pouo.mutation.UpdatedAt(); !ok {
+func (_u *PaymentOrderUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := paymentorder.UpdateDefaultUpdatedAt()
-		pouo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pouo *PaymentOrderUpdateOne) check() error {
-	if v, ok := pouo.mutation.TxHash(); ok {
+func (_u *PaymentOrderUpdateOne) check() error {
+	if v, ok := _u.mutation.TxHash(); ok {
 		if err := paymentorder.TxHashValidator(v); err != nil {
 			return &ValidationError{Name: "tx_hash", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.tx_hash": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.GatewayID(); ok {
+	if v, ok := _u.mutation.GatewayID(); ok {
 		if err := paymentorder.GatewayIDValidator(v); err != nil {
 			return &ValidationError{Name: "gateway_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.gateway_id": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.FromAddress(); ok {
+	if v, ok := _u.mutation.FromAddress(); ok {
 		if err := paymentorder.FromAddressValidator(v); err != nil {
 			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.from_address": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.ReturnAddress(); ok {
+	if v, ok := _u.mutation.ReturnAddress(); ok {
 		if err := paymentorder.ReturnAddressValidator(v); err != nil {
 			return &ValidationError{Name: "return_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.return_address": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.ReceiveAddress(); ok {
+	if v, ok := _u.mutation.ReceiveAddress(); ok {
 		if err := paymentorder.ReceiveAddressValidator(v); err != nil {
 			return &ValidationError{Name: "receive_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.receive_address": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.FeeAddress(); ok {
+	if v, ok := _u.mutation.FeeAddress(); ok {
 		if err := paymentorder.FeeAddressValidator(v); err != nil {
 			return &ValidationError{Name: "fee_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.fee_address": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.Institution(); ok {
+	if v, ok := _u.mutation.Institution(); ok {
 		if err := paymentorder.InstitutionValidator(v); err != nil {
 			return &ValidationError{Name: "institution", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.institution": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.AccountIdentifier(); ok {
+	if v, ok := _u.mutation.AccountIdentifier(); ok {
 		if err := paymentorder.AccountIdentifierValidator(v); err != nil {
 			return &ValidationError{Name: "account_identifier", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_identifier": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.AccountName(); ok {
+	if v, ok := _u.mutation.AccountName(); ok {
 		if err := paymentorder.AccountNameValidator(v); err != nil {
 			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_name": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.Memo(); ok {
+	if v, ok := _u.mutation.Memo(); ok {
 		if err := paymentorder.MemoValidator(v); err != nil {
 			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.Sender(); ok {
+	if v, ok := _u.mutation.Sender(); ok {
 		if err := paymentorder.SenderValidator(v); err != nil {
 			return &ValidationError{Name: "sender", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.sender": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.Reference(); ok {
+	if v, ok := _u.mutation.Reference(); ok {
 		if err := paymentorder.ReferenceValidator(v); err != nil {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.Status(); ok {
+	if v, ok := _u.mutation.Status(); ok {
 		if err := paymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
 		}
 	}
-	if v, ok := pouo.mutation.OrderType(); ok {
+	if v, ok := _u.mutation.OrderType(); ok {
 		if err := paymentorder.OrderTypeValidator(v); err != nil {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
 		}
 	}
-	if pouo.mutation.TokenCleared() && len(pouo.mutation.TokenIDs()) > 0 {
+	if _u.mutation.TokenCleared() && len(_u.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrder.token"`)
 	}
 	return nil
 }
 
-func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrder, err error) {
-	if err := pouo.check(); err != nil {
+func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrder, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(paymentorder.Table, paymentorder.Columns, sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID))
-	id, ok := pouo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "PaymentOrder.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := pouo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, paymentorder.FieldID)
 		for _, f := range fields {
@@ -2378,202 +2378,202 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 			}
 		}
 	}
-	if ps := pouo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pouo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentorder.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := pouo.mutation.Amount(); ok {
+	if value, ok := _u.mutation.Amount(); ok {
 		_spec.SetField(paymentorder.FieldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedAmount(); ok {
+	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(paymentorder.FieldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.Rate(); ok {
+	if value, ok := _u.mutation.Rate(); ok {
 		_spec.SetField(paymentorder.FieldRate, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedRate(); ok {
+	if value, ok := _u.mutation.AddedRate(); ok {
 		_spec.AddField(paymentorder.FieldRate, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AmountInUsd(); ok {
+	if value, ok := _u.mutation.AmountInUsd(); ok {
 		_spec.SetField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedAmountInUsd(); ok {
+	if value, ok := _u.mutation.AddedAmountInUsd(); ok {
 		_spec.AddField(paymentorder.FieldAmountInUsd, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AmountPaid(); ok {
+	if value, ok := _u.mutation.AmountPaid(); ok {
 		_spec.SetField(paymentorder.FieldAmountPaid, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedAmountPaid(); ok {
+	if value, ok := _u.mutation.AddedAmountPaid(); ok {
 		_spec.AddField(paymentorder.FieldAmountPaid, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AmountReturned(); ok {
+	if value, ok := _u.mutation.AmountReturned(); ok {
 		_spec.SetField(paymentorder.FieldAmountReturned, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedAmountReturned(); ok {
+	if value, ok := _u.mutation.AddedAmountReturned(); ok {
 		_spec.AddField(paymentorder.FieldAmountReturned, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.PercentSettled(); ok {
+	if value, ok := _u.mutation.PercentSettled(); ok {
 		_spec.SetField(paymentorder.FieldPercentSettled, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedPercentSettled(); ok {
+	if value, ok := _u.mutation.AddedPercentSettled(); ok {
 		_spec.AddField(paymentorder.FieldPercentSettled, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.SenderFee(); ok {
+	if value, ok := _u.mutation.SenderFee(); ok {
 		_spec.SetField(paymentorder.FieldSenderFee, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedSenderFee(); ok {
+	if value, ok := _u.mutation.AddedSenderFee(); ok {
 		_spec.AddField(paymentorder.FieldSenderFee, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.NetworkFee(); ok {
+	if value, ok := _u.mutation.NetworkFee(); ok {
 		_spec.SetField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedNetworkFee(); ok {
+	if value, ok := _u.mutation.AddedNetworkFee(); ok {
 		_spec.AddField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.ProtocolFee(); ok {
+	if value, ok := _u.mutation.ProtocolFee(); ok {
 		_spec.SetField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedProtocolFee(); ok {
+	if value, ok := _u.mutation.AddedProtocolFee(); ok {
 		_spec.AddField(paymentorder.FieldProtocolFee, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.OrderPercent(); ok {
+	if value, ok := _u.mutation.OrderPercent(); ok {
 		_spec.SetField(paymentorder.FieldOrderPercent, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedOrderPercent(); ok {
+	if value, ok := _u.mutation.AddedOrderPercent(); ok {
 		_spec.AddField(paymentorder.FieldOrderPercent, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.FeePercent(); ok {
+	if value, ok := _u.mutation.FeePercent(); ok {
 		_spec.SetField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.AddedFeePercent(); ok {
+	if value, ok := _u.mutation.AddedFeePercent(); ok {
 		_spec.AddField(paymentorder.FieldFeePercent, field.TypeFloat64, value)
 	}
-	if value, ok := pouo.mutation.TxHash(); ok {
+	if value, ok := _u.mutation.TxHash(); ok {
 		_spec.SetField(paymentorder.FieldTxHash, field.TypeString, value)
 	}
-	if pouo.mutation.TxHashCleared() {
+	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(paymentorder.FieldTxHash, field.TypeString)
 	}
-	if value, ok := pouo.mutation.BlockNumber(); ok {
+	if value, ok := _u.mutation.BlockNumber(); ok {
 		_spec.SetField(paymentorder.FieldBlockNumber, field.TypeInt64, value)
 	}
-	if value, ok := pouo.mutation.AddedBlockNumber(); ok {
+	if value, ok := _u.mutation.AddedBlockNumber(); ok {
 		_spec.AddField(paymentorder.FieldBlockNumber, field.TypeInt64, value)
 	}
-	if value, ok := pouo.mutation.MessageHash(); ok {
+	if value, ok := _u.mutation.MessageHash(); ok {
 		_spec.SetField(paymentorder.FieldMessageHash, field.TypeString, value)
 	}
-	if pouo.mutation.MessageHashCleared() {
+	if _u.mutation.MessageHashCleared() {
 		_spec.ClearField(paymentorder.FieldMessageHash, field.TypeString)
 	}
-	if value, ok := pouo.mutation.GatewayID(); ok {
+	if value, ok := _u.mutation.GatewayID(); ok {
 		_spec.SetField(paymentorder.FieldGatewayID, field.TypeString, value)
 	}
-	if pouo.mutation.GatewayIDCleared() {
+	if _u.mutation.GatewayIDCleared() {
 		_spec.ClearField(paymentorder.FieldGatewayID, field.TypeString)
 	}
-	if value, ok := pouo.mutation.FromAddress(); ok {
+	if value, ok := _u.mutation.FromAddress(); ok {
 		_spec.SetField(paymentorder.FieldFromAddress, field.TypeString, value)
 	}
-	if pouo.mutation.FromAddressCleared() {
+	if _u.mutation.FromAddressCleared() {
 		_spec.ClearField(paymentorder.FieldFromAddress, field.TypeString)
 	}
-	if value, ok := pouo.mutation.ReturnAddress(); ok {
+	if value, ok := _u.mutation.ReturnAddress(); ok {
 		_spec.SetField(paymentorder.FieldReturnAddress, field.TypeString, value)
 	}
-	if pouo.mutation.ReturnAddressCleared() {
+	if _u.mutation.ReturnAddressCleared() {
 		_spec.ClearField(paymentorder.FieldReturnAddress, field.TypeString)
 	}
-	if value, ok := pouo.mutation.ReceiveAddress(); ok {
+	if value, ok := _u.mutation.ReceiveAddress(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddress, field.TypeString, value)
 	}
-	if pouo.mutation.ReceiveAddressCleared() {
+	if _u.mutation.ReceiveAddressCleared() {
 		_spec.ClearField(paymentorder.FieldReceiveAddress, field.TypeString)
 	}
-	if value, ok := pouo.mutation.ReceiveAddressSalt(); ok {
+	if value, ok := _u.mutation.ReceiveAddressSalt(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes, value)
 	}
-	if pouo.mutation.ReceiveAddressSaltCleared() {
+	if _u.mutation.ReceiveAddressSaltCleared() {
 		_spec.ClearField(paymentorder.FieldReceiveAddressSalt, field.TypeBytes)
 	}
-	if value, ok := pouo.mutation.ReceiveAddressExpiry(); ok {
+	if value, ok := _u.mutation.ReceiveAddressExpiry(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddressExpiry, field.TypeTime, value)
 	}
-	if pouo.mutation.ReceiveAddressExpiryCleared() {
+	if _u.mutation.ReceiveAddressExpiryCleared() {
 		_spec.ClearField(paymentorder.FieldReceiveAddressExpiry, field.TypeTime)
 	}
-	if value, ok := pouo.mutation.FeeAddress(); ok {
+	if value, ok := _u.mutation.FeeAddress(); ok {
 		_spec.SetField(paymentorder.FieldFeeAddress, field.TypeString, value)
 	}
-	if pouo.mutation.FeeAddressCleared() {
+	if _u.mutation.FeeAddressCleared() {
 		_spec.ClearField(paymentorder.FieldFeeAddress, field.TypeString)
 	}
-	if value, ok := pouo.mutation.Institution(); ok {
+	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(paymentorder.FieldInstitution, field.TypeString, value)
 	}
-	if value, ok := pouo.mutation.AccountIdentifier(); ok {
+	if value, ok := _u.mutation.AccountIdentifier(); ok {
 		_spec.SetField(paymentorder.FieldAccountIdentifier, field.TypeString, value)
 	}
-	if value, ok := pouo.mutation.AccountName(); ok {
+	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(paymentorder.FieldAccountName, field.TypeString, value)
 	}
-	if value, ok := pouo.mutation.Memo(); ok {
+	if value, ok := _u.mutation.Memo(); ok {
 		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
 	}
-	if pouo.mutation.MemoCleared() {
+	if _u.mutation.MemoCleared() {
 		_spec.ClearField(paymentorder.FieldMemo, field.TypeString)
 	}
-	if value, ok := pouo.mutation.Metadata(); ok {
+	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(paymentorder.FieldMetadata, field.TypeJSON, value)
 	}
-	if pouo.mutation.MetadataCleared() {
+	if _u.mutation.MetadataCleared() {
 		_spec.ClearField(paymentorder.FieldMetadata, field.TypeJSON)
 	}
-	if value, ok := pouo.mutation.Sender(); ok {
+	if value, ok := _u.mutation.Sender(); ok {
 		_spec.SetField(paymentorder.FieldSender, field.TypeString, value)
 	}
-	if pouo.mutation.SenderCleared() {
+	if _u.mutation.SenderCleared() {
 		_spec.ClearField(paymentorder.FieldSender, field.TypeString)
 	}
-	if value, ok := pouo.mutation.Reference(); ok {
+	if value, ok := _u.mutation.Reference(); ok {
 		_spec.SetField(paymentorder.FieldReference, field.TypeString, value)
 	}
-	if pouo.mutation.ReferenceCleared() {
+	if _u.mutation.ReferenceCleared() {
 		_spec.ClearField(paymentorder.FieldReference, field.TypeString)
 	}
-	if value, ok := pouo.mutation.CancellationCount(); ok {
+	if value, ok := _u.mutation.CancellationCount(); ok {
 		_spec.SetField(paymentorder.FieldCancellationCount, field.TypeInt, value)
 	}
-	if value, ok := pouo.mutation.AddedCancellationCount(); ok {
+	if value, ok := _u.mutation.AddedCancellationCount(); ok {
 		_spec.AddField(paymentorder.FieldCancellationCount, field.TypeInt, value)
 	}
-	if pouo.mutation.CancellationCountCleared() {
+	if _u.mutation.CancellationCountCleared() {
 		_spec.ClearField(paymentorder.FieldCancellationCount, field.TypeInt)
 	}
-	if value, ok := pouo.mutation.CancellationReasons(); ok {
+	if value, ok := _u.mutation.CancellationReasons(); ok {
 		_spec.SetField(paymentorder.FieldCancellationReasons, field.TypeJSON, value)
 	}
-	if value, ok := pouo.mutation.AppendedCancellationReasons(); ok {
+	if value, ok := _u.mutation.AppendedCancellationReasons(); ok {
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, paymentorder.FieldCancellationReasons, value)
 		})
 	}
-	if pouo.mutation.CancellationReasonsCleared() {
+	if _u.mutation.CancellationReasonsCleared() {
 		_spec.ClearField(paymentorder.FieldCancellationReasons, field.TypeJSON)
 	}
-	if value, ok := pouo.mutation.Status(); ok {
+	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
 	}
-	if value, ok := pouo.mutation.OrderType(); ok {
+	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
 	}
-	if pouo.mutation.TokenCleared() {
+	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -2586,7 +2586,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pouo.mutation.TokenIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -2602,7 +2602,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pouo.mutation.SenderProfileCleared() {
+	if _u.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -2615,7 +2615,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pouo.mutation.SenderProfileIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -2631,7 +2631,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pouo.mutation.PaymentWebhookCleared() {
+	if _u.mutation.PaymentWebhookCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -2644,7 +2644,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pouo.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -2660,7 +2660,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pouo.mutation.ProviderCleared() {
+	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -2673,7 +2673,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pouo.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -2689,7 +2689,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pouo.mutation.ProvisionBucketCleared() {
+	if _u.mutation.ProvisionBucketCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -2702,7 +2702,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pouo.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -2718,7 +2718,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pouo.mutation.FulfillmentsCleared() {
+	if _u.mutation.FulfillmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -2731,7 +2731,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pouo.mutation.RemovedFulfillmentsIDs(); len(nodes) > 0 && !pouo.mutation.FulfillmentsCleared() {
+	if nodes := _u.mutation.RemovedFulfillmentsIDs(); len(nodes) > 0 && !_u.mutation.FulfillmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -2747,7 +2747,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pouo.mutation.FulfillmentsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.FulfillmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -2763,7 +2763,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pouo.mutation.TransactionsCleared() {
+	if _u.mutation.TransactionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -2776,7 +2776,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pouo.mutation.RemovedTransactionsIDs(); len(nodes) > 0 && !pouo.mutation.TransactionsCleared() {
+	if nodes := _u.mutation.RemovedTransactionsIDs(); len(nodes) > 0 && !_u.mutation.TransactionsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -2792,7 +2792,7 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pouo.mutation.TransactionsIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.TransactionsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -2808,10 +2808,10 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &PaymentOrder{config: pouo.config}
+	_node = &PaymentOrder{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, pouo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentorder.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -2819,6 +2819,6 @@ func (pouo *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentO
 		}
 		return nil, err
 	}
-	pouo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

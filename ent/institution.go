@@ -78,57 +78,57 @@ func (*Institution) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Institution fields.
-func (i *Institution) assignValues(columns []string, values []any) error {
+func (_m *Institution) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
-	for j := range columns {
-		switch columns[j] {
+	for i := range columns {
+		switch columns[i] {
 		case institution.FieldID:
-			value, ok := values[j].(*sql.NullInt64)
+			value, ok := values[i].(*sql.NullInt64)
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			i.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case institution.FieldCreatedAt:
-			if value, ok := values[j].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[j])
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				i.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case institution.FieldUpdatedAt:
-			if value, ok := values[j].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field updated_at", values[j])
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				i.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case institution.FieldCode:
-			if value, ok := values[j].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field code", values[j])
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field code", values[i])
 			} else if value.Valid {
-				i.Code = value.String
+				_m.Code = value.String
 			}
 		case institution.FieldName:
-			if value, ok := values[j].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field name", values[j])
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
-				i.Name = value.String
+				_m.Name = value.String
 			}
 		case institution.FieldType:
-			if value, ok := values[j].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field type", values[j])
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
-				i.Type = institution.Type(value.String)
+				_m.Type = institution.Type(value.String)
 			}
 		case institution.ForeignKeys[0]:
-			if value, ok := values[j].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field fiat_currency_institutions", values[j])
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field fiat_currency_institutions", values[i])
 			} else if value.Valid {
-				i.fiat_currency_institutions = new(uuid.UUID)
-				*i.fiat_currency_institutions = *value.S.(*uuid.UUID)
+				_m.fiat_currency_institutions = new(uuid.UUID)
+				*_m.fiat_currency_institutions = *value.S.(*uuid.UUID)
 			}
 		default:
-			i.selectValues.Set(columns[j], values[j])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -136,52 +136,52 @@ func (i *Institution) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the Institution.
 // This includes values selected through modifiers, order, etc.
-func (i *Institution) Value(name string) (ent.Value, error) {
-	return i.selectValues.Get(name)
+func (_m *Institution) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryFiatCurrency queries the "fiat_currency" edge of the Institution entity.
-func (i *Institution) QueryFiatCurrency() *FiatCurrencyQuery {
-	return NewInstitutionClient(i.config).QueryFiatCurrency(i)
+func (_m *Institution) QueryFiatCurrency() *FiatCurrencyQuery {
+	return NewInstitutionClient(_m.config).QueryFiatCurrency(_m)
 }
 
 // Update returns a builder for updating this Institution.
 // Note that you need to call Institution.Unwrap() before calling this method if this Institution
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (i *Institution) Update() *InstitutionUpdateOne {
-	return NewInstitutionClient(i.config).UpdateOne(i)
+func (_m *Institution) Update() *InstitutionUpdateOne {
+	return NewInstitutionClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the Institution entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (i *Institution) Unwrap() *Institution {
-	_tx, ok := i.config.driver.(*txDriver)
+func (_m *Institution) Unwrap() *Institution {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Institution is not a transactional entity")
 	}
-	i.config.driver = _tx.drv
-	return i
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (i *Institution) String() string {
+func (_m *Institution) String() string {
 	var builder strings.Builder
 	builder.WriteString("Institution(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", i.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(i.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(i.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("code=")
-	builder.WriteString(i.Code)
+	builder.WriteString(_m.Code)
 	builder.WriteString(", ")
 	builder.WriteString("name=")
-	builder.WriteString(i.Name)
+	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
 	builder.WriteString("type=")
-	builder.WriteString(fmt.Sprintf("%v", i.Type))
+	builder.WriteString(fmt.Sprintf("%v", _m.Type))
 	builder.WriteByte(')')
 	return builder.String()
 }

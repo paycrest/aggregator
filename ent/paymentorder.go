@@ -234,7 +234,7 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the PaymentOrder fields.
-func (po *PaymentOrder) assignValues(columns []string, values []any) error {
+func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -244,175 +244,175 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				po.ID = *value
+				_m.ID = *value
 			}
 		case paymentorder.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				po.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case paymentorder.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				po.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case paymentorder.FieldAmount:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field amount", values[i])
 			} else if value != nil {
-				po.Amount = *value
+				_m.Amount = *value
 			}
 		case paymentorder.FieldRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field rate", values[i])
 			} else if value != nil {
-				po.Rate = *value
+				_m.Rate = *value
 			}
 		case paymentorder.FieldAmountInUsd:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field amount_in_usd", values[i])
 			} else if value != nil {
-				po.AmountInUsd = *value
+				_m.AmountInUsd = *value
 			}
 		case paymentorder.FieldAmountPaid:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field amount_paid", values[i])
 			} else if value != nil {
-				po.AmountPaid = *value
+				_m.AmountPaid = *value
 			}
 		case paymentorder.FieldAmountReturned:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field amount_returned", values[i])
 			} else if value != nil {
-				po.AmountReturned = *value
+				_m.AmountReturned = *value
 			}
 		case paymentorder.FieldPercentSettled:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field percent_settled", values[i])
 			} else if value != nil {
-				po.PercentSettled = *value
+				_m.PercentSettled = *value
 			}
 		case paymentorder.FieldSenderFee:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field sender_fee", values[i])
 			} else if value != nil {
-				po.SenderFee = *value
+				_m.SenderFee = *value
 			}
 		case paymentorder.FieldNetworkFee:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field network_fee", values[i])
 			} else if value != nil {
-				po.NetworkFee = *value
+				_m.NetworkFee = *value
 			}
 		case paymentorder.FieldProtocolFee:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field protocol_fee", values[i])
 			} else if value != nil {
-				po.ProtocolFee = *value
+				_m.ProtocolFee = *value
 			}
 		case paymentorder.FieldOrderPercent:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field order_percent", values[i])
 			} else if value != nil {
-				po.OrderPercent = *value
+				_m.OrderPercent = *value
 			}
 		case paymentorder.FieldFeePercent:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field fee_percent", values[i])
 			} else if value != nil {
-				po.FeePercent = *value
+				_m.FeePercent = *value
 			}
 		case paymentorder.FieldTxHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field tx_hash", values[i])
 			} else if value.Valid {
-				po.TxHash = value.String
+				_m.TxHash = value.String
 			}
 		case paymentorder.FieldBlockNumber:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field block_number", values[i])
 			} else if value.Valid {
-				po.BlockNumber = value.Int64
+				_m.BlockNumber = value.Int64
 			}
 		case paymentorder.FieldMessageHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field message_hash", values[i])
 			} else if value.Valid {
-				po.MessageHash = value.String
+				_m.MessageHash = value.String
 			}
 		case paymentorder.FieldGatewayID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field gateway_id", values[i])
 			} else if value.Valid {
-				po.GatewayID = value.String
+				_m.GatewayID = value.String
 			}
 		case paymentorder.FieldFromAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field from_address", values[i])
 			} else if value.Valid {
-				po.FromAddress = value.String
+				_m.FromAddress = value.String
 			}
 		case paymentorder.FieldReturnAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field return_address", values[i])
 			} else if value.Valid {
-				po.ReturnAddress = value.String
+				_m.ReturnAddress = value.String
 			}
 		case paymentorder.FieldReceiveAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field receive_address", values[i])
 			} else if value.Valid {
-				po.ReceiveAddress = value.String
+				_m.ReceiveAddress = value.String
 			}
 		case paymentorder.FieldReceiveAddressSalt:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field receive_address_salt", values[i])
 			} else if value != nil {
-				po.ReceiveAddressSalt = *value
+				_m.ReceiveAddressSalt = *value
 			}
 		case paymentorder.FieldReceiveAddressExpiry:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field receive_address_expiry", values[i])
 			} else if value.Valid {
-				po.ReceiveAddressExpiry = value.Time
+				_m.ReceiveAddressExpiry = value.Time
 			}
 		case paymentorder.FieldFeeAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field fee_address", values[i])
 			} else if value.Valid {
-				po.FeeAddress = value.String
+				_m.FeeAddress = value.String
 			}
 		case paymentorder.FieldInstitution:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field institution", values[i])
 			} else if value.Valid {
-				po.Institution = value.String
+				_m.Institution = value.String
 			}
 		case paymentorder.FieldAccountIdentifier:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_identifier", values[i])
 			} else if value.Valid {
-				po.AccountIdentifier = value.String
+				_m.AccountIdentifier = value.String
 			}
 		case paymentorder.FieldAccountName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_name", values[i])
 			} else if value.Valid {
-				po.AccountName = value.String
+				_m.AccountName = value.String
 			}
 		case paymentorder.FieldMemo:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field memo", values[i])
 			} else if value.Valid {
-				po.Memo = value.String
+				_m.Memo = value.String
 			}
 		case paymentorder.FieldMetadata:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field metadata", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &po.Metadata); err != nil {
+				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
 					return fmt.Errorf("unmarshal field metadata: %w", err)
 				}
 			}
@@ -420,25 +420,25 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field sender", values[i])
 			} else if value.Valid {
-				po.Sender = value.String
+				_m.Sender = value.String
 			}
 		case paymentorder.FieldReference:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field reference", values[i])
 			} else if value.Valid {
-				po.Reference = value.String
+				_m.Reference = value.String
 			}
 		case paymentorder.FieldCancellationCount:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field cancellation_count", values[i])
 			} else if value.Valid {
-				po.CancellationCount = int(value.Int64)
+				_m.CancellationCount = int(value.Int64)
 			}
 		case paymentorder.FieldCancellationReasons:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field cancellation_reasons", values[i])
 			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &po.CancellationReasons); err != nil {
+				if err := json.Unmarshal(*value, &_m.CancellationReasons); err != nil {
 					return fmt.Errorf("unmarshal field cancellation_reasons: %w", err)
 				}
 			}
@@ -446,51 +446,51 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				po.Status = paymentorder.Status(value.String)
+				_m.Status = paymentorder.Status(value.String)
 			}
 		case paymentorder.FieldOrderType:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field order_type", values[i])
 			} else if value.Valid {
-				po.OrderType = paymentorder.OrderType(value.String)
+				_m.OrderType = paymentorder.OrderType(value.String)
 			}
 		case paymentorder.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field api_key_payment_orders", values[i])
 			} else if value.Valid {
-				po.api_key_payment_orders = new(uuid.UUID)
-				*po.api_key_payment_orders = *value.S.(*uuid.UUID)
+				_m.api_key_payment_orders = new(uuid.UUID)
+				*_m.api_key_payment_orders = *value.S.(*uuid.UUID)
 			}
 		case paymentorder.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_profile_assigned_orders", values[i])
 			} else if value.Valid {
-				po.provider_profile_assigned_orders = new(string)
-				*po.provider_profile_assigned_orders = value.String
+				_m.provider_profile_assigned_orders = new(string)
+				*_m.provider_profile_assigned_orders = value.String
 			}
 		case paymentorder.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field provision_bucket_payment_orders", value)
 			} else if value.Valid {
-				po.provision_bucket_payment_orders = new(int)
-				*po.provision_bucket_payment_orders = int(value.Int64)
+				_m.provision_bucket_payment_orders = new(int)
+				*_m.provision_bucket_payment_orders = int(value.Int64)
 			}
 		case paymentorder.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field sender_profile_payment_orders", values[i])
 			} else if value.Valid {
-				po.sender_profile_payment_orders = new(uuid.UUID)
-				*po.sender_profile_payment_orders = *value.S.(*uuid.UUID)
+				_m.sender_profile_payment_orders = new(uuid.UUID)
+				*_m.sender_profile_payment_orders = *value.S.(*uuid.UUID)
 			}
 		case paymentorder.ForeignKeys[4]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field token_payment_orders", value)
 			} else if value.Valid {
-				po.token_payment_orders = new(int)
-				*po.token_payment_orders = int(value.Int64)
+				_m.token_payment_orders = new(int)
+				*_m.token_payment_orders = int(value.Int64)
 			}
 		default:
-			po.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -498,169 +498,169 @@ func (po *PaymentOrder) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the PaymentOrder.
 // This includes values selected through modifiers, order, etc.
-func (po *PaymentOrder) Value(name string) (ent.Value, error) {
-	return po.selectValues.Get(name)
+func (_m *PaymentOrder) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryToken queries the "token" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QueryToken() *TokenQuery {
-	return NewPaymentOrderClient(po.config).QueryToken(po)
+func (_m *PaymentOrder) QueryToken() *TokenQuery {
+	return NewPaymentOrderClient(_m.config).QueryToken(_m)
 }
 
 // QuerySenderProfile queries the "sender_profile" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QuerySenderProfile() *SenderProfileQuery {
-	return NewPaymentOrderClient(po.config).QuerySenderProfile(po)
+func (_m *PaymentOrder) QuerySenderProfile() *SenderProfileQuery {
+	return NewPaymentOrderClient(_m.config).QuerySenderProfile(_m)
 }
 
 // QueryPaymentWebhook queries the "payment_webhook" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QueryPaymentWebhook() *PaymentWebhookQuery {
-	return NewPaymentOrderClient(po.config).QueryPaymentWebhook(po)
+func (_m *PaymentOrder) QueryPaymentWebhook() *PaymentWebhookQuery {
+	return NewPaymentOrderClient(_m.config).QueryPaymentWebhook(_m)
 }
 
 // QueryProvider queries the "provider" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QueryProvider() *ProviderProfileQuery {
-	return NewPaymentOrderClient(po.config).QueryProvider(po)
+func (_m *PaymentOrder) QueryProvider() *ProviderProfileQuery {
+	return NewPaymentOrderClient(_m.config).QueryProvider(_m)
 }
 
 // QueryProvisionBucket queries the "provision_bucket" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QueryProvisionBucket() *ProvisionBucketQuery {
-	return NewPaymentOrderClient(po.config).QueryProvisionBucket(po)
+func (_m *PaymentOrder) QueryProvisionBucket() *ProvisionBucketQuery {
+	return NewPaymentOrderClient(_m.config).QueryProvisionBucket(_m)
 }
 
 // QueryFulfillments queries the "fulfillments" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QueryFulfillments() *PaymentOrderFulfillmentQuery {
-	return NewPaymentOrderClient(po.config).QueryFulfillments(po)
+func (_m *PaymentOrder) QueryFulfillments() *PaymentOrderFulfillmentQuery {
+	return NewPaymentOrderClient(_m.config).QueryFulfillments(_m)
 }
 
 // QueryTransactions queries the "transactions" edge of the PaymentOrder entity.
-func (po *PaymentOrder) QueryTransactions() *TransactionLogQuery {
-	return NewPaymentOrderClient(po.config).QueryTransactions(po)
+func (_m *PaymentOrder) QueryTransactions() *TransactionLogQuery {
+	return NewPaymentOrderClient(_m.config).QueryTransactions(_m)
 }
 
 // Update returns a builder for updating this PaymentOrder.
 // Note that you need to call PaymentOrder.Unwrap() before calling this method if this PaymentOrder
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (po *PaymentOrder) Update() *PaymentOrderUpdateOne {
-	return NewPaymentOrderClient(po.config).UpdateOne(po)
+func (_m *PaymentOrder) Update() *PaymentOrderUpdateOne {
+	return NewPaymentOrderClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the PaymentOrder entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (po *PaymentOrder) Unwrap() *PaymentOrder {
-	_tx, ok := po.config.driver.(*txDriver)
+func (_m *PaymentOrder) Unwrap() *PaymentOrder {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: PaymentOrder is not a transactional entity")
 	}
-	po.config.driver = _tx.drv
-	return po
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (po *PaymentOrder) String() string {
+func (_m *PaymentOrder) String() string {
 	var builder strings.Builder
 	builder.WriteString("PaymentOrder(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", po.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(po.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(po.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("amount=")
-	builder.WriteString(fmt.Sprintf("%v", po.Amount))
+	builder.WriteString(fmt.Sprintf("%v", _m.Amount))
 	builder.WriteString(", ")
 	builder.WriteString("rate=")
-	builder.WriteString(fmt.Sprintf("%v", po.Rate))
+	builder.WriteString(fmt.Sprintf("%v", _m.Rate))
 	builder.WriteString(", ")
 	builder.WriteString("amount_in_usd=")
-	builder.WriteString(fmt.Sprintf("%v", po.AmountInUsd))
+	builder.WriteString(fmt.Sprintf("%v", _m.AmountInUsd))
 	builder.WriteString(", ")
 	builder.WriteString("amount_paid=")
-	builder.WriteString(fmt.Sprintf("%v", po.AmountPaid))
+	builder.WriteString(fmt.Sprintf("%v", _m.AmountPaid))
 	builder.WriteString(", ")
 	builder.WriteString("amount_returned=")
-	builder.WriteString(fmt.Sprintf("%v", po.AmountReturned))
+	builder.WriteString(fmt.Sprintf("%v", _m.AmountReturned))
 	builder.WriteString(", ")
 	builder.WriteString("percent_settled=")
-	builder.WriteString(fmt.Sprintf("%v", po.PercentSettled))
+	builder.WriteString(fmt.Sprintf("%v", _m.PercentSettled))
 	builder.WriteString(", ")
 	builder.WriteString("sender_fee=")
-	builder.WriteString(fmt.Sprintf("%v", po.SenderFee))
+	builder.WriteString(fmt.Sprintf("%v", _m.SenderFee))
 	builder.WriteString(", ")
 	builder.WriteString("network_fee=")
-	builder.WriteString(fmt.Sprintf("%v", po.NetworkFee))
+	builder.WriteString(fmt.Sprintf("%v", _m.NetworkFee))
 	builder.WriteString(", ")
 	builder.WriteString("protocol_fee=")
-	builder.WriteString(fmt.Sprintf("%v", po.ProtocolFee))
+	builder.WriteString(fmt.Sprintf("%v", _m.ProtocolFee))
 	builder.WriteString(", ")
 	builder.WriteString("order_percent=")
-	builder.WriteString(fmt.Sprintf("%v", po.OrderPercent))
+	builder.WriteString(fmt.Sprintf("%v", _m.OrderPercent))
 	builder.WriteString(", ")
 	builder.WriteString("fee_percent=")
-	builder.WriteString(fmt.Sprintf("%v", po.FeePercent))
+	builder.WriteString(fmt.Sprintf("%v", _m.FeePercent))
 	builder.WriteString(", ")
 	builder.WriteString("tx_hash=")
-	builder.WriteString(po.TxHash)
+	builder.WriteString(_m.TxHash)
 	builder.WriteString(", ")
 	builder.WriteString("block_number=")
-	builder.WriteString(fmt.Sprintf("%v", po.BlockNumber))
+	builder.WriteString(fmt.Sprintf("%v", _m.BlockNumber))
 	builder.WriteString(", ")
 	builder.WriteString("message_hash=")
-	builder.WriteString(po.MessageHash)
+	builder.WriteString(_m.MessageHash)
 	builder.WriteString(", ")
 	builder.WriteString("gateway_id=")
-	builder.WriteString(po.GatewayID)
+	builder.WriteString(_m.GatewayID)
 	builder.WriteString(", ")
 	builder.WriteString("from_address=")
-	builder.WriteString(po.FromAddress)
+	builder.WriteString(_m.FromAddress)
 	builder.WriteString(", ")
 	builder.WriteString("return_address=")
-	builder.WriteString(po.ReturnAddress)
+	builder.WriteString(_m.ReturnAddress)
 	builder.WriteString(", ")
 	builder.WriteString("receive_address=")
-	builder.WriteString(po.ReceiveAddress)
+	builder.WriteString(_m.ReceiveAddress)
 	builder.WriteString(", ")
 	builder.WriteString("receive_address_salt=")
-	builder.WriteString(fmt.Sprintf("%v", po.ReceiveAddressSalt))
+	builder.WriteString(fmt.Sprintf("%v", _m.ReceiveAddressSalt))
 	builder.WriteString(", ")
 	builder.WriteString("receive_address_expiry=")
-	builder.WriteString(po.ReceiveAddressExpiry.Format(time.ANSIC))
+	builder.WriteString(_m.ReceiveAddressExpiry.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("fee_address=")
-	builder.WriteString(po.FeeAddress)
+	builder.WriteString(_m.FeeAddress)
 	builder.WriteString(", ")
 	builder.WriteString("institution=")
-	builder.WriteString(po.Institution)
+	builder.WriteString(_m.Institution)
 	builder.WriteString(", ")
 	builder.WriteString("account_identifier=")
-	builder.WriteString(po.AccountIdentifier)
+	builder.WriteString(_m.AccountIdentifier)
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
-	builder.WriteString(po.AccountName)
+	builder.WriteString(_m.AccountName)
 	builder.WriteString(", ")
 	builder.WriteString("memo=")
-	builder.WriteString(po.Memo)
+	builder.WriteString(_m.Memo)
 	builder.WriteString(", ")
 	builder.WriteString("metadata=")
-	builder.WriteString(fmt.Sprintf("%v", po.Metadata))
+	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("sender=")
-	builder.WriteString(po.Sender)
+	builder.WriteString(_m.Sender)
 	builder.WriteString(", ")
 	builder.WriteString("reference=")
-	builder.WriteString(po.Reference)
+	builder.WriteString(_m.Reference)
 	builder.WriteString(", ")
 	builder.WriteString("cancellation_count=")
-	builder.WriteString(fmt.Sprintf("%v", po.CancellationCount))
+	builder.WriteString(fmt.Sprintf("%v", _m.CancellationCount))
 	builder.WriteString(", ")
 	builder.WriteString("cancellation_reasons=")
-	builder.WriteString(fmt.Sprintf("%v", po.CancellationReasons))
+	builder.WriteString(fmt.Sprintf("%v", _m.CancellationReasons))
 	builder.WriteString(", ")
 	builder.WriteString("status=")
-	builder.WriteString(fmt.Sprintf("%v", po.Status))
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
 	builder.WriteString(", ")
 	builder.WriteString("order_type=")
-	builder.WriteString(fmt.Sprintf("%v", po.OrderType))
+	builder.WriteString(fmt.Sprintf("%v", _m.OrderType))
 	builder.WriteByte(')')
 	return builder.String()
 }

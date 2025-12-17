@@ -28,233 +28,233 @@ type TokenUpdate struct {
 }
 
 // Where appends a list predicates to the TokenUpdate builder.
-func (tu *TokenUpdate) Where(ps ...predicate.Token) *TokenUpdate {
-	tu.mutation.Where(ps...)
-	return tu
+func (_u *TokenUpdate) Where(ps ...predicate.Token) *TokenUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (tu *TokenUpdate) SetUpdatedAt(t time.Time) *TokenUpdate {
-	tu.mutation.SetUpdatedAt(t)
-	return tu
+func (_u *TokenUpdate) SetUpdatedAt(v time.Time) *TokenUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetSymbol sets the "symbol" field.
-func (tu *TokenUpdate) SetSymbol(s string) *TokenUpdate {
-	tu.mutation.SetSymbol(s)
-	return tu
+func (_u *TokenUpdate) SetSymbol(v string) *TokenUpdate {
+	_u.mutation.SetSymbol(v)
+	return _u
 }
 
 // SetNillableSymbol sets the "symbol" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableSymbol(s *string) *TokenUpdate {
-	if s != nil {
-		tu.SetSymbol(*s)
+func (_u *TokenUpdate) SetNillableSymbol(v *string) *TokenUpdate {
+	if v != nil {
+		_u.SetSymbol(*v)
 	}
-	return tu
+	return _u
 }
 
 // SetContractAddress sets the "contract_address" field.
-func (tu *TokenUpdate) SetContractAddress(s string) *TokenUpdate {
-	tu.mutation.SetContractAddress(s)
-	return tu
+func (_u *TokenUpdate) SetContractAddress(v string) *TokenUpdate {
+	_u.mutation.SetContractAddress(v)
+	return _u
 }
 
 // SetNillableContractAddress sets the "contract_address" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableContractAddress(s *string) *TokenUpdate {
-	if s != nil {
-		tu.SetContractAddress(*s)
+func (_u *TokenUpdate) SetNillableContractAddress(v *string) *TokenUpdate {
+	if v != nil {
+		_u.SetContractAddress(*v)
 	}
-	return tu
+	return _u
 }
 
 // SetDecimals sets the "decimals" field.
-func (tu *TokenUpdate) SetDecimals(i int8) *TokenUpdate {
-	tu.mutation.ResetDecimals()
-	tu.mutation.SetDecimals(i)
-	return tu
+func (_u *TokenUpdate) SetDecimals(v int8) *TokenUpdate {
+	_u.mutation.ResetDecimals()
+	_u.mutation.SetDecimals(v)
+	return _u
 }
 
 // SetNillableDecimals sets the "decimals" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableDecimals(i *int8) *TokenUpdate {
-	if i != nil {
-		tu.SetDecimals(*i)
+func (_u *TokenUpdate) SetNillableDecimals(v *int8) *TokenUpdate {
+	if v != nil {
+		_u.SetDecimals(*v)
 	}
-	return tu
+	return _u
 }
 
-// AddDecimals adds i to the "decimals" field.
-func (tu *TokenUpdate) AddDecimals(i int8) *TokenUpdate {
-	tu.mutation.AddDecimals(i)
-	return tu
+// AddDecimals adds value to the "decimals" field.
+func (_u *TokenUpdate) AddDecimals(v int8) *TokenUpdate {
+	_u.mutation.AddDecimals(v)
+	return _u
 }
 
 // SetIsEnabled sets the "is_enabled" field.
-func (tu *TokenUpdate) SetIsEnabled(b bool) *TokenUpdate {
-	tu.mutation.SetIsEnabled(b)
-	return tu
+func (_u *TokenUpdate) SetIsEnabled(v bool) *TokenUpdate {
+	_u.mutation.SetIsEnabled(v)
+	return _u
 }
 
 // SetNillableIsEnabled sets the "is_enabled" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableIsEnabled(b *bool) *TokenUpdate {
-	if b != nil {
-		tu.SetIsEnabled(*b)
+func (_u *TokenUpdate) SetNillableIsEnabled(v *bool) *TokenUpdate {
+	if v != nil {
+		_u.SetIsEnabled(*v)
 	}
-	return tu
+	return _u
 }
 
 // SetBaseCurrency sets the "base_currency" field.
-func (tu *TokenUpdate) SetBaseCurrency(s string) *TokenUpdate {
-	tu.mutation.SetBaseCurrency(s)
-	return tu
+func (_u *TokenUpdate) SetBaseCurrency(v string) *TokenUpdate {
+	_u.mutation.SetBaseCurrency(v)
+	return _u
 }
 
 // SetNillableBaseCurrency sets the "base_currency" field if the given value is not nil.
-func (tu *TokenUpdate) SetNillableBaseCurrency(s *string) *TokenUpdate {
-	if s != nil {
-		tu.SetBaseCurrency(*s)
+func (_u *TokenUpdate) SetNillableBaseCurrency(v *string) *TokenUpdate {
+	if v != nil {
+		_u.SetBaseCurrency(*v)
 	}
-	return tu
+	return _u
 }
 
 // SetNetworkID sets the "network" edge to the Network entity by ID.
-func (tu *TokenUpdate) SetNetworkID(id int) *TokenUpdate {
-	tu.mutation.SetNetworkID(id)
-	return tu
+func (_u *TokenUpdate) SetNetworkID(id int) *TokenUpdate {
+	_u.mutation.SetNetworkID(id)
+	return _u
 }
 
 // SetNetwork sets the "network" edge to the Network entity.
-func (tu *TokenUpdate) SetNetwork(n *Network) *TokenUpdate {
-	return tu.SetNetworkID(n.ID)
+func (_u *TokenUpdate) SetNetwork(v *Network) *TokenUpdate {
+	return _u.SetNetworkID(v.ID)
 }
 
 // AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (tu *TokenUpdate) AddPaymentOrderIDs(ids ...uuid.UUID) *TokenUpdate {
-	tu.mutation.AddPaymentOrderIDs(ids...)
-	return tu
+func (_u *TokenUpdate) AddPaymentOrderIDs(ids ...uuid.UUID) *TokenUpdate {
+	_u.mutation.AddPaymentOrderIDs(ids...)
+	return _u
 }
 
 // AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (tu *TokenUpdate) AddPaymentOrders(p ...*PaymentOrder) *TokenUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *TokenUpdate) AddPaymentOrders(v ...*PaymentOrder) *TokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tu.AddPaymentOrderIDs(ids...)
+	return _u.AddPaymentOrderIDs(ids...)
 }
 
 // AddSenderOrderTokenIDs adds the "sender_order_tokens" edge to the SenderOrderToken entity by IDs.
-func (tu *TokenUpdate) AddSenderOrderTokenIDs(ids ...int) *TokenUpdate {
-	tu.mutation.AddSenderOrderTokenIDs(ids...)
-	return tu
+func (_u *TokenUpdate) AddSenderOrderTokenIDs(ids ...int) *TokenUpdate {
+	_u.mutation.AddSenderOrderTokenIDs(ids...)
+	return _u
 }
 
 // AddSenderOrderTokens adds the "sender_order_tokens" edges to the SenderOrderToken entity.
-func (tu *TokenUpdate) AddSenderOrderTokens(s ...*SenderOrderToken) *TokenUpdate {
-	ids := make([]int, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
+func (_u *TokenUpdate) AddSenderOrderTokens(v ...*SenderOrderToken) *TokenUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tu.AddSenderOrderTokenIDs(ids...)
+	return _u.AddSenderOrderTokenIDs(ids...)
 }
 
 // AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
-func (tu *TokenUpdate) AddProviderOrderTokenIDs(ids ...int) *TokenUpdate {
-	tu.mutation.AddProviderOrderTokenIDs(ids...)
-	return tu
+func (_u *TokenUpdate) AddProviderOrderTokenIDs(ids ...int) *TokenUpdate {
+	_u.mutation.AddProviderOrderTokenIDs(ids...)
+	return _u
 }
 
 // AddProviderOrderTokens adds the "provider_order_tokens" edges to the ProviderOrderToken entity.
-func (tu *TokenUpdate) AddProviderOrderTokens(p ...*ProviderOrderToken) *TokenUpdate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *TokenUpdate) AddProviderOrderTokens(v ...*ProviderOrderToken) *TokenUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tu.AddProviderOrderTokenIDs(ids...)
+	return _u.AddProviderOrderTokenIDs(ids...)
 }
 
 // Mutation returns the TokenMutation object of the builder.
-func (tu *TokenUpdate) Mutation() *TokenMutation {
-	return tu.mutation
+func (_u *TokenUpdate) Mutation() *TokenMutation {
+	return _u.mutation
 }
 
 // ClearNetwork clears the "network" edge to the Network entity.
-func (tu *TokenUpdate) ClearNetwork() *TokenUpdate {
-	tu.mutation.ClearNetwork()
-	return tu
+func (_u *TokenUpdate) ClearNetwork() *TokenUpdate {
+	_u.mutation.ClearNetwork()
+	return _u
 }
 
 // ClearPaymentOrders clears all "payment_orders" edges to the PaymentOrder entity.
-func (tu *TokenUpdate) ClearPaymentOrders() *TokenUpdate {
-	tu.mutation.ClearPaymentOrders()
-	return tu
+func (_u *TokenUpdate) ClearPaymentOrders() *TokenUpdate {
+	_u.mutation.ClearPaymentOrders()
+	return _u
 }
 
 // RemovePaymentOrderIDs removes the "payment_orders" edge to PaymentOrder entities by IDs.
-func (tu *TokenUpdate) RemovePaymentOrderIDs(ids ...uuid.UUID) *TokenUpdate {
-	tu.mutation.RemovePaymentOrderIDs(ids...)
-	return tu
+func (_u *TokenUpdate) RemovePaymentOrderIDs(ids ...uuid.UUID) *TokenUpdate {
+	_u.mutation.RemovePaymentOrderIDs(ids...)
+	return _u
 }
 
 // RemovePaymentOrders removes "payment_orders" edges to PaymentOrder entities.
-func (tu *TokenUpdate) RemovePaymentOrders(p ...*PaymentOrder) *TokenUpdate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *TokenUpdate) RemovePaymentOrders(v ...*PaymentOrder) *TokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tu.RemovePaymentOrderIDs(ids...)
+	return _u.RemovePaymentOrderIDs(ids...)
 }
 
 // ClearSenderOrderTokens clears all "sender_order_tokens" edges to the SenderOrderToken entity.
-func (tu *TokenUpdate) ClearSenderOrderTokens() *TokenUpdate {
-	tu.mutation.ClearSenderOrderTokens()
-	return tu
+func (_u *TokenUpdate) ClearSenderOrderTokens() *TokenUpdate {
+	_u.mutation.ClearSenderOrderTokens()
+	return _u
 }
 
 // RemoveSenderOrderTokenIDs removes the "sender_order_tokens" edge to SenderOrderToken entities by IDs.
-func (tu *TokenUpdate) RemoveSenderOrderTokenIDs(ids ...int) *TokenUpdate {
-	tu.mutation.RemoveSenderOrderTokenIDs(ids...)
-	return tu
+func (_u *TokenUpdate) RemoveSenderOrderTokenIDs(ids ...int) *TokenUpdate {
+	_u.mutation.RemoveSenderOrderTokenIDs(ids...)
+	return _u
 }
 
 // RemoveSenderOrderTokens removes "sender_order_tokens" edges to SenderOrderToken entities.
-func (tu *TokenUpdate) RemoveSenderOrderTokens(s ...*SenderOrderToken) *TokenUpdate {
-	ids := make([]int, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
+func (_u *TokenUpdate) RemoveSenderOrderTokens(v ...*SenderOrderToken) *TokenUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tu.RemoveSenderOrderTokenIDs(ids...)
+	return _u.RemoveSenderOrderTokenIDs(ids...)
 }
 
 // ClearProviderOrderTokens clears all "provider_order_tokens" edges to the ProviderOrderToken entity.
-func (tu *TokenUpdate) ClearProviderOrderTokens() *TokenUpdate {
-	tu.mutation.ClearProviderOrderTokens()
-	return tu
+func (_u *TokenUpdate) ClearProviderOrderTokens() *TokenUpdate {
+	_u.mutation.ClearProviderOrderTokens()
+	return _u
 }
 
 // RemoveProviderOrderTokenIDs removes the "provider_order_tokens" edge to ProviderOrderToken entities by IDs.
-func (tu *TokenUpdate) RemoveProviderOrderTokenIDs(ids ...int) *TokenUpdate {
-	tu.mutation.RemoveProviderOrderTokenIDs(ids...)
-	return tu
+func (_u *TokenUpdate) RemoveProviderOrderTokenIDs(ids ...int) *TokenUpdate {
+	_u.mutation.RemoveProviderOrderTokenIDs(ids...)
+	return _u
 }
 
 // RemoveProviderOrderTokens removes "provider_order_tokens" edges to ProviderOrderToken entities.
-func (tu *TokenUpdate) RemoveProviderOrderTokens(p ...*ProviderOrderToken) *TokenUpdate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *TokenUpdate) RemoveProviderOrderTokens(v ...*ProviderOrderToken) *TokenUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tu.RemoveProviderOrderTokenIDs(ids...)
+	return _u.RemoveProviderOrderTokenIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (tu *TokenUpdate) Save(ctx context.Context) (int, error) {
-	tu.defaults()
-	return withHooks(ctx, tu.sqlSave, tu.mutation, tu.hooks)
+func (_u *TokenUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (tu *TokenUpdate) SaveX(ctx context.Context) int {
-	affected, err := tu.Save(ctx)
+func (_u *TokenUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -262,78 +262,78 @@ func (tu *TokenUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (tu *TokenUpdate) Exec(ctx context.Context) error {
-	_, err := tu.Save(ctx)
+func (_u *TokenUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tu *TokenUpdate) ExecX(ctx context.Context) {
-	if err := tu.Exec(ctx); err != nil {
+func (_u *TokenUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (tu *TokenUpdate) defaults() {
-	if _, ok := tu.mutation.UpdatedAt(); !ok {
+func (_u *TokenUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := token.UpdateDefaultUpdatedAt()
-		tu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (tu *TokenUpdate) check() error {
-	if v, ok := tu.mutation.Symbol(); ok {
+func (_u *TokenUpdate) check() error {
+	if v, ok := _u.mutation.Symbol(); ok {
 		if err := token.SymbolValidator(v); err != nil {
 			return &ValidationError{Name: "symbol", err: fmt.Errorf(`ent: validator failed for field "Token.symbol": %w`, err)}
 		}
 	}
-	if v, ok := tu.mutation.ContractAddress(); ok {
+	if v, ok := _u.mutation.ContractAddress(); ok {
 		if err := token.ContractAddressValidator(v); err != nil {
 			return &ValidationError{Name: "contract_address", err: fmt.Errorf(`ent: validator failed for field "Token.contract_address": %w`, err)}
 		}
 	}
-	if tu.mutation.NetworkCleared() && len(tu.mutation.NetworkIDs()) > 0 {
+	if _u.mutation.NetworkCleared() && len(_u.mutation.NetworkIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Token.network"`)
 	}
 	return nil
 }
 
-func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := tu.check(); err != nil {
-		return n, err
+func (_u *TokenUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(token.Table, token.Columns, sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt))
-	if ps := tu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := tu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(token.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := tu.mutation.Symbol(); ok {
+	if value, ok := _u.mutation.Symbol(); ok {
 		_spec.SetField(token.FieldSymbol, field.TypeString, value)
 	}
-	if value, ok := tu.mutation.ContractAddress(); ok {
+	if value, ok := _u.mutation.ContractAddress(); ok {
 		_spec.SetField(token.FieldContractAddress, field.TypeString, value)
 	}
-	if value, ok := tu.mutation.Decimals(); ok {
+	if value, ok := _u.mutation.Decimals(); ok {
 		_spec.SetField(token.FieldDecimals, field.TypeInt8, value)
 	}
-	if value, ok := tu.mutation.AddedDecimals(); ok {
+	if value, ok := _u.mutation.AddedDecimals(); ok {
 		_spec.AddField(token.FieldDecimals, field.TypeInt8, value)
 	}
-	if value, ok := tu.mutation.IsEnabled(); ok {
+	if value, ok := _u.mutation.IsEnabled(); ok {
 		_spec.SetField(token.FieldIsEnabled, field.TypeBool, value)
 	}
-	if value, ok := tu.mutation.BaseCurrency(); ok {
+	if value, ok := _u.mutation.BaseCurrency(); ok {
 		_spec.SetField(token.FieldBaseCurrency, field.TypeString, value)
 	}
-	if tu.mutation.NetworkCleared() {
+	if _u.mutation.NetworkCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -346,7 +346,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tu.mutation.NetworkIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.NetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -362,7 +362,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if tu.mutation.PaymentOrdersCleared() {
+	if _u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -375,7 +375,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tu.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !tu.mutation.PaymentOrdersCleared() {
+	if nodes := _u.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -391,7 +391,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tu.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -407,7 +407,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if tu.mutation.SenderOrderTokensCleared() {
+	if _u.mutation.SenderOrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -420,7 +420,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tu.mutation.RemovedSenderOrderTokensIDs(); len(nodes) > 0 && !tu.mutation.SenderOrderTokensCleared() {
+	if nodes := _u.mutation.RemovedSenderOrderTokensIDs(); len(nodes) > 0 && !_u.mutation.SenderOrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -436,7 +436,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tu.mutation.SenderOrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SenderOrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -452,7 +452,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if tu.mutation.ProviderOrderTokensCleared() {
+	if _u.mutation.ProviderOrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -465,7 +465,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tu.mutation.RemovedProviderOrderTokensIDs(); len(nodes) > 0 && !tu.mutation.ProviderOrderTokensCleared() {
+	if nodes := _u.mutation.RemovedProviderOrderTokensIDs(); len(nodes) > 0 && !_u.mutation.ProviderOrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -481,7 +481,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tu.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -497,7 +497,7 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, tu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{token.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -505,8 +505,8 @@ func (tu *TokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
-	tu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // TokenUpdateOne is the builder for updating a single Token entity.
@@ -518,240 +518,240 @@ type TokenUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (tuo *TokenUpdateOne) SetUpdatedAt(t time.Time) *TokenUpdateOne {
-	tuo.mutation.SetUpdatedAt(t)
-	return tuo
+func (_u *TokenUpdateOne) SetUpdatedAt(v time.Time) *TokenUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetSymbol sets the "symbol" field.
-func (tuo *TokenUpdateOne) SetSymbol(s string) *TokenUpdateOne {
-	tuo.mutation.SetSymbol(s)
-	return tuo
+func (_u *TokenUpdateOne) SetSymbol(v string) *TokenUpdateOne {
+	_u.mutation.SetSymbol(v)
+	return _u
 }
 
 // SetNillableSymbol sets the "symbol" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableSymbol(s *string) *TokenUpdateOne {
-	if s != nil {
-		tuo.SetSymbol(*s)
+func (_u *TokenUpdateOne) SetNillableSymbol(v *string) *TokenUpdateOne {
+	if v != nil {
+		_u.SetSymbol(*v)
 	}
-	return tuo
+	return _u
 }
 
 // SetContractAddress sets the "contract_address" field.
-func (tuo *TokenUpdateOne) SetContractAddress(s string) *TokenUpdateOne {
-	tuo.mutation.SetContractAddress(s)
-	return tuo
+func (_u *TokenUpdateOne) SetContractAddress(v string) *TokenUpdateOne {
+	_u.mutation.SetContractAddress(v)
+	return _u
 }
 
 // SetNillableContractAddress sets the "contract_address" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableContractAddress(s *string) *TokenUpdateOne {
-	if s != nil {
-		tuo.SetContractAddress(*s)
+func (_u *TokenUpdateOne) SetNillableContractAddress(v *string) *TokenUpdateOne {
+	if v != nil {
+		_u.SetContractAddress(*v)
 	}
-	return tuo
+	return _u
 }
 
 // SetDecimals sets the "decimals" field.
-func (tuo *TokenUpdateOne) SetDecimals(i int8) *TokenUpdateOne {
-	tuo.mutation.ResetDecimals()
-	tuo.mutation.SetDecimals(i)
-	return tuo
+func (_u *TokenUpdateOne) SetDecimals(v int8) *TokenUpdateOne {
+	_u.mutation.ResetDecimals()
+	_u.mutation.SetDecimals(v)
+	return _u
 }
 
 // SetNillableDecimals sets the "decimals" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableDecimals(i *int8) *TokenUpdateOne {
-	if i != nil {
-		tuo.SetDecimals(*i)
+func (_u *TokenUpdateOne) SetNillableDecimals(v *int8) *TokenUpdateOne {
+	if v != nil {
+		_u.SetDecimals(*v)
 	}
-	return tuo
+	return _u
 }
 
-// AddDecimals adds i to the "decimals" field.
-func (tuo *TokenUpdateOne) AddDecimals(i int8) *TokenUpdateOne {
-	tuo.mutation.AddDecimals(i)
-	return tuo
+// AddDecimals adds value to the "decimals" field.
+func (_u *TokenUpdateOne) AddDecimals(v int8) *TokenUpdateOne {
+	_u.mutation.AddDecimals(v)
+	return _u
 }
 
 // SetIsEnabled sets the "is_enabled" field.
-func (tuo *TokenUpdateOne) SetIsEnabled(b bool) *TokenUpdateOne {
-	tuo.mutation.SetIsEnabled(b)
-	return tuo
+func (_u *TokenUpdateOne) SetIsEnabled(v bool) *TokenUpdateOne {
+	_u.mutation.SetIsEnabled(v)
+	return _u
 }
 
 // SetNillableIsEnabled sets the "is_enabled" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableIsEnabled(b *bool) *TokenUpdateOne {
-	if b != nil {
-		tuo.SetIsEnabled(*b)
+func (_u *TokenUpdateOne) SetNillableIsEnabled(v *bool) *TokenUpdateOne {
+	if v != nil {
+		_u.SetIsEnabled(*v)
 	}
-	return tuo
+	return _u
 }
 
 // SetBaseCurrency sets the "base_currency" field.
-func (tuo *TokenUpdateOne) SetBaseCurrency(s string) *TokenUpdateOne {
-	tuo.mutation.SetBaseCurrency(s)
-	return tuo
+func (_u *TokenUpdateOne) SetBaseCurrency(v string) *TokenUpdateOne {
+	_u.mutation.SetBaseCurrency(v)
+	return _u
 }
 
 // SetNillableBaseCurrency sets the "base_currency" field if the given value is not nil.
-func (tuo *TokenUpdateOne) SetNillableBaseCurrency(s *string) *TokenUpdateOne {
-	if s != nil {
-		tuo.SetBaseCurrency(*s)
+func (_u *TokenUpdateOne) SetNillableBaseCurrency(v *string) *TokenUpdateOne {
+	if v != nil {
+		_u.SetBaseCurrency(*v)
 	}
-	return tuo
+	return _u
 }
 
 // SetNetworkID sets the "network" edge to the Network entity by ID.
-func (tuo *TokenUpdateOne) SetNetworkID(id int) *TokenUpdateOne {
-	tuo.mutation.SetNetworkID(id)
-	return tuo
+func (_u *TokenUpdateOne) SetNetworkID(id int) *TokenUpdateOne {
+	_u.mutation.SetNetworkID(id)
+	return _u
 }
 
 // SetNetwork sets the "network" edge to the Network entity.
-func (tuo *TokenUpdateOne) SetNetwork(n *Network) *TokenUpdateOne {
-	return tuo.SetNetworkID(n.ID)
+func (_u *TokenUpdateOne) SetNetwork(v *Network) *TokenUpdateOne {
+	return _u.SetNetworkID(v.ID)
 }
 
 // AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (tuo *TokenUpdateOne) AddPaymentOrderIDs(ids ...uuid.UUID) *TokenUpdateOne {
-	tuo.mutation.AddPaymentOrderIDs(ids...)
-	return tuo
+func (_u *TokenUpdateOne) AddPaymentOrderIDs(ids ...uuid.UUID) *TokenUpdateOne {
+	_u.mutation.AddPaymentOrderIDs(ids...)
+	return _u
 }
 
 // AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (tuo *TokenUpdateOne) AddPaymentOrders(p ...*PaymentOrder) *TokenUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *TokenUpdateOne) AddPaymentOrders(v ...*PaymentOrder) *TokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tuo.AddPaymentOrderIDs(ids...)
+	return _u.AddPaymentOrderIDs(ids...)
 }
 
 // AddSenderOrderTokenIDs adds the "sender_order_tokens" edge to the SenderOrderToken entity by IDs.
-func (tuo *TokenUpdateOne) AddSenderOrderTokenIDs(ids ...int) *TokenUpdateOne {
-	tuo.mutation.AddSenderOrderTokenIDs(ids...)
-	return tuo
+func (_u *TokenUpdateOne) AddSenderOrderTokenIDs(ids ...int) *TokenUpdateOne {
+	_u.mutation.AddSenderOrderTokenIDs(ids...)
+	return _u
 }
 
 // AddSenderOrderTokens adds the "sender_order_tokens" edges to the SenderOrderToken entity.
-func (tuo *TokenUpdateOne) AddSenderOrderTokens(s ...*SenderOrderToken) *TokenUpdateOne {
-	ids := make([]int, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
+func (_u *TokenUpdateOne) AddSenderOrderTokens(v ...*SenderOrderToken) *TokenUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tuo.AddSenderOrderTokenIDs(ids...)
+	return _u.AddSenderOrderTokenIDs(ids...)
 }
 
 // AddProviderOrderTokenIDs adds the "provider_order_tokens" edge to the ProviderOrderToken entity by IDs.
-func (tuo *TokenUpdateOne) AddProviderOrderTokenIDs(ids ...int) *TokenUpdateOne {
-	tuo.mutation.AddProviderOrderTokenIDs(ids...)
-	return tuo
+func (_u *TokenUpdateOne) AddProviderOrderTokenIDs(ids ...int) *TokenUpdateOne {
+	_u.mutation.AddProviderOrderTokenIDs(ids...)
+	return _u
 }
 
 // AddProviderOrderTokens adds the "provider_order_tokens" edges to the ProviderOrderToken entity.
-func (tuo *TokenUpdateOne) AddProviderOrderTokens(p ...*ProviderOrderToken) *TokenUpdateOne {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *TokenUpdateOne) AddProviderOrderTokens(v ...*ProviderOrderToken) *TokenUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tuo.AddProviderOrderTokenIDs(ids...)
+	return _u.AddProviderOrderTokenIDs(ids...)
 }
 
 // Mutation returns the TokenMutation object of the builder.
-func (tuo *TokenUpdateOne) Mutation() *TokenMutation {
-	return tuo.mutation
+func (_u *TokenUpdateOne) Mutation() *TokenMutation {
+	return _u.mutation
 }
 
 // ClearNetwork clears the "network" edge to the Network entity.
-func (tuo *TokenUpdateOne) ClearNetwork() *TokenUpdateOne {
-	tuo.mutation.ClearNetwork()
-	return tuo
+func (_u *TokenUpdateOne) ClearNetwork() *TokenUpdateOne {
+	_u.mutation.ClearNetwork()
+	return _u
 }
 
 // ClearPaymentOrders clears all "payment_orders" edges to the PaymentOrder entity.
-func (tuo *TokenUpdateOne) ClearPaymentOrders() *TokenUpdateOne {
-	tuo.mutation.ClearPaymentOrders()
-	return tuo
+func (_u *TokenUpdateOne) ClearPaymentOrders() *TokenUpdateOne {
+	_u.mutation.ClearPaymentOrders()
+	return _u
 }
 
 // RemovePaymentOrderIDs removes the "payment_orders" edge to PaymentOrder entities by IDs.
-func (tuo *TokenUpdateOne) RemovePaymentOrderIDs(ids ...uuid.UUID) *TokenUpdateOne {
-	tuo.mutation.RemovePaymentOrderIDs(ids...)
-	return tuo
+func (_u *TokenUpdateOne) RemovePaymentOrderIDs(ids ...uuid.UUID) *TokenUpdateOne {
+	_u.mutation.RemovePaymentOrderIDs(ids...)
+	return _u
 }
 
 // RemovePaymentOrders removes "payment_orders" edges to PaymentOrder entities.
-func (tuo *TokenUpdateOne) RemovePaymentOrders(p ...*PaymentOrder) *TokenUpdateOne {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *TokenUpdateOne) RemovePaymentOrders(v ...*PaymentOrder) *TokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tuo.RemovePaymentOrderIDs(ids...)
+	return _u.RemovePaymentOrderIDs(ids...)
 }
 
 // ClearSenderOrderTokens clears all "sender_order_tokens" edges to the SenderOrderToken entity.
-func (tuo *TokenUpdateOne) ClearSenderOrderTokens() *TokenUpdateOne {
-	tuo.mutation.ClearSenderOrderTokens()
-	return tuo
+func (_u *TokenUpdateOne) ClearSenderOrderTokens() *TokenUpdateOne {
+	_u.mutation.ClearSenderOrderTokens()
+	return _u
 }
 
 // RemoveSenderOrderTokenIDs removes the "sender_order_tokens" edge to SenderOrderToken entities by IDs.
-func (tuo *TokenUpdateOne) RemoveSenderOrderTokenIDs(ids ...int) *TokenUpdateOne {
-	tuo.mutation.RemoveSenderOrderTokenIDs(ids...)
-	return tuo
+func (_u *TokenUpdateOne) RemoveSenderOrderTokenIDs(ids ...int) *TokenUpdateOne {
+	_u.mutation.RemoveSenderOrderTokenIDs(ids...)
+	return _u
 }
 
 // RemoveSenderOrderTokens removes "sender_order_tokens" edges to SenderOrderToken entities.
-func (tuo *TokenUpdateOne) RemoveSenderOrderTokens(s ...*SenderOrderToken) *TokenUpdateOne {
-	ids := make([]int, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
+func (_u *TokenUpdateOne) RemoveSenderOrderTokens(v ...*SenderOrderToken) *TokenUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tuo.RemoveSenderOrderTokenIDs(ids...)
+	return _u.RemoveSenderOrderTokenIDs(ids...)
 }
 
 // ClearProviderOrderTokens clears all "provider_order_tokens" edges to the ProviderOrderToken entity.
-func (tuo *TokenUpdateOne) ClearProviderOrderTokens() *TokenUpdateOne {
-	tuo.mutation.ClearProviderOrderTokens()
-	return tuo
+func (_u *TokenUpdateOne) ClearProviderOrderTokens() *TokenUpdateOne {
+	_u.mutation.ClearProviderOrderTokens()
+	return _u
 }
 
 // RemoveProviderOrderTokenIDs removes the "provider_order_tokens" edge to ProviderOrderToken entities by IDs.
-func (tuo *TokenUpdateOne) RemoveProviderOrderTokenIDs(ids ...int) *TokenUpdateOne {
-	tuo.mutation.RemoveProviderOrderTokenIDs(ids...)
-	return tuo
+func (_u *TokenUpdateOne) RemoveProviderOrderTokenIDs(ids ...int) *TokenUpdateOne {
+	_u.mutation.RemoveProviderOrderTokenIDs(ids...)
+	return _u
 }
 
 // RemoveProviderOrderTokens removes "provider_order_tokens" edges to ProviderOrderToken entities.
-func (tuo *TokenUpdateOne) RemoveProviderOrderTokens(p ...*ProviderOrderToken) *TokenUpdateOne {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_u *TokenUpdateOne) RemoveProviderOrderTokens(v ...*ProviderOrderToken) *TokenUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return tuo.RemoveProviderOrderTokenIDs(ids...)
+	return _u.RemoveProviderOrderTokenIDs(ids...)
 }
 
 // Where appends a list predicates to the TokenUpdate builder.
-func (tuo *TokenUpdateOne) Where(ps ...predicate.Token) *TokenUpdateOne {
-	tuo.mutation.Where(ps...)
-	return tuo
+func (_u *TokenUpdateOne) Where(ps ...predicate.Token) *TokenUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (tuo *TokenUpdateOne) Select(field string, fields ...string) *TokenUpdateOne {
-	tuo.fields = append([]string{field}, fields...)
-	return tuo
+func (_u *TokenUpdateOne) Select(field string, fields ...string) *TokenUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated Token entity.
-func (tuo *TokenUpdateOne) Save(ctx context.Context) (*Token, error) {
-	tuo.defaults()
-	return withHooks(ctx, tuo.sqlSave, tuo.mutation, tuo.hooks)
+func (_u *TokenUpdateOne) Save(ctx context.Context) (*Token, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (tuo *TokenUpdateOne) SaveX(ctx context.Context) *Token {
-	node, err := tuo.Save(ctx)
+func (_u *TokenUpdateOne) SaveX(ctx context.Context) *Token {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -759,55 +759,55 @@ func (tuo *TokenUpdateOne) SaveX(ctx context.Context) *Token {
 }
 
 // Exec executes the query on the entity.
-func (tuo *TokenUpdateOne) Exec(ctx context.Context) error {
-	_, err := tuo.Save(ctx)
+func (_u *TokenUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (tuo *TokenUpdateOne) ExecX(ctx context.Context) {
-	if err := tuo.Exec(ctx); err != nil {
+func (_u *TokenUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (tuo *TokenUpdateOne) defaults() {
-	if _, ok := tuo.mutation.UpdatedAt(); !ok {
+func (_u *TokenUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := token.UpdateDefaultUpdatedAt()
-		tuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (tuo *TokenUpdateOne) check() error {
-	if v, ok := tuo.mutation.Symbol(); ok {
+func (_u *TokenUpdateOne) check() error {
+	if v, ok := _u.mutation.Symbol(); ok {
 		if err := token.SymbolValidator(v); err != nil {
 			return &ValidationError{Name: "symbol", err: fmt.Errorf(`ent: validator failed for field "Token.symbol": %w`, err)}
 		}
 	}
-	if v, ok := tuo.mutation.ContractAddress(); ok {
+	if v, ok := _u.mutation.ContractAddress(); ok {
 		if err := token.ContractAddressValidator(v); err != nil {
 			return &ValidationError{Name: "contract_address", err: fmt.Errorf(`ent: validator failed for field "Token.contract_address": %w`, err)}
 		}
 	}
-	if tuo.mutation.NetworkCleared() && len(tuo.mutation.NetworkIDs()) > 0 {
+	if _u.mutation.NetworkCleared() && len(_u.mutation.NetworkIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "Token.network"`)
 	}
 	return nil
 }
 
-func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error) {
-	if err := tuo.check(); err != nil {
+func (_u *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(token.Table, token.Columns, sqlgraph.NewFieldSpec(token.FieldID, field.TypeInt))
-	id, ok := tuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Token.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := tuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, token.FieldID)
 		for _, f := range fields {
@@ -819,35 +819,35 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 			}
 		}
 	}
-	if ps := tuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := tuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(token.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := tuo.mutation.Symbol(); ok {
+	if value, ok := _u.mutation.Symbol(); ok {
 		_spec.SetField(token.FieldSymbol, field.TypeString, value)
 	}
-	if value, ok := tuo.mutation.ContractAddress(); ok {
+	if value, ok := _u.mutation.ContractAddress(); ok {
 		_spec.SetField(token.FieldContractAddress, field.TypeString, value)
 	}
-	if value, ok := tuo.mutation.Decimals(); ok {
+	if value, ok := _u.mutation.Decimals(); ok {
 		_spec.SetField(token.FieldDecimals, field.TypeInt8, value)
 	}
-	if value, ok := tuo.mutation.AddedDecimals(); ok {
+	if value, ok := _u.mutation.AddedDecimals(); ok {
 		_spec.AddField(token.FieldDecimals, field.TypeInt8, value)
 	}
-	if value, ok := tuo.mutation.IsEnabled(); ok {
+	if value, ok := _u.mutation.IsEnabled(); ok {
 		_spec.SetField(token.FieldIsEnabled, field.TypeBool, value)
 	}
-	if value, ok := tuo.mutation.BaseCurrency(); ok {
+	if value, ok := _u.mutation.BaseCurrency(); ok {
 		_spec.SetField(token.FieldBaseCurrency, field.TypeString, value)
 	}
-	if tuo.mutation.NetworkCleared() {
+	if _u.mutation.NetworkCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -860,7 +860,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tuo.mutation.NetworkIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.NetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -876,7 +876,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if tuo.mutation.PaymentOrdersCleared() {
+	if _u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -889,7 +889,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tuo.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !tuo.mutation.PaymentOrdersCleared() {
+	if nodes := _u.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.PaymentOrdersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -905,7 +905,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tuo.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -921,7 +921,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if tuo.mutation.SenderOrderTokensCleared() {
+	if _u.mutation.SenderOrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -934,7 +934,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tuo.mutation.RemovedSenderOrderTokensIDs(); len(nodes) > 0 && !tuo.mutation.SenderOrderTokensCleared() {
+	if nodes := _u.mutation.RemovedSenderOrderTokensIDs(); len(nodes) > 0 && !_u.mutation.SenderOrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -950,7 +950,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tuo.mutation.SenderOrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.SenderOrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -966,7 +966,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if tuo.mutation.ProviderOrderTokensCleared() {
+	if _u.mutation.ProviderOrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -979,7 +979,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tuo.mutation.RemovedProviderOrderTokensIDs(); len(nodes) > 0 && !tuo.mutation.ProviderOrderTokensCleared() {
+	if nodes := _u.mutation.RemovedProviderOrderTokensIDs(); len(nodes) > 0 && !_u.mutation.ProviderOrderTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -995,7 +995,7 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := tuo.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.ProviderOrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -1011,10 +1011,10 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &Token{config: tuo.config}
+	_node = &Token{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, tuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{token.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -1022,6 +1022,6 @@ func (tuo *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error
 		}
 		return nil, err
 	}
-	tuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

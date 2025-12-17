@@ -26,128 +26,128 @@ type PaymentOrderFulfillmentCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (pofc *PaymentOrderFulfillmentCreate) SetCreatedAt(t time.Time) *PaymentOrderFulfillmentCreate {
-	pofc.mutation.SetCreatedAt(t)
-	return pofc
+func (_c *PaymentOrderFulfillmentCreate) SetCreatedAt(v time.Time) *PaymentOrderFulfillmentCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (pofc *PaymentOrderFulfillmentCreate) SetNillableCreatedAt(t *time.Time) *PaymentOrderFulfillmentCreate {
-	if t != nil {
-		pofc.SetCreatedAt(*t)
+func (_c *PaymentOrderFulfillmentCreate) SetNillableCreatedAt(v *time.Time) *PaymentOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return pofc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pofc *PaymentOrderFulfillmentCreate) SetUpdatedAt(t time.Time) *PaymentOrderFulfillmentCreate {
-	pofc.mutation.SetUpdatedAt(t)
-	return pofc
+func (_c *PaymentOrderFulfillmentCreate) SetUpdatedAt(v time.Time) *PaymentOrderFulfillmentCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (pofc *PaymentOrderFulfillmentCreate) SetNillableUpdatedAt(t *time.Time) *PaymentOrderFulfillmentCreate {
-	if t != nil {
-		pofc.SetUpdatedAt(*t)
+func (_c *PaymentOrderFulfillmentCreate) SetNillableUpdatedAt(v *time.Time) *PaymentOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return pofc
+	return _c
 }
 
 // SetTxID sets the "tx_id" field.
-func (pofc *PaymentOrderFulfillmentCreate) SetTxID(s string) *PaymentOrderFulfillmentCreate {
-	pofc.mutation.SetTxID(s)
-	return pofc
+func (_c *PaymentOrderFulfillmentCreate) SetTxID(v string) *PaymentOrderFulfillmentCreate {
+	_c.mutation.SetTxID(v)
+	return _c
 }
 
 // SetNillableTxID sets the "tx_id" field if the given value is not nil.
-func (pofc *PaymentOrderFulfillmentCreate) SetNillableTxID(s *string) *PaymentOrderFulfillmentCreate {
-	if s != nil {
-		pofc.SetTxID(*s)
+func (_c *PaymentOrderFulfillmentCreate) SetNillableTxID(v *string) *PaymentOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetTxID(*v)
 	}
-	return pofc
+	return _c
 }
 
 // SetPsp sets the "psp" field.
-func (pofc *PaymentOrderFulfillmentCreate) SetPsp(s string) *PaymentOrderFulfillmentCreate {
-	pofc.mutation.SetPsp(s)
-	return pofc
+func (_c *PaymentOrderFulfillmentCreate) SetPsp(v string) *PaymentOrderFulfillmentCreate {
+	_c.mutation.SetPsp(v)
+	return _c
 }
 
 // SetNillablePsp sets the "psp" field if the given value is not nil.
-func (pofc *PaymentOrderFulfillmentCreate) SetNillablePsp(s *string) *PaymentOrderFulfillmentCreate {
-	if s != nil {
-		pofc.SetPsp(*s)
+func (_c *PaymentOrderFulfillmentCreate) SetNillablePsp(v *string) *PaymentOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetPsp(*v)
 	}
-	return pofc
+	return _c
 }
 
 // SetValidationStatus sets the "validation_status" field.
-func (pofc *PaymentOrderFulfillmentCreate) SetValidationStatus(ps paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentCreate {
-	pofc.mutation.SetValidationStatus(ps)
-	return pofc
+func (_c *PaymentOrderFulfillmentCreate) SetValidationStatus(v paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentCreate {
+	_c.mutation.SetValidationStatus(v)
+	return _c
 }
 
 // SetNillableValidationStatus sets the "validation_status" field if the given value is not nil.
-func (pofc *PaymentOrderFulfillmentCreate) SetNillableValidationStatus(ps *paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentCreate {
-	if ps != nil {
-		pofc.SetValidationStatus(*ps)
+func (_c *PaymentOrderFulfillmentCreate) SetNillableValidationStatus(v *paymentorderfulfillment.ValidationStatus) *PaymentOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetValidationStatus(*v)
 	}
-	return pofc
+	return _c
 }
 
 // SetValidationError sets the "validation_error" field.
-func (pofc *PaymentOrderFulfillmentCreate) SetValidationError(s string) *PaymentOrderFulfillmentCreate {
-	pofc.mutation.SetValidationError(s)
-	return pofc
+func (_c *PaymentOrderFulfillmentCreate) SetValidationError(v string) *PaymentOrderFulfillmentCreate {
+	_c.mutation.SetValidationError(v)
+	return _c
 }
 
 // SetNillableValidationError sets the "validation_error" field if the given value is not nil.
-func (pofc *PaymentOrderFulfillmentCreate) SetNillableValidationError(s *string) *PaymentOrderFulfillmentCreate {
-	if s != nil {
-		pofc.SetValidationError(*s)
+func (_c *PaymentOrderFulfillmentCreate) SetNillableValidationError(v *string) *PaymentOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetValidationError(*v)
 	}
-	return pofc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (pofc *PaymentOrderFulfillmentCreate) SetID(u uuid.UUID) *PaymentOrderFulfillmentCreate {
-	pofc.mutation.SetID(u)
-	return pofc
+func (_c *PaymentOrderFulfillmentCreate) SetID(v uuid.UUID) *PaymentOrderFulfillmentCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (pofc *PaymentOrderFulfillmentCreate) SetNillableID(u *uuid.UUID) *PaymentOrderFulfillmentCreate {
-	if u != nil {
-		pofc.SetID(*u)
+func (_c *PaymentOrderFulfillmentCreate) SetNillableID(v *uuid.UUID) *PaymentOrderFulfillmentCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return pofc
+	return _c
 }
 
 // SetOrderID sets the "order" edge to the PaymentOrder entity by ID.
-func (pofc *PaymentOrderFulfillmentCreate) SetOrderID(id uuid.UUID) *PaymentOrderFulfillmentCreate {
-	pofc.mutation.SetOrderID(id)
-	return pofc
+func (_c *PaymentOrderFulfillmentCreate) SetOrderID(id uuid.UUID) *PaymentOrderFulfillmentCreate {
+	_c.mutation.SetOrderID(id)
+	return _c
 }
 
 // SetOrder sets the "order" edge to the PaymentOrder entity.
-func (pofc *PaymentOrderFulfillmentCreate) SetOrder(p *PaymentOrder) *PaymentOrderFulfillmentCreate {
-	return pofc.SetOrderID(p.ID)
+func (_c *PaymentOrderFulfillmentCreate) SetOrder(v *PaymentOrder) *PaymentOrderFulfillmentCreate {
+	return _c.SetOrderID(v.ID)
 }
 
 // Mutation returns the PaymentOrderFulfillmentMutation object of the builder.
-func (pofc *PaymentOrderFulfillmentCreate) Mutation() *PaymentOrderFulfillmentMutation {
-	return pofc.mutation
+func (_c *PaymentOrderFulfillmentCreate) Mutation() *PaymentOrderFulfillmentMutation {
+	return _c.mutation
 }
 
 // Save creates the PaymentOrderFulfillment in the database.
-func (pofc *PaymentOrderFulfillmentCreate) Save(ctx context.Context) (*PaymentOrderFulfillment, error) {
-	pofc.defaults()
-	return withHooks(ctx, pofc.sqlSave, pofc.mutation, pofc.hooks)
+func (_c *PaymentOrderFulfillmentCreate) Save(ctx context.Context) (*PaymentOrderFulfillment, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (pofc *PaymentOrderFulfillmentCreate) SaveX(ctx context.Context) *PaymentOrderFulfillment {
-	v, err := pofc.Save(ctx)
+func (_c *PaymentOrderFulfillmentCreate) SaveX(ctx context.Context) *PaymentOrderFulfillment {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -155,66 +155,66 @@ func (pofc *PaymentOrderFulfillmentCreate) SaveX(ctx context.Context) *PaymentOr
 }
 
 // Exec executes the query.
-func (pofc *PaymentOrderFulfillmentCreate) Exec(ctx context.Context) error {
-	_, err := pofc.Save(ctx)
+func (_c *PaymentOrderFulfillmentCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pofc *PaymentOrderFulfillmentCreate) ExecX(ctx context.Context) {
-	if err := pofc.Exec(ctx); err != nil {
+func (_c *PaymentOrderFulfillmentCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pofc *PaymentOrderFulfillmentCreate) defaults() {
-	if _, ok := pofc.mutation.CreatedAt(); !ok {
+func (_c *PaymentOrderFulfillmentCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := paymentorderfulfillment.DefaultCreatedAt()
-		pofc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := pofc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := paymentorderfulfillment.DefaultUpdatedAt()
-		pofc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := pofc.mutation.ValidationStatus(); !ok {
+	if _, ok := _c.mutation.ValidationStatus(); !ok {
 		v := paymentorderfulfillment.DefaultValidationStatus
-		pofc.mutation.SetValidationStatus(v)
+		_c.mutation.SetValidationStatus(v)
 	}
-	if _, ok := pofc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := paymentorderfulfillment.DefaultID()
-		pofc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pofc *PaymentOrderFulfillmentCreate) check() error {
-	if _, ok := pofc.mutation.CreatedAt(); !ok {
+func (_c *PaymentOrderFulfillmentCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "PaymentOrderFulfillment.created_at"`)}
 	}
-	if _, ok := pofc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "PaymentOrderFulfillment.updated_at"`)}
 	}
-	if _, ok := pofc.mutation.ValidationStatus(); !ok {
+	if _, ok := _c.mutation.ValidationStatus(); !ok {
 		return &ValidationError{Name: "validation_status", err: errors.New(`ent: missing required field "PaymentOrderFulfillment.validation_status"`)}
 	}
-	if v, ok := pofc.mutation.ValidationStatus(); ok {
+	if v, ok := _c.mutation.ValidationStatus(); ok {
 		if err := paymentorderfulfillment.ValidationStatusValidator(v); err != nil {
 			return &ValidationError{Name: "validation_status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrderFulfillment.validation_status": %w`, err)}
 		}
 	}
-	if len(pofc.mutation.OrderIDs()) == 0 {
+	if len(_c.mutation.OrderIDs()) == 0 {
 		return &ValidationError{Name: "order", err: errors.New(`ent: missing required edge "PaymentOrderFulfillment.order"`)}
 	}
 	return nil
 }
 
-func (pofc *PaymentOrderFulfillmentCreate) sqlSave(ctx context.Context) (*PaymentOrderFulfillment, error) {
-	if err := pofc.check(); err != nil {
+func (_c *PaymentOrderFulfillmentCreate) sqlSave(ctx context.Context) (*PaymentOrderFulfillment, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := pofc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, pofc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -227,46 +227,46 @@ func (pofc *PaymentOrderFulfillmentCreate) sqlSave(ctx context.Context) (*Paymen
 			return nil, err
 		}
 	}
-	pofc.mutation.id = &_node.ID
-	pofc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (pofc *PaymentOrderFulfillmentCreate) createSpec() (*PaymentOrderFulfillment, *sqlgraph.CreateSpec) {
+func (_c *PaymentOrderFulfillmentCreate) createSpec() (*PaymentOrderFulfillment, *sqlgraph.CreateSpec) {
 	var (
-		_node = &PaymentOrderFulfillment{config: pofc.config}
+		_node = &PaymentOrderFulfillment{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(paymentorderfulfillment.Table, sqlgraph.NewFieldSpec(paymentorderfulfillment.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = pofc.conflict
-	if id, ok := pofc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := pofc.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := pofc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := pofc.mutation.TxID(); ok {
+	if value, ok := _c.mutation.TxID(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldTxID, field.TypeString, value)
 		_node.TxID = value
 	}
-	if value, ok := pofc.mutation.Psp(); ok {
+	if value, ok := _c.mutation.Psp(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldPsp, field.TypeString, value)
 		_node.Psp = value
 	}
-	if value, ok := pofc.mutation.ValidationStatus(); ok {
+	if value, ok := _c.mutation.ValidationStatus(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldValidationStatus, field.TypeEnum, value)
 		_node.ValidationStatus = value
 	}
-	if value, ok := pofc.mutation.ValidationError(); ok {
+	if value, ok := _c.mutation.ValidationError(); ok {
 		_spec.SetField(paymentorderfulfillment.FieldValidationError, field.TypeString, value)
 		_node.ValidationError = value
 	}
-	if nodes := pofc.mutation.OrderIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.OrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -302,10 +302,10 @@ func (pofc *PaymentOrderFulfillmentCreate) createSpec() (*PaymentOrderFulfillmen
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (pofc *PaymentOrderFulfillmentCreate) OnConflict(opts ...sql.ConflictOption) *PaymentOrderFulfillmentUpsertOne {
-	pofc.conflict = opts
+func (_c *PaymentOrderFulfillmentCreate) OnConflict(opts ...sql.ConflictOption) *PaymentOrderFulfillmentUpsertOne {
+	_c.conflict = opts
 	return &PaymentOrderFulfillmentUpsertOne{
-		create: pofc,
+		create: _c,
 	}
 }
 
@@ -315,10 +315,10 @@ func (pofc *PaymentOrderFulfillmentCreate) OnConflict(opts ...sql.ConflictOption
 //	client.PaymentOrderFulfillment.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pofc *PaymentOrderFulfillmentCreate) OnConflictColumns(columns ...string) *PaymentOrderFulfillmentUpsertOne {
-	pofc.conflict = append(pofc.conflict, sql.ConflictColumns(columns...))
+func (_c *PaymentOrderFulfillmentCreate) OnConflictColumns(columns ...string) *PaymentOrderFulfillmentUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &PaymentOrderFulfillmentUpsertOne{
-		create: pofc,
+		create: _c,
 	}
 }
 
@@ -602,16 +602,16 @@ type PaymentOrderFulfillmentCreateBulk struct {
 }
 
 // Save creates the PaymentOrderFulfillment entities in the database.
-func (pofcb *PaymentOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*PaymentOrderFulfillment, error) {
-	if pofcb.err != nil {
-		return nil, pofcb.err
+func (_c *PaymentOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*PaymentOrderFulfillment, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(pofcb.builders))
-	nodes := make([]*PaymentOrderFulfillment, len(pofcb.builders))
-	mutators := make([]Mutator, len(pofcb.builders))
-	for i := range pofcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*PaymentOrderFulfillment, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := pofcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*PaymentOrderFulfillmentMutation)
@@ -625,12 +625,12 @@ func (pofcb *PaymentOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*Pa
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, pofcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = pofcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, pofcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -650,7 +650,7 @@ func (pofcb *PaymentOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*Pa
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, pofcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -658,8 +658,8 @@ func (pofcb *PaymentOrderFulfillmentCreateBulk) Save(ctx context.Context) ([]*Pa
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pofcb *PaymentOrderFulfillmentCreateBulk) SaveX(ctx context.Context) []*PaymentOrderFulfillment {
-	v, err := pofcb.Save(ctx)
+func (_c *PaymentOrderFulfillmentCreateBulk) SaveX(ctx context.Context) []*PaymentOrderFulfillment {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -667,14 +667,14 @@ func (pofcb *PaymentOrderFulfillmentCreateBulk) SaveX(ctx context.Context) []*Pa
 }
 
 // Exec executes the query.
-func (pofcb *PaymentOrderFulfillmentCreateBulk) Exec(ctx context.Context) error {
-	_, err := pofcb.Save(ctx)
+func (_c *PaymentOrderFulfillmentCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pofcb *PaymentOrderFulfillmentCreateBulk) ExecX(ctx context.Context) {
-	if err := pofcb.Exec(ctx); err != nil {
+func (_c *PaymentOrderFulfillmentCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -694,10 +694,10 @@ func (pofcb *PaymentOrderFulfillmentCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (pofcb *PaymentOrderFulfillmentCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentOrderFulfillmentUpsertBulk {
-	pofcb.conflict = opts
+func (_c *PaymentOrderFulfillmentCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentOrderFulfillmentUpsertBulk {
+	_c.conflict = opts
 	return &PaymentOrderFulfillmentUpsertBulk{
-		create: pofcb,
+		create: _c,
 	}
 }
 
@@ -707,10 +707,10 @@ func (pofcb *PaymentOrderFulfillmentCreateBulk) OnConflict(opts ...sql.ConflictO
 //	client.PaymentOrderFulfillment.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pofcb *PaymentOrderFulfillmentCreateBulk) OnConflictColumns(columns ...string) *PaymentOrderFulfillmentUpsertBulk {
-	pofcb.conflict = append(pofcb.conflict, sql.ConflictColumns(columns...))
+func (_c *PaymentOrderFulfillmentCreateBulk) OnConflictColumns(columns ...string) *PaymentOrderFulfillmentUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &PaymentOrderFulfillmentUpsertBulk{
-		create: pofcb,
+		create: _c,
 	}
 }
 

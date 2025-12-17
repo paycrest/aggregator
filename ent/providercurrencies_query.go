@@ -34,44 +34,44 @@ type ProviderCurrenciesQuery struct {
 }
 
 // Where adds a new predicate for the ProviderCurrenciesQuery builder.
-func (pcq *ProviderCurrenciesQuery) Where(ps ...predicate.ProviderCurrencies) *ProviderCurrenciesQuery {
-	pcq.predicates = append(pcq.predicates, ps...)
-	return pcq
+func (_q *ProviderCurrenciesQuery) Where(ps ...predicate.ProviderCurrencies) *ProviderCurrenciesQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (pcq *ProviderCurrenciesQuery) Limit(limit int) *ProviderCurrenciesQuery {
-	pcq.ctx.Limit = &limit
-	return pcq
+func (_q *ProviderCurrenciesQuery) Limit(limit int) *ProviderCurrenciesQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (pcq *ProviderCurrenciesQuery) Offset(offset int) *ProviderCurrenciesQuery {
-	pcq.ctx.Offset = &offset
-	return pcq
+func (_q *ProviderCurrenciesQuery) Offset(offset int) *ProviderCurrenciesQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (pcq *ProviderCurrenciesQuery) Unique(unique bool) *ProviderCurrenciesQuery {
-	pcq.ctx.Unique = &unique
-	return pcq
+func (_q *ProviderCurrenciesQuery) Unique(unique bool) *ProviderCurrenciesQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (pcq *ProviderCurrenciesQuery) Order(o ...providercurrencies.OrderOption) *ProviderCurrenciesQuery {
-	pcq.order = append(pcq.order, o...)
-	return pcq
+func (_q *ProviderCurrenciesQuery) Order(o ...providercurrencies.OrderOption) *ProviderCurrenciesQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryProvider chains the current query on the "provider" edge.
-func (pcq *ProviderCurrenciesQuery) QueryProvider() *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: pcq.config}).Query()
+func (_q *ProviderCurrenciesQuery) QueryProvider() *ProviderProfileQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := pcq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := pcq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -80,20 +80,20 @@ func (pcq *ProviderCurrenciesQuery) QueryProvider() *ProviderProfileQuery {
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, providercurrencies.ProviderTable, providercurrencies.ProviderColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(pcq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryCurrency chains the current query on the "currency" edge.
-func (pcq *ProviderCurrenciesQuery) QueryCurrency() *FiatCurrencyQuery {
-	query := (&FiatCurrencyClient{config: pcq.config}).Query()
+func (_q *ProviderCurrenciesQuery) QueryCurrency() *FiatCurrencyQuery {
+	query := (&FiatCurrencyClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := pcq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := pcq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func (pcq *ProviderCurrenciesQuery) QueryCurrency() *FiatCurrencyQuery {
 			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, providercurrencies.CurrencyTable, providercurrencies.CurrencyColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(pcq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -110,8 +110,8 @@ func (pcq *ProviderCurrenciesQuery) QueryCurrency() *FiatCurrencyQuery {
 
 // First returns the first ProviderCurrencies entity from the query.
 // Returns a *NotFoundError when no ProviderCurrencies was found.
-func (pcq *ProviderCurrenciesQuery) First(ctx context.Context) (*ProviderCurrencies, error) {
-	nodes, err := pcq.Limit(1).All(setContextOp(ctx, pcq.ctx, ent.OpQueryFirst))
+func (_q *ProviderCurrenciesQuery) First(ctx context.Context) (*ProviderCurrencies, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -122,8 +122,8 @@ func (pcq *ProviderCurrenciesQuery) First(ctx context.Context) (*ProviderCurrenc
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (pcq *ProviderCurrenciesQuery) FirstX(ctx context.Context) *ProviderCurrencies {
-	node, err := pcq.First(ctx)
+func (_q *ProviderCurrenciesQuery) FirstX(ctx context.Context) *ProviderCurrencies {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -132,9 +132,9 @@ func (pcq *ProviderCurrenciesQuery) FirstX(ctx context.Context) *ProviderCurrenc
 
 // FirstID returns the first ProviderCurrencies ID from the query.
 // Returns a *NotFoundError when no ProviderCurrencies ID was found.
-func (pcq *ProviderCurrenciesQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *ProviderCurrenciesQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pcq.Limit(1).IDs(setContextOp(ctx, pcq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -145,8 +145,8 @@ func (pcq *ProviderCurrenciesQuery) FirstID(ctx context.Context) (id uuid.UUID, 
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (pcq *ProviderCurrenciesQuery) FirstIDX(ctx context.Context) uuid.UUID {
-	id, err := pcq.FirstID(ctx)
+func (_q *ProviderCurrenciesQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -156,8 +156,8 @@ func (pcq *ProviderCurrenciesQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Only returns a single ProviderCurrencies entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one ProviderCurrencies entity is found.
 // Returns a *NotFoundError when no ProviderCurrencies entities are found.
-func (pcq *ProviderCurrenciesQuery) Only(ctx context.Context) (*ProviderCurrencies, error) {
-	nodes, err := pcq.Limit(2).All(setContextOp(ctx, pcq.ctx, ent.OpQueryOnly))
+func (_q *ProviderCurrenciesQuery) Only(ctx context.Context) (*ProviderCurrencies, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -172,8 +172,8 @@ func (pcq *ProviderCurrenciesQuery) Only(ctx context.Context) (*ProviderCurrenci
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (pcq *ProviderCurrenciesQuery) OnlyX(ctx context.Context) *ProviderCurrencies {
-	node, err := pcq.Only(ctx)
+func (_q *ProviderCurrenciesQuery) OnlyX(ctx context.Context) *ProviderCurrencies {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -183,9 +183,9 @@ func (pcq *ProviderCurrenciesQuery) OnlyX(ctx context.Context) *ProviderCurrenci
 // OnlyID is like Only, but returns the only ProviderCurrencies ID in the query.
 // Returns a *NotSingularError when more than one ProviderCurrencies ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (pcq *ProviderCurrenciesQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *ProviderCurrenciesQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pcq.Limit(2).IDs(setContextOp(ctx, pcq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -200,8 +200,8 @@ func (pcq *ProviderCurrenciesQuery) OnlyID(ctx context.Context) (id uuid.UUID, e
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (pcq *ProviderCurrenciesQuery) OnlyIDX(ctx context.Context) uuid.UUID {
-	id, err := pcq.OnlyID(ctx)
+func (_q *ProviderCurrenciesQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -209,18 +209,18 @@ func (pcq *ProviderCurrenciesQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 }
 
 // All executes the query and returns a list of ProviderCurrenciesSlice.
-func (pcq *ProviderCurrenciesQuery) All(ctx context.Context) ([]*ProviderCurrencies, error) {
-	ctx = setContextOp(ctx, pcq.ctx, ent.OpQueryAll)
-	if err := pcq.prepareQuery(ctx); err != nil {
+func (_q *ProviderCurrenciesQuery) All(ctx context.Context) ([]*ProviderCurrencies, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*ProviderCurrencies, *ProviderCurrenciesQuery]()
-	return withInterceptors[[]*ProviderCurrencies](ctx, pcq, qr, pcq.inters)
+	return withInterceptors[[]*ProviderCurrencies](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (pcq *ProviderCurrenciesQuery) AllX(ctx context.Context) []*ProviderCurrencies {
-	nodes, err := pcq.All(ctx)
+func (_q *ProviderCurrenciesQuery) AllX(ctx context.Context) []*ProviderCurrencies {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -228,20 +228,20 @@ func (pcq *ProviderCurrenciesQuery) AllX(ctx context.Context) []*ProviderCurrenc
 }
 
 // IDs executes the query and returns a list of ProviderCurrencies IDs.
-func (pcq *ProviderCurrenciesQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
-	if pcq.ctx.Unique == nil && pcq.path != nil {
-		pcq.Unique(true)
+func (_q *ProviderCurrenciesQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, pcq.ctx, ent.OpQueryIDs)
-	if err = pcq.Select(providercurrencies.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(providercurrencies.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (pcq *ProviderCurrenciesQuery) IDsX(ctx context.Context) []uuid.UUID {
-	ids, err := pcq.IDs(ctx)
+func (_q *ProviderCurrenciesQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -249,17 +249,17 @@ func (pcq *ProviderCurrenciesQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (pcq *ProviderCurrenciesQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, pcq.ctx, ent.OpQueryCount)
-	if err := pcq.prepareQuery(ctx); err != nil {
+func (_q *ProviderCurrenciesQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, pcq, querierCount[*ProviderCurrenciesQuery](), pcq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*ProviderCurrenciesQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (pcq *ProviderCurrenciesQuery) CountX(ctx context.Context) int {
-	count, err := pcq.Count(ctx)
+func (_q *ProviderCurrenciesQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -267,9 +267,9 @@ func (pcq *ProviderCurrenciesQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (pcq *ProviderCurrenciesQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, pcq.ctx, ent.OpQueryExist)
-	switch _, err := pcq.FirstID(ctx); {
+func (_q *ProviderCurrenciesQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -280,8 +280,8 @@ func (pcq *ProviderCurrenciesQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (pcq *ProviderCurrenciesQuery) ExistX(ctx context.Context) bool {
-	exist, err := pcq.Exist(ctx)
+func (_q *ProviderCurrenciesQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -290,44 +290,44 @@ func (pcq *ProviderCurrenciesQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the ProviderCurrenciesQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (pcq *ProviderCurrenciesQuery) Clone() *ProviderCurrenciesQuery {
-	if pcq == nil {
+func (_q *ProviderCurrenciesQuery) Clone() *ProviderCurrenciesQuery {
+	if _q == nil {
 		return nil
 	}
 	return &ProviderCurrenciesQuery{
-		config:       pcq.config,
-		ctx:          pcq.ctx.Clone(),
-		order:        append([]providercurrencies.OrderOption{}, pcq.order...),
-		inters:       append([]Interceptor{}, pcq.inters...),
-		predicates:   append([]predicate.ProviderCurrencies{}, pcq.predicates...),
-		withProvider: pcq.withProvider.Clone(),
-		withCurrency: pcq.withCurrency.Clone(),
+		config:       _q.config,
+		ctx:          _q.ctx.Clone(),
+		order:        append([]providercurrencies.OrderOption{}, _q.order...),
+		inters:       append([]Interceptor{}, _q.inters...),
+		predicates:   append([]predicate.ProviderCurrencies{}, _q.predicates...),
+		withProvider: _q.withProvider.Clone(),
+		withCurrency: _q.withCurrency.Clone(),
 		// clone intermediate query.
-		sql:  pcq.sql.Clone(),
-		path: pcq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithProvider tells the query-builder to eager-load the nodes that are connected to
 // the "provider" edge. The optional arguments are used to configure the query builder of the edge.
-func (pcq *ProviderCurrenciesQuery) WithProvider(opts ...func(*ProviderProfileQuery)) *ProviderCurrenciesQuery {
-	query := (&ProviderProfileClient{config: pcq.config}).Query()
+func (_q *ProviderCurrenciesQuery) WithProvider(opts ...func(*ProviderProfileQuery)) *ProviderCurrenciesQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	pcq.withProvider = query
-	return pcq
+	_q.withProvider = query
+	return _q
 }
 
 // WithCurrency tells the query-builder to eager-load the nodes that are connected to
 // the "currency" edge. The optional arguments are used to configure the query builder of the edge.
-func (pcq *ProviderCurrenciesQuery) WithCurrency(opts ...func(*FiatCurrencyQuery)) *ProviderCurrenciesQuery {
-	query := (&FiatCurrencyClient{config: pcq.config}).Query()
+func (_q *ProviderCurrenciesQuery) WithCurrency(opts ...func(*FiatCurrencyQuery)) *ProviderCurrenciesQuery {
+	query := (&FiatCurrencyClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	pcq.withCurrency = query
-	return pcq
+	_q.withCurrency = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -344,10 +344,10 @@ func (pcq *ProviderCurrenciesQuery) WithCurrency(opts ...func(*FiatCurrencyQuery
 //		GroupBy(providercurrencies.FieldAvailableBalance).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (pcq *ProviderCurrenciesQuery) GroupBy(field string, fields ...string) *ProviderCurrenciesGroupBy {
-	pcq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &ProviderCurrenciesGroupBy{build: pcq}
-	grbuild.flds = &pcq.ctx.Fields
+func (_q *ProviderCurrenciesQuery) GroupBy(field string, fields ...string) *ProviderCurrenciesGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &ProviderCurrenciesGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = providercurrencies.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -365,56 +365,56 @@ func (pcq *ProviderCurrenciesQuery) GroupBy(field string, fields ...string) *Pro
 //	client.ProviderCurrencies.Query().
 //		Select(providercurrencies.FieldAvailableBalance).
 //		Scan(ctx, &v)
-func (pcq *ProviderCurrenciesQuery) Select(fields ...string) *ProviderCurrenciesSelect {
-	pcq.ctx.Fields = append(pcq.ctx.Fields, fields...)
-	sbuild := &ProviderCurrenciesSelect{ProviderCurrenciesQuery: pcq}
+func (_q *ProviderCurrenciesQuery) Select(fields ...string) *ProviderCurrenciesSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &ProviderCurrenciesSelect{ProviderCurrenciesQuery: _q}
 	sbuild.label = providercurrencies.Label
-	sbuild.flds, sbuild.scan = &pcq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a ProviderCurrenciesSelect configured with the given aggregations.
-func (pcq *ProviderCurrenciesQuery) Aggregate(fns ...AggregateFunc) *ProviderCurrenciesSelect {
-	return pcq.Select().Aggregate(fns...)
+func (_q *ProviderCurrenciesQuery) Aggregate(fns ...AggregateFunc) *ProviderCurrenciesSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (pcq *ProviderCurrenciesQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range pcq.inters {
+func (_q *ProviderCurrenciesQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, pcq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range pcq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !providercurrencies.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if pcq.path != nil {
-		prev, err := pcq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		pcq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (pcq *ProviderCurrenciesQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProviderCurrencies, error) {
+func (_q *ProviderCurrenciesQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProviderCurrencies, error) {
 	var (
 		nodes       = []*ProviderCurrencies{}
-		withFKs     = pcq.withFKs
-		_spec       = pcq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [2]bool{
-			pcq.withProvider != nil,
-			pcq.withCurrency != nil,
+			_q.withProvider != nil,
+			_q.withCurrency != nil,
 		}
 	)
-	if pcq.withProvider != nil || pcq.withCurrency != nil {
+	if _q.withProvider != nil || _q.withCurrency != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -424,7 +424,7 @@ func (pcq *ProviderCurrenciesQuery) sqlAll(ctx context.Context, hooks ...queryHo
 		return (*ProviderCurrencies).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &ProviderCurrencies{config: pcq.config}
+		node := &ProviderCurrencies{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -432,20 +432,20 @@ func (pcq *ProviderCurrenciesQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, pcq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := pcq.withProvider; query != nil {
-		if err := pcq.loadProvider(ctx, query, nodes, nil,
+	if query := _q.withProvider; query != nil {
+		if err := _q.loadProvider(ctx, query, nodes, nil,
 			func(n *ProviderCurrencies, e *ProviderProfile) { n.Edges.Provider = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pcq.withCurrency; query != nil {
-		if err := pcq.loadCurrency(ctx, query, nodes, nil,
+	if query := _q.withCurrency; query != nil {
+		if err := _q.loadCurrency(ctx, query, nodes, nil,
 			func(n *ProviderCurrencies, e *FiatCurrency) { n.Edges.Currency = e }); err != nil {
 			return nil, err
 		}
@@ -453,7 +453,7 @@ func (pcq *ProviderCurrenciesQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	return nodes, nil
 }
 
-func (pcq *ProviderCurrenciesQuery) loadProvider(ctx context.Context, query *ProviderProfileQuery, nodes []*ProviderCurrencies, init func(*ProviderCurrencies), assign func(*ProviderCurrencies, *ProviderProfile)) error {
+func (_q *ProviderCurrenciesQuery) loadProvider(ctx context.Context, query *ProviderProfileQuery, nodes []*ProviderCurrencies, init func(*ProviderCurrencies), assign func(*ProviderCurrencies, *ProviderProfile)) error {
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*ProviderCurrencies)
 	for i := range nodes {
@@ -485,7 +485,7 @@ func (pcq *ProviderCurrenciesQuery) loadProvider(ctx context.Context, query *Pro
 	}
 	return nil
 }
-func (pcq *ProviderCurrenciesQuery) loadCurrency(ctx context.Context, query *FiatCurrencyQuery, nodes []*ProviderCurrencies, init func(*ProviderCurrencies), assign func(*ProviderCurrencies, *FiatCurrency)) error {
+func (_q *ProviderCurrenciesQuery) loadCurrency(ctx context.Context, query *FiatCurrencyQuery, nodes []*ProviderCurrencies, init func(*ProviderCurrencies), assign func(*ProviderCurrencies, *FiatCurrency)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProviderCurrencies)
 	for i := range nodes {
@@ -518,24 +518,24 @@ func (pcq *ProviderCurrenciesQuery) loadCurrency(ctx context.Context, query *Fia
 	return nil
 }
 
-func (pcq *ProviderCurrenciesQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := pcq.querySpec()
-	_spec.Node.Columns = pcq.ctx.Fields
-	if len(pcq.ctx.Fields) > 0 {
-		_spec.Unique = pcq.ctx.Unique != nil && *pcq.ctx.Unique
+func (_q *ProviderCurrenciesQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, pcq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (pcq *ProviderCurrenciesQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *ProviderCurrenciesQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(providercurrencies.Table, providercurrencies.Columns, sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID))
-	_spec.From = pcq.sql
-	if unique := pcq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if pcq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := pcq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, providercurrencies.FieldID)
 		for i := range fields {
@@ -544,20 +544,20 @@ func (pcq *ProviderCurrenciesQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := pcq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := pcq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := pcq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := pcq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -567,33 +567,33 @@ func (pcq *ProviderCurrenciesQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (pcq *ProviderCurrenciesQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(pcq.driver.Dialect())
+func (_q *ProviderCurrenciesQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(providercurrencies.Table)
-	columns := pcq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = providercurrencies.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if pcq.sql != nil {
-		selector = pcq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if pcq.ctx.Unique != nil && *pcq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range pcq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range pcq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := pcq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := pcq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -606,41 +606,41 @@ type ProviderCurrenciesGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (pcgb *ProviderCurrenciesGroupBy) Aggregate(fns ...AggregateFunc) *ProviderCurrenciesGroupBy {
-	pcgb.fns = append(pcgb.fns, fns...)
-	return pcgb
+func (_g *ProviderCurrenciesGroupBy) Aggregate(fns ...AggregateFunc) *ProviderCurrenciesGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pcgb *ProviderCurrenciesGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pcgb.build.ctx, ent.OpQueryGroupBy)
-	if err := pcgb.build.prepareQuery(ctx); err != nil {
+func (_g *ProviderCurrenciesGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProviderCurrenciesQuery, *ProviderCurrenciesGroupBy](ctx, pcgb.build, pcgb, pcgb.build.inters, v)
+	return scanWithInterceptors[*ProviderCurrenciesQuery, *ProviderCurrenciesGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (pcgb *ProviderCurrenciesGroupBy) sqlScan(ctx context.Context, root *ProviderCurrenciesQuery, v any) error {
+func (_g *ProviderCurrenciesGroupBy) sqlScan(ctx context.Context, root *ProviderCurrenciesQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(pcgb.fns))
-	for _, fn := range pcgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*pcgb.flds)+len(pcgb.fns))
-		for _, f := range *pcgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*pcgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pcgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -654,27 +654,27 @@ type ProviderCurrenciesSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (pcs *ProviderCurrenciesSelect) Aggregate(fns ...AggregateFunc) *ProviderCurrenciesSelect {
-	pcs.fns = append(pcs.fns, fns...)
-	return pcs
+func (_s *ProviderCurrenciesSelect) Aggregate(fns ...AggregateFunc) *ProviderCurrenciesSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pcs *ProviderCurrenciesSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pcs.ctx, ent.OpQuerySelect)
-	if err := pcs.prepareQuery(ctx); err != nil {
+func (_s *ProviderCurrenciesSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProviderCurrenciesQuery, *ProviderCurrenciesSelect](ctx, pcs.ProviderCurrenciesQuery, pcs, pcs.inters, v)
+	return scanWithInterceptors[*ProviderCurrenciesQuery, *ProviderCurrenciesSelect](ctx, _s.ProviderCurrenciesQuery, _s, _s.inters, v)
 }
 
-func (pcs *ProviderCurrenciesSelect) sqlScan(ctx context.Context, root *ProviderCurrenciesQuery, v any) error {
+func (_s *ProviderCurrenciesSelect) sqlScan(ctx context.Context, root *ProviderCurrenciesQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(pcs.fns))
-	for _, fn := range pcs.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*pcs.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -682,7 +682,7 @@ func (pcs *ProviderCurrenciesSelect) sqlScan(ctx context.Context, root *Provider
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pcs.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

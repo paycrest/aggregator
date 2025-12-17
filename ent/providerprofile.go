@@ -165,7 +165,7 @@ func (*ProviderProfile) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ProviderProfile fields.
-func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
+func (_m *ProviderProfile) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -175,59 +175,59 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value.Valid {
-				pp.ID = value.String
+				_m.ID = value.String
 			}
 		case providerprofile.FieldTradingName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field trading_name", values[i])
 			} else if value.Valid {
-				pp.TradingName = value.String
+				_m.TradingName = value.String
 			}
 		case providerprofile.FieldHostIdentifier:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field host_identifier", values[i])
 			} else if value.Valid {
-				pp.HostIdentifier = value.String
+				_m.HostIdentifier = value.String
 			}
 		case providerprofile.FieldProvisionMode:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provision_mode", values[i])
 			} else if value.Valid {
-				pp.ProvisionMode = providerprofile.ProvisionMode(value.String)
+				_m.ProvisionMode = providerprofile.ProvisionMode(value.String)
 			}
 		case providerprofile.FieldIsActive:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_active", values[i])
 			} else if value.Valid {
-				pp.IsActive = value.Bool
+				_m.IsActive = value.Bool
 			}
 		case providerprofile.FieldIsKybVerified:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_kyb_verified", values[i])
 			} else if value.Valid {
-				pp.IsKybVerified = value.Bool
+				_m.IsKybVerified = value.Bool
 			}
 		case providerprofile.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				pp.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case providerprofile.FieldVisibilityMode:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field visibility_mode", values[i])
 			} else if value.Valid {
-				pp.VisibilityMode = providerprofile.VisibilityMode(value.String)
+				_m.VisibilityMode = providerprofile.VisibilityMode(value.String)
 			}
 		case providerprofile.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field user_provider_profile", values[i])
 			} else if value.Valid {
-				pp.user_provider_profile = new(uuid.UUID)
-				*pp.user_provider_profile = *value.S.(*uuid.UUID)
+				_m.user_provider_profile = new(uuid.UUID)
+				*_m.user_provider_profile = *value.S.(*uuid.UUID)
 			}
 		default:
-			pp.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -235,93 +235,93 @@ func (pp *ProviderProfile) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the ProviderProfile.
 // This includes values selected through modifiers, order, etc.
-func (pp *ProviderProfile) Value(name string) (ent.Value, error) {
-	return pp.selectValues.Get(name)
+func (_m *ProviderProfile) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryUser queries the "user" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryUser() *UserQuery {
-	return NewProviderProfileClient(pp.config).QueryUser(pp)
+func (_m *ProviderProfile) QueryUser() *UserQuery {
+	return NewProviderProfileClient(_m.config).QueryUser(_m)
 }
 
 // QueryAPIKey queries the "api_key" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryAPIKey() *APIKeyQuery {
-	return NewProviderProfileClient(pp.config).QueryAPIKey(pp)
+func (_m *ProviderProfile) QueryAPIKey() *APIKeyQuery {
+	return NewProviderProfileClient(_m.config).QueryAPIKey(_m)
 }
 
 // QueryProviderCurrencies queries the "provider_currencies" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryProviderCurrencies() *ProviderCurrenciesQuery {
-	return NewProviderProfileClient(pp.config).QueryProviderCurrencies(pp)
+func (_m *ProviderProfile) QueryProviderCurrencies() *ProviderCurrenciesQuery {
+	return NewProviderProfileClient(_m.config).QueryProviderCurrencies(_m)
 }
 
 // QueryProvisionBuckets queries the "provision_buckets" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryProvisionBuckets() *ProvisionBucketQuery {
-	return NewProviderProfileClient(pp.config).QueryProvisionBuckets(pp)
+func (_m *ProviderProfile) QueryProvisionBuckets() *ProvisionBucketQuery {
+	return NewProviderProfileClient(_m.config).QueryProvisionBuckets(_m)
 }
 
 // QueryOrderTokens queries the "order_tokens" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryOrderTokens() *ProviderOrderTokenQuery {
-	return NewProviderProfileClient(pp.config).QueryOrderTokens(pp)
+func (_m *ProviderProfile) QueryOrderTokens() *ProviderOrderTokenQuery {
+	return NewProviderProfileClient(_m.config).QueryOrderTokens(_m)
 }
 
 // QueryProviderRating queries the "provider_rating" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryProviderRating() *ProviderRatingQuery {
-	return NewProviderProfileClient(pp.config).QueryProviderRating(pp)
+func (_m *ProviderProfile) QueryProviderRating() *ProviderRatingQuery {
+	return NewProviderProfileClient(_m.config).QueryProviderRating(_m)
 }
 
 // QueryAssignedOrders queries the "assigned_orders" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryAssignedOrders() *PaymentOrderQuery {
-	return NewProviderProfileClient(pp.config).QueryAssignedOrders(pp)
+func (_m *ProviderProfile) QueryAssignedOrders() *PaymentOrderQuery {
+	return NewProviderProfileClient(_m.config).QueryAssignedOrders(_m)
 }
 
 // QueryFiatAccounts queries the "fiat_accounts" edge of the ProviderProfile entity.
-func (pp *ProviderProfile) QueryFiatAccounts() *ProviderFiatAccountQuery {
-	return NewProviderProfileClient(pp.config).QueryFiatAccounts(pp)
+func (_m *ProviderProfile) QueryFiatAccounts() *ProviderFiatAccountQuery {
+	return NewProviderProfileClient(_m.config).QueryFiatAccounts(_m)
 }
 
 // Update returns a builder for updating this ProviderProfile.
 // Note that you need to call ProviderProfile.Unwrap() before calling this method if this ProviderProfile
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (pp *ProviderProfile) Update() *ProviderProfileUpdateOne {
-	return NewProviderProfileClient(pp.config).UpdateOne(pp)
+func (_m *ProviderProfile) Update() *ProviderProfileUpdateOne {
+	return NewProviderProfileClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the ProviderProfile entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (pp *ProviderProfile) Unwrap() *ProviderProfile {
-	_tx, ok := pp.config.driver.(*txDriver)
+func (_m *ProviderProfile) Unwrap() *ProviderProfile {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ProviderProfile is not a transactional entity")
 	}
-	pp.config.driver = _tx.drv
-	return pp
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (pp *ProviderProfile) String() string {
+func (_m *ProviderProfile) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProviderProfile(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", pp.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("trading_name=")
-	builder.WriteString(pp.TradingName)
+	builder.WriteString(_m.TradingName)
 	builder.WriteString(", ")
 	builder.WriteString("host_identifier=")
-	builder.WriteString(pp.HostIdentifier)
+	builder.WriteString(_m.HostIdentifier)
 	builder.WriteString(", ")
 	builder.WriteString("provision_mode=")
-	builder.WriteString(fmt.Sprintf("%v", pp.ProvisionMode))
+	builder.WriteString(fmt.Sprintf("%v", _m.ProvisionMode))
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
-	builder.WriteString(fmt.Sprintf("%v", pp.IsActive))
+	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))
 	builder.WriteString(", ")
 	builder.WriteString("is_kyb_verified=")
-	builder.WriteString(fmt.Sprintf("%v", pp.IsKybVerified))
+	builder.WriteString(fmt.Sprintf("%v", _m.IsKybVerified))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(pp.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("visibility_mode=")
-	builder.WriteString(fmt.Sprintf("%v", pp.VisibilityMode))
+	builder.WriteString(fmt.Sprintf("%v", _m.VisibilityMode))
 	builder.WriteByte(')')
 	return builder.String()
 }

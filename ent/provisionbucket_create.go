@@ -28,86 +28,86 @@ type ProvisionBucketCreate struct {
 }
 
 // SetMinAmount sets the "min_amount" field.
-func (pbc *ProvisionBucketCreate) SetMinAmount(d decimal.Decimal) *ProvisionBucketCreate {
-	pbc.mutation.SetMinAmount(d)
-	return pbc
+func (_c *ProvisionBucketCreate) SetMinAmount(v decimal.Decimal) *ProvisionBucketCreate {
+	_c.mutation.SetMinAmount(v)
+	return _c
 }
 
 // SetMaxAmount sets the "max_amount" field.
-func (pbc *ProvisionBucketCreate) SetMaxAmount(d decimal.Decimal) *ProvisionBucketCreate {
-	pbc.mutation.SetMaxAmount(d)
-	return pbc
+func (_c *ProvisionBucketCreate) SetMaxAmount(v decimal.Decimal) *ProvisionBucketCreate {
+	_c.mutation.SetMaxAmount(v)
+	return _c
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (pbc *ProvisionBucketCreate) SetCreatedAt(t time.Time) *ProvisionBucketCreate {
-	pbc.mutation.SetCreatedAt(t)
-	return pbc
+func (_c *ProvisionBucketCreate) SetCreatedAt(v time.Time) *ProvisionBucketCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (pbc *ProvisionBucketCreate) SetNillableCreatedAt(t *time.Time) *ProvisionBucketCreate {
-	if t != nil {
-		pbc.SetCreatedAt(*t)
+func (_c *ProvisionBucketCreate) SetNillableCreatedAt(v *time.Time) *ProvisionBucketCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return pbc
+	return _c
 }
 
 // SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (pbc *ProvisionBucketCreate) SetCurrencyID(id uuid.UUID) *ProvisionBucketCreate {
-	pbc.mutation.SetCurrencyID(id)
-	return pbc
+func (_c *ProvisionBucketCreate) SetCurrencyID(id uuid.UUID) *ProvisionBucketCreate {
+	_c.mutation.SetCurrencyID(id)
+	return _c
 }
 
 // SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (pbc *ProvisionBucketCreate) SetCurrency(f *FiatCurrency) *ProvisionBucketCreate {
-	return pbc.SetCurrencyID(f.ID)
+func (_c *ProvisionBucketCreate) SetCurrency(v *FiatCurrency) *ProvisionBucketCreate {
+	return _c.SetCurrencyID(v.ID)
 }
 
 // AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (pbc *ProvisionBucketCreate) AddPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketCreate {
-	pbc.mutation.AddPaymentOrderIDs(ids...)
-	return pbc
+func (_c *ProvisionBucketCreate) AddPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketCreate {
+	_c.mutation.AddPaymentOrderIDs(ids...)
+	return _c
 }
 
 // AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (pbc *ProvisionBucketCreate) AddPaymentOrders(p ...*PaymentOrder) *ProvisionBucketCreate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *ProvisionBucketCreate) AddPaymentOrders(v ...*PaymentOrder) *ProvisionBucketCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pbc.AddPaymentOrderIDs(ids...)
+	return _c.AddPaymentOrderIDs(ids...)
 }
 
 // AddProviderProfileIDs adds the "provider_profiles" edge to the ProviderProfile entity by IDs.
-func (pbc *ProvisionBucketCreate) AddProviderProfileIDs(ids ...string) *ProvisionBucketCreate {
-	pbc.mutation.AddProviderProfileIDs(ids...)
-	return pbc
+func (_c *ProvisionBucketCreate) AddProviderProfileIDs(ids ...string) *ProvisionBucketCreate {
+	_c.mutation.AddProviderProfileIDs(ids...)
+	return _c
 }
 
 // AddProviderProfiles adds the "provider_profiles" edges to the ProviderProfile entity.
-func (pbc *ProvisionBucketCreate) AddProviderProfiles(p ...*ProviderProfile) *ProvisionBucketCreate {
-	ids := make([]string, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *ProvisionBucketCreate) AddProviderProfiles(v ...*ProviderProfile) *ProvisionBucketCreate {
+	ids := make([]string, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return pbc.AddProviderProfileIDs(ids...)
+	return _c.AddProviderProfileIDs(ids...)
 }
 
 // Mutation returns the ProvisionBucketMutation object of the builder.
-func (pbc *ProvisionBucketCreate) Mutation() *ProvisionBucketMutation {
-	return pbc.mutation
+func (_c *ProvisionBucketCreate) Mutation() *ProvisionBucketMutation {
+	return _c.mutation
 }
 
 // Save creates the ProvisionBucket in the database.
-func (pbc *ProvisionBucketCreate) Save(ctx context.Context) (*ProvisionBucket, error) {
-	pbc.defaults()
-	return withHooks(ctx, pbc.sqlSave, pbc.mutation, pbc.hooks)
+func (_c *ProvisionBucketCreate) Save(ctx context.Context) (*ProvisionBucket, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (pbc *ProvisionBucketCreate) SaveX(ctx context.Context) *ProvisionBucket {
-	v, err := pbc.Save(ctx)
+func (_c *ProvisionBucketCreate) SaveX(ctx context.Context) *ProvisionBucket {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -115,49 +115,49 @@ func (pbc *ProvisionBucketCreate) SaveX(ctx context.Context) *ProvisionBucket {
 }
 
 // Exec executes the query.
-func (pbc *ProvisionBucketCreate) Exec(ctx context.Context) error {
-	_, err := pbc.Save(ctx)
+func (_c *ProvisionBucketCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pbc *ProvisionBucketCreate) ExecX(ctx context.Context) {
-	if err := pbc.Exec(ctx); err != nil {
+func (_c *ProvisionBucketCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pbc *ProvisionBucketCreate) defaults() {
-	if _, ok := pbc.mutation.CreatedAt(); !ok {
+func (_c *ProvisionBucketCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := provisionbucket.DefaultCreatedAt()
-		pbc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pbc *ProvisionBucketCreate) check() error {
-	if _, ok := pbc.mutation.MinAmount(); !ok {
+func (_c *ProvisionBucketCreate) check() error {
+	if _, ok := _c.mutation.MinAmount(); !ok {
 		return &ValidationError{Name: "min_amount", err: errors.New(`ent: missing required field "ProvisionBucket.min_amount"`)}
 	}
-	if _, ok := pbc.mutation.MaxAmount(); !ok {
+	if _, ok := _c.mutation.MaxAmount(); !ok {
 		return &ValidationError{Name: "max_amount", err: errors.New(`ent: missing required field "ProvisionBucket.max_amount"`)}
 	}
-	if _, ok := pbc.mutation.CreatedAt(); !ok {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ProvisionBucket.created_at"`)}
 	}
-	if len(pbc.mutation.CurrencyIDs()) == 0 {
+	if len(_c.mutation.CurrencyIDs()) == 0 {
 		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required edge "ProvisionBucket.currency"`)}
 	}
 	return nil
 }
 
-func (pbc *ProvisionBucketCreate) sqlSave(ctx context.Context) (*ProvisionBucket, error) {
-	if err := pbc.check(); err != nil {
+func (_c *ProvisionBucketCreate) sqlSave(ctx context.Context) (*ProvisionBucket, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := pbc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, pbc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -165,30 +165,30 @@ func (pbc *ProvisionBucketCreate) sqlSave(ctx context.Context) (*ProvisionBucket
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	pbc.mutation.id = &_node.ID
-	pbc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (pbc *ProvisionBucketCreate) createSpec() (*ProvisionBucket, *sqlgraph.CreateSpec) {
+func (_c *ProvisionBucketCreate) createSpec() (*ProvisionBucket, *sqlgraph.CreateSpec) {
 	var (
-		_node = &ProvisionBucket{config: pbc.config}
+		_node = &ProvisionBucket{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(provisionbucket.Table, sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = pbc.conflict
-	if value, ok := pbc.mutation.MinAmount(); ok {
+	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.MinAmount(); ok {
 		_spec.SetField(provisionbucket.FieldMinAmount, field.TypeFloat64, value)
 		_node.MinAmount = value
 	}
-	if value, ok := pbc.mutation.MaxAmount(); ok {
+	if value, ok := _c.mutation.MaxAmount(); ok {
 		_spec.SetField(provisionbucket.FieldMaxAmount, field.TypeFloat64, value)
 		_node.MaxAmount = value
 	}
-	if value, ok := pbc.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(provisionbucket.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if nodes := pbc.mutation.CurrencyIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.CurrencyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -205,7 +205,7 @@ func (pbc *ProvisionBucketCreate) createSpec() (*ProvisionBucket, *sqlgraph.Crea
 		_node.fiat_currency_provision_buckets = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pbc.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -221,7 +221,7 @@ func (pbc *ProvisionBucketCreate) createSpec() (*ProvisionBucket, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := pbc.mutation.ProviderProfilesIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderProfilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: false,
@@ -256,10 +256,10 @@ func (pbc *ProvisionBucketCreate) createSpec() (*ProvisionBucket, *sqlgraph.Crea
 //			SetMinAmount(v+v).
 //		}).
 //		Exec(ctx)
-func (pbc *ProvisionBucketCreate) OnConflict(opts ...sql.ConflictOption) *ProvisionBucketUpsertOne {
-	pbc.conflict = opts
+func (_c *ProvisionBucketCreate) OnConflict(opts ...sql.ConflictOption) *ProvisionBucketUpsertOne {
+	_c.conflict = opts
 	return &ProvisionBucketUpsertOne{
-		create: pbc,
+		create: _c,
 	}
 }
 
@@ -269,10 +269,10 @@ func (pbc *ProvisionBucketCreate) OnConflict(opts ...sql.ConflictOption) *Provis
 //	client.ProvisionBucket.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pbc *ProvisionBucketCreate) OnConflictColumns(columns ...string) *ProvisionBucketUpsertOne {
-	pbc.conflict = append(pbc.conflict, sql.ConflictColumns(columns...))
+func (_c *ProvisionBucketCreate) OnConflictColumns(columns ...string) *ProvisionBucketUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProvisionBucketUpsertOne{
-		create: pbc,
+		create: _c,
 	}
 }
 
@@ -454,16 +454,16 @@ type ProvisionBucketCreateBulk struct {
 }
 
 // Save creates the ProvisionBucket entities in the database.
-func (pbcb *ProvisionBucketCreateBulk) Save(ctx context.Context) ([]*ProvisionBucket, error) {
-	if pbcb.err != nil {
-		return nil, pbcb.err
+func (_c *ProvisionBucketCreateBulk) Save(ctx context.Context) ([]*ProvisionBucket, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(pbcb.builders))
-	nodes := make([]*ProvisionBucket, len(pbcb.builders))
-	mutators := make([]Mutator, len(pbcb.builders))
-	for i := range pbcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*ProvisionBucket, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := pbcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*ProvisionBucketMutation)
@@ -477,12 +477,12 @@ func (pbcb *ProvisionBucketCreateBulk) Save(ctx context.Context) ([]*ProvisionBu
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, pbcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = pbcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, pbcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -506,7 +506,7 @@ func (pbcb *ProvisionBucketCreateBulk) Save(ctx context.Context) ([]*ProvisionBu
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, pbcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -514,8 +514,8 @@ func (pbcb *ProvisionBucketCreateBulk) Save(ctx context.Context) ([]*ProvisionBu
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pbcb *ProvisionBucketCreateBulk) SaveX(ctx context.Context) []*ProvisionBucket {
-	v, err := pbcb.Save(ctx)
+func (_c *ProvisionBucketCreateBulk) SaveX(ctx context.Context) []*ProvisionBucket {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -523,14 +523,14 @@ func (pbcb *ProvisionBucketCreateBulk) SaveX(ctx context.Context) []*ProvisionBu
 }
 
 // Exec executes the query.
-func (pbcb *ProvisionBucketCreateBulk) Exec(ctx context.Context) error {
-	_, err := pbcb.Save(ctx)
+func (_c *ProvisionBucketCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pbcb *ProvisionBucketCreateBulk) ExecX(ctx context.Context) {
-	if err := pbcb.Exec(ctx); err != nil {
+func (_c *ProvisionBucketCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -550,10 +550,10 @@ func (pbcb *ProvisionBucketCreateBulk) ExecX(ctx context.Context) {
 //			SetMinAmount(v+v).
 //		}).
 //		Exec(ctx)
-func (pbcb *ProvisionBucketCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProvisionBucketUpsertBulk {
-	pbcb.conflict = opts
+func (_c *ProvisionBucketCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProvisionBucketUpsertBulk {
+	_c.conflict = opts
 	return &ProvisionBucketUpsertBulk{
-		create: pbcb,
+		create: _c,
 	}
 }
 
@@ -563,10 +563,10 @@ func (pbcb *ProvisionBucketCreateBulk) OnConflict(opts ...sql.ConflictOption) *P
 //	client.ProvisionBucket.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pbcb *ProvisionBucketCreateBulk) OnConflictColumns(columns ...string) *ProvisionBucketUpsertBulk {
-	pbcb.conflict = append(pbcb.conflict, sql.ConflictColumns(columns...))
+func (_c *ProvisionBucketCreateBulk) OnConflictColumns(columns ...string) *ProvisionBucketUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProvisionBucketUpsertBulk{
-		create: pbcb,
+		create: _c,
 	}
 }
 

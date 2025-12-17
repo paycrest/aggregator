@@ -33,255 +33,255 @@ type ProviderProfileCreate struct {
 }
 
 // SetTradingName sets the "trading_name" field.
-func (ppc *ProviderProfileCreate) SetTradingName(s string) *ProviderProfileCreate {
-	ppc.mutation.SetTradingName(s)
-	return ppc
+func (_c *ProviderProfileCreate) SetTradingName(v string) *ProviderProfileCreate {
+	_c.mutation.SetTradingName(v)
+	return _c
 }
 
 // SetNillableTradingName sets the "trading_name" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableTradingName(s *string) *ProviderProfileCreate {
-	if s != nil {
-		ppc.SetTradingName(*s)
+func (_c *ProviderProfileCreate) SetNillableTradingName(v *string) *ProviderProfileCreate {
+	if v != nil {
+		_c.SetTradingName(*v)
 	}
-	return ppc
+	return _c
 }
 
 // SetHostIdentifier sets the "host_identifier" field.
-func (ppc *ProviderProfileCreate) SetHostIdentifier(s string) *ProviderProfileCreate {
-	ppc.mutation.SetHostIdentifier(s)
-	return ppc
+func (_c *ProviderProfileCreate) SetHostIdentifier(v string) *ProviderProfileCreate {
+	_c.mutation.SetHostIdentifier(v)
+	return _c
 }
 
 // SetNillableHostIdentifier sets the "host_identifier" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableHostIdentifier(s *string) *ProviderProfileCreate {
-	if s != nil {
-		ppc.SetHostIdentifier(*s)
+func (_c *ProviderProfileCreate) SetNillableHostIdentifier(v *string) *ProviderProfileCreate {
+	if v != nil {
+		_c.SetHostIdentifier(*v)
 	}
-	return ppc
+	return _c
 }
 
 // SetProvisionMode sets the "provision_mode" field.
-func (ppc *ProviderProfileCreate) SetProvisionMode(pm providerprofile.ProvisionMode) *ProviderProfileCreate {
-	ppc.mutation.SetProvisionMode(pm)
-	return ppc
+func (_c *ProviderProfileCreate) SetProvisionMode(v providerprofile.ProvisionMode) *ProviderProfileCreate {
+	_c.mutation.SetProvisionMode(v)
+	return _c
 }
 
 // SetNillableProvisionMode sets the "provision_mode" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableProvisionMode(pm *providerprofile.ProvisionMode) *ProviderProfileCreate {
-	if pm != nil {
-		ppc.SetProvisionMode(*pm)
+func (_c *ProviderProfileCreate) SetNillableProvisionMode(v *providerprofile.ProvisionMode) *ProviderProfileCreate {
+	if v != nil {
+		_c.SetProvisionMode(*v)
 	}
-	return ppc
+	return _c
 }
 
 // SetIsActive sets the "is_active" field.
-func (ppc *ProviderProfileCreate) SetIsActive(b bool) *ProviderProfileCreate {
-	ppc.mutation.SetIsActive(b)
-	return ppc
+func (_c *ProviderProfileCreate) SetIsActive(v bool) *ProviderProfileCreate {
+	_c.mutation.SetIsActive(v)
+	return _c
 }
 
 // SetNillableIsActive sets the "is_active" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableIsActive(b *bool) *ProviderProfileCreate {
-	if b != nil {
-		ppc.SetIsActive(*b)
+func (_c *ProviderProfileCreate) SetNillableIsActive(v *bool) *ProviderProfileCreate {
+	if v != nil {
+		_c.SetIsActive(*v)
 	}
-	return ppc
+	return _c
 }
 
 // SetIsKybVerified sets the "is_kyb_verified" field.
-func (ppc *ProviderProfileCreate) SetIsKybVerified(b bool) *ProviderProfileCreate {
-	ppc.mutation.SetIsKybVerified(b)
-	return ppc
+func (_c *ProviderProfileCreate) SetIsKybVerified(v bool) *ProviderProfileCreate {
+	_c.mutation.SetIsKybVerified(v)
+	return _c
 }
 
 // SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableIsKybVerified(b *bool) *ProviderProfileCreate {
-	if b != nil {
-		ppc.SetIsKybVerified(*b)
+func (_c *ProviderProfileCreate) SetNillableIsKybVerified(v *bool) *ProviderProfileCreate {
+	if v != nil {
+		_c.SetIsKybVerified(*v)
 	}
-	return ppc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (ppc *ProviderProfileCreate) SetUpdatedAt(t time.Time) *ProviderProfileCreate {
-	ppc.mutation.SetUpdatedAt(t)
-	return ppc
+func (_c *ProviderProfileCreate) SetUpdatedAt(v time.Time) *ProviderProfileCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableUpdatedAt(t *time.Time) *ProviderProfileCreate {
-	if t != nil {
-		ppc.SetUpdatedAt(*t)
+func (_c *ProviderProfileCreate) SetNillableUpdatedAt(v *time.Time) *ProviderProfileCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return ppc
+	return _c
 }
 
 // SetVisibilityMode sets the "visibility_mode" field.
-func (ppc *ProviderProfileCreate) SetVisibilityMode(pm providerprofile.VisibilityMode) *ProviderProfileCreate {
-	ppc.mutation.SetVisibilityMode(pm)
-	return ppc
+func (_c *ProviderProfileCreate) SetVisibilityMode(v providerprofile.VisibilityMode) *ProviderProfileCreate {
+	_c.mutation.SetVisibilityMode(v)
+	return _c
 }
 
 // SetNillableVisibilityMode sets the "visibility_mode" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableVisibilityMode(pm *providerprofile.VisibilityMode) *ProviderProfileCreate {
-	if pm != nil {
-		ppc.SetVisibilityMode(*pm)
+func (_c *ProviderProfileCreate) SetNillableVisibilityMode(v *providerprofile.VisibilityMode) *ProviderProfileCreate {
+	if v != nil {
+		_c.SetVisibilityMode(*v)
 	}
-	return ppc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (ppc *ProviderProfileCreate) SetID(s string) *ProviderProfileCreate {
-	ppc.mutation.SetID(s)
-	return ppc
+func (_c *ProviderProfileCreate) SetID(v string) *ProviderProfileCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableID(s *string) *ProviderProfileCreate {
-	if s != nil {
-		ppc.SetID(*s)
+func (_c *ProviderProfileCreate) SetNillableID(v *string) *ProviderProfileCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return ppc
+	return _c
 }
 
 // SetUserID sets the "user" edge to the User entity by ID.
-func (ppc *ProviderProfileCreate) SetUserID(id uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.SetUserID(id)
-	return ppc
+func (_c *ProviderProfileCreate) SetUserID(id uuid.UUID) *ProviderProfileCreate {
+	_c.mutation.SetUserID(id)
+	return _c
 }
 
 // SetUser sets the "user" edge to the User entity.
-func (ppc *ProviderProfileCreate) SetUser(u *User) *ProviderProfileCreate {
-	return ppc.SetUserID(u.ID)
+func (_c *ProviderProfileCreate) SetUser(v *User) *ProviderProfileCreate {
+	return _c.SetUserID(v.ID)
 }
 
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
-func (ppc *ProviderProfileCreate) SetAPIKeyID(id uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.SetAPIKeyID(id)
-	return ppc
+func (_c *ProviderProfileCreate) SetAPIKeyID(id uuid.UUID) *ProviderProfileCreate {
+	_c.mutation.SetAPIKeyID(id)
+	return _c
 }
 
 // SetNillableAPIKeyID sets the "api_key" edge to the APIKey entity by ID if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableAPIKeyID(id *uuid.UUID) *ProviderProfileCreate {
+func (_c *ProviderProfileCreate) SetNillableAPIKeyID(id *uuid.UUID) *ProviderProfileCreate {
 	if id != nil {
-		ppc = ppc.SetAPIKeyID(*id)
+		_c = _c.SetAPIKeyID(*id)
 	}
-	return ppc
+	return _c
 }
 
 // SetAPIKey sets the "api_key" edge to the APIKey entity.
-func (ppc *ProviderProfileCreate) SetAPIKey(a *APIKey) *ProviderProfileCreate {
-	return ppc.SetAPIKeyID(a.ID)
+func (_c *ProviderProfileCreate) SetAPIKey(v *APIKey) *ProviderProfileCreate {
+	return _c.SetAPIKeyID(v.ID)
 }
 
 // AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
-func (ppc *ProviderProfileCreate) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.AddProviderCurrencyIDs(ids...)
-	return ppc
+func (_c *ProviderProfileCreate) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	_c.mutation.AddProviderCurrencyIDs(ids...)
+	return _c
 }
 
 // AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
-func (ppc *ProviderProfileCreate) AddProviderCurrencies(p ...*ProviderCurrencies) *ProviderProfileCreate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *ProviderProfileCreate) AddProviderCurrencies(v ...*ProviderCurrencies) *ProviderProfileCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppc.AddProviderCurrencyIDs(ids...)
+	return _c.AddProviderCurrencyIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
-func (ppc *ProviderProfileCreate) AddProvisionBucketIDs(ids ...int) *ProviderProfileCreate {
-	ppc.mutation.AddProvisionBucketIDs(ids...)
-	return ppc
+func (_c *ProviderProfileCreate) AddProvisionBucketIDs(ids ...int) *ProviderProfileCreate {
+	_c.mutation.AddProvisionBucketIDs(ids...)
+	return _c
 }
 
 // AddProvisionBuckets adds the "provision_buckets" edges to the ProvisionBucket entity.
-func (ppc *ProviderProfileCreate) AddProvisionBuckets(p ...*ProvisionBucket) *ProviderProfileCreate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *ProviderProfileCreate) AddProvisionBuckets(v ...*ProvisionBucket) *ProviderProfileCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppc.AddProvisionBucketIDs(ids...)
+	return _c.AddProvisionBucketIDs(ids...)
 }
 
 // AddOrderTokenIDs adds the "order_tokens" edge to the ProviderOrderToken entity by IDs.
-func (ppc *ProviderProfileCreate) AddOrderTokenIDs(ids ...int) *ProviderProfileCreate {
-	ppc.mutation.AddOrderTokenIDs(ids...)
-	return ppc
+func (_c *ProviderProfileCreate) AddOrderTokenIDs(ids ...int) *ProviderProfileCreate {
+	_c.mutation.AddOrderTokenIDs(ids...)
+	return _c
 }
 
 // AddOrderTokens adds the "order_tokens" edges to the ProviderOrderToken entity.
-func (ppc *ProviderProfileCreate) AddOrderTokens(p ...*ProviderOrderToken) *ProviderProfileCreate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *ProviderProfileCreate) AddOrderTokens(v ...*ProviderOrderToken) *ProviderProfileCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppc.AddOrderTokenIDs(ids...)
+	return _c.AddOrderTokenIDs(ids...)
 }
 
 // SetProviderRatingID sets the "provider_rating" edge to the ProviderRating entity by ID.
-func (ppc *ProviderProfileCreate) SetProviderRatingID(id int) *ProviderProfileCreate {
-	ppc.mutation.SetProviderRatingID(id)
-	return ppc
+func (_c *ProviderProfileCreate) SetProviderRatingID(id int) *ProviderProfileCreate {
+	_c.mutation.SetProviderRatingID(id)
+	return _c
 }
 
 // SetNillableProviderRatingID sets the "provider_rating" edge to the ProviderRating entity by ID if the given value is not nil.
-func (ppc *ProviderProfileCreate) SetNillableProviderRatingID(id *int) *ProviderProfileCreate {
+func (_c *ProviderProfileCreate) SetNillableProviderRatingID(id *int) *ProviderProfileCreate {
 	if id != nil {
-		ppc = ppc.SetProviderRatingID(*id)
+		_c = _c.SetProviderRatingID(*id)
 	}
-	return ppc
+	return _c
 }
 
 // SetProviderRating sets the "provider_rating" edge to the ProviderRating entity.
-func (ppc *ProviderProfileCreate) SetProviderRating(p *ProviderRating) *ProviderProfileCreate {
-	return ppc.SetProviderRatingID(p.ID)
+func (_c *ProviderProfileCreate) SetProviderRating(v *ProviderRating) *ProviderProfileCreate {
+	return _c.SetProviderRatingID(v.ID)
 }
 
 // AddAssignedOrderIDs adds the "assigned_orders" edge to the PaymentOrder entity by IDs.
-func (ppc *ProviderProfileCreate) AddAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.AddAssignedOrderIDs(ids...)
-	return ppc
+func (_c *ProviderProfileCreate) AddAssignedOrderIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	_c.mutation.AddAssignedOrderIDs(ids...)
+	return _c
 }
 
 // AddAssignedOrders adds the "assigned_orders" edges to the PaymentOrder entity.
-func (ppc *ProviderProfileCreate) AddAssignedOrders(p ...*PaymentOrder) *ProviderProfileCreate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *ProviderProfileCreate) AddAssignedOrders(v ...*PaymentOrder) *ProviderProfileCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppc.AddAssignedOrderIDs(ids...)
+	return _c.AddAssignedOrderIDs(ids...)
 }
 
 // AddFiatAccountIDs adds the "fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
-func (ppc *ProviderProfileCreate) AddFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileCreate {
-	ppc.mutation.AddFiatAccountIDs(ids...)
-	return ppc
+func (_c *ProviderProfileCreate) AddFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	_c.mutation.AddFiatAccountIDs(ids...)
+	return _c
 }
 
 // AddFiatAccounts adds the "fiat_accounts" edges to the ProviderFiatAccount entity.
-func (ppc *ProviderProfileCreate) AddFiatAccounts(p ...*ProviderFiatAccount) *ProviderProfileCreate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *ProviderProfileCreate) AddFiatAccounts(v ...*ProviderFiatAccount) *ProviderProfileCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return ppc.AddFiatAccountIDs(ids...)
+	return _c.AddFiatAccountIDs(ids...)
 }
 
 // Mutation returns the ProviderProfileMutation object of the builder.
-func (ppc *ProviderProfileCreate) Mutation() *ProviderProfileMutation {
-	return ppc.mutation
+func (_c *ProviderProfileCreate) Mutation() *ProviderProfileMutation {
+	return _c.mutation
 }
 
 // Save creates the ProviderProfile in the database.
-func (ppc *ProviderProfileCreate) Save(ctx context.Context) (*ProviderProfile, error) {
-	ppc.defaults()
-	return withHooks(ctx, ppc.sqlSave, ppc.mutation, ppc.hooks)
+func (_c *ProviderProfileCreate) Save(ctx context.Context) (*ProviderProfile, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (ppc *ProviderProfileCreate) SaveX(ctx context.Context) *ProviderProfile {
-	v, err := ppc.Save(ctx)
+func (_c *ProviderProfileCreate) SaveX(ctx context.Context) *ProviderProfile {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -289,90 +289,90 @@ func (ppc *ProviderProfileCreate) SaveX(ctx context.Context) *ProviderProfile {
 }
 
 // Exec executes the query.
-func (ppc *ProviderProfileCreate) Exec(ctx context.Context) error {
-	_, err := ppc.Save(ctx)
+func (_c *ProviderProfileCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ppc *ProviderProfileCreate) ExecX(ctx context.Context) {
-	if err := ppc.Exec(ctx); err != nil {
+func (_c *ProviderProfileCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (ppc *ProviderProfileCreate) defaults() {
-	if _, ok := ppc.mutation.ProvisionMode(); !ok {
+func (_c *ProviderProfileCreate) defaults() {
+	if _, ok := _c.mutation.ProvisionMode(); !ok {
 		v := providerprofile.DefaultProvisionMode
-		ppc.mutation.SetProvisionMode(v)
+		_c.mutation.SetProvisionMode(v)
 	}
-	if _, ok := ppc.mutation.IsActive(); !ok {
+	if _, ok := _c.mutation.IsActive(); !ok {
 		v := providerprofile.DefaultIsActive
-		ppc.mutation.SetIsActive(v)
+		_c.mutation.SetIsActive(v)
 	}
-	if _, ok := ppc.mutation.IsKybVerified(); !ok {
+	if _, ok := _c.mutation.IsKybVerified(); !ok {
 		v := providerprofile.DefaultIsKybVerified
-		ppc.mutation.SetIsKybVerified(v)
+		_c.mutation.SetIsKybVerified(v)
 	}
-	if _, ok := ppc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := providerprofile.DefaultUpdatedAt()
-		ppc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := ppc.mutation.VisibilityMode(); !ok {
+	if _, ok := _c.mutation.VisibilityMode(); !ok {
 		v := providerprofile.DefaultVisibilityMode
-		ppc.mutation.SetVisibilityMode(v)
+		_c.mutation.SetVisibilityMode(v)
 	}
-	if _, ok := ppc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := providerprofile.DefaultID()
-		ppc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (ppc *ProviderProfileCreate) check() error {
-	if v, ok := ppc.mutation.TradingName(); ok {
+func (_c *ProviderProfileCreate) check() error {
+	if v, ok := _c.mutation.TradingName(); ok {
 		if err := providerprofile.TradingNameValidator(v); err != nil {
 			return &ValidationError{Name: "trading_name", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.trading_name": %w`, err)}
 		}
 	}
-	if _, ok := ppc.mutation.ProvisionMode(); !ok {
+	if _, ok := _c.mutation.ProvisionMode(); !ok {
 		return &ValidationError{Name: "provision_mode", err: errors.New(`ent: missing required field "ProviderProfile.provision_mode"`)}
 	}
-	if v, ok := ppc.mutation.ProvisionMode(); ok {
+	if v, ok := _c.mutation.ProvisionMode(); ok {
 		if err := providerprofile.ProvisionModeValidator(v); err != nil {
 			return &ValidationError{Name: "provision_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.provision_mode": %w`, err)}
 		}
 	}
-	if _, ok := ppc.mutation.IsActive(); !ok {
+	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "ProviderProfile.is_active"`)}
 	}
-	if _, ok := ppc.mutation.IsKybVerified(); !ok {
+	if _, ok := _c.mutation.IsKybVerified(); !ok {
 		return &ValidationError{Name: "is_kyb_verified", err: errors.New(`ent: missing required field "ProviderProfile.is_kyb_verified"`)}
 	}
-	if _, ok := ppc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderProfile.updated_at"`)}
 	}
-	if _, ok := ppc.mutation.VisibilityMode(); !ok {
+	if _, ok := _c.mutation.VisibilityMode(); !ok {
 		return &ValidationError{Name: "visibility_mode", err: errors.New(`ent: missing required field "ProviderProfile.visibility_mode"`)}
 	}
-	if v, ok := ppc.mutation.VisibilityMode(); ok {
+	if v, ok := _c.mutation.VisibilityMode(); ok {
 		if err := providerprofile.VisibilityModeValidator(v); err != nil {
 			return &ValidationError{Name: "visibility_mode", err: fmt.Errorf(`ent: validator failed for field "ProviderProfile.visibility_mode": %w`, err)}
 		}
 	}
-	if len(ppc.mutation.UserIDs()) == 0 {
+	if len(_c.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "ProviderProfile.user"`)}
 	}
 	return nil
 }
 
-func (ppc *ProviderProfileCreate) sqlSave(ctx context.Context) (*ProviderProfile, error) {
-	if err := ppc.check(); err != nil {
+func (_c *ProviderProfileCreate) sqlSave(ctx context.Context) (*ProviderProfile, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := ppc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, ppc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -385,50 +385,50 @@ func (ppc *ProviderProfileCreate) sqlSave(ctx context.Context) (*ProviderProfile
 			return nil, fmt.Errorf("unexpected ProviderProfile.ID type: %T", _spec.ID.Value)
 		}
 	}
-	ppc.mutation.id = &_node.ID
-	ppc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.CreateSpec) {
+func (_c *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.CreateSpec) {
 	var (
-		_node = &ProviderProfile{config: ppc.config}
+		_node = &ProviderProfile{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(providerprofile.Table, sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString))
 	)
-	_spec.OnConflict = ppc.conflict
-	if id, ok := ppc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = id
 	}
-	if value, ok := ppc.mutation.TradingName(); ok {
+	if value, ok := _c.mutation.TradingName(); ok {
 		_spec.SetField(providerprofile.FieldTradingName, field.TypeString, value)
 		_node.TradingName = value
 	}
-	if value, ok := ppc.mutation.HostIdentifier(); ok {
+	if value, ok := _c.mutation.HostIdentifier(); ok {
 		_spec.SetField(providerprofile.FieldHostIdentifier, field.TypeString, value)
 		_node.HostIdentifier = value
 	}
-	if value, ok := ppc.mutation.ProvisionMode(); ok {
+	if value, ok := _c.mutation.ProvisionMode(); ok {
 		_spec.SetField(providerprofile.FieldProvisionMode, field.TypeEnum, value)
 		_node.ProvisionMode = value
 	}
-	if value, ok := ppc.mutation.IsActive(); ok {
+	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
 	}
-	if value, ok := ppc.mutation.IsKybVerified(); ok {
+	if value, ok := _c.mutation.IsKybVerified(); ok {
 		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 		_node.IsKybVerified = value
 	}
-	if value, ok := ppc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := ppc.mutation.VisibilityMode(); ok {
+	if value, ok := _c.mutation.VisibilityMode(); ok {
 		_spec.SetField(providerprofile.FieldVisibilityMode, field.TypeEnum, value)
 		_node.VisibilityMode = value
 	}
-	if nodes := ppc.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -445,7 +445,7 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		_node.user_provider_profile = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.APIKeyIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.APIKeyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -461,7 +461,7 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -477,7 +477,7 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
@@ -493,7 +493,7 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.OrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.OrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -509,7 +509,7 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.ProviderRatingIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderRatingIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -525,7 +525,7 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.AssignedOrdersIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.AssignedOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -541,7 +541,7 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := ppc.mutation.FiatAccountsIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.FiatAccountsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -576,10 +576,10 @@ func (ppc *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Crea
 //			SetTradingName(v+v).
 //		}).
 //		Exec(ctx)
-func (ppc *ProviderProfileCreate) OnConflict(opts ...sql.ConflictOption) *ProviderProfileUpsertOne {
-	ppc.conflict = opts
+func (_c *ProviderProfileCreate) OnConflict(opts ...sql.ConflictOption) *ProviderProfileUpsertOne {
+	_c.conflict = opts
 	return &ProviderProfileUpsertOne{
-		create: ppc,
+		create: _c,
 	}
 }
 
@@ -589,10 +589,10 @@ func (ppc *ProviderProfileCreate) OnConflict(opts ...sql.ConflictOption) *Provid
 //	client.ProviderProfile.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (ppc *ProviderProfileCreate) OnConflictColumns(columns ...string) *ProviderProfileUpsertOne {
-	ppc.conflict = append(ppc.conflict, sql.ConflictColumns(columns...))
+func (_c *ProviderProfileCreate) OnConflictColumns(columns ...string) *ProviderProfileUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProviderProfileUpsertOne{
-		create: ppc,
+		create: _c,
 	}
 }
 
@@ -912,16 +912,16 @@ type ProviderProfileCreateBulk struct {
 }
 
 // Save creates the ProviderProfile entities in the database.
-func (ppcb *ProviderProfileCreateBulk) Save(ctx context.Context) ([]*ProviderProfile, error) {
-	if ppcb.err != nil {
-		return nil, ppcb.err
+func (_c *ProviderProfileCreateBulk) Save(ctx context.Context) ([]*ProviderProfile, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(ppcb.builders))
-	nodes := make([]*ProviderProfile, len(ppcb.builders))
-	mutators := make([]Mutator, len(ppcb.builders))
-	for i := range ppcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*ProviderProfile, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := ppcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*ProviderProfileMutation)
@@ -935,12 +935,12 @@ func (ppcb *ProviderProfileCreateBulk) Save(ctx context.Context) ([]*ProviderPro
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, ppcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = ppcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, ppcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -960,7 +960,7 @@ func (ppcb *ProviderProfileCreateBulk) Save(ctx context.Context) ([]*ProviderPro
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, ppcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -968,8 +968,8 @@ func (ppcb *ProviderProfileCreateBulk) Save(ctx context.Context) ([]*ProviderPro
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (ppcb *ProviderProfileCreateBulk) SaveX(ctx context.Context) []*ProviderProfile {
-	v, err := ppcb.Save(ctx)
+func (_c *ProviderProfileCreateBulk) SaveX(ctx context.Context) []*ProviderProfile {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -977,14 +977,14 @@ func (ppcb *ProviderProfileCreateBulk) SaveX(ctx context.Context) []*ProviderPro
 }
 
 // Exec executes the query.
-func (ppcb *ProviderProfileCreateBulk) Exec(ctx context.Context) error {
-	_, err := ppcb.Save(ctx)
+func (_c *ProviderProfileCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ppcb *ProviderProfileCreateBulk) ExecX(ctx context.Context) {
-	if err := ppcb.Exec(ctx); err != nil {
+func (_c *ProviderProfileCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -1004,10 +1004,10 @@ func (ppcb *ProviderProfileCreateBulk) ExecX(ctx context.Context) {
 //			SetTradingName(v+v).
 //		}).
 //		Exec(ctx)
-func (ppcb *ProviderProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderProfileUpsertBulk {
-	ppcb.conflict = opts
+func (_c *ProviderProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderProfileUpsertBulk {
+	_c.conflict = opts
 	return &ProviderProfileUpsertBulk{
-		create: ppcb,
+		create: _c,
 	}
 }
 
@@ -1017,10 +1017,10 @@ func (ppcb *ProviderProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *P
 //	client.ProviderProfile.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (ppcb *ProviderProfileCreateBulk) OnConflictColumns(columns ...string) *ProviderProfileUpsertBulk {
-	ppcb.conflict = append(ppcb.conflict, sql.ConflictColumns(columns...))
+func (_c *ProviderProfileCreateBulk) OnConflictColumns(columns ...string) *ProviderProfileUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProviderProfileUpsertBulk{
-		create: ppcb,
+		create: _c,
 	}
 }
 

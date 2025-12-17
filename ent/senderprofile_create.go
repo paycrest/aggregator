@@ -29,169 +29,169 @@ type SenderProfileCreate struct {
 }
 
 // SetWebhookURL sets the "webhook_url" field.
-func (spc *SenderProfileCreate) SetWebhookURL(s string) *SenderProfileCreate {
-	spc.mutation.SetWebhookURL(s)
-	return spc
+func (_c *SenderProfileCreate) SetWebhookURL(v string) *SenderProfileCreate {
+	_c.mutation.SetWebhookURL(v)
+	return _c
 }
 
 // SetNillableWebhookURL sets the "webhook_url" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableWebhookURL(s *string) *SenderProfileCreate {
-	if s != nil {
-		spc.SetWebhookURL(*s)
+func (_c *SenderProfileCreate) SetNillableWebhookURL(v *string) *SenderProfileCreate {
+	if v != nil {
+		_c.SetWebhookURL(*v)
 	}
-	return spc
+	return _c
 }
 
 // SetDomainWhitelist sets the "domain_whitelist" field.
-func (spc *SenderProfileCreate) SetDomainWhitelist(s []string) *SenderProfileCreate {
-	spc.mutation.SetDomainWhitelist(s)
-	return spc
+func (_c *SenderProfileCreate) SetDomainWhitelist(v []string) *SenderProfileCreate {
+	_c.mutation.SetDomainWhitelist(v)
+	return _c
 }
 
 // SetProviderID sets the "provider_id" field.
-func (spc *SenderProfileCreate) SetProviderID(s string) *SenderProfileCreate {
-	spc.mutation.SetProviderID(s)
-	return spc
+func (_c *SenderProfileCreate) SetProviderID(v string) *SenderProfileCreate {
+	_c.mutation.SetProviderID(v)
+	return _c
 }
 
 // SetNillableProviderID sets the "provider_id" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableProviderID(s *string) *SenderProfileCreate {
-	if s != nil {
-		spc.SetProviderID(*s)
+func (_c *SenderProfileCreate) SetNillableProviderID(v *string) *SenderProfileCreate {
+	if v != nil {
+		_c.SetProviderID(*v)
 	}
-	return spc
+	return _c
 }
 
 // SetIsPartner sets the "is_partner" field.
-func (spc *SenderProfileCreate) SetIsPartner(b bool) *SenderProfileCreate {
-	spc.mutation.SetIsPartner(b)
-	return spc
+func (_c *SenderProfileCreate) SetIsPartner(v bool) *SenderProfileCreate {
+	_c.mutation.SetIsPartner(v)
+	return _c
 }
 
 // SetNillableIsPartner sets the "is_partner" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableIsPartner(b *bool) *SenderProfileCreate {
-	if b != nil {
-		spc.SetIsPartner(*b)
+func (_c *SenderProfileCreate) SetNillableIsPartner(v *bool) *SenderProfileCreate {
+	if v != nil {
+		_c.SetIsPartner(*v)
 	}
-	return spc
+	return _c
 }
 
 // SetIsActive sets the "is_active" field.
-func (spc *SenderProfileCreate) SetIsActive(b bool) *SenderProfileCreate {
-	spc.mutation.SetIsActive(b)
-	return spc
+func (_c *SenderProfileCreate) SetIsActive(v bool) *SenderProfileCreate {
+	_c.mutation.SetIsActive(v)
+	return _c
 }
 
 // SetNillableIsActive sets the "is_active" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableIsActive(b *bool) *SenderProfileCreate {
-	if b != nil {
-		spc.SetIsActive(*b)
+func (_c *SenderProfileCreate) SetNillableIsActive(v *bool) *SenderProfileCreate {
+	if v != nil {
+		_c.SetIsActive(*v)
 	}
-	return spc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (spc *SenderProfileCreate) SetUpdatedAt(t time.Time) *SenderProfileCreate {
-	spc.mutation.SetUpdatedAt(t)
-	return spc
+func (_c *SenderProfileCreate) SetUpdatedAt(v time.Time) *SenderProfileCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableUpdatedAt(t *time.Time) *SenderProfileCreate {
-	if t != nil {
-		spc.SetUpdatedAt(*t)
+func (_c *SenderProfileCreate) SetNillableUpdatedAt(v *time.Time) *SenderProfileCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return spc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (spc *SenderProfileCreate) SetID(u uuid.UUID) *SenderProfileCreate {
-	spc.mutation.SetID(u)
-	return spc
+func (_c *SenderProfileCreate) SetID(v uuid.UUID) *SenderProfileCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableID(u *uuid.UUID) *SenderProfileCreate {
-	if u != nil {
-		spc.SetID(*u)
+func (_c *SenderProfileCreate) SetNillableID(v *uuid.UUID) *SenderProfileCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return spc
+	return _c
 }
 
 // SetUserID sets the "user" edge to the User entity by ID.
-func (spc *SenderProfileCreate) SetUserID(id uuid.UUID) *SenderProfileCreate {
-	spc.mutation.SetUserID(id)
-	return spc
+func (_c *SenderProfileCreate) SetUserID(id uuid.UUID) *SenderProfileCreate {
+	_c.mutation.SetUserID(id)
+	return _c
 }
 
 // SetUser sets the "user" edge to the User entity.
-func (spc *SenderProfileCreate) SetUser(u *User) *SenderProfileCreate {
-	return spc.SetUserID(u.ID)
+func (_c *SenderProfileCreate) SetUser(v *User) *SenderProfileCreate {
+	return _c.SetUserID(v.ID)
 }
 
 // SetAPIKeyID sets the "api_key" edge to the APIKey entity by ID.
-func (spc *SenderProfileCreate) SetAPIKeyID(id uuid.UUID) *SenderProfileCreate {
-	spc.mutation.SetAPIKeyID(id)
-	return spc
+func (_c *SenderProfileCreate) SetAPIKeyID(id uuid.UUID) *SenderProfileCreate {
+	_c.mutation.SetAPIKeyID(id)
+	return _c
 }
 
 // SetNillableAPIKeyID sets the "api_key" edge to the APIKey entity by ID if the given value is not nil.
-func (spc *SenderProfileCreate) SetNillableAPIKeyID(id *uuid.UUID) *SenderProfileCreate {
+func (_c *SenderProfileCreate) SetNillableAPIKeyID(id *uuid.UUID) *SenderProfileCreate {
 	if id != nil {
-		spc = spc.SetAPIKeyID(*id)
+		_c = _c.SetAPIKeyID(*id)
 	}
-	return spc
+	return _c
 }
 
 // SetAPIKey sets the "api_key" edge to the APIKey entity.
-func (spc *SenderProfileCreate) SetAPIKey(a *APIKey) *SenderProfileCreate {
-	return spc.SetAPIKeyID(a.ID)
+func (_c *SenderProfileCreate) SetAPIKey(v *APIKey) *SenderProfileCreate {
+	return _c.SetAPIKeyID(v.ID)
 }
 
 // AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (spc *SenderProfileCreate) AddPaymentOrderIDs(ids ...uuid.UUID) *SenderProfileCreate {
-	spc.mutation.AddPaymentOrderIDs(ids...)
-	return spc
+func (_c *SenderProfileCreate) AddPaymentOrderIDs(ids ...uuid.UUID) *SenderProfileCreate {
+	_c.mutation.AddPaymentOrderIDs(ids...)
+	return _c
 }
 
 // AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (spc *SenderProfileCreate) AddPaymentOrders(p ...*PaymentOrder) *SenderProfileCreate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *SenderProfileCreate) AddPaymentOrders(v ...*PaymentOrder) *SenderProfileCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return spc.AddPaymentOrderIDs(ids...)
+	return _c.AddPaymentOrderIDs(ids...)
 }
 
 // AddOrderTokenIDs adds the "order_tokens" edge to the SenderOrderToken entity by IDs.
-func (spc *SenderProfileCreate) AddOrderTokenIDs(ids ...int) *SenderProfileCreate {
-	spc.mutation.AddOrderTokenIDs(ids...)
-	return spc
+func (_c *SenderProfileCreate) AddOrderTokenIDs(ids ...int) *SenderProfileCreate {
+	_c.mutation.AddOrderTokenIDs(ids...)
+	return _c
 }
 
 // AddOrderTokens adds the "order_tokens" edges to the SenderOrderToken entity.
-func (spc *SenderProfileCreate) AddOrderTokens(s ...*SenderOrderToken) *SenderProfileCreate {
-	ids := make([]int, len(s))
-	for i := range s {
-		ids[i] = s[i].ID
+func (_c *SenderProfileCreate) AddOrderTokens(v ...*SenderOrderToken) *SenderProfileCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return spc.AddOrderTokenIDs(ids...)
+	return _c.AddOrderTokenIDs(ids...)
 }
 
 // Mutation returns the SenderProfileMutation object of the builder.
-func (spc *SenderProfileCreate) Mutation() *SenderProfileMutation {
-	return spc.mutation
+func (_c *SenderProfileCreate) Mutation() *SenderProfileMutation {
+	return _c.mutation
 }
 
 // Save creates the SenderProfile in the database.
-func (spc *SenderProfileCreate) Save(ctx context.Context) (*SenderProfile, error) {
-	spc.defaults()
-	return withHooks(ctx, spc.sqlSave, spc.mutation, spc.hooks)
+func (_c *SenderProfileCreate) Save(ctx context.Context) (*SenderProfile, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (spc *SenderProfileCreate) SaveX(ctx context.Context) *SenderProfile {
-	v, err := spc.Save(ctx)
+func (_c *SenderProfileCreate) SaveX(ctx context.Context) *SenderProfile {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -199,68 +199,68 @@ func (spc *SenderProfileCreate) SaveX(ctx context.Context) *SenderProfile {
 }
 
 // Exec executes the query.
-func (spc *SenderProfileCreate) Exec(ctx context.Context) error {
-	_, err := spc.Save(ctx)
+func (_c *SenderProfileCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (spc *SenderProfileCreate) ExecX(ctx context.Context) {
-	if err := spc.Exec(ctx); err != nil {
+func (_c *SenderProfileCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (spc *SenderProfileCreate) defaults() {
-	if _, ok := spc.mutation.DomainWhitelist(); !ok {
+func (_c *SenderProfileCreate) defaults() {
+	if _, ok := _c.mutation.DomainWhitelist(); !ok {
 		v := senderprofile.DefaultDomainWhitelist
-		spc.mutation.SetDomainWhitelist(v)
+		_c.mutation.SetDomainWhitelist(v)
 	}
-	if _, ok := spc.mutation.IsPartner(); !ok {
+	if _, ok := _c.mutation.IsPartner(); !ok {
 		v := senderprofile.DefaultIsPartner
-		spc.mutation.SetIsPartner(v)
+		_c.mutation.SetIsPartner(v)
 	}
-	if _, ok := spc.mutation.IsActive(); !ok {
+	if _, ok := _c.mutation.IsActive(); !ok {
 		v := senderprofile.DefaultIsActive
-		spc.mutation.SetIsActive(v)
+		_c.mutation.SetIsActive(v)
 	}
-	if _, ok := spc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := senderprofile.DefaultUpdatedAt()
-		spc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := spc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := senderprofile.DefaultID()
-		spc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (spc *SenderProfileCreate) check() error {
-	if _, ok := spc.mutation.DomainWhitelist(); !ok {
+func (_c *SenderProfileCreate) check() error {
+	if _, ok := _c.mutation.DomainWhitelist(); !ok {
 		return &ValidationError{Name: "domain_whitelist", err: errors.New(`ent: missing required field "SenderProfile.domain_whitelist"`)}
 	}
-	if _, ok := spc.mutation.IsPartner(); !ok {
+	if _, ok := _c.mutation.IsPartner(); !ok {
 		return &ValidationError{Name: "is_partner", err: errors.New(`ent: missing required field "SenderProfile.is_partner"`)}
 	}
-	if _, ok := spc.mutation.IsActive(); !ok {
+	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "SenderProfile.is_active"`)}
 	}
-	if _, ok := spc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "SenderProfile.updated_at"`)}
 	}
-	if len(spc.mutation.UserIDs()) == 0 {
+	if len(_c.mutation.UserIDs()) == 0 {
 		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "SenderProfile.user"`)}
 	}
 	return nil
 }
 
-func (spc *SenderProfileCreate) sqlSave(ctx context.Context) (*SenderProfile, error) {
-	if err := spc.check(); err != nil {
+func (_c *SenderProfileCreate) sqlSave(ctx context.Context) (*SenderProfile, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := spc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, spc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -273,46 +273,46 @@ func (spc *SenderProfileCreate) sqlSave(ctx context.Context) (*SenderProfile, er
 			return nil, err
 		}
 	}
-	spc.mutation.id = &_node.ID
-	spc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSpec) {
+func (_c *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSpec) {
 	var (
-		_node = &SenderProfile{config: spc.config}
+		_node = &SenderProfile{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(senderprofile.Table, sqlgraph.NewFieldSpec(senderprofile.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = spc.conflict
-	if id, ok := spc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := spc.mutation.WebhookURL(); ok {
+	if value, ok := _c.mutation.WebhookURL(); ok {
 		_spec.SetField(senderprofile.FieldWebhookURL, field.TypeString, value)
 		_node.WebhookURL = value
 	}
-	if value, ok := spc.mutation.DomainWhitelist(); ok {
+	if value, ok := _c.mutation.DomainWhitelist(); ok {
 		_spec.SetField(senderprofile.FieldDomainWhitelist, field.TypeJSON, value)
 		_node.DomainWhitelist = value
 	}
-	if value, ok := spc.mutation.ProviderID(); ok {
+	if value, ok := _c.mutation.ProviderID(); ok {
 		_spec.SetField(senderprofile.FieldProviderID, field.TypeString, value)
 		_node.ProviderID = value
 	}
-	if value, ok := spc.mutation.IsPartner(); ok {
+	if value, ok := _c.mutation.IsPartner(); ok {
 		_spec.SetField(senderprofile.FieldIsPartner, field.TypeBool, value)
 		_node.IsPartner = value
 	}
-	if value, ok := spc.mutation.IsActive(); ok {
+	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(senderprofile.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
 	}
-	if value, ok := spc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(senderprofile.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if nodes := spc.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -329,7 +329,7 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 		_node.user_sender_profile = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := spc.mutation.APIKeyIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.APIKeyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -345,7 +345,7 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := spc.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -361,7 +361,7 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := spc.mutation.OrderTokensIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.OrderTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -396,10 +396,10 @@ func (spc *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSp
 //			SetWebhookURL(v+v).
 //		}).
 //		Exec(ctx)
-func (spc *SenderProfileCreate) OnConflict(opts ...sql.ConflictOption) *SenderProfileUpsertOne {
-	spc.conflict = opts
+func (_c *SenderProfileCreate) OnConflict(opts ...sql.ConflictOption) *SenderProfileUpsertOne {
+	_c.conflict = opts
 	return &SenderProfileUpsertOne{
-		create: spc,
+		create: _c,
 	}
 }
 
@@ -409,10 +409,10 @@ func (spc *SenderProfileCreate) OnConflict(opts ...sql.ConflictOption) *SenderPr
 //	client.SenderProfile.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (spc *SenderProfileCreate) OnConflictColumns(columns ...string) *SenderProfileUpsertOne {
-	spc.conflict = append(spc.conflict, sql.ConflictColumns(columns...))
+func (_c *SenderProfileCreate) OnConflictColumns(columns ...string) *SenderProfileUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &SenderProfileUpsertOne{
-		create: spc,
+		create: _c,
 	}
 }
 
@@ -706,16 +706,16 @@ type SenderProfileCreateBulk struct {
 }
 
 // Save creates the SenderProfile entities in the database.
-func (spcb *SenderProfileCreateBulk) Save(ctx context.Context) ([]*SenderProfile, error) {
-	if spcb.err != nil {
-		return nil, spcb.err
+func (_c *SenderProfileCreateBulk) Save(ctx context.Context) ([]*SenderProfile, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(spcb.builders))
-	nodes := make([]*SenderProfile, len(spcb.builders))
-	mutators := make([]Mutator, len(spcb.builders))
-	for i := range spcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*SenderProfile, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := spcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*SenderProfileMutation)
@@ -729,12 +729,12 @@ func (spcb *SenderProfileCreateBulk) Save(ctx context.Context) ([]*SenderProfile
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, spcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = spcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, spcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -754,7 +754,7 @@ func (spcb *SenderProfileCreateBulk) Save(ctx context.Context) ([]*SenderProfile
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, spcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -762,8 +762,8 @@ func (spcb *SenderProfileCreateBulk) Save(ctx context.Context) ([]*SenderProfile
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (spcb *SenderProfileCreateBulk) SaveX(ctx context.Context) []*SenderProfile {
-	v, err := spcb.Save(ctx)
+func (_c *SenderProfileCreateBulk) SaveX(ctx context.Context) []*SenderProfile {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -771,14 +771,14 @@ func (spcb *SenderProfileCreateBulk) SaveX(ctx context.Context) []*SenderProfile
 }
 
 // Exec executes the query.
-func (spcb *SenderProfileCreateBulk) Exec(ctx context.Context) error {
-	_, err := spcb.Save(ctx)
+func (_c *SenderProfileCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (spcb *SenderProfileCreateBulk) ExecX(ctx context.Context) {
-	if err := spcb.Exec(ctx); err != nil {
+func (_c *SenderProfileCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -798,10 +798,10 @@ func (spcb *SenderProfileCreateBulk) ExecX(ctx context.Context) {
 //			SetWebhookURL(v+v).
 //		}).
 //		Exec(ctx)
-func (spcb *SenderProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *SenderProfileUpsertBulk {
-	spcb.conflict = opts
+func (_c *SenderProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *SenderProfileUpsertBulk {
+	_c.conflict = opts
 	return &SenderProfileUpsertBulk{
-		create: spcb,
+		create: _c,
 	}
 }
 
@@ -811,10 +811,10 @@ func (spcb *SenderProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *Sen
 //	client.SenderProfile.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (spcb *SenderProfileCreateBulk) OnConflictColumns(columns ...string) *SenderProfileUpsertBulk {
-	spcb.conflict = append(spcb.conflict, sql.ConflictColumns(columns...))
+func (_c *SenderProfileCreateBulk) OnConflictColumns(columns ...string) *SenderProfileUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &SenderProfileUpsertBulk{
-		create: spcb,
+		create: _c,
 	}
 }
 

@@ -27,159 +27,159 @@ type NetworkCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (nc *NetworkCreate) SetCreatedAt(t time.Time) *NetworkCreate {
-	nc.mutation.SetCreatedAt(t)
-	return nc
+func (_c *NetworkCreate) SetCreatedAt(v time.Time) *NetworkCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (nc *NetworkCreate) SetNillableCreatedAt(t *time.Time) *NetworkCreate {
-	if t != nil {
-		nc.SetCreatedAt(*t)
+func (_c *NetworkCreate) SetNillableCreatedAt(v *time.Time) *NetworkCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return nc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (nc *NetworkCreate) SetUpdatedAt(t time.Time) *NetworkCreate {
-	nc.mutation.SetUpdatedAt(t)
-	return nc
+func (_c *NetworkCreate) SetUpdatedAt(v time.Time) *NetworkCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (nc *NetworkCreate) SetNillableUpdatedAt(t *time.Time) *NetworkCreate {
-	if t != nil {
-		nc.SetUpdatedAt(*t)
+func (_c *NetworkCreate) SetNillableUpdatedAt(v *time.Time) *NetworkCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return nc
+	return _c
 }
 
 // SetChainID sets the "chain_id" field.
-func (nc *NetworkCreate) SetChainID(i int64) *NetworkCreate {
-	nc.mutation.SetChainID(i)
-	return nc
+func (_c *NetworkCreate) SetChainID(v int64) *NetworkCreate {
+	_c.mutation.SetChainID(v)
+	return _c
 }
 
 // SetIdentifier sets the "identifier" field.
-func (nc *NetworkCreate) SetIdentifier(s string) *NetworkCreate {
-	nc.mutation.SetIdentifier(s)
-	return nc
+func (_c *NetworkCreate) SetIdentifier(v string) *NetworkCreate {
+	_c.mutation.SetIdentifier(v)
+	return _c
 }
 
 // SetRPCEndpoint sets the "rpc_endpoint" field.
-func (nc *NetworkCreate) SetRPCEndpoint(s string) *NetworkCreate {
-	nc.mutation.SetRPCEndpoint(s)
-	return nc
+func (_c *NetworkCreate) SetRPCEndpoint(v string) *NetworkCreate {
+	_c.mutation.SetRPCEndpoint(v)
+	return _c
 }
 
 // SetGatewayContractAddress sets the "gateway_contract_address" field.
-func (nc *NetworkCreate) SetGatewayContractAddress(s string) *NetworkCreate {
-	nc.mutation.SetGatewayContractAddress(s)
-	return nc
+func (_c *NetworkCreate) SetGatewayContractAddress(v string) *NetworkCreate {
+	_c.mutation.SetGatewayContractAddress(v)
+	return _c
 }
 
 // SetNillableGatewayContractAddress sets the "gateway_contract_address" field if the given value is not nil.
-func (nc *NetworkCreate) SetNillableGatewayContractAddress(s *string) *NetworkCreate {
-	if s != nil {
-		nc.SetGatewayContractAddress(*s)
+func (_c *NetworkCreate) SetNillableGatewayContractAddress(v *string) *NetworkCreate {
+	if v != nil {
+		_c.SetGatewayContractAddress(*v)
 	}
-	return nc
+	return _c
 }
 
 // SetBlockTime sets the "block_time" field.
-func (nc *NetworkCreate) SetBlockTime(d decimal.Decimal) *NetworkCreate {
-	nc.mutation.SetBlockTime(d)
-	return nc
+func (_c *NetworkCreate) SetBlockTime(v decimal.Decimal) *NetworkCreate {
+	_c.mutation.SetBlockTime(v)
+	return _c
 }
 
 // SetIsTestnet sets the "is_testnet" field.
-func (nc *NetworkCreate) SetIsTestnet(b bool) *NetworkCreate {
-	nc.mutation.SetIsTestnet(b)
-	return nc
+func (_c *NetworkCreate) SetIsTestnet(v bool) *NetworkCreate {
+	_c.mutation.SetIsTestnet(v)
+	return _c
 }
 
 // SetBundlerURL sets the "bundler_url" field.
-func (nc *NetworkCreate) SetBundlerURL(s string) *NetworkCreate {
-	nc.mutation.SetBundlerURL(s)
-	return nc
+func (_c *NetworkCreate) SetBundlerURL(v string) *NetworkCreate {
+	_c.mutation.SetBundlerURL(v)
+	return _c
 }
 
 // SetNillableBundlerURL sets the "bundler_url" field if the given value is not nil.
-func (nc *NetworkCreate) SetNillableBundlerURL(s *string) *NetworkCreate {
-	if s != nil {
-		nc.SetBundlerURL(*s)
+func (_c *NetworkCreate) SetNillableBundlerURL(v *string) *NetworkCreate {
+	if v != nil {
+		_c.SetBundlerURL(*v)
 	}
-	return nc
+	return _c
 }
 
 // SetPaymasterURL sets the "paymaster_url" field.
-func (nc *NetworkCreate) SetPaymasterURL(s string) *NetworkCreate {
-	nc.mutation.SetPaymasterURL(s)
-	return nc
+func (_c *NetworkCreate) SetPaymasterURL(v string) *NetworkCreate {
+	_c.mutation.SetPaymasterURL(v)
+	return _c
 }
 
 // SetNillablePaymasterURL sets the "paymaster_url" field if the given value is not nil.
-func (nc *NetworkCreate) SetNillablePaymasterURL(s *string) *NetworkCreate {
-	if s != nil {
-		nc.SetPaymasterURL(*s)
+func (_c *NetworkCreate) SetNillablePaymasterURL(v *string) *NetworkCreate {
+	if v != nil {
+		_c.SetPaymasterURL(*v)
 	}
-	return nc
+	return _c
 }
 
 // SetFee sets the "fee" field.
-func (nc *NetworkCreate) SetFee(d decimal.Decimal) *NetworkCreate {
-	nc.mutation.SetFee(d)
-	return nc
+func (_c *NetworkCreate) SetFee(v decimal.Decimal) *NetworkCreate {
+	_c.mutation.SetFee(v)
+	return _c
 }
 
 // AddTokenIDs adds the "tokens" edge to the Token entity by IDs.
-func (nc *NetworkCreate) AddTokenIDs(ids ...int) *NetworkCreate {
-	nc.mutation.AddTokenIDs(ids...)
-	return nc
+func (_c *NetworkCreate) AddTokenIDs(ids ...int) *NetworkCreate {
+	_c.mutation.AddTokenIDs(ids...)
+	return _c
 }
 
 // AddTokens adds the "tokens" edges to the Token entity.
-func (nc *NetworkCreate) AddTokens(t ...*Token) *NetworkCreate {
-	ids := make([]int, len(t))
-	for i := range t {
-		ids[i] = t[i].ID
+func (_c *NetworkCreate) AddTokens(v ...*Token) *NetworkCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return nc.AddTokenIDs(ids...)
+	return _c.AddTokenIDs(ids...)
 }
 
 // SetPaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID.
-func (nc *NetworkCreate) SetPaymentWebhookID(id uuid.UUID) *NetworkCreate {
-	nc.mutation.SetPaymentWebhookID(id)
-	return nc
+func (_c *NetworkCreate) SetPaymentWebhookID(id uuid.UUID) *NetworkCreate {
+	_c.mutation.SetPaymentWebhookID(id)
+	return _c
 }
 
 // SetNillablePaymentWebhookID sets the "payment_webhook" edge to the PaymentWebhook entity by ID if the given value is not nil.
-func (nc *NetworkCreate) SetNillablePaymentWebhookID(id *uuid.UUID) *NetworkCreate {
+func (_c *NetworkCreate) SetNillablePaymentWebhookID(id *uuid.UUID) *NetworkCreate {
 	if id != nil {
-		nc = nc.SetPaymentWebhookID(*id)
+		_c = _c.SetPaymentWebhookID(*id)
 	}
-	return nc
+	return _c
 }
 
 // SetPaymentWebhook sets the "payment_webhook" edge to the PaymentWebhook entity.
-func (nc *NetworkCreate) SetPaymentWebhook(p *PaymentWebhook) *NetworkCreate {
-	return nc.SetPaymentWebhookID(p.ID)
+func (_c *NetworkCreate) SetPaymentWebhook(v *PaymentWebhook) *NetworkCreate {
+	return _c.SetPaymentWebhookID(v.ID)
 }
 
 // Mutation returns the NetworkMutation object of the builder.
-func (nc *NetworkCreate) Mutation() *NetworkMutation {
-	return nc.mutation
+func (_c *NetworkCreate) Mutation() *NetworkMutation {
+	return _c.mutation
 }
 
 // Save creates the Network in the database.
-func (nc *NetworkCreate) Save(ctx context.Context) (*Network, error) {
-	nc.defaults()
-	return withHooks(ctx, nc.sqlSave, nc.mutation, nc.hooks)
+func (_c *NetworkCreate) Save(ctx context.Context) (*Network, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (nc *NetworkCreate) SaveX(ctx context.Context) *Network {
-	v, err := nc.Save(ctx)
+func (_c *NetworkCreate) SaveX(ctx context.Context) *Network {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -187,72 +187,72 @@ func (nc *NetworkCreate) SaveX(ctx context.Context) *Network {
 }
 
 // Exec executes the query.
-func (nc *NetworkCreate) Exec(ctx context.Context) error {
-	_, err := nc.Save(ctx)
+func (_c *NetworkCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (nc *NetworkCreate) ExecX(ctx context.Context) {
-	if err := nc.Exec(ctx); err != nil {
+func (_c *NetworkCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (nc *NetworkCreate) defaults() {
-	if _, ok := nc.mutation.CreatedAt(); !ok {
+func (_c *NetworkCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := network.DefaultCreatedAt()
-		nc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := nc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := network.DefaultUpdatedAt()
-		nc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := nc.mutation.GatewayContractAddress(); !ok {
+	if _, ok := _c.mutation.GatewayContractAddress(); !ok {
 		v := network.DefaultGatewayContractAddress
-		nc.mutation.SetGatewayContractAddress(v)
+		_c.mutation.SetGatewayContractAddress(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (nc *NetworkCreate) check() error {
-	if _, ok := nc.mutation.CreatedAt(); !ok {
+func (_c *NetworkCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Network.created_at"`)}
 	}
-	if _, ok := nc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Network.updated_at"`)}
 	}
-	if _, ok := nc.mutation.ChainID(); !ok {
+	if _, ok := _c.mutation.ChainID(); !ok {
 		return &ValidationError{Name: "chain_id", err: errors.New(`ent: missing required field "Network.chain_id"`)}
 	}
-	if _, ok := nc.mutation.Identifier(); !ok {
+	if _, ok := _c.mutation.Identifier(); !ok {
 		return &ValidationError{Name: "identifier", err: errors.New(`ent: missing required field "Network.identifier"`)}
 	}
-	if _, ok := nc.mutation.RPCEndpoint(); !ok {
+	if _, ok := _c.mutation.RPCEndpoint(); !ok {
 		return &ValidationError{Name: "rpc_endpoint", err: errors.New(`ent: missing required field "Network.rpc_endpoint"`)}
 	}
-	if _, ok := nc.mutation.GatewayContractAddress(); !ok {
+	if _, ok := _c.mutation.GatewayContractAddress(); !ok {
 		return &ValidationError{Name: "gateway_contract_address", err: errors.New(`ent: missing required field "Network.gateway_contract_address"`)}
 	}
-	if _, ok := nc.mutation.BlockTime(); !ok {
+	if _, ok := _c.mutation.BlockTime(); !ok {
 		return &ValidationError{Name: "block_time", err: errors.New(`ent: missing required field "Network.block_time"`)}
 	}
-	if _, ok := nc.mutation.IsTestnet(); !ok {
+	if _, ok := _c.mutation.IsTestnet(); !ok {
 		return &ValidationError{Name: "is_testnet", err: errors.New(`ent: missing required field "Network.is_testnet"`)}
 	}
-	if _, ok := nc.mutation.Fee(); !ok {
+	if _, ok := _c.mutation.Fee(); !ok {
 		return &ValidationError{Name: "fee", err: errors.New(`ent: missing required field "Network.fee"`)}
 	}
 	return nil
 }
 
-func (nc *NetworkCreate) sqlSave(ctx context.Context) (*Network, error) {
-	if err := nc.check(); err != nil {
+func (_c *NetworkCreate) sqlSave(ctx context.Context) (*Network, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := nc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, nc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -260,62 +260,62 @@ func (nc *NetworkCreate) sqlSave(ctx context.Context) (*Network, error) {
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	nc.mutation.id = &_node.ID
-	nc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
+func (_c *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	var (
-		_node = &Network{config: nc.config}
+		_node = &Network{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(network.Table, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = nc.conflict
-	if value, ok := nc.mutation.CreatedAt(); ok {
+	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(network.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := nc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(network.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := nc.mutation.ChainID(); ok {
+	if value, ok := _c.mutation.ChainID(); ok {
 		_spec.SetField(network.FieldChainID, field.TypeInt64, value)
 		_node.ChainID = value
 	}
-	if value, ok := nc.mutation.Identifier(); ok {
+	if value, ok := _c.mutation.Identifier(); ok {
 		_spec.SetField(network.FieldIdentifier, field.TypeString, value)
 		_node.Identifier = value
 	}
-	if value, ok := nc.mutation.RPCEndpoint(); ok {
+	if value, ok := _c.mutation.RPCEndpoint(); ok {
 		_spec.SetField(network.FieldRPCEndpoint, field.TypeString, value)
 		_node.RPCEndpoint = value
 	}
-	if value, ok := nc.mutation.GatewayContractAddress(); ok {
+	if value, ok := _c.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
 		_node.GatewayContractAddress = value
 	}
-	if value, ok := nc.mutation.BlockTime(); ok {
+	if value, ok := _c.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
 		_node.BlockTime = value
 	}
-	if value, ok := nc.mutation.IsTestnet(); ok {
+	if value, ok := _c.mutation.IsTestnet(); ok {
 		_spec.SetField(network.FieldIsTestnet, field.TypeBool, value)
 		_node.IsTestnet = value
 	}
-	if value, ok := nc.mutation.BundlerURL(); ok {
+	if value, ok := _c.mutation.BundlerURL(); ok {
 		_spec.SetField(network.FieldBundlerURL, field.TypeString, value)
 		_node.BundlerURL = value
 	}
-	if value, ok := nc.mutation.PaymasterURL(); ok {
+	if value, ok := _c.mutation.PaymasterURL(); ok {
 		_spec.SetField(network.FieldPaymasterURL, field.TypeString, value)
 		_node.PaymasterURL = value
 	}
-	if value, ok := nc.mutation.Fee(); ok {
+	if value, ok := _c.mutation.Fee(); ok {
 		_spec.SetField(network.FieldFee, field.TypeFloat64, value)
 		_node.Fee = value
 	}
-	if nodes := nc.mutation.TokensIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.TokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -331,7 +331,7 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := nc.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentWebhookIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: false,
@@ -366,10 +366,10 @@ func (nc *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (nc *NetworkCreate) OnConflict(opts ...sql.ConflictOption) *NetworkUpsertOne {
-	nc.conflict = opts
+func (_c *NetworkCreate) OnConflict(opts ...sql.ConflictOption) *NetworkUpsertOne {
+	_c.conflict = opts
 	return &NetworkUpsertOne{
-		create: nc,
+		create: _c,
 	}
 }
 
@@ -379,10 +379,10 @@ func (nc *NetworkCreate) OnConflict(opts ...sql.ConflictOption) *NetworkUpsertOn
 //	client.Network.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (nc *NetworkCreate) OnConflictColumns(columns ...string) *NetworkUpsertOne {
-	nc.conflict = append(nc.conflict, sql.ConflictColumns(columns...))
+func (_c *NetworkCreate) OnConflictColumns(columns ...string) *NetworkUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &NetworkUpsertOne{
-		create: nc,
+		create: _c,
 	}
 }
 
@@ -811,16 +811,16 @@ type NetworkCreateBulk struct {
 }
 
 // Save creates the Network entities in the database.
-func (ncb *NetworkCreateBulk) Save(ctx context.Context) ([]*Network, error) {
-	if ncb.err != nil {
-		return nil, ncb.err
+func (_c *NetworkCreateBulk) Save(ctx context.Context) ([]*Network, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(ncb.builders))
-	nodes := make([]*Network, len(ncb.builders))
-	mutators := make([]Mutator, len(ncb.builders))
-	for i := range ncb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*Network, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := ncb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*NetworkMutation)
@@ -834,12 +834,12 @@ func (ncb *NetworkCreateBulk) Save(ctx context.Context) ([]*Network, error) {
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, ncb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = ncb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, ncb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -863,7 +863,7 @@ func (ncb *NetworkCreateBulk) Save(ctx context.Context) ([]*Network, error) {
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, ncb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -871,8 +871,8 @@ func (ncb *NetworkCreateBulk) Save(ctx context.Context) ([]*Network, error) {
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (ncb *NetworkCreateBulk) SaveX(ctx context.Context) []*Network {
-	v, err := ncb.Save(ctx)
+func (_c *NetworkCreateBulk) SaveX(ctx context.Context) []*Network {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -880,14 +880,14 @@ func (ncb *NetworkCreateBulk) SaveX(ctx context.Context) []*Network {
 }
 
 // Exec executes the query.
-func (ncb *NetworkCreateBulk) Exec(ctx context.Context) error {
-	_, err := ncb.Save(ctx)
+func (_c *NetworkCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ncb *NetworkCreateBulk) ExecX(ctx context.Context) {
-	if err := ncb.Exec(ctx); err != nil {
+func (_c *NetworkCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -907,10 +907,10 @@ func (ncb *NetworkCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (ncb *NetworkCreateBulk) OnConflict(opts ...sql.ConflictOption) *NetworkUpsertBulk {
-	ncb.conflict = opts
+func (_c *NetworkCreateBulk) OnConflict(opts ...sql.ConflictOption) *NetworkUpsertBulk {
+	_c.conflict = opts
 	return &NetworkUpsertBulk{
-		create: ncb,
+		create: _c,
 	}
 }
 
@@ -920,10 +920,10 @@ func (ncb *NetworkCreateBulk) OnConflict(opts ...sql.ConflictOption) *NetworkUps
 //	client.Network.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (ncb *NetworkCreateBulk) OnConflictColumns(columns ...string) *NetworkUpsertBulk {
-	ncb.conflict = append(ncb.conflict, sql.ConflictColumns(columns...))
+func (_c *NetworkCreateBulk) OnConflictColumns(columns ...string) *NetworkUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &NetworkUpsertBulk{
-		create: ncb,
+		create: _c,
 	}
 }
 
