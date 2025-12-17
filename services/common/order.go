@@ -411,7 +411,8 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		).
 		SetBlockNumber(event.BlockNumber).
 		SetTxHash(event.TxHash).
-		SetStatus(paymentorder.StatusSettled)
+		SetStatus(paymentorder.StatusSettled).
+		AddPercentSettled(event.SettlePercent)
 
 	if transactionLog != nil {
 		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
@@ -481,8 +482,6 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		}
 	}
 
-	settledPercent := decimal.NewFromInt(0)
-
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettled.sender %v", err)
@@ -492,10 +491,6 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	if paymentOrder != nil {
 		orderKey := fmt.Sprintf("order_exclude_list_%s", paymentOrder.ID)
 		_ = db.RedisClient.Del(ctx, orderKey).Err()
-	}
-
-	if settledPercent.GreaterThanOrEqual(decimal.NewFromInt(100)) {
-		paymentOrder.Status = paymentorder.StatusSettled
 	}
 
 	// Send webhook notification to sender
@@ -887,7 +882,14 @@ func validateAndPreparePaymentOrderData(
 		WithNetwork().
 		Only(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, nil, nil, "Token lookup failed", refundOrder)
+		if ent.IsNotFound(err) {
+			// Cannot call createBasicPaymentOrderAndCancel without token - refund directly
+			refundErr := refundOrder(ctx, network, event.OrderId)
+			if refundErr != nil {
+				return nil, nil, nil, nil, nil, fmt.Errorf("token lookup failed and refund failed: %w", refundErr)
+			}
+		}
+		return nil, nil, nil, nil, nil, nil
 	}
 
 	// Get order recipient from message hash
