@@ -506,7 +506,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	// Create webhook for the smart address to monitor transfers (only for EVM networks)
-	if !strings.HasPrefix(payload.Network, "tron") {
+	if !strings.HasPrefix(payload.Network, "tron") && !strings.HasPrefix(payload.Network, "starknet") {
 		engineService := svc.NewEngineService()
 		webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
 			ctx,
@@ -803,14 +803,14 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 	}
 
 	searchPredicates = append(searchPredicates,
-		paymentorder.ReceiveAddressContains(searchText),
-		paymentorder.FromAddressContains(searchText),
-		paymentorder.ReturnAddressContains(searchText),
+		paymentorder.ReceiveAddressContainsFold(searchText),
+		paymentorder.FromAddressContainsFold(searchText),
+		paymentorder.ReturnAddressContainsFold(searchText),
 		paymentorder.Or(
-			paymentorder.AccountIdentifierContains(searchText),
-			paymentorder.AccountNameContains(searchText),
-			paymentorder.MemoContains(searchText),
-			paymentorder.InstitutionContains(searchText),
+			paymentorder.AccountIdentifierContainsFold(searchText),
+			paymentorder.AccountNameContainsFold(searchText),
+			paymentorder.MemoContainsFold(searchText),
+			paymentorder.InstitutionContainsFold(searchText),
 		),
 	)
 

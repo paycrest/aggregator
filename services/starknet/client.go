@@ -256,28 +256,35 @@ func (c *Client) GetTransactionReceipt(ctx context.Context, txHash, accountAddre
 	}
 
 	// Filter logs from the receipt that match the specified event signatures
+	// If accountAddress is nil, return all events (no address filtering)
 	// If token contract is used, the caller should handle the receive address logs
 	for _, log := range receipt.Events {
-		if log.FromAddress != nil && accountAddress != nil && log.FromAddress.Equal(accountAddress) {
-			if len(log.Keys) == 0 || log.Keys[0] == nil {
+		// If accountAddress is nil, skip address filtering and process all events
+		// Otherwise, filter by address
+		if accountAddress != nil {
+			if log.FromAddress == nil || !log.FromAddress.Equal(accountAddress) {
 				continue
 			}
-			// Check if this log matches any of our event signatures
-			eventSignature := log.Keys[0]
-			for _, signature := range eventSignatures {
-				sig := signature
-				if eventSignature.Equal(&sig) {
-					eventsPacked := types.StarknetEventsData{
-						Events: rpc.EmittedEvent{
-							Event:           log,
-							BlockHash:       receipt.BlockHash,
-							BlockNumber:     uint64(receipt.BlockNumber),
-							TransactionHash: receipt.Hash,
-						},
-					}
-					logs = append(logs, eventsPacked)
-					break
+		}
+
+		if len(log.Keys) == 0 || log.Keys[0] == nil {
+			continue
+		}
+		// Check if this log matches any of our event signatures
+		eventSignature := log.Keys[0]
+		for _, signature := range eventSignatures {
+			sig := signature
+			if eventSignature.Equal(&sig) {
+				eventsPacked := types.StarknetEventsData{
+					Events: rpc.EmittedEvent{
+						Event:           log,
+						BlockHash:       receipt.BlockHash,
+						BlockNumber:     uint64(receipt.BlockNumber),
+						TransactionHash: receipt.Hash,
+					},
 				}
+				logs = append(logs, eventsPacked)
+				break
 			}
 		}
 	}
