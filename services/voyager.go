@@ -39,6 +39,7 @@ type VoyagerRequestContext struct {
 	Cancel    context.CancelFunc
 	Response  chan *VoyagerResponse
 	Done      chan struct{}
+	doneOnce  sync.Once // Ensures Done channel is closed exactly once
 }
 
 // VoyagerRequest represents a queued Voyager API request
@@ -317,7 +318,7 @@ func cleanupVoyagerStaleRequests() {
 
 		if now.Sub(reqCtx.CreatedAt) > voyagerRequestTimeout || reqCtx.Context.Err() != nil {
 			reqCtx.Cancel()
-			close(reqCtx.Done)
+			reqCtx.doneOnce.Do(func() { close(reqCtx.Done) })
 			voyagerPendingRequests.Delete(key)
 			cleaned++
 		}
@@ -407,7 +408,7 @@ func (w *VoyagerWorker) start(ctx context.Context) {
 			if atomic.LoadInt64(&voyagerMonthlyCallsCounter) >= monthlyLimit {
 				logger.Warnf("Monthly Voyager API limit reached (%d/%d). Worker %d paused until reset.",
 					atomic.LoadInt64(&voyagerMonthlyCallsCounter), monthlyLimit, w.WorkerID)
-				
+
 				// Calculate sleep duration, ensuring a minimum wait to avoid busy-looping
 				sleepDuration := time.Until(voyagerMonthlyLimitResetTime)
 				const minBackoff = 1 * time.Second
@@ -416,7 +417,7 @@ func (w *VoyagerWorker) start(ctx context.Context) {
 					sleepDuration = minBackoff
 					logger.Warnf("Worker %d: monthly limit reset time is in the past, using %v backoff", w.WorkerID, minBackoff)
 				}
-				
+
 				time.Sleep(sleepDuration)
 				continue
 			}
@@ -593,7 +594,7 @@ func (w *VoyagerWorker) processNextRequest(ctx context.Context) error {
 			}
 
 			reqCtx.Cancel()
-			close(reqCtx.Done)
+			reqCtx.doneOnce.Do(func() { close(reqCtx.Done) })
 			voyagerPendingRequests.Delete(request.ID)
 			voyagerQueuedRequestIDs.Delete(request.ID)
 		}
@@ -625,6 +626,11 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 				if timestamp, ok := fromBlockData["timestamp"].(float64); ok {
 					params["timestampFrom"] = fmt.Sprintf("%.0f", timestamp)
 				}
+			} else {
+				logger.WithFields(logger.Fields{
+					"BlockNumber": request.FromBlock,
+					"Error":       err.Error(),
+				}).Warnf("Failed to convert block to timestamp")
 			}
 		}
 		if request.ToBlock > 0 {
@@ -708,17 +714,51 @@ func (w *VoyagerWorker) makeVoyagerEventsAPICall(request VoyagerRequest) ([]map[
 		// Convert block numbers to timestamps using Voyager blocks endpoint
 		if request.FromBlock > 0 {
 			fromBlockData, err := w.getBlockByNumber(request.FromBlock)
-			if err == nil && fromBlockData != nil {
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"BlockNumber": request.FromBlock,
+					"RequestID":   request.ID,
+					"Error":       err.Error(),
+				}).Warnf("Failed to get timestamp for FromBlock in makeVoyagerEventsAPICall")
+			} else if fromBlockData == nil {
+				logger.WithFields(logger.Fields{
+					"BlockNumber": request.FromBlock,
+					"RequestID":   request.ID,
+				}).Warnf("getBlockByNumber returned nil for FromBlock")
+			} else {
 				if timestamp, ok := fromBlockData["timestamp"].(float64); ok {
 					params["timestampFrom"] = fmt.Sprintf("%.0f", timestamp)
+				} else {
+					logger.WithFields(logger.Fields{
+						"BlockNumber": request.FromBlock,
+						"RequestID":   request.ID,
+						"DataType":    fmt.Sprintf("%T", fromBlockData["timestamp"]),
+					}).Warnf("Unexpected timestamp type for FromBlock")
 				}
 			}
 		}
 		if request.ToBlock > 0 {
 			toBlockData, err := w.getBlockByNumber(request.ToBlock)
-			if err == nil && toBlockData != nil {
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"BlockNumber": request.ToBlock,
+					"RequestID":   request.ID,
+					"Error":       err.Error(),
+				}).Warnf("Failed to get timestamp for ToBlock in makeVoyagerEventsAPICall")
+			} else if toBlockData == nil {
+				logger.WithFields(logger.Fields{
+					"BlockNumber": request.ToBlock,
+					"RequestID":   request.ID,
+				}).Warnf("getBlockByNumber returned nil for ToBlock")
+			} else {
 				if timestamp, ok := toBlockData["timestamp"].(float64); ok {
 					params["timestampTo"] = fmt.Sprintf("%.0f", timestamp)
+				} else {
+					logger.WithFields(logger.Fields{
+						"BlockNumber": request.ToBlock,
+						"RequestID":   request.ID,
+						"DataType":    fmt.Sprintf("%T", toBlockData["timestamp"]),
+					}).Warnf("Unexpected timestamp type for ToBlock")
 				}
 			}
 		}
@@ -1428,6 +1468,34 @@ func (s *VoyagerService) GetEventsByTransactionHash(ctx context.Context, txHash 
 	}
 }
 
+// GetLatestBlockNumberImmediate fetches the latest block number immediately without queuing
+func (s *VoyagerService) GetLatestBlockNumberImmediate(ctx context.Context) (uint64, error) {
+	voyagerWorkerMutex.RLock()
+	var worker *VoyagerWorker
+	if len(voyagerWorkers) > 0 {
+		worker = voyagerWorkers[0]
+	}
+	voyagerWorkerMutex.RUnlock()
+
+	if worker == nil {
+		return s.getLatestBlockNumberRPC(ctx)
+	}
+
+	block, err := worker.makeVoyagerBlocksAPICall()
+	if err == nil {
+		if blockNum, ok := block["blockNumber"].(float64); ok {
+			return uint64(blockNum), nil
+		}
+	}
+
+	logger.WithFields(logger.Fields{
+		"VoyagerError":  err.Error(),
+		"FallbackToRPC": true,
+	}).Warnf("Voyager failed, falling back to RPC for latest block number")
+
+	return s.getLatestBlockNumberRPC(ctx)
+}
+
 // GetLatestBlockNumber fetches the latest block number from Voyager
 func (s *VoyagerService) GetLatestBlockNumber(ctx context.Context) (uint64, error) {
 	requestID := "blocks_latest"
@@ -1453,9 +1521,9 @@ func (s *VoyagerService) GetLatestBlockNumber(ctx context.Context) (uint64, erro
 			// This ensures the original requester receives the response
 			select {
 			case <-existingReqCtx.Context.Done():
-				// Original request completed, make our own request
-				// The original request will have been removed from pending, so this will be a new request
-				return s.GetLatestBlockNumber(ctx)
+				// Original request completed, make our own immediate request
+				// This prevents infinite recursion that could occur with recursive GetLatestBlockNumber calls
+				return s.GetLatestBlockNumberImmediate(ctx)
 			case <-reqCtx.Done():
 				return 0, reqCtx.Err()
 			}

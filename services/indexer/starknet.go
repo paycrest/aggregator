@@ -62,20 +62,13 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 		return counts, nil
 	}
 
+	// Determine chunk size based on whether block range is provided
 	var ChunkSize int
 	if fromBlock == 0 && toBlock == 0 {
+		// No block range - get last 5 transactions
 		ChunkSize = 5
-		currentBlock, err := s.voyagerService.GetLatestBlockNumber(ctx)
-		if err != nil {
-			return eventCounts, fmt.Errorf("failed to get latest block number: %w", err)
-		}
-		toBlock = int64(currentBlock)
-		fromBlock = int64(toBlock) - 5 // 4s per block and we want to read every 4seconds
-		// Ensure fromBlock is not negative
-		if fromBlock < 0 {
-			fromBlock = 0
-		}
 	} else {
+		// Block range provided - get up to 100 transactions in range
 		ChunkSize = 100
 	}
 
@@ -577,8 +570,6 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
-	// Determine block range
-	var fromBlockNum, toBlockNum uint64
 	if txHash != "" {
 		counts, err := s.indexGatewayByTransaction(ctx, network, txHash)
 		if err != nil {
@@ -588,26 +579,18 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 		return counts, nil
 	}
 
-	// Use provided block range or get latest
+	// Determine limit based on whether block range is provided
+	var limit int
 	if fromBlock == 0 && toBlock == 0 {
-		latest, err := s.voyagerService.GetLatestBlockNumber(ctx)
-		if err != nil {
-			return eventCounts, fmt.Errorf("failed to get latest block: %w", err)
-		}
-		toBlockNum = latest
-		// Index last 100 blocks by default
-		if latest > 100 {
-			fromBlockNum = latest - 100
-		} else {
-			fromBlockNum = 0
-		}
+		// No block range - get last 10 events
+		limit = 10
 	} else {
-		fromBlockNum = uint64(fromBlock)
-		toBlockNum = uint64(toBlock)
+		// Block range provided - get up to 100 events in range
+		limit = 100
 	}
 
 	// Use Voyager service to get gateway events (handles RPC fallback internally)
-	events, err := s.voyagerService.GetContractEvents(ctx, address, 100, int64(fromBlockNum), int64(toBlockNum))
+	events, err := s.voyagerService.GetContractEvents(ctx, address, limit, fromBlock, toBlock)
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to get gateway events: %w", err)
 	}
@@ -619,7 +602,6 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 		transactions[i] = services.TransformVoyagerEventToRPCFormat(event)
 	}
 	if len(transactions) == 0 {
-		logger.Infof("No gateway events found in block range %d-%d for address: %s", fromBlockNum, toBlockNum, address)
 		return eventCounts, nil
 	}
 
@@ -657,9 +639,19 @@ func (s *IndexerStarknet) IndexProviderAddress(ctx context.Context, network *ent
 		return counts, nil
 	}
 
+	// Determine limit based on whether block range is provided
+	var limit int
+	if fromBlock == 0 && toBlock == 0 {
+		// No block range - get last 20 transfers
+		limit = 20
+	} else {
+		// Block range provided - get up to 100 transfers in range
+		limit = 100
+	}
+
 	// Use Voyager transfers endpoint with from filter to get transfers from gateway to provider
 	// This directly returns transfers from gateway contract to provider address
-	transfers, err := s.voyagerService.GetAddressTokenTransfers(ctx, address, 100, fromBlock, toBlock, network.GatewayContractAddress, "")
+	transfers, err := s.voyagerService.GetAddressTokenTransfers(ctx, address, limit, fromBlock, toBlock, network.GatewayContractAddress, "")
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to get provider transfers: %w", err)
 	}
