@@ -581,10 +581,10 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 	}
 }
 
-// SyncLockOrderFulfillments syncs lock order fulfillments
+// SyncPaymentOrderFulfillments syncs payment order fulfillments
 // Only processes regular orders
 // TODO: refactor this to process OTC orders as well when OTC fulfillment validation is automated
-func SyncLockOrderFulfillments() {
+func SyncPaymentOrderFulfillments() {
 	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	// defer cancel()
 	ctx := context.Background()
@@ -661,7 +661,7 @@ func SyncLockOrderFulfillments() {
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.Edges.Provider.ID,
 					"Reason":     "internal: Failed to decode provider secret",
-				}).Errorf("SyncLockOrderFulfillments.DecodeSecret")
+				}).Errorf("SyncPaymentOrderFulfillments.DecodeSecret")
 				continue
 			}
 			decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
@@ -671,7 +671,7 @@ func SyncLockOrderFulfillments() {
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.Edges.Provider.ID,
 					"Reason":     "internal: Failed to decrypt provider secret",
-				}).Errorf("SyncLockOrderFulfillments.DecryptSecret")
+				}).Errorf("SyncPaymentOrderFulfillments.DecryptSecret")
 				continue
 			}
 
@@ -695,7 +695,7 @@ func SyncLockOrderFulfillments() {
 					"PayloadOrderId":  payload["orderId"],
 					"PayloadCurrency": payload["currency"],
 					"Reason":          "internal: Failed to send tx_status request to provider",
-				}).Errorf("SyncLockOrderFulfillments.SendTxStatusRequest")
+				}).Errorf("SyncPaymentOrderFulfillments.SendTxStatusRequest")
 
 				// Set status to pending on 400 error
 				if strings.Contains(fmt.Sprintf("%v", err), "400") {
@@ -709,7 +709,7 @@ func SyncLockOrderFulfillments() {
 							"OrderID":    order.ID.String(),
 							"ProviderID": order.Edges.Provider.ID,
 							"Reason":     "internal: Failed to update order status",
-						}).Errorf("SyncLockOrderFulfillments.UpdateStatus")
+						}).Errorf("SyncPaymentOrderFulfillments.UpdateStatus")
 					}
 				}
 				continue
@@ -803,7 +803,7 @@ func SyncLockOrderFulfillments() {
 						"Error":       fmt.Sprintf("%v", err),
 						"MessageHash": order.MessageHash,
 						"OrderID":     order.ID,
-					}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.webhook")
+					}).Errorf("SyncPaymentOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 				}
 			}
 		} else {
@@ -940,7 +940,7 @@ func SyncLockOrderFulfillments() {
 								"Error":       fmt.Sprintf("%v", err),
 								"MessageHash": order.MessageHash,
 								"OrderID":     order.ID,
-							}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.webhook")
+							}).Errorf("SyncPaymentOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 						}
 					}
 
@@ -976,7 +976,7 @@ func SyncLockOrderFulfillments() {
 							"Error":       fmt.Sprintf("%v", err),
 							"MessageHash": order.MessageHash,
 							"OrderID":     order.ID,
-						}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.webhook")
+						}).Errorf("SyncPaymentOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 					}
 				}
 			}
@@ -1815,7 +1815,7 @@ func ProcessStuckValidatedOrders() error {
 			// Process each stuck order
 			for _, order := range lockOrders {
 				// Get provider address for this order
-				providerAddress, err := common.GetProviderAddressFromLockOrder(ctx, order)
+				providerAddress, err := common.GetProviderAddressFromOrder(ctx, order)
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),
@@ -2119,10 +2119,10 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for RetryFailedWebhookNotifications: %v", err)
 	}
 
-	// Sync lock order fulfillments every 32 seconds
-	_, err = scheduler.Every(32).Seconds().Do(SyncLockOrderFulfillments)
+	// Sync payment order fulfillments every 32 seconds
+	_, err = scheduler.Every(32).Seconds().Do(SyncPaymentOrderFulfillments)
 	if err != nil {
-		logger.Errorf("StartCronJobs for SyncLockOrderFulfillments: %v", err)
+		logger.Errorf("StartCronJobs for SyncPaymentOrderFulfillments: %v", err)
 	}
 
 	// Handle receive address validity every 6 minutes

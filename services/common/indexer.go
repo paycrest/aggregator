@@ -394,25 +394,25 @@ func GetProviderAddresses(ctx context.Context, token *ent.Token, currencyCode st
 	return addresses, nil
 }
 
-// GetProviderAddressFromLockOrder gets the provider address for a payment order
-func GetProviderAddressFromLockOrder(ctx context.Context, lockOrder *ent.PaymentOrder) (string, error) {
-	if lockOrder.Edges.Provider == nil {
-		return "", fmt.Errorf("lock order has no provider")
+// GetProviderAddressFromOrder gets the provider address for a payment order
+func GetProviderAddressFromOrder(ctx context.Context, order *ent.PaymentOrder) (string, error) {
+	if order.Edges.Provider == nil {
+		return "", fmt.Errorf("payment order has no provider")
 	}
 
 	// Get the currency from the provision bucket
-	if lockOrder.Edges.ProvisionBucket == nil {
-		return "", fmt.Errorf("lock order has no provision bucket")
+	if order.Edges.ProvisionBucket == nil {
+		return "", fmt.Errorf("payment order has no provision bucket")
 	}
 
-	currencyCode := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
+	currencyCode := order.Edges.ProvisionBucket.Edges.Currency.Code
 
 	// Get provider order token for this provider, token, and currency
 	providerOrderToken, err := storage.Client.ProviderOrderToken.
 		Query().
 		Where(
-			providerordertoken.HasProviderWith(providerprofile.IDEQ(lockOrder.Edges.Provider.ID)),
-			providerordertoken.HasTokenWith(tokenent.IDEQ(lockOrder.Edges.Token.ID)),
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(order.Edges.Provider.ID)),
+			providerordertoken.HasTokenWith(tokenent.IDEQ(order.Edges.Token.ID)),
 			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
 			providerordertoken.AddressNEQ(""),
 		).
