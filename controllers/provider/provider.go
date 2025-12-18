@@ -581,17 +581,19 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// Check if order is already in a finalized state
-	// Prevent accepting orders that are refunded, fulfilled, validated, settled, or cancelled
+	// Prevent accepting orders that are refunded, fulfilled, validated, settled, cancelled, or processing
 	if currentOrder.Status == lockpaymentorder.StatusRefunded ||
 		currentOrder.Status == lockpaymentorder.StatusFulfilled ||
 		currentOrder.Status == lockpaymentorder.StatusValidated ||
 		currentOrder.Status == lockpaymentorder.StatusSettled ||
-		currentOrder.Status == lockpaymentorder.StatusCancelled {
+		currentOrder.Status == lockpaymentorder.StatusCancelled ||
+		currentOrder.Status == lockpaymentorder.StatusProcessing {
 		_ = tx.Rollback()
 		logger.WithFields(logger.Fields{
-			"OrderID": orderID.String(),
-			"Status":  currentOrder.Status,
-		}).Warnf("Rejecting accept request for order already in final state")
+			"OrderID":    orderID.String(),
+			"Status":     currentOrder.Status,
+			"ProviderID": provider.ID,
+		}).Warnf("Rejecting accept request for order in final/processing state")
 		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Order cannot be accepted: order is already %s", currentOrder.Status), nil)
 		return
 	}
