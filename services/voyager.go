@@ -33,13 +33,15 @@ const (
 
 // VoyagerRequestContext tracks pending requests with proper lifecycle management
 type VoyagerRequestContext struct {
-	ID        string
-	CreatedAt time.Time
-	Context   context.Context
-	Cancel    context.CancelFunc
-	Response  chan *VoyagerResponse
-	Done      chan struct{}
-	doneOnce  sync.Once // Ensures Done channel is closed exactly once
+	ID             string
+	CreatedAt      time.Time
+	Context        context.Context
+	Cancel         context.CancelFunc
+	Response       chan *VoyagerResponse
+	Done           chan struct{}
+	doneOnce       sync.Once        // Ensures Done channel is closed exactly once
+	StoredResponse *VoyagerResponse // Stored response for duplicate waiters
+	responseMutex  sync.RWMutex
 }
 
 // VoyagerRequest represents a queued Voyager API request
@@ -76,7 +78,7 @@ type VoyagerWorker struct {
 	CircuitOpen       bool
 	LastFailure       time.Time
 	ExhaustedUntil    time.Time
-	BackoffInterval   time.Duration
+	RateLimitedUntil  time.Time
 	Mutex             sync.RWMutex
 }
 
@@ -107,6 +109,13 @@ func (w *VoyagerWorker) isExhausted() bool {
 	w.Mutex.RLock()
 	defer w.Mutex.RUnlock()
 	return time.Now().Before(w.ExhaustedUntil)
+}
+
+// isRateLimited checks if the worker is currently rate limited
+func (w *VoyagerWorker) isRateLimited() bool {
+	w.Mutex.RLock()
+	defer w.Mutex.RUnlock()
+	return time.Now().Before(w.RateLimitedUntil)
 }
 
 // VoyagerService provides functionality for interacting with Voyager API
@@ -422,13 +431,6 @@ func (w *VoyagerWorker) start(ctx context.Context) {
 				continue
 			}
 
-			currentInterval := w.Interval
-			w.Mutex.RLock()
-			if w.BackoffInterval > 0 {
-				currentInterval = w.BackoffInterval
-			}
-			w.Mutex.RUnlock()
-
 			err := w.processNextRequest(ctx)
 			if err != nil {
 				if err.Error() == "no requests in queue" {
@@ -439,7 +441,7 @@ func (w *VoyagerWorker) start(ctx context.Context) {
 					continue
 				}
 				consecutiveEmptyPolls = 0
-				ticker.Reset(currentInterval)
+				ticker.Reset(w.Interval)
 				w.recordError()
 				logger.WithFields(logger.Fields{
 					"WorkerID": w.WorkerID,
@@ -447,7 +449,7 @@ func (w *VoyagerWorker) start(ctx context.Context) {
 				}).Errorf("Failed to process Voyager request")
 			} else {
 				consecutiveEmptyPolls = 0
-				ticker.Reset(currentInterval)
+				ticker.Reset(w.Interval)
 				w.recordSuccess()
 				atomic.AddInt64(&voyagerMonthlyCallsCounter, 1)
 			}
@@ -503,6 +505,23 @@ func (w *VoyagerWorker) recordError() {
 	}
 }
 
+// recordRateLimitError records a rate limit error and sets rate limit backoff
+func (w *VoyagerWorker) recordRateLimitError() {
+	w.Mutex.Lock()
+	defer w.Mutex.Unlock()
+
+	w.Errors++
+	w.ConsecutiveErrors++
+	w.LastFailure = time.Now()
+	w.RateLimitedUntil = time.Now().Add(60 * time.Second)
+
+	logger.WithFields(logger.Fields{
+		"WorkerID":         w.WorkerID,
+		"RateLimitedUntil": w.RateLimitedUntil,
+		"TotalErrors":      w.Errors,
+	}).Warnf("Worker rate limited, backing off for 60 seconds")
+}
+
 // recordSuccess records a successful request
 func (w *VoyagerWorker) recordSuccess() {
 	w.Mutex.Lock()
@@ -510,11 +529,16 @@ func (w *VoyagerWorker) recordSuccess() {
 
 	w.Processed++
 	w.ConsecutiveErrors = 0
-	w.BackoffInterval = 0
+	w.RateLimitedUntil = time.Time{}
 }
 
 // processNextRequest processes the next request from the queue
 func (w *VoyagerWorker) processNextRequest(ctx context.Context) error {
+	// Check if worker is rate limited before consuming queue items
+	if w.isRateLimited() {
+		return fmt.Errorf("worker is rate limited")
+	}
+
 	requestData, err := storage.RedisClient.LPop(ctx, "voyager_queue").Result()
 	if err != nil {
 		return fmt.Errorf("no requests in queue")
@@ -563,12 +587,13 @@ func (w *VoyagerWorker) processNextRequest(ctx context.Context) error {
 		apiErr = fmt.Errorf("unknown request type: %s", request.RequestType)
 	}
 
-	// Update error counters
+	// Update error counters and handle rate limiting
 	if apiErr != nil {
 		errorType := classifyVoyagerError(apiErr.Error())
 		switch errorType {
 		case VoyagerErrorTypeRateLimit:
 			atomic.AddInt64(&voyagerRateLimitErrorsCounter, 1)
+			w.recordRateLimitError()
 		case VoyagerErrorTypeMonthlyLimit:
 			atomic.AddInt64(&voyagerMonthlyLimitErrorsCounter, 1)
 		case VoyagerErrorTypeAPI:
@@ -581,11 +606,19 @@ func (w *VoyagerWorker) processNextRequest(ctx context.Context) error {
 	// Send response to pending request
 	if reqCtxValue, exists := voyagerPendingRequests.Load(request.ID); exists {
 		if reqCtx, ok := reqCtxValue.(*VoyagerRequestContext); ok {
-			select {
-			case reqCtx.Response <- &VoyagerResponse{
+			response := &VoyagerResponse{
 				Data:  data,
 				Error: apiErr,
-			}:
+			}
+
+			// Store response for duplicate waiters
+			reqCtx.responseMutex.Lock()
+			reqCtx.StoredResponse = response
+			reqCtx.responseMutex.Unlock()
+
+			// Send to response channel (non-blocking)
+			select {
+			case reqCtx.Response <- response:
 			default:
 				logger.WithFields(logger.Fields{
 					"WorkerID":  w.WorkerID,
@@ -665,9 +698,12 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 		"x-api-key":    w.APIKey,
 	}).Build().GET("").
 		Query().AddParams(params).Send()
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transfers: %w", err)
+	}
+
+	if res.RawResponse.StatusCode == http.StatusTooManyRequests {
+		return nil, fmt.Errorf("rate limit exceeded (429) for address %s", request.Address)
 	}
 
 	if res.RawResponse.StatusCode != http.StatusOK {
@@ -778,9 +814,12 @@ func (w *VoyagerWorker) makeVoyagerEventsAPICall(request VoyagerRequest) ([]map[
 		"x-api-key":    w.APIKey,
 	}).Build().GET("").
 		Query().AddParams(params).Send()
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events: %w", err)
+	}
+
+	if res.RawResponse.StatusCode == http.StatusTooManyRequests {
+		return nil, fmt.Errorf("rate limit exceeded (429) for contract %s", request.ContractAddr)
 	}
 
 	if res.RawResponse.StatusCode != http.StatusOK {
@@ -835,9 +874,12 @@ func (w *VoyagerWorker) makeVoyagerEventsByTxAPICall(request VoyagerRequest) ([]
 		"x-api-key":    w.APIKey,
 	}).Build().GET("").
 		Query().AddParams(params).Send()
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events by tx: %w", err)
+	}
+
+	if res.RawResponse.StatusCode == http.StatusTooManyRequests {
+		return nil, fmt.Errorf("rate limit exceeded (429) for tx %s", request.TxHash)
 	}
 
 	if res.RawResponse.StatusCode != http.StatusOK {
@@ -891,9 +933,12 @@ func (w *VoyagerWorker) makeVoyagerBlocksAPICall() (map[string]interface{}, erro
 		"x-api-key":    w.APIKey,
 	}).Build().GET("").
 		Query().AddParams(params).Send()
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get blocks: %w", err)
+	}
+
+	if res.RawResponse.StatusCode == http.StatusTooManyRequests {
+		return nil, fmt.Errorf("rate limit exceeded (429) for blocks")
 	}
 
 	if res.RawResponse.StatusCode != http.StatusOK {
@@ -943,7 +988,6 @@ func (w *VoyagerWorker) getBlockByNumber(blockNumber int64) (map[string]interfac
 		"Content-Type": "application/json",
 		"x-api-key":    w.APIKey,
 	}).Build().GET("").Send()
-
 	if err != nil {
 		return nil, err
 	}
@@ -1046,16 +1090,22 @@ func TransformVoyagerEventToRPCFormat(event map[string]interface{}) map[string]i
 
 // GetAddressTokenTransfersImmediate fetches token transfers immediately without queuing
 func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, address string, limit int, fromBlock int64, toBlock int64, fromAddress string, toAddress string) ([]map[string]interface{}, error) {
-	// Try Voyager API first
+	// Try Voyager API first - find a non-rate-limited worker
 	voyagerWorkerMutex.RLock()
 	var worker *VoyagerWorker
-	if len(voyagerWorkers) > 0 {
-		worker = voyagerWorkers[0]
+	for _, w := range voyagerWorkers {
+		if !w.isRateLimited() {
+			worker = w
+			break
+		}
 	}
 	voyagerWorkerMutex.RUnlock()
 
 	if worker == nil {
-		// Fallback to RPC if no workers available
+		// All workers rate limited or no workers available, skip directly to RPC
+		logger.WithFields(logger.Fields{
+			"Address": address,
+		}).Debugf("All Voyager workers rate limited, using RPC directly")
 		return s.getAddressTokenTransfersRPC(ctx, address, limit, fromBlock, toBlock)
 	}
 
@@ -1130,15 +1180,31 @@ func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, address s
 		Done:      doneChan,
 	}
 
-	// Check for duplicate request
+	// Check for duplicate request - share the response instead of creating new requests
 	if existingCtx, exists := voyagerPendingRequests.Load(requestID); exists {
 		if existingReqCtx, ok := existingCtx.(*VoyagerRequestContext); ok {
-			// Wait for the original request to complete instead of consuming its response
-			// This ensures the original requester receives the response
+			// Wait for the existing request to complete
 			select {
-			case <-existingReqCtx.Context.Done():
-				// Original request completed, make our own immediate request
-				return s.GetAddressTokenTransfersImmediate(ctx, address, limit, fromBlock, toBlock, fromAddress, toAddress)
+			case <-existingReqCtx.Done:
+				// Request completed, check stored response
+				existingReqCtx.responseMutex.RLock()
+				storedResponse := existingReqCtx.StoredResponse
+				existingReqCtx.responseMutex.RUnlock()
+
+				if storedResponse == nil {
+					// Request was cleaned up without response, make immediate request
+					return s.GetAddressTokenTransfersImmediate(ctx, address, limit, fromBlock, toBlock, fromAddress, toAddress)
+				}
+
+				if storedResponse.Error != nil {
+					// Original request failed, fallback to RPC (single fallback for all waiters)
+					return s.getAddressTokenTransfersRPC(ctx, address, limit, fromBlock, toBlock)
+				}
+
+				if transfers, ok := storedResponse.Data.([]map[string]interface{}); ok {
+					return transfers, nil
+				}
+				return []map[string]interface{}{}, nil
 			case <-reqCtx.Done():
 				return nil, reqCtx.Err()
 			}
@@ -1204,15 +1270,22 @@ func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, address s
 
 // GetContractEventsImmediate fetches contract events immediately without queuing
 func (s *VoyagerService) GetContractEventsImmediate(ctx context.Context, contractAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	// Try Voyager API first
+	// Try Voyager API first - find a non-rate-limited worker
 	voyagerWorkerMutex.RLock()
 	var worker *VoyagerWorker
-	if len(voyagerWorkers) > 0 {
-		worker = voyagerWorkers[0]
+	for _, w := range voyagerWorkers {
+		if !w.isRateLimited() {
+			worker = w
+			break
+		}
 	}
 	voyagerWorkerMutex.RUnlock()
 
 	if worker == nil {
+		// All workers rate limited or no workers available, skip directly to RPC
+		logger.WithFields(logger.Fields{
+			"Contract": contractAddress,
+		}).Debugf("All Voyager workers rate limited, using RPC directly")
 		return s.getContractEventsRPC(ctx, contractAddress, limit, fromBlock, toBlock)
 	}
 
@@ -1281,12 +1354,28 @@ func (s *VoyagerService) GetContractEvents(ctx context.Context, contractAddress 
 
 	if existingCtx, exists := voyagerPendingRequests.Load(requestID); exists {
 		if existingReqCtx, ok := existingCtx.(*VoyagerRequestContext); ok {
-			// Wait for the original request to complete instead of consuming its response
-			// This ensures the original requester receives the response
+			// Wait for the existing request to complete
 			select {
-			case <-existingReqCtx.Context.Done():
-				// Original request completed, make our own immediate request
-				return s.GetContractEventsImmediate(ctx, contractAddress, limit, fromBlock, toBlock)
+			case <-existingReqCtx.Done:
+				// Request completed, check stored response
+				existingReqCtx.responseMutex.RLock()
+				storedResponse := existingReqCtx.StoredResponse
+				existingReqCtx.responseMutex.RUnlock()
+
+				if storedResponse == nil {
+					// Request was cleaned up without response, make immediate request
+					return s.GetContractEventsImmediate(ctx, contractAddress, limit, fromBlock, toBlock)
+				}
+
+				if storedResponse.Error != nil {
+					// Original request failed, fallback to RPC (single fallback for all waiters)
+					return s.getContractEventsRPC(ctx, contractAddress, limit, fromBlock, toBlock)
+				}
+
+				if events, ok := storedResponse.Data.([]map[string]interface{}); ok {
+					return events, nil
+				}
+				return []map[string]interface{}{}, nil
 			case <-reqCtx.Done():
 				return nil, reqCtx.Err()
 			}
@@ -1344,14 +1433,22 @@ func (s *VoyagerService) GetContractEvents(ctx context.Context, contractAddress 
 
 // GetEventsByTransactionHashImmediate fetches events by transaction hash immediately
 func (s *VoyagerService) GetEventsByTransactionHashImmediate(ctx context.Context, txHash string, limit int) ([]map[string]interface{}, error) {
+	// Try Voyager API first - find a non-rate-limited worker
 	voyagerWorkerMutex.RLock()
 	var worker *VoyagerWorker
-	if len(voyagerWorkers) > 0 {
-		worker = voyagerWorkers[0]
+	for _, w := range voyagerWorkers {
+		if !w.isRateLimited() {
+			worker = w
+			break
+		}
 	}
 	voyagerWorkerMutex.RUnlock()
 
 	if worker == nil {
+		// All workers rate limited or no workers available, skip directly to RPC
+		logger.WithFields(logger.Fields{
+			"TxHash": txHash,
+		}).Debugf("All Voyager workers rate limited, using RPC directly")
 		return s.getEventsByTransactionHashRPC(ctx, txHash)
 	}
 
@@ -1419,12 +1516,28 @@ func (s *VoyagerService) GetEventsByTransactionHash(ctx context.Context, txHash 
 
 	if existingCtx, exists := voyagerPendingRequests.Load(requestID); exists {
 		if existingReqCtx, ok := existingCtx.(*VoyagerRequestContext); ok {
-			// Wait for the original request to complete instead of consuming its response
-			// This ensures the original requester receives the response
+			// Wait for the existing request to complete
 			select {
-			case <-existingReqCtx.Context.Done():
-				// Original request completed, make our own immediate request
-				return s.GetEventsByTransactionHashImmediate(ctx, txHash, limit)
+			case <-existingReqCtx.Done:
+				// Request completed, check stored response
+				existingReqCtx.responseMutex.RLock()
+				storedResponse := existingReqCtx.StoredResponse
+				existingReqCtx.responseMutex.RUnlock()
+
+				if storedResponse == nil {
+					// Request was cleaned up without response, make immediate request
+					return s.GetEventsByTransactionHashImmediate(ctx, txHash, limit)
+				}
+
+				if storedResponse.Error != nil {
+					// Original request failed, fallback to RPC (single fallback for all waiters)
+					return s.getEventsByTransactionHashRPC(ctx, txHash)
+				}
+
+				if events, ok := storedResponse.Data.([]map[string]interface{}); ok {
+					return events, nil
+				}
+				return []map[string]interface{}{}, nil
 			case <-reqCtx.Done():
 				return nil, reqCtx.Err()
 			}
