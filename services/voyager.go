@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -129,6 +130,9 @@ var (
 	voyagerWorkerCancel  context.CancelFunc
 	voyagerWorkers       []*VoyagerWorker
 	voyagerWorkerMutex   sync.RWMutex
+
+	// Sentinel errors
+	ErrWorkerRateLimited = fmt.Errorf("worker is rate limited")
 
 	// Request tracking
 	voyagerPendingRequests  sync.Map
@@ -440,6 +444,11 @@ func (w *VoyagerWorker) start(ctx context.Context) {
 					}
 					continue
 				}
+				// Check if worker is rate limited - don't record as error
+				if errors.Is(err, ErrWorkerRateLimited) {
+					// Worker is rate limited, skip without recording error
+					continue
+				}
 				consecutiveEmptyPolls = 0
 				ticker.Reset(w.Interval)
 				w.recordError()
@@ -536,7 +545,7 @@ func (w *VoyagerWorker) recordSuccess() {
 func (w *VoyagerWorker) processNextRequest(ctx context.Context) error {
 	// Check if worker is rate limited before consuming queue items
 	if w.isRateLimited() {
-		return fmt.Errorf("worker is rate limited")
+		return ErrWorkerRateLimited
 	}
 
 	requestData, err := storage.RedisClient.LPop(ctx, "voyager_queue").Result()
