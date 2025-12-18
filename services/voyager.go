@@ -641,6 +641,11 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 				}
 			}
 		}
+	} else {
+		// timestampFrom and timestampTo should be default to 3days ago and now
+		timestampFrom := time.Now().Add(-3 * 24 * time.Hour).Unix()
+		params["timestampFrom"] = fmt.Sprintf("%d", timestampFrom)
+		params["timestampTo"] = fmt.Sprintf("%d", time.Now().Unix())
 	}
 
 	// Add from/to address filters
@@ -1106,8 +1111,11 @@ func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, address s
 	// Create request ID
 	requestID := fmt.Sprintf("transfers_%s_%d_%d_%d", address, limit, fromBlock, toBlock)
 
-	// Create request context
-	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// Create request context with 120s timeout to account for:
+	// - Queue wait time (if workers are busy)
+	// - Worker processing time (30s API timeout + overhead)
+	// - Block-to-timestamp conversion (2 additional API calls)
+	reqCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
 	responseChan := make(chan *VoyagerResponse, 1)
@@ -1255,7 +1263,8 @@ func (s *VoyagerService) getContractEventsRPC(ctx context.Context, contractAddre
 func (s *VoyagerService) GetContractEvents(ctx context.Context, contractAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
 	requestID := fmt.Sprintf("events_%s_%d_%d_%d", contractAddress, limit, fromBlock, toBlock)
 
-	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// Use 120s timeout to account for queue wait + processing time
+	reqCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
 	responseChan := make(chan *VoyagerResponse, 1)
@@ -1392,7 +1401,8 @@ func (s *VoyagerService) getEventsByTransactionHashRPC(ctx context.Context, txHa
 func (s *VoyagerService) GetEventsByTransactionHash(ctx context.Context, txHash string, limit int) ([]map[string]interface{}, error) {
 	requestID := fmt.Sprintf("events_tx_%s_%d", txHash, limit)
 
-	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// Use 120s timeout to account for queue wait + processing time
+	reqCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
 	responseChan := make(chan *VoyagerResponse, 1)
@@ -1500,7 +1510,8 @@ func (s *VoyagerService) GetLatestBlockNumberImmediate(ctx context.Context) (uin
 func (s *VoyagerService) GetLatestBlockNumber(ctx context.Context) (uint64, error) {
 	requestID := "blocks_latest"
 
-	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// Use 120s timeout to account for queue wait + processing time
+	reqCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
 	responseChan := make(chan *VoyagerResponse, 1)
