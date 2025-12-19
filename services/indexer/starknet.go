@@ -73,7 +73,7 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 	}
 
 	// Use Voyager service to get token transfers (handles RPC fallback internally)
-	transfers, err := s.voyagerService.GetAddressTokenTransfers(ctx, token.ContractAddress, ChunkSize, fromBlock, toBlock, "", "")
+	transfers, err := s.voyagerService.GetAddressTokenTransfers(ctx, token.ContractAddress, ChunkSize, fromBlock, toBlock, "", userAccountAddress)
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to get token transfers for token %s: %w", token.Symbol, err)
 	}
@@ -651,7 +651,7 @@ func (s *IndexerStarknet) IndexProviderAddress(ctx context.Context, network *ent
 
 	// Use Voyager transfers endpoint with from filter to get transfers from gateway to provider
 	// This directly returns transfers from gateway contract to provider address
-	transfers, err := s.voyagerService.GetAddressTokenTransfers(ctx, address, limit, fromBlock, toBlock, network.GatewayContractAddress, "")
+	transfers, err := s.voyagerService.GetAddressTokenTransfers(ctx, "", limit, fromBlock, toBlock, network.GatewayContractAddress, address)
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to get provider transfers: %w", err)
 	}
