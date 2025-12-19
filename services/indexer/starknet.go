@@ -75,9 +75,18 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 	// Use Voyager service to get token transfers (handles RPC fallback internally)
 	transfers, err := s.voyagerService.GetAddressTokenTransfers(ctx, token.ContractAddress, ChunkSize, fromBlock, toBlock, "", userAccountAddress)
 	if err != nil {
+		logger.WithFields(logger.Fields{
+			"error": fmt.Sprintf("%v", err),
+			"Token": token.Symbol,
+			"UserAddress":   userAccountAddress,
+		}).Error("Failed to get token transfers for token")
 		return eventCounts, fmt.Errorf("failed to get token transfers for token %s: %w", token.Symbol, err)
 	}
-
+	logger.WithFields(logger.Fields{
+		"Token":         token.Symbol,
+		"UserAddress":   userAccountAddress,
+		"TransferCount": len(transfers),
+	}).Infof("Voyager: after transfer")
 	// Transform Voyager transfers to RPC format for processing
 	transactions := make([]map[string]interface{}, len(transfers))
 	for i, transfer := range transfers {
@@ -92,8 +101,18 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 
 	transferEventCount, err := s.processReceiveAddressByTransactionEvents(ctx, token, transactions, userAccountAddress)
 	if err != nil {
+		logger.WithFields(logger.Fields{
+			"error": fmt.Sprintf("%v", err),
+			"Token": token.Symbol,
+			"UserAddress":   userAccountAddress,
+		}).Error("Failed to process receive address by transaction events")
 		return eventCounts, fmt.Errorf("failed to index receive address by transaction: %w", err)
 	}
+	logger.WithFields(logger.Fields{
+		"Token":         token.Symbol,
+		"UserAddress":   userAccountAddress,
+		"TransferCount": transferEventCount.Transfer,
+	}).Infof("Processed transfer events for receive address")
 	eventCounts.Transfer += transferEventCount.Transfer
 
 	for _, tx := range transactions {
