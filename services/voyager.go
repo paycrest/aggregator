@@ -1062,12 +1062,18 @@ func getStarknetRPCClient() (*starknet.Client, error) {
 func TransformVoyagerTransferToRPCFormat(transfer map[string]interface{}) map[string]interface{} {
 	// Voyager format: txHash, transferFrom, transferTo, blockNumber, transferValue, etc.
 	// RPC format: transaction_hash, block_number, decoded.non_indexed_params (from, to, value)
-
 	txHash, _ := transfer["txHash"].(string)
 	blockNumber, _ := transfer["blockNumber"].(float64)
 	transferFrom, _ := transfer["transferFrom"].(string)
 	transferTo, _ := transfer["transferTo"].(string)
 	transferValue, _ := transfer["transferValue"].(string)
+	logger.WithFields(logger.Fields{
+		"TxHash":      txHash,
+		"BlockNumber": blockNumber,
+		"From":        transferFrom,
+		"To":          transferTo,
+		"Value":       transferValue,
+	}).Errorf("Transforming Voyager transfer to RPC format")
 
 	// Create RPC-formatted event
 	rpcEvent := map[string]interface{}{
