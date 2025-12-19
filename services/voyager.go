@@ -1073,7 +1073,7 @@ func TransformVoyagerTransferToRPCFormat(transfer map[string]interface{}) map[st
 		"From":        transferFrom,
 		"To":          transferTo,
 		"Value":       transferValue,
-	}).Errorf("Transforming Voyager transfer to RPC format")
+	}).Infof("Transforming Voyager transfer to RPC format")
 
 	// Create RPC-formatted event
 	rpcEvent := map[string]interface{}{
