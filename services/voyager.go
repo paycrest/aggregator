@@ -18,7 +18,9 @@ import (
 	"github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
 	u "github.com/paycrest/aggregator/utils"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
+	"github.com/shopspring/decimal"
 )
 
 // VoyagerErrorType represents different types of errors for smart handling
@@ -1067,13 +1069,32 @@ func TransformVoyagerTransferToRPCFormat(transfer map[string]interface{}) map[st
 	transferFrom, _ := transfer["transferFrom"].(string)
 	transferTo, _ := transfer["transferTo"].(string)
 	transferValue, _ := transfer["transferValue"].(string)
+	tokenDecimals, _ := transfer["tokenDecimals"].(int)
+	
 	logger.WithFields(logger.Fields{
 		"TxHash":      txHash,
 		"BlockNumber": blockNumber,
-		"From":        transferFrom,
-		"To":          transferTo,
+		"From":        cryptoUtils.NormalizeStarknetAddress(transferFrom),
+		"To":          cryptoUtils.NormalizeStarknetAddress(transferTo),
 		"Value":       transferValue,
 	}).Infof("Transforming Voyager transfer to RPC format")
+
+	var rawValue string
+	if tokenDecimals > 0 && transferValue != "" {
+		decimalValue, err := decimal.NewFromString(transferValue)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"TxHash": txHash,
+				"Value":  transferValue,
+				"Error":  err.Error(),
+			}).Warnf("Failed to parse transfer value for decimal conversion")
+			return nil
+		}
+		rawValueDecimals := u.ToSubunit(decimalValue, int8(tokenDecimals))
+		rawValue = rawValueDecimals.String()
+	} else {
+		return nil
+	}
 
 	// Create RPC-formatted event
 	rpcEvent := map[string]interface{}{
@@ -1081,9 +1102,9 @@ func TransformVoyagerTransferToRPCFormat(transfer map[string]interface{}) map[st
 		"block_number":     blockNumber,
 		"decoded": map[string]interface{}{
 			"non_indexed_params": map[string]interface{}{
-				"from":  transferFrom,
-				"to":    transferTo,
-				"value": transferValue,
+				"from":  cryptoUtils.NormalizeStarknetAddress(transferFrom),
+				"to":    cryptoUtils.NormalizeStarknetAddress(transferTo),
+				"value": rawValue,
 			},
 			"indexed_params": map[string]interface{}{},
 		},
@@ -1133,7 +1154,7 @@ func TransformVoyagerEventToRPCFormat(event map[string]interface{}) map[string]i
 		"transaction_hash": transactionHash,
 		"block_number":     blockNumber,
 		"name":             name,
-		"from_address":     fromAddress,
+		"from_address":     cryptoUtils.NormalizeStarknetAddress(fromAddress),
 		"decoded": map[string]interface{}{
 			"indexed_params":     indexedParams,
 			"non_indexed_params": nonIndexedParams,

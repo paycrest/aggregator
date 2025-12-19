@@ -61,5 +61,5 @@ func (s *ReceiveAddressService) CreateStarknetAddress(client *starknet.Client) (
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to encrypt salt: %w", err)
 	}
-	return accountInfo.NewAccount.Address.String(), saltEncrypted, nil
+	return cryptoUtils.NormalizeStarknetAddress(accountInfo.NewAccount.Address.String()), saltEncrypted, nil
 }
