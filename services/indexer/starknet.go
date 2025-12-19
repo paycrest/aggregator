@@ -14,6 +14,7 @@ import (
 	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 )
@@ -152,7 +153,7 @@ func (s *IndexerStarknet) indexReceiveAddressByTransaction(ctx context.Context, 
 			// Try RPC format
 			fromAddr, ok = event["from_address"].(string)
 		}
-		if ok && strings.EqualFold(fromAddr, token.ContractAddress) {
+		if ok && strings.EqualFold(cryptoUtils.NormalizeStarknetAddress(fromAddr), cryptoUtils.NormalizeStarknetAddress(token.ContractAddress)) {
 			// Check if it's a transfer event (name or selector)
 			name, _ := event["name"].(string)
 			if name == "Transfer" || name == "" {
@@ -244,12 +245,12 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 		}
 
 		// Filter by userAccountAddress - only process transfers to the specified address
-		if userAccountAddress != "" && !strings.EqualFold(toStr, userAccountAddress) {
+		if userAccountAddress != "" && !strings.EqualFold(cryptoUtils.NormalizeStarknetAddress(toStr), cryptoUtils.NormalizeStarknetAddress(userAccountAddress)) {
 			continue
 		}
 
 		// Skip if transfer is from gateway contract
-		if strings.EqualFold(fromStr, token.Edges.Network.GatewayContractAddress) {
+		if strings.EqualFold(cryptoUtils.NormalizeStarknetAddress(fromStr), cryptoUtils.NormalizeStarknetAddress(token.Edges.Network.GatewayContractAddress)) {
 			continue
 		}
 
@@ -289,6 +290,11 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 			"Token":       token.Symbol,
 			"UserAddress": userAccountAddress,
 			"ToAddress":   toStr,
+			"From":        fromStr,
+			"ValueStr":    valueStr,
+			"ValueDecimal": transferEvent.Value.String(),
+			"BlockNumber": blockNumber,
+			"TxHash":      txHashFromEvent[:10] + "...",
 		}).Infof("Processing transfer event")
 
 		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toStr}, addressToEvent)
@@ -333,7 +339,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			// Try RPC format
 			fromAddr, ok = event["from_address"].(string)
 		}
-		if ok && strings.EqualFold(fromAddr, network.GatewayContractAddress) {
+		if ok && strings.EqualFold(cryptoUtils.NormalizeStarknetAddress(fromAddr), cryptoUtils.NormalizeStarknetAddress(network.GatewayContractAddress)) {
 			// Transform Voyager event to RPC format if needed
 			if _, hasDecoded := event["decoded"]; !hasDecoded {
 				// This is a Voyager event, transform it
@@ -723,7 +729,7 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 			// Try RPC format
 			fromAddr, ok = event["from_address"].(string)
 		}
-		if !ok || !strings.EqualFold(fromAddr, network.GatewayContractAddress) {
+		if !ok || !strings.EqualFold(cryptoUtils.NormalizeStarknetAddress(fromAddr), cryptoUtils.NormalizeStarknetAddress(network.GatewayContractAddress)) {
 			continue
 		}
 		name, _ := event["name"].(string)
@@ -766,7 +772,7 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 			continue
 		}
 
-		if !strings.EqualFold(liquidityProvider, providerAddress) {
+		if !strings.EqualFold(cryptoUtils.NormalizeStarknetAddress(liquidityProvider), cryptoUtils.NormalizeStarknetAddress(providerAddress)) {
 			continue
 		}
 
