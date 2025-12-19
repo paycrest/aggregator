@@ -675,7 +675,7 @@ func (w *VoyagerWorker) processNextRequest(ctx context.Context) error {
 // makeVoyagerTransfersAPICall makes the actual API call to Voyager for transfers
 func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]map[string]interface{}, error) {
 	// Build URL: /beta/contracts/{address}/transfers
-	url := fmt.Sprintf("https://api.voyager.online/beta/contracts/%s/transfers", request.Address)
+	url := fmt.Sprintf("https://api.voyager.online/beta/contracts/%s/transfers", request.ToAddress)
 
 	// Build query parameters
 	params := map[string]string{
@@ -711,18 +711,18 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 			}
 		}
 	} else {
-		// timestampFrom and timestampTo should be default to 3days ago and now
-		timestampFrom := time.Now().Add(-3 * 24 * time.Hour).Unix()
+		// timestampFrom and timestampTo should be default to 4days ago and now
+		timestampFrom := time.Now().Add(-4 * 24 * time.Hour).Unix()
 		params["timestampFrom"] = fmt.Sprintf("%d", timestampFrom)
 		params["timestampTo"] = fmt.Sprintf("%d", time.Now().Unix())
 	}
 
 	// Add from/to address filters
+	if request.ContractAddr != "" {
+		params["tokenAddress"] = request.ContractAddr
+	}
 	if request.FromAddress != "" {
 		params["from"] = request.FromAddress
-	}
-	if request.ToAddress != "" {
-		params["to"] = request.ToAddress
 	}
 
 	logger.WithFields(logger.Fields{
@@ -1138,7 +1138,7 @@ func TransformVoyagerEventToRPCFormat(event map[string]interface{}) map[string]i
 }
 
 // GetAddressTokenTransfersImmediate fetches token transfers immediately without queuing
-func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, address string, limit int, fromBlock int64, toBlock int64, fromAddress string, toAddress string) ([]map[string]interface{}, error) {
+func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, tokenAddress string, limit int, fromBlock int64, toBlock int64, fromAddress string, toAddress string) ([]map[string]interface{}, error) {
 	// Try Voyager API first - find a non-rate-limited worker
 	voyagerWorkerMutex.RLock()
 	var worker *VoyagerWorker
@@ -1155,13 +1155,14 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 	if worker == nil {
 		// All workers rate limited or no workers available, skip directly to RPC
 		logger.WithFields(logger.Fields{
-			"Address": address,
+			"TokenAddress": tokenAddress,
 		}).Debugf("All Voyager workers rate limited, using RPC directly")
-		return s.getAddressTokenTransfersRPC(ctx, address, limit, fromBlock, toBlock)
+		return s.getAddressTokenTransfersRPC(ctx, tokenAddress, limit, fromBlock, toBlock)
 	}
 
 	logger.WithFields(logger.Fields{
-		"Address":          address,
+		"TokenContract":    tokenAddress,
+		"ToAddress":        toAddress,
 		"FromBlock":        fromBlock,
 		"ToBlock":          toBlock,
 		"Limit":            limit,
@@ -1170,20 +1171,22 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 	}).Infof("Making immediate Voyager API call for token transfers")
 
 	request := VoyagerRequest{
-		ID:          fmt.Sprintf("transfers_%s_%d", address, limit),
-		RequestType: "transfers",
-		Address:     address,
-		Limit:       limit,
-		FromBlock:   fromBlock,
-		ToBlock:     toBlock,
-		FromAddress: fromAddress,
-		ToAddress:   toAddress,
+		ID:           fmt.Sprintf("transfers_%s_%d", toAddress, limit),
+		RequestType:  "transfers",
+		ContractAddr: tokenAddress,
+		Address:      tokenAddress,
+		Limit:        limit,
+		FromBlock:    fromBlock,
+		ToBlock:      toBlock,
+		FromAddress:  fromAddress,
+		ToAddress:    toAddress,
 	}
 
 	transfers, err := worker.makeVoyagerTransfersAPICall(request)
 	if err == nil {
 		logger.WithFields(logger.Fields{
-			"Address":       address,
+			"tokenAddress":  tokenAddress,
+			"ToAddress":     toAddress,
 			"TransferCount": len(transfers),
 			"WorkerID":      worker.WorkerID,
 		}).Infof("Voyager API call successful for token transfers")
@@ -1192,7 +1195,8 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 
 	// Voyager failed, fallback to RPC
 	logger.WithFields(logger.Fields{
-		"Address":       address,
+		"tokenAddress":  tokenAddress,
+		"ToAddress":     toAddress,
 		"FromBlock":     fromBlock,
 		"ToBlock":       toBlock,
 		"WorkerID":      worker.WorkerID,
@@ -1200,17 +1204,17 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 		"FallbackToRPC": true,
 	}).Infof("Voyager failed, falling back to RPC for token transfers")
 
-	return s.getAddressTokenTransfersRPC(ctx, address, limit, fromBlock, toBlock)
+	return s.getAddressTokenTransfersRPC(ctx, tokenAddress, limit, fromBlock, toBlock)
 }
 
 // getAddressTokenTransfersRPC fetches token transfers using RPC as fallback
-func (s *VoyagerService) getAddressTokenTransfersRPC(ctx context.Context, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+func (s *VoyagerService) getAddressTokenTransfersRPC(ctx context.Context, tokenAddress string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
 	client, err := getStarknetRPCClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RPC client: %w", err)
 	}
 
-	addressFelt, err := utils.HexToFelt(address)
+	addressFelt, err := utils.HexToFelt(tokenAddress)
 	if err != nil {
 		return nil, fmt.Errorf("invalid address: %w", err)
 	}
@@ -1225,9 +1229,9 @@ func (s *VoyagerService) getAddressTokenTransfersRPC(ctx context.Context, addres
 }
 
 // GetAddressTokenTransfers fetches token transfers (queued version)
-func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, address string, limit int, fromBlock int64, toBlock int64, fromAddress string, toAddress string) ([]map[string]interface{}, error) {
+func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, tokenAddress string, limit int, fromBlock int64, toBlock int64, fromAddress string, toAddress string) ([]map[string]interface{}, error) {
 	// Create request ID
-	requestID := fmt.Sprintf("transfers_%s_%d_%d_%d", address, limit, fromBlock, toBlock)
+	requestID := fmt.Sprintf("transfers_%s_%d_%d_%d", toAddress, limit, fromBlock, toBlock)
 
 	// Create request context with 120s timeout to account for:
 	// - Queue wait time (if workers are busy)
@@ -1261,12 +1265,12 @@ func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, address s
 
 				if storedResponse == nil {
 					// Request was cleaned up without response, make immediate request
-					return s.GetAddressTokenTransfersImmediate(ctx, address, limit, fromBlock, toBlock, fromAddress, toAddress)
+					return s.GetAddressTokenTransfersImmediate(ctx, tokenAddress, limit, fromBlock, toBlock, fromAddress, toAddress)
 				}
 
 				if storedResponse.Error != nil {
 					// Original request failed, fallback to RPC (single fallback for all waiters)
-					return s.getAddressTokenTransfersRPC(ctx, address, limit, fromBlock, toBlock)
+					return s.getAddressTokenTransfersRPC(ctx, tokenAddress, limit, fromBlock, toBlock)
 				}
 
 				if transfers, ok := storedResponse.Data.([]map[string]interface{}); ok {
@@ -1284,16 +1288,16 @@ func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, address s
 
 	// Create the request
 	request := VoyagerRequest{
-		ID:          requestID,
-		RequestType: "transfers",
-		Address:     address,
-		Limit:       limit,
-		FromBlock:   fromBlock,
-		ToBlock:     toBlock,
-		FromAddress: fromAddress,
-		ToAddress:   toAddress,
-		CreatedAt:   time.Now(),
-		Timeout:     30,
+		ID:           requestID,
+		RequestType:  "transfers",
+		ContractAddr: tokenAddress,
+		Limit:        limit,
+		FromBlock:    fromBlock,
+		ToBlock:      toBlock,
+		FromAddress:  fromAddress,
+		ToAddress:    toAddress,
+		CreatedAt:    time.Now(),
+		Timeout:      30,
 	}
 
 	// Serialize and queue the request
@@ -1312,11 +1316,12 @@ func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, address s
 	}
 
 	logger.WithFields(logger.Fields{
-		"RequestID":   requestID,
-		"Address":     address,
-		"FromBlock":   fromBlock,
-		"ToBlock":     toBlock,
-		"RequestType": "transfers",
+		"RequestID":       requestID,
+		"ContractAddress": tokenAddress,
+		"ToAddress":       toAddress,
+		"FromBlock":       fromBlock,
+		"ToBlock":         toBlock,
+		"RequestType":     "transfers",
 	}).Infof("Voyager request queued")
 
 	// Wait for response
@@ -1325,11 +1330,12 @@ func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, address s
 		if response.Error != nil {
 			// Voyager failed, fallback to RPC
 			logger.WithFields(logger.Fields{
-				"Address":       address,
-				"VoyagerError":  response.Error.Error(),
-				"FallbackToRPC": true,
+				"ContractAddress": tokenAddress,
+				"ToAddress":       toAddress,
+				"VoyagerError":    response.Error.Error(),
+				"FallbackToRPC":   true,
 			}).Warnf("Voyager failed, falling back to RPC for token transfers")
-			return s.getAddressTokenTransfersRPC(ctx, address, limit, fromBlock, toBlock)
+			return s.getAddressTokenTransfersRPC(ctx, tokenAddress, limit, fromBlock, toBlock)
 		}
 		if transfers, ok := response.Data.([]map[string]interface{}); ok {
 			return transfers, nil
