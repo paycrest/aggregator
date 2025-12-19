@@ -395,7 +395,7 @@ func (w *VoyagerWorker) start(ctx context.Context) {
 		"APIKey":    w.APIKey[:8] + "...",
 		"RateLimit": w.RateLimit,
 		"Interval":  w.Interval,
-	}).Info("Voyager worker started")
+	}).Infof("Voyager worker started")
 
 	consecutiveEmptyPolls := 0
 	maxEmptyPolls := 10
@@ -510,7 +510,7 @@ func (w *VoyagerWorker) recordError() {
 			"WorkerID":          w.WorkerID,
 			"TotalErrors":       w.Errors,
 			"ConsecutiveErrors": w.ConsecutiveErrors,
-		}).Warnf("Voyager circuit breaker opened")
+		}).Infof("Voyager circuit breaker opened")
 	}
 }
 
@@ -528,7 +528,7 @@ func (w *VoyagerWorker) recordRateLimitError() {
 		"WorkerID":         w.WorkerID,
 		"RateLimitedUntil": w.RateLimitedUntil,
 		"TotalErrors":      w.Errors,
-	}).Warnf("Worker rate limited, backing off for 60 seconds")
+	}).Infof("Worker rate limited, backing off for 60 seconds")
 }
 
 // recordSuccess records a successful request
@@ -579,6 +579,13 @@ func (w *VoyagerWorker) processNextRequest(ctx context.Context) error {
 		return nil
 	}
 
+	logger.WithFields(logger.Fields{
+		"WorkerID":    w.WorkerID,
+		"RequestID":   request.ID,
+		"RequestType": request.RequestType,
+		"Age":         time.Since(request.CreatedAt),
+	}).Infof("Processing Voyager request")
+
 	// Make the actual API call
 	var data interface{}
 	var apiErr error
@@ -594,6 +601,26 @@ func (w *VoyagerWorker) processNextRequest(ctx context.Context) error {
 		data, apiErr = w.makeVoyagerBlocksAPICall()
 	default:
 		apiErr = fmt.Errorf("unknown request type: %s", request.RequestType)
+	}
+
+	if apiErr != nil {
+		logger.WithFields(logger.Fields{
+			"WorkerID":    w.WorkerID,
+			"RequestID":   request.ID,
+			"RequestType": request.RequestType,
+			"Error":       apiErr.Error(),
+		}).Infof("Voyager API call failed")
+	} else {
+		var itemCount int
+		if items, ok := data.([]map[string]interface{}); ok {
+			itemCount = len(items)
+		}
+		logger.WithFields(logger.Fields{
+			"WorkerID":    w.WorkerID,
+			"RequestID":   request.ID,
+			"RequestType": request.RequestType,
+			"ItemCount":   itemCount,
+		}).Infof("Voyager API call successful")
 	}
 
 	// Update error counters and handle rate limiting
@@ -698,6 +725,13 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 		params["to"] = request.ToAddress
 	}
 
+	logger.WithFields(logger.Fields{
+		"WorkerID": w.WorkerID,
+		"Address":  request.Address,
+		"URL":      url,
+		"Params":   params,
+	}).Infof("Calling Voyager transfers API")
+
 	// Make API call
 	res, err := fastshot.NewClient(url).
 		Config().SetTimeout(30 * time.Second).
@@ -710,6 +744,12 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transfers: %w", err)
 	}
+
+	logger.WithFields(logger.Fields{
+		"WorkerID":   w.WorkerID,
+		"StatusCode": res.RawResponse.StatusCode,
+		"Address":    request.Address,
+	}).Infof("Voyager transfers API response received")
 
 	if res.RawResponse.StatusCode == http.StatusTooManyRequests {
 		return nil, fmt.Errorf("rate limit exceeded (429) for address %s", request.Address)
@@ -1102,10 +1142,12 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 	// Try Voyager API first - find a non-rate-limited worker
 	voyagerWorkerMutex.RLock()
 	var worker *VoyagerWorker
+	var rateLimitedCount int
 	for _, w := range voyagerWorkers {
-		if !w.isRateLimited() {
+		if w.isRateLimited() {
+			rateLimitedCount++
+		} else if worker == nil {
 			worker = w
-			break
 		}
 	}
 	voyagerWorkerMutex.RUnlock()
@@ -1117,6 +1159,15 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 		}).Debugf("All Voyager workers rate limited, using RPC directly")
 		return s.getAddressTokenTransfersRPC(ctx, address, limit, fromBlock, toBlock)
 	}
+
+	logger.WithFields(logger.Fields{
+		"Address":          address,
+		"FromBlock":        fromBlock,
+		"ToBlock":          toBlock,
+		"Limit":            limit,
+		"WorkerID":         worker.WorkerID,
+		"RateLimitedCount": rateLimitedCount,
+	}).Infof("Making immediate Voyager API call for token transfers")
 
 	request := VoyagerRequest{
 		ID:          fmt.Sprintf("transfers_%s_%d", address, limit),
@@ -1131,15 +1182,23 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 
 	transfers, err := worker.makeVoyagerTransfersAPICall(request)
 	if err == nil {
+		logger.WithFields(logger.Fields{
+			"Address":       address,
+			"TransferCount": len(transfers),
+			"WorkerID":      worker.WorkerID,
+		}).Infof("Voyager API call successful for token transfers")
 		return transfers, nil
 	}
 
 	// Voyager failed, fallback to RPC
 	logger.WithFields(logger.Fields{
 		"Address":       address,
+		"FromBlock":     fromBlock,
+		"ToBlock":       toBlock,
+		"WorkerID":      worker.WorkerID,
 		"VoyagerError":  err.Error(),
 		"FallbackToRPC": true,
-	}).Warnf("Voyager failed, falling back to RPC for token transfers")
+	}).Infof("Voyager failed, falling back to RPC for token transfers")
 
 	return s.getAddressTokenTransfersRPC(ctx, address, limit, fromBlock, toBlock)
 }
@@ -1251,6 +1310,14 @@ func (s *VoyagerService) GetAddressTokenTransfers(ctx context.Context, address s
 		voyagerPendingRequests.Delete(requestID)
 		return nil, fmt.Errorf("failed to queue request: %w", err)
 	}
+
+	logger.WithFields(logger.Fields{
+		"RequestID":   requestID,
+		"Address":     address,
+		"FromBlock":   fromBlock,
+		"ToBlock":     toBlock,
+		"RequestType": "transfers",
+	}).Infof("Voyager request queued")
 
 	// Wait for response
 	select {
