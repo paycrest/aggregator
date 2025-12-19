@@ -897,7 +897,7 @@ func SyncPaymentOrderFulfillments() {
 						}
 
 						_, err = order.Update().
-							SetStatus(paymentorder.StatusFulfilled).
+							SetStatus(paymentorder.StatusCancelled).
 							Save(ctx)
 						if err != nil {
 							continue
