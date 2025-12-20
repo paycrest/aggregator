@@ -199,10 +199,12 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 	for _, eventMap := range transferEvents {
 		decoded, ok := eventMap["decoded"].(map[string]interface{})
 		if !ok || decoded == nil {
+			logger.Errorf("Missing or invalid 'decoded' field in transfer event")
 			continue
 		}
 		nonIndexedParams, ok := decoded["non_indexed_params"].(map[string]interface{})
 		if !ok || nonIndexedParams == nil {
+			logger.Errorf("Missing or invalid 'non_indexed_params' in transfer event")
 			continue
 		}
 
@@ -215,6 +217,7 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 			continue
 		}
 		if fromStr == "" {
+			logger.Errorf("Empty 'from' parameter in transfer event")
 			continue
 		}
 
@@ -226,6 +229,7 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 			continue
 		}
 		if toStr == "" {
+			logger.Errorf("Empty 'to' parameter in transfer event")
 			continue
 		}
 
@@ -241,18 +245,37 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 			continue
 		}
 		if valueStr == "" {
+			logger.Errorf("Empty 'value' parameter in transfer event")
 			continue
 		}
+		logger.WithFields(logger.Fields{
+			"fromStr":  fromStr,
+			"toStr":    toStr,
+			"valueStr": valueStr,
+		}).Infof("Extracted transfer event parameters")
 
 		// Filter by userAccountAddress - only process transfers to the specified address
 		if userAccountAddress != "" && !strings.EqualFold(cryptoUtils.NormalizeStarknetAddress(toStr), cryptoUtils.NormalizeStarknetAddress(userAccountAddress)) {
+			logger.WithFields(logger.Fields{
+				"toStr": cryptoUtils.NormalizeStarknetAddress(toStr),
+				"userAccountAddress": cryptoUtils.NormalizeStarknetAddress(userAccountAddress),
+			}).Infof("Skipping transfer event - 'to' address does not match user account address")
 			continue
 		}
 
 		// Skip if transfer is from gateway contract
 		if strings.EqualFold(cryptoUtils.NormalizeStarknetAddress(fromStr), cryptoUtils.NormalizeStarknetAddress(token.Edges.Network.GatewayContractAddress)) {
+			logger.WithFields(logger.Fields{
+				"fromStr": cryptoUtils.NormalizeStarknetAddress(fromStr),
+				"GatewayContractAddress": cryptoUtils.NormalizeStarknetAddress(token.Edges.Network.GatewayContractAddress),
+			}).Infof("Skipping transfer event - 'from' address is gateway contract")
 			continue
 		}
+		logger.WithFields(logger.Fields{
+			"valueStr": valueStr,
+			"fromStr":  fromStr,
+			"toStr":    toStr,
+		}).Infof("Processing transfer event details")
 
 		// Parse transfer value
 		transferValue, err := decimal.NewFromString(valueStr)
@@ -264,12 +287,14 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 		// Safely extract block_number and transaction_hash
 		blockNumberRaw, ok := eventMap["block_number"].(float64)
 		if !ok {
+			logger.Errorf("Missing or invalid 'block_number' in transfer event")
 			continue
 		}
 		blockNumber := int64(blockNumberRaw)
 
 		txHashFromEvent, ok := eventMap["transaction_hash"].(string)
 		if !ok || txHashFromEvent == "" {
+			logger.Errorf("Missing or invalid 'transaction_hash' in transfer event")
 			continue
 		}
 
