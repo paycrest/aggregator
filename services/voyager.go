@@ -1049,7 +1049,7 @@ func TransformVoyagerTransferToRPCFormat(transfer map[string]interface{}) map[st
 	transferFrom, _ := transfer["transferFrom"].(string)
 	transferTo, _ := transfer["transferTo"].(string)
 	transferValue, _ := transfer["transferValue"].(string)
-	tokenDecimals, _ := transfer["tokenDecimals"].(int)
+	tokenDecimals, _ := transfer["tokenDecimals"].(float64)
 
 	if tokenDecimals <= 0 {
 		logger.WithFields(logger.Fields{
