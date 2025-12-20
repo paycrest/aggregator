@@ -273,8 +273,8 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 		}
 		logger.WithFields(logger.Fields{
 			"valueStr": valueStr,
-			"fromStr":  fromStr,
-			"toStr":    toStr,
+			"fromStr":  cryptoUtils.NormalizeStarknetAddress(fromStr),
+			"toStr":    cryptoUtils.NormalizeStarknetAddress(toStr),
 		}).Infof("Processing transfer event details")
 
 		// Parse transfer value
