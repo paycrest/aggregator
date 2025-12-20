@@ -28,6 +28,8 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 
+	"github.com/NethermindEth/juno/core/felt"
+	"github.com/NethermindEth/starknet.go/utils"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
@@ -1403,4 +1405,164 @@ func DetermineOrderType(orderToken *ent.ProviderOrderToken, tokenAmount decimal.
 	// OTC limits are configured - any amount exceeding regular max should be treated as OTC attempt
 	// Validation will catch if it's outside the valid OTC range (gap between MaxOrderAmount and MinOrderAmountOtc, or > MaxOrderAmountOtc)
 	return paymentorder.OrderTypeOtc
+}
+
+
+// ParseByteArray converts Cairo ByteArray format to string
+// ByteArray format: [num_full_chunks, ...full_chunks, pending_word, pending_word_len]
+func ParseByteArray(data []*felt.Felt) string {
+	if len(data) < 3 {
+		return ""
+	}
+
+	numFullChunks := int(data[0].BigInt(big.NewInt(0)).Int64())
+
+	if len(data) < numFullChunks+3 {
+		return ""
+	}
+
+	var result []byte
+
+	// Process full chunks (31 bytes each)
+	for i := 0; i < numFullChunks; i++ {
+		chunk := data[1+i]
+		chunkBytes := chunk.Bytes()
+
+		// Convert [32]byte to slice and take last 31 bytes
+		chunkSlice := chunkBytes[:]
+		if len(chunkSlice) >= 31 {
+			result = append(result, chunkSlice[len(chunkSlice)-31:]...)
+		} else {
+			// If less than 31 bytes, pad with zeros at the front
+			padding := make([]byte, 31-len(chunkSlice))
+			result = append(result, padding...)
+			result = append(result, chunkSlice...)
+		}
+	}
+
+	// Process pending word
+	pendingWord := data[1+numFullChunks]
+	pendingWordLen := int(data[2+numFullChunks].BigInt(big.NewInt(0)).Int64())
+
+	if pendingWordLen > 0 {
+		pendingBytes := pendingWord.Bytes()
+		pendingSlice := pendingBytes[:]
+
+		if len(pendingSlice) > pendingWordLen {
+			pendingSlice = pendingSlice[len(pendingSlice)-pendingWordLen:]
+		}
+		result = append(result, pendingSlice...)
+	}
+
+	return string(result)
+}
+
+func ParseByteArrayFromJSON(messageHashData map[string]interface{}) (string, error) {
+	if messageHashData == nil {
+		return "", fmt.Errorf("messageHashData is nil")
+	}
+
+	// Extract data array
+	data, ok := messageHashData["data"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("data field missing or invalid")
+	}
+
+	dataValue, ok := data["value"].([]interface{})
+	if !ok {
+		dataValue = []interface{}{} // Empty array if not present
+	}
+
+	// Extract pending_word
+	pendingWordMap, ok := messageHashData["pending_word"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("pending_word field missing or invalid")
+	}
+	pendingWordStr, ok := pendingWordMap["value"].(string)
+	if !ok {
+		return "", fmt.Errorf("pending_word value missing or invalid")
+	}
+
+	// Extract pending_word_len
+	pendingWordLenMap, ok := messageHashData["pending_word_len"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("pending_word_len field missing or invalid")
+	}
+	pendingWordLenStr, ok := pendingWordLenMap["value"].(string)
+	if !ok {
+		return "", fmt.Errorf("pending_word_len value missing or invalid")
+	}
+
+	// Convert to []*felt.Felt array
+	felts := make([]*felt.Felt, 0)
+
+	// 1. Number of full chunks
+	felts = append(felts, new(felt.Felt).SetUint64(uint64(len(dataValue))))
+
+	// 2. Full chunks
+	for _, item := range dataValue {
+		if str, ok := item.(string); ok {
+			felt, err := utils.HexToFelt(str)
+			if err != nil {
+				continue
+			}
+			felts = append(felts, felt)
+		}
+	}
+
+	// 3. Pending word
+	pendingWordFelt, err := utils.HexToFelt(pendingWordStr)
+	if err != nil {
+		return "", fmt.Errorf("invalid pending_word: %w", err)
+	}
+	felts = append(felts, pendingWordFelt)
+
+	// 4. Pending word length
+	pendingWordLenFelt, err := utils.HexToFelt(pendingWordLenStr)
+	if err != nil {
+		return "", fmt.Errorf("invalid pending_word_len: %w", err)
+	}
+	felts = append(felts, pendingWordLenFelt)
+
+	// Use the existing ParseByteArray function
+	return ParseByteArray(felts), nil
+}
+
+func ParseStringAsDecimals(strVal string) (decimal.Decimal, error) {
+	if strVal == "" {
+		return decimal.Zero, fmt.Errorf("empty string")
+	}
+
+	// Check if it's a hex string
+	if strings.HasPrefix(strVal, "0x") || strings.HasPrefix(strVal, "0X") {
+		return parseHexString(strVal)
+	}
+
+	// Try parsing as decimal string
+	result, err := decimal.NewFromString(strVal)
+	if err != nil {
+		return decimal.Zero, fmt.Errorf("invalid decimal string '%s': %w", strVal, err)
+	}
+
+	return result, nil
+}
+
+
+// parseHexString converts hex string to decimal
+func parseHexString(hexStr string) (decimal.Decimal, error) {
+	// Remove 0x prefix and convert to lowercase
+	hexStr = strings.TrimPrefix(strings.ToLower(hexStr), "0x")
+
+	if hexStr == "" {
+		return decimal.Zero, nil
+	}
+
+	// Parse hex to big.Int
+	bigInt := new(big.Int)
+	_, success := bigInt.SetString(hexStr, 16)
+	if !success {
+		return decimal.Zero, fmt.Errorf("invalid hex string: 0x%s", hexStr)
+	}
+
+	return decimal.NewFromBigInt(bigInt, 0), nil
 }
