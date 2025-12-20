@@ -233,6 +233,11 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 			continue
 		}
 
+		logger.WithFields(logger.Fields{
+			"fromStr": fromStr,
+			"toStr":   toStr,
+		}).Infof("Extracted transfer event addresses")
+
 		var valueStr string
 		if bigIntVal, ok := nonIndexedParams["value"].(*big.Int); ok {
 			valueStr = bigIntVal.String()
