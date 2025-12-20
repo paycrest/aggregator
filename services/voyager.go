@@ -1045,7 +1045,7 @@ func TransformVoyagerTransferToRPCFormat(transfer map[string]interface{}) map[st
 	// Voyager format: txHash, transferFrom, transferTo, blockNumber, transferValue, etc.
 	// RPC format: transaction_hash, block_number, decoded.non_indexed_params (from, to, value)
 	txHash, _ := transfer["txHash"].(string)
-	blockNumber, _ := transfer["blockNumber"].(float64)
+	blockNumber, _ := transfer["blockNumber"].(int64)
 	transferFrom, _ := transfer["transferFrom"].(string)
 	transferTo, _ := transfer["transferTo"].(string)
 	transferValue, _ := transfer["transferValue"].(string)
@@ -1107,7 +1107,7 @@ func TransformVoyagerEventToRPCFormat(event map[string]interface{}) (map[string]
 	// RPC format: transaction_hash, block_number, decoded.indexed_params, decoded.non_indexed_params
 
 	transactionHash, _ := event["transactionHash"].(string)
-	blockNumber, _ := event["blockNumber"].(float64)
+	blockNumber, _ := event["blockNumber"].(int64)
 	name, _ := event["name"].(string)
 	dataDecoded, _ := event["dataDecoded"].([]interface{})
 	keyDecoded, _ := event["keyDecoded"].([]interface{})
@@ -1121,7 +1121,10 @@ func TransformVoyagerEventToRPCFormat(event map[string]interface{}) (map[string]
 	indexedParams := make(map[string]interface{})
 	nonIndexedParams := make(map[string]interface{})
 	// Key is expected to be a string
-	topics := keys[0].(string)
+	topics, ok := keys[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to assert keys[0] as string")
+	}
 
 	switch topics {
 		case u.OrderCreatedStarknetSelector:
