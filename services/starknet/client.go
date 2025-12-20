@@ -23,6 +23,7 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -672,6 +673,11 @@ func (c *Client) handleOrderCreated(emittedEvent rpc.EmittedEvent) (map[string]i
 	amountHigh := emittedEvent.Keys[4]
 	amount := u256FromFelts(amountLow, amountHigh)
 
+	amountDecimals, err := u.ParseStringAsDecimals(amount.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse amount as decimals: %w", err)
+	}
+
 	if len(emittedEvent.Data) < 4 {
 		return nil, fmt.Errorf("invalid OrderCreated event: insufficient data")
 	}
@@ -680,6 +686,10 @@ func (c *Client) handleOrderCreated(emittedEvent rpc.EmittedEvent) (map[string]i
 	protocolFeeLow := emittedEvent.Data[0]
 	protocolFeeHigh := emittedEvent.Data[1]
 	protocolFee := u256FromFelts(protocolFeeLow, protocolFeeHigh)
+	protocolFeeDecimals, err := u.ParseStringAsDecimals(protocolFee.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse protocol_fee as decimals: %w", err)
+	}
 
 	orderID := emittedEvent.Data[2]
 
@@ -687,29 +697,33 @@ func (c *Client) handleOrderCreated(emittedEvent rpc.EmittedEvent) (map[string]i
 	rateLow := emittedEvent.Data[3]
 	rateBytes := rateLow.Bytes()
 	rate := new(big.Int).SetBytes(rateBytes[:])
+	rateDecimals, err := u.ParseStringAsDecimals(rate.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse rate as decimals: %w", err)
+	}
 
 	// Parse ByteArray message_hash starting at index 5
 	messageHash := ""
 	if len(emittedEvent.Data) > 3 {
-		messageHash = parseByteArray(emittedEvent.Data[4:])
+		messageHash = u.ParseByteArray(emittedEvent.Data[4:])
 	}
 
 	event := map[string]interface{}{
 		"block_number":     float64(emittedEvent.BlockNumber),
 		"transaction_hash": emittedEvent.TransactionHash.String(),
-		"address":          emittedEvent.FromAddress.String(),
+		"address":          cryptoUtils.NormalizeStarknetAddress(emittedEvent.FromAddress.String()),
 		"topics":           emittedEvent.Keys[0].String(),
 		"data":             emittedEvent.Data,
 		"decoded": map[string]interface{}{
 			"indexed_params": map[string]interface{}{
-				"sender": sender.String(),
-				"token":  token.String(),
-				"amount": amount.String(),
+				"sender": cryptoUtils.NormalizeStarknetAddress(sender.String()),
+				"token":  cryptoUtils.NormalizeStarknetAddress(token.String()),
+				"amount": amountDecimals,
 			},
 			"non_indexed_params": map[string]interface{}{
-				"protocol_fee": protocolFee.String(),
+				"protocol_fee": protocolFeeDecimals,
 				"order_id":     orderID.String(),
-				"rate":         rate.String(),
+				"rate":         rateDecimals,
 				"message_hash": messageHash,
 			},
 		},
@@ -738,8 +752,28 @@ func (c *Client) handleOrderSettled(emittedEvent rpc.EmittedEvent) (map[string]i
 	settlePercent := emittedEvent.Data[1].BigInt(big.NewInt(0)).Uint64()
 	rebatePercent := emittedEvent.Data[2].BigInt(big.NewInt(0)).Uint64()
 
+	settlePercentStr, ok := extractUint64AsString(settlePercent)
+	if !ok {
+		return nil, fmt.Errorf("failed to extract settle_percent as uint64")
+	}
+	
+	rebatePercentStr, ok := extractUint64AsString(rebatePercent)
+	if !ok {
+		return nil, fmt.Errorf("failed to extract rebate_percent as uint64")
+	}
+
+	settledPercentDecimals, err := u.ParseStringAsDecimals(settlePercentStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse settle_percent as decimals: %w", err)
+	}
+
+	rebatePercentDecimals, err := u.ParseStringAsDecimals(rebatePercentStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse rebate_percent as decimals: %w", err)
+	}
+
 	event := map[string]interface{}{
-		"block_number":     float64(emittedEvent.BlockNumber),
+		"block_number":     emittedEvent.BlockNumber,
 		"transaction_hash": emittedEvent.TransactionHash.String(),
 		"address":          emittedEvent.FromAddress.String(),
 		"topics":           emittedEvent.Keys[0].String(),
@@ -750,8 +784,8 @@ func (c *Client) handleOrderSettled(emittedEvent rpc.EmittedEvent) (map[string]i
 			},
 			"non_indexed_params": map[string]interface{}{
 				"split_order_id": splitOrderID.String(),
-				"settle_percent": settlePercent,
-				"rebate_percent": rebatePercent,
+				"settle_percent": settledPercentDecimals,
+				"rebate_percent": rebatePercentDecimals,
 			},
 		},
 	}
@@ -779,8 +813,13 @@ func (c *Client) handleOrderRefunded(emittedEvent rpc.EmittedEvent) (map[string]
 	feeHigh := emittedEvent.Data[1]
 	fee := u256FromFelts(feeLow, feeHigh)
 
+	feeDecimals, err := u.ParseStringAsDecimals(fee.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse fee as decimals: %w", err)
+	}
+
 	event := map[string]interface{}{
-		"block_number":     float64(emittedEvent.BlockNumber),
+		"block_number":     emittedEvent.BlockNumber,
 		"transaction_hash": emittedEvent.TransactionHash.String(),
 		"address":          emittedEvent.FromAddress.String(),
 		"topics":           emittedEvent.Keys[0].String(),
@@ -789,7 +828,7 @@ func (c *Client) handleOrderRefunded(emittedEvent rpc.EmittedEvent) (map[string]
 				"order_id": orderID.String(),
 			},
 			"non_indexed_params": map[string]interface{}{
-				"fee": fee.String(),
+				"fee": feeDecimals,
 			},
 		},
 	}
@@ -816,20 +855,28 @@ func (c *Client) handleTransfer(emittedEvent rpc.EmittedEvent) (map[string]inter
 	event := map[string]interface{}{
 		"block_number":     float64(emittedEvent.BlockNumber),
 		"transaction_hash": emittedEvent.TransactionHash.String(),
-		"address":          emittedEvent.FromAddress.String(),
+		"address":          cryptoUtils.NormalizeStarknetAddress(emittedEvent.FromAddress.String()),
 		"topics":           emittedEvent.Keys[0].String(),
 		"decoded": map[string]interface{}{
 			"indexed_params": map[string]interface{}{},
 			"non_indexed_params": map[string]interface{}{
 				// Starknet Transfer event are non-indexed
-				"from":  from.String(),
-				"to":    to.String(),
+				"from":  cryptoUtils.NormalizeStarknetAddress(from.String()),
+				"to":    cryptoUtils.NormalizeStarknetAddress(to.String()),
 				"value": amount.String(),
 			},
 		},
 	}
 
 	return event, nil
+}
+
+
+func extractUint64AsString(val interface{}) (string, bool) {
+	if uintVal, ok := val.(uint64); ok {
+		return fmt.Sprintf("%d", uintVal), true
+	}
+	return "", false
 }
 
 func getUserUserParameters() paymaster.UserParameters {
@@ -914,51 +961,3 @@ func u256FromFelts(low, high *felt.Felt) *big.Int {
 	return result
 }
 
-// parseByteArray converts Cairo ByteArray format to string
-// ByteArray format: [num_full_chunks, ...full_chunks, pending_word, pending_word_len]
-func parseByteArray(data []*felt.Felt) string {
-	if len(data) < 3 {
-		return ""
-	}
-
-	numFullChunks := int(data[0].BigInt(big.NewInt(0)).Int64())
-
-	if len(data) < numFullChunks+3 {
-		return ""
-	}
-
-	var result []byte
-
-	// Process full chunks (31 bytes each)
-	for i := 0; i < numFullChunks; i++ {
-		chunk := data[1+i]
-		chunkBytes := chunk.Bytes()
-
-		// Convert [32]byte to slice and take last 31 bytes
-		chunkSlice := chunkBytes[:]
-		if len(chunkSlice) >= 31 {
-			result = append(result, chunkSlice[len(chunkSlice)-31:]...)
-		} else {
-			// If less than 31 bytes, pad with zeros at the front
-			padding := make([]byte, 31-len(chunkSlice))
-			result = append(result, padding...)
-			result = append(result, chunkSlice...)
-		}
-	}
-
-	// Process pending word
-	pendingWord := data[1+numFullChunks]
-	pendingWordLen := int(data[2+numFullChunks].BigInt(big.NewInt(0)).Int64())
-
-	if pendingWordLen > 0 {
-		pendingBytes := pendingWord.Bytes()
-		pendingSlice := pendingBytes[:]
-
-		if len(pendingSlice) > pendingWordLen {
-			pendingSlice = pendingSlice[len(pendingSlice)-pendingWordLen:]
-		}
-		result = append(result, pendingSlice...)
-	}
-
-	return string(result)
-}

@@ -2131,28 +2131,6 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	fromBlockStr := ctx.Query("from_block")
 	toBlockStr := ctx.Query("to_block")
 
-	// Determine if pathParam is a tx_hash or address based on length
-	var txHash, address string
-	if pathParam != "" && strings.HasPrefix(pathParam, "0x") {
-		if len(pathParam) == 66 {
-			txHash = pathParam
-		} else if len(pathParam) == 42 {
-			address = pathParam
-		}
-	}
-
-	// Validate that pathParam is a valid tx_hash or address
-	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash (66 chars) or address (42 chars)", nil)
-		return
-	}
-
-	// Validate that at least one indexing method is provided
-	if txHash == "" && address == "" && (fromBlockStr == "" || toBlockStr == "") {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Must provide either a valid transaction hash, address, or from_block/to_block range", nil)
-		return
-	}
-
 	// Parse block range if provided
 	var fromBlock, toBlock int64
 	var blockErr error
@@ -2206,6 +2184,36 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 				networkent.IsTestnetEQ(isTestnet),
 			).
 			Only(ctx)
+	}
+
+	// Determine if pathParam is a tx_hash or address based on length
+	var txHash, address string
+	if pathParam != "" && strings.HasPrefix(pathParam, "0x") {
+		if strings.HasPrefix(network.Identifier, "starknet") {
+			if len(pathParam) == 65 {
+				txHash = pathParam
+			} else if len(pathParam) == 66 {
+				address = pathParam
+			}
+		} else {
+			if len(pathParam) == 66 {
+				txHash = pathParam
+			} else if len(pathParam) == 42 {
+				address = pathParam
+			}
+		}
+	}
+
+	// Validate that pathParam is a valid tx_hash or address
+	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash (66 chars) or address (42 chars)", nil)
+		return
+	}
+
+	// Validate that at least one indexing method is provided
+	if txHash == "" && address == "" && (fromBlockStr == "" || toBlockStr == "") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Must provide either a valid transaction hash, address, or from_block/to_block range", nil)
+		return
 	}
 
 	if err != nil {
