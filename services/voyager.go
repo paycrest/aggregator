@@ -706,8 +706,8 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 			}
 		}
 	} else {
-		// timestampFrom and timestampTo should be default to 4days ago and now
-		timestampFrom := time.Now().Add(-4 * 24 * time.Hour).Unix()
+		// timestampFrom and timestampTo should be default to 7 days ago and now
+		timestampFrom := time.Now().Add(-7 * 24 * time.Hour).Unix()
 		params["timestampFrom"] = fmt.Sprintf("%d", timestampFrom)
 		params["timestampTo"] = fmt.Sprintf("%d", time.Now().Unix())
 	}
