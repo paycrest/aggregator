@@ -1127,110 +1127,110 @@ func TransformVoyagerEventToRPCFormat(event map[string]interface{}) (map[string]
 	}
 
 	switch topics {
-		case u.OrderCreatedStarknetSelector:
-			for _, keyItem := range keyDecoded {
-				if keyMap, ok := keyItem.(map[string]interface{}); ok {
-					keyName, _ := keyMap["name"].(string)
-					keyValue := keyMap["value"]
-					switch keyName {
-					case "sender", "token":
-						indexedParams[keyName] = keyValue
-					case "amount":
-						orderAmount, err := u.ParseStringAsDecimals(keyValue.(string))
-						if err != nil {
-							return nil, fmt.Errorf("failed to parse order amount: %v", err)
-						}
-						indexedParams[keyName] = orderAmount.String()
-					default:
-						indexedParams[keyName] = keyValue
+	case u.OrderCreatedStarknetSelector:
+		for _, keyItem := range keyDecoded {
+			if keyMap, ok := keyItem.(map[string]interface{}); ok {
+				keyName, _ := keyMap["name"].(string)
+				keyValue := keyMap["value"]
+				switch keyName {
+				case "sender", "token":
+					indexedParams[keyName] = keyValue
+				case "amount":
+					orderAmount, err := u.ParseStringAsDecimals(keyValue.(string))
+					if err != nil {
+						return nil, fmt.Errorf("failed to parse order amount: %v", err)
 					}
+					indexedParams[keyName] = orderAmount.String()
+				default:
+					indexedParams[keyName] = keyValue
 				}
 			}
+		}
 
-			for _, dataItem := range dataDecoded {
-				if dataMap, ok := dataItem.(map[string]interface{}); ok {
-					dataName, _ := dataMap["name"].(string)
-					dataValue := dataMap["value"]
-					dataType, _ := dataMap["type"].(string)
+		for _, dataItem := range dataDecoded {
+			if dataMap, ok := dataItem.(map[string]interface{}); ok {
+				dataName, _ := dataMap["name"].(string)
+				dataValue := dataMap["value"]
+				dataType, _ := dataMap["type"].(string)
 
-					switch dataName {
-					case "protocol_fee", "rate":
-						valueDecimals, err := u.ParseStringAsDecimals(dataValue.(string))
-						if err != nil {
-							return nil, fmt.Errorf("failed to parse %s: %v", dataName, err)
-						}
-						nonIndexedParams[dataName] = valueDecimals
-					case "order_id":
-						nonIndexedParams[dataName] = dataValue
-					case "message_hash":
-						// Handle ByteArray type specially
-						if dataType == "core::byte_array::ByteArray" {
-							if byteArrayMap, ok := dataValue.(map[string]interface{}); ok {
-								messageHash, err := u.ParseByteArrayFromJSON(byteArrayMap)
-								if err != nil {
-									nonIndexedParams[dataName] = dataValue
-								} else {
-									nonIndexedParams[dataName] = messageHash
-								}
-							} else {
+				switch dataName {
+				case "protocol_fee", "rate":
+					valueDecimals, err := u.ParseStringAsDecimals(dataValue.(string))
+					if err != nil {
+						return nil, fmt.Errorf("failed to parse %s: %v", dataName, err)
+					}
+					nonIndexedParams[dataName] = valueDecimals
+				case "order_id":
+					nonIndexedParams[dataName] = dataValue
+				case "message_hash":
+					// Handle ByteArray type specially
+					if dataType == "core::byte_array::ByteArray" {
+						if byteArrayMap, ok := dataValue.(map[string]interface{}); ok {
+							messageHash, err := u.ParseByteArrayFromJSON(byteArrayMap)
+							if err != nil {
 								nonIndexedParams[dataName] = dataValue
+							} else {
+								nonIndexedParams[dataName] = messageHash
 							}
 						} else {
 							nonIndexedParams[dataName] = dataValue
 						}
+					} else {
+						nonIndexedParams[dataName] = dataValue
 					}
 				}
 			}
+		}
 
-		case u.OrderSettledStarknetSelector:
-			for _, keyItem := range keyDecoded {
-				if keyMap, ok := keyItem.(map[string]interface{}); ok {
-					keyName, _ := keyMap["name"].(string)
-					keyValue, _ := keyMap["value"].(string)
-					indexedParams[keyName] = keyValue
-				}
+	case u.OrderSettledStarknetSelector:
+		for _, keyItem := range keyDecoded {
+			if keyMap, ok := keyItem.(map[string]interface{}); ok {
+				keyName, _ := keyMap["name"].(string)
+				keyValue, _ := keyMap["value"].(string)
+				indexedParams[keyName] = keyValue
 			}
+		}
 
-			for _, dataItem := range dataDecoded {
-				if dataMap, ok := dataItem.(map[string]interface{}); ok {
-					dataName, _ := dataMap["name"].(string)
-					dataValue := dataMap["value"]
-					switch dataName {
-						case "split_order_id":
-							nonIndexedParams[dataName] = dataValue
-						case  "settle_percent", "rebate_percent":
-							percentValue, err := u.ParseStringAsDecimals(dataValue.(string))
-							if err != nil {
-								return nil, fmt.Errorf("failed to parse %s: %v", dataName, err)
-							}
-							nonIndexedParams[dataName] = percentValue
-						default:
-							nonIndexedParams[dataName] = dataValue
-					}
-				}
-			}
-	
-		case u.OrderRefundedStarknetSelector:
-			for _, keyItem := range keyDecoded {
-				if keyMap, ok := keyItem.(map[string]interface{}); ok {
-					keyName, _ := keyMap["name"].(string)
-					keyValue, _ := keyMap["value"].(string)
-					indexedParams[keyName] = keyValue
-				}
-			}
-
-			for _, dataItem := range dataDecoded {
-				if dataMap, ok := dataItem.(map[string]interface{}); ok {
-					dataName, _ := dataMap["name"].(string)
-					dataValue, _ := dataMap["value"].(string)
-					feeValue, err := u.ParseStringAsDecimals(dataValue)
+		for _, dataItem := range dataDecoded {
+			if dataMap, ok := dataItem.(map[string]interface{}); ok {
+				dataName, _ := dataMap["name"].(string)
+				dataValue := dataMap["value"]
+				switch dataName {
+				case "split_order_id":
+					nonIndexedParams[dataName] = dataValue
+				case "settle_percent", "rebate_percent":
+					percentValue, err := u.ParseStringAsDecimals(dataValue.(string))
 					if err != nil {
 						return nil, fmt.Errorf("failed to parse %s: %v", dataName, err)
 					}
-					nonIndexedParams[dataName] = feeValue
+					nonIndexedParams[dataName] = percentValue
+				default:
+					nonIndexedParams[dataName] = dataValue
 				}
 			}
-	
+		}
+
+	case u.OrderRefundedStarknetSelector:
+		for _, keyItem := range keyDecoded {
+			if keyMap, ok := keyItem.(map[string]interface{}); ok {
+				keyName, _ := keyMap["name"].(string)
+				keyValue, _ := keyMap["value"].(string)
+				indexedParams[keyName] = keyValue
+			}
+		}
+
+		for _, dataItem := range dataDecoded {
+			if dataMap, ok := dataItem.(map[string]interface{}); ok {
+				dataName, _ := dataMap["name"].(string)
+				dataValue, _ := dataMap["value"].(string)
+				feeValue, err := u.ParseStringAsDecimals(dataValue)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse %s: %v", dataName, err)
+				}
+				nonIndexedParams[dataName] = feeValue
+			}
+		}
+
 	}
 
 	// Create RPC-formatted event
@@ -1238,7 +1238,7 @@ func TransformVoyagerEventToRPCFormat(event map[string]interface{}) (map[string]
 		"transaction_hash": transactionHash,
 		"block_number":     blockNumber,
 		"name":             name,
-		"topic":            keys[0],
+		"topic":            topics,
 		"address":          cryptoUtils.NormalizeStarknetAddress(fromAddress),
 		"decoded": map[string]interface{}{
 			"indexed_params":     indexedParams,
