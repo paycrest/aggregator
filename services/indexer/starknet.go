@@ -221,12 +221,12 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 		}
 
 		// Safely extract block_number and transaction_hash
-		blockNumber, ok := eventMap["block_number"].(int64)
+		blockNumberFloat, ok := eventMap["block_number"].(float64)
 		if !ok {
 			logger.Errorf("Missing or invalid 'block_number' in transfer event")
 			continue
 		}
-
+		blockNumber := int64(blockNumberFloat)
 		txHashFromEvent, ok := eventMap["transaction_hash"].(string)
 		if !ok || txHashFromEvent == "" {
 			logger.Errorf("Missing or invalid 'transaction_hash' in transfer event")
@@ -299,11 +299,13 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 		}
 
 		// Safely extract block_number and transaction_hash
-		blockNumber, ok := eventMap["block_number"].(int64)
+		blockNumberFloat, ok := eventMap["block_number"].(float64)
 		if !ok {
 			logger.Errorf("Missing or invalid 'block_number' in gateway event")
 			continue
 		}
+
+		blockNumber := int64(blockNumberFloat)
 
 		txHashFromEvent, ok := eventMap["transaction_hash"].(string)
 		if !ok || txHashFromEvent == "" {
@@ -681,10 +683,11 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 		}
 
 		// Safely extract block_number and transaction_hash
-		blockNumber, ok := eventMap["block_number"].(int64)
+		blockNumberFloat, ok := eventMap["block_number"].(float64)
 		if !ok {
 			continue
 		}
+		blockNumber := int64(blockNumberFloat)
 
 		txHash, ok := eventMap["transaction_hash"].(string)
 		if !ok || txHash == "" {
