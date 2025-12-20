@@ -221,12 +221,11 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 		}
 
 		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
+		blockNumber, ok := eventMap["block_number"].(int64)
 		if !ok {
 			logger.Errorf("Missing or invalid 'block_number' in transfer event")
 			continue
 		}
-		blockNumber := int64(blockNumberRaw)
 
 		txHashFromEvent, ok := eventMap["transaction_hash"].(string)
 		if !ok || txHashFromEvent == "" {
@@ -300,12 +299,11 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 		}
 
 		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
+		blockNumber, ok := eventMap["block_number"].(int64)
 		if !ok {
 			logger.Errorf("Missing or invalid 'block_number' in gateway event")
 			continue
 		}
-		blockNumber := int64(blockNumberRaw)
 
 		txHashFromEvent, ok := eventMap["transaction_hash"].(string)
 		if !ok || txHashFromEvent == "" {
@@ -683,11 +681,10 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 		}
 
 		// Safely extract block_number and transaction_hash
-		blockNumberRaw, ok := eventMap["block_number"].(float64)
+		blockNumber, ok := eventMap["block_number"].(int64)
 		if !ok {
 			continue
 		}
-		blockNumber := int64(blockNumberRaw)
 
 		txHash, ok := eventMap["transaction_hash"].(string)
 		if !ok || txHash == "" {
@@ -701,23 +698,13 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 		}
 
 		// Safely extract required fields
-		settlePercentStr, ok := nonIndexedParams["settle_percent"].(string)
-		if !ok || settlePercentStr == "" {
+		settlePercent, ok := nonIndexedParams["settle_percent"].(decimal.Decimal)
+		if !ok {
 			continue
 		}
 
-		settlePercent, err := decimal.NewFromString(settlePercentStr)
-		if err != nil {
-			continue
-		}
-
-		rebatePercentStr, ok := nonIndexedParams["rebate_percent"].(string)
-		if !ok || rebatePercentStr == "" {
-			continue
-		}
-
-		rebatePercent, err := decimal.NewFromString(rebatePercentStr)
-		if err != nil {
+		rebatePercent, ok := nonIndexedParams["rebate_percent"].(decimal.Decimal)
+		if !ok  {
 			continue
 		}
 

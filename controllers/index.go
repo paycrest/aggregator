@@ -2126,6 +2126,12 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 
 	// Get the second path param, which can be a tx_hash or an address
 	pathParam := ctx.Param("tx_hash_or_address")
+	
+	// Validate that pathParam is a valid tx_hash or address
+	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash or address", nil)
+		return
+	}
 
 	// Get optional parameters from query string
 	fromBlockStr := ctx.Query("from_block")
@@ -2185,6 +2191,19 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 			).
 			Only(ctx)
 	}
+	
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found or not supported for current environment", nil)
+			return
+		}
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", err),
+			"NetworkParam": networkParam,
+		}).Errorf("Failed to fetch network")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate network", nil)
+		return
+	}
 
 	// Determine if pathParam is a tx_hash or address based on length
 	var txHash, address string
@@ -2204,28 +2223,9 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		}
 	}
 
-	// Validate that pathParam is a valid tx_hash or address
-	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash (66 chars) or address (42 chars)", nil)
-		return
-	}
-
 	// Validate that at least one indexing method is provided
 	if txHash == "" && address == "" && (fromBlockStr == "" || toBlockStr == "") {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Must provide either a valid transaction hash, address, or from_block/to_block range", nil)
-		return
-	}
-
-	if err != nil {
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found or not supported for current environment", nil)
-			return
-		}
-		logger.WithFields(logger.Fields{
-			"Error":        fmt.Sprintf("%v", err),
-			"NetworkParam": networkParam,
-		}).Errorf("Failed to fetch network")
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate network", nil)
 		return
 	}
 

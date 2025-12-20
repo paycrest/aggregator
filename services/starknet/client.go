@@ -709,7 +709,7 @@ func (c *Client) handleOrderCreated(emittedEvent rpc.EmittedEvent) (map[string]i
 	}
 
 	event := map[string]interface{}{
-		"block_number":     float64(emittedEvent.BlockNumber),
+		"block_number":     emittedEvent.BlockNumber,
 		"transaction_hash": emittedEvent.TransactionHash.String(),
 		"address":          cryptoUtils.NormalizeStarknetAddress(emittedEvent.FromAddress.String()),
 		"topics":           emittedEvent.Keys[0].String(),
@@ -853,7 +853,7 @@ func (c *Client) handleTransfer(emittedEvent rpc.EmittedEvent) (map[string]inter
 	amount := u256FromFelts(amountLow, amountHigh)
 
 	event := map[string]interface{}{
-		"block_number":     float64(emittedEvent.BlockNumber),
+		"block_number":     emittedEvent.BlockNumber,
 		"transaction_hash": emittedEvent.TransactionHash.String(),
 		"address":          cryptoUtils.NormalizeStarknetAddress(emittedEvent.FromAddress.String()),
 		"topics":           emittedEvent.Keys[0].String(),
