@@ -51,15 +51,23 @@ func (s *ReceiveAddressService) CreateTronAddress(ctx context.Context) (string, 
 
 // CreateStarknetAddress generates and saves a new Starknet address
 func (s *ReceiveAddressService) CreateStarknetAddress(client *starknet.Client) (string, []byte, error) {
-	accountInfo, err := client.GenerateDeterministicAccount("")
+	// Generate a secure random seed
+	seed, err := cryptoUtils.GenerateSecureSeed()
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to generate seed: %w", err)
+	}
+
+	// Generate deterministic account from the seed
+	accountInfo, err := client.GenerateDeterministicAccount(seed)
 	if err != nil {
 		return "", nil, fmt.Errorf("CreateStarknetAddress: %w", err)
 	}
 
-	saltBytes := accountInfo.Salt.Bytes()
-	saltEncrypted, err := cryptoUtils.EncryptPlain(saltBytes[:])
+	seedWithSuffix := fmt.Sprintf("%s-paycrest", seed)
+	saltEncrypted, err := cryptoUtils.EncryptPlain([]byte(seedWithSuffix))
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to encrypt salt: %w", err)
 	}
 	return cryptoUtils.NormalizeStarknetAddress(accountInfo.NewAccount.Address.String()), saltEncrypted, nil
 }
+

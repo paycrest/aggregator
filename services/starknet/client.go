@@ -566,17 +566,13 @@ func (c *Client) BuildRefundOrderCall(
 }
 
 func (c *Client) GenerateDeterministicAccount(seed string) (*types.StarknetDeterministicAccountInfo, error) {
+	if seed == "" {
+		return nil, fmt.Errorf("seed is required to generate deterministic account")
+	}
 	// This assume that all accounts inclusive with aggregator use the same class hash
 	classHash, err := utils.HexToFelt(accountClassHash)
 	if err != nil {
 		return nil, fmt.Errorf("invalid account class hash: %w", err)
-	}
-
-	if seed == "" {
-		seed, err = generateSecureSeed()
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate secure seed: %w", err)
-		}
 	}
 
 	// Always derive everything from seed for consistency
@@ -931,15 +927,6 @@ func encodeCairoByteArray(data []byte) []*felt.Felt {
 	result = append(result, new(felt.Felt).SetUint64(uint64(pendingWordLen)))
 
 	return result
-}
-
-func generateSecureSeed() (string, error) {
-	b := make([]byte, 32)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
 }
 
 // splitU256FromFelt splits a felt value into (low, high) 128-bit limbs for u256 calldata

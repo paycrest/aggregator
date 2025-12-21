@@ -1087,7 +1087,7 @@ func TransformVoyagerTransferToRPCFormat(transfer map[string]interface{}) map[st
 	rpcEvent := map[string]interface{}{
 		"transaction_hash": txHash,
 		"block_number":     blockNumber,
-		"topic":            u.TransferStarknetSelector,
+		"topics":           u.TransferStarknetSelector,
 		"decoded": map[string]interface{}{
 			"non_indexed_params": map[string]interface{}{
 				"from":  cryptoUtils.NormalizeStarknetAddress(transferFrom),
@@ -1238,7 +1238,7 @@ func TransformVoyagerEventToRPCFormat(event map[string]interface{}) (map[string]
 		"transaction_hash": transactionHash,
 		"block_number":     blockNumber,
 		"name":             name,
-		"topic":            topics,
+		"topics":           topics,
 		"address":          cryptoUtils.NormalizeStarknetAddress(fromAddress),
 		"decoded": map[string]interface{}{
 			"indexed_params":     indexedParams,
