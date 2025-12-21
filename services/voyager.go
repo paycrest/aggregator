@@ -1140,7 +1140,7 @@ func TransformVoyagerEventToRPCFormat(event map[string]interface{}) (map[string]
 					if err != nil {
 						return nil, fmt.Errorf("failed to parse order amount: %v", err)
 					}
-					indexedParams[keyName] = orderAmount.String()
+					indexedParams[keyName] = orderAmount
 				default:
 					indexedParams[keyName] = keyValue
 				}
