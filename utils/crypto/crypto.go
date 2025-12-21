@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -321,4 +322,15 @@ func NormalizeStarknetAddress(address string) string {
 	
 	// Add 0x prefix back
 	return "0x" + addr
+}
+
+
+// generateSecureSeed generates a cryptographically secure random seed
+func GenerateSecureSeed() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }
