@@ -321,27 +321,32 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			}
 			orderAmount, ok := indexedParams["amount"].(decimal.Decimal)
 			if !ok {
+				logger.Infof("CreateOrder-Gateway, Unable to decode amount")
 				continue
 			}
 
 			// Extract sender (string)
 			senderStr, ok := indexedParams["sender"].(string)
 			if !ok || senderStr == "" {
+				logger.Infof("CreateOrder-Gateway, Unable to decode sender")
 				continue
 			}
 
 			tokenStr, ok := indexedParams["token"].(string)
 			if !ok || tokenStr == "" {
+				logger.Infof("CreateOrder-Gateway, Unable to decode token")
 				continue
 			}
 
 			nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
 			if !ok || nonIndexedParams == nil {
+				logger.Errorf("Missing or invalid 'non_indexed_params' in OrderCreated event")
 				continue
 			}
 
 			protocolFee, ok := nonIndexedParams["protocol_fee"].(decimal.Decimal)
 			if !ok {
+				logger.Infof("CreateOrder-Gateway, Unable to decode protocol_fee")
 				continue
 			}
 
@@ -352,12 +357,14 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 
 			orderIDStr, ok := nonIndexedParams["order_id"].(string)
 			if !ok || orderIDStr == "" {
+				logger.Infof("CreateOrder-Gateway, Unable to decode order_id")
 				continue
 			}
 
 			// Extract messageHash (string)
 			messageHashStr, ok := nonIndexedParams["message_hash"].(string)
 			if !ok || messageHashStr == "" {
+				logger.Infof("CreateOrder-Gateway, Unable to decode message_hash")
 				continue
 			}
 
@@ -465,6 +472,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 	// Process OrderCreated events
 	if len(orderCreatedEvents) > 0 {
 		orderIDs := []string{}
+		logger.Infof("Create order event found!!")
 		orderIDToEvent := make(map[string]*types.OrderCreatedEvent)
 		for _, event := range orderCreatedEvents {
 			orderIDs = append(orderIDs, event.OrderId)
