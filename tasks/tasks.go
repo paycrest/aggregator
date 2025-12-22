@@ -647,9 +647,34 @@ func SyncPaymentOrderFulfillments() {
 		if order.Edges.Provider == nil {
 			continue
 		}
+		if order.Edges.Provider.Edges.APIKey == nil {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.Edges.Provider.ID,
+				"Reason":     "internal: Provider APIKey is nil",
+			}).Errorf("SyncPaymentOrderFulfillments.MissingAPIKey")
+			continue
+		}
 		if len(order.Edges.Fulfillments) == 0 {
 			if order.Status == paymentorder.StatusCancelled {
 				reassignCancelledOrder(ctx, order, nil)
+				continue
+			}
+
+			if order.Edges.ProvisionBucket == nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Reason":     "internal: ProvisionBucket is nil",
+				}).Errorf("SyncPaymentOrderFulfillments.MissingProvisionBucket")
+				continue
+			}
+			if order.Edges.ProvisionBucket.Edges.Currency == nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Reason":     "internal: ProvisionBucket Currency is nil",
+				}).Errorf("SyncPaymentOrderFulfillments.MissingCurrency")
 				continue
 			}
 
@@ -776,6 +801,23 @@ func SyncPaymentOrderFulfillments() {
 					continue
 				}
 
+				if order.Edges.Token == nil {
+					logger.WithFields(logger.Fields{
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.Edges.Provider.ID,
+						"Reason":     "internal: Token is nil",
+					}).Errorf("SyncPaymentOrderFulfillments.MissingToken")
+					continue
+				}
+				if order.Edges.Token.Edges.Network == nil {
+					logger.WithFields(logger.Fields{
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.Edges.Provider.ID,
+						"Reason":     "internal: Token Network is nil",
+					}).Errorf("SyncPaymentOrderFulfillments.MissingNetwork")
+					continue
+				}
+
 				transactionLog, err := storage.Client.TransactionLog.
 					Create().
 					SetStatus(transactionlog.StatusOrderValidated).
@@ -807,6 +849,23 @@ func SyncPaymentOrderFulfillments() {
 				}
 			}
 		} else {
+			if order.Edges.ProvisionBucket == nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Reason":     "internal: ProvisionBucket is nil",
+				}).Errorf("SyncPaymentOrderFulfillments.MissingProvisionBucket")
+				continue
+			}
+			if order.Edges.ProvisionBucket.Edges.Currency == nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Reason":     "internal: ProvisionBucket Currency is nil",
+				}).Errorf("SyncPaymentOrderFulfillments.MissingCurrency")
+				continue
+			}
+
 			for _, fulfillment := range order.Edges.Fulfillments {
 				if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusPending {
 					// Compute HMAC
@@ -913,6 +972,23 @@ func SyncPaymentOrderFulfillments() {
 							continue
 						}
 
+						if order.Edges.Token == nil {
+							logger.WithFields(logger.Fields{
+								"OrderID":    order.ID.String(),
+								"ProviderID": order.Edges.Provider.ID,
+								"Reason":     "internal: Token is nil",
+							}).Errorf("SyncPaymentOrderFulfillments.MissingToken")
+							continue
+						}
+						if order.Edges.Token.Edges.Network == nil {
+							logger.WithFields(logger.Fields{
+								"OrderID":    order.ID.String(),
+								"ProviderID": order.Edges.Provider.ID,
+								"Reason":     "internal: Token Network is nil",
+							}).Errorf("SyncPaymentOrderFulfillments.MissingNetwork")
+							continue
+						}
+
 						transactionLog, err := storage.Client.TransactionLog.
 							Create().
 							SetStatus(transactionlog.StatusOrderValidated).
@@ -949,6 +1025,23 @@ func SyncPaymentOrderFulfillments() {
 					continue
 
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusSuccess {
+					if order.Edges.Token == nil {
+						logger.WithFields(logger.Fields{
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.Edges.Provider.ID,
+							"Reason":     "internal: Token is nil",
+						}).Errorf("SyncPaymentOrderFulfillments.MissingToken")
+						continue
+					}
+					if order.Edges.Token.Edges.Network == nil {
+						logger.WithFields(logger.Fields{
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.Edges.Provider.ID,
+							"Reason":     "internal: Token Network is nil",
+						}).Errorf("SyncPaymentOrderFulfillments.MissingNetwork")
+						continue
+					}
+
 					transactionLog, err := storage.Client.TransactionLog.
 						Create().
 						SetStatus(transactionlog.StatusOrderValidated).
