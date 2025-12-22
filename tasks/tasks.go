@@ -55,14 +55,14 @@ var (
 	indexingAddresses sync.Map // address_chainID -> time.Time (when indexing started)
 	recentlyIndexed   sync.Map // address_chainID -> time.Time (when last indexed)
 
-	// Minimum time between indexing same address (3 minutes)
-	indexingCooldown = 3 * time.Minute
+	// Minimum time between indexing same address
+	indexingCooldown = 10 * time.Second
 
-	// Maximum time an address can be "in progress" before considering it stale (5 minutes)
-	indexingTimeout = 5 * time.Minute
+	// Maximum time an address can be "in progress" before considering it stale
+	indexingTimeout = 2 * time.Minute
 
 	// Cleanup interval for stale entries in indexing maps
-	indexingCleanupInterval = 10 * time.Minute
+	indexingCleanupInterval = 3 * time.Minute
 )
 
 // cleanupIndexingMaps removes stale entries from indexing coordination maps
@@ -1811,8 +1811,6 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 		// Mark as recently indexed on success
 		recentlyIndexed.Store(indexKey, time.Now())
 		processedCount++
-
-		// Removed 250ms delay - queue handles rate limiting, no need for artificial delay
 	}
 
 	// Log summary at end instead of logging every order

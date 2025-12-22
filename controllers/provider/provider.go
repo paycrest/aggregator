@@ -578,6 +578,40 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		return
 	}
 
+	// Fetch the order to check its current status before accepting
+	currentOrder, err := tx.LockPaymentOrder.Get(ctx, orderID)
+	if err != nil {
+		_ = tx.Rollback()
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found", nil)
+		} else {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("error fetching order: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order", nil)
+		}
+		return
+	}
+
+	// Check if order is already in a finalized state
+	// Prevent accepting orders that are refunded, fulfilled, validated, settled, cancelled, or processing
+	if currentOrder.Status == lockpaymentorder.StatusRefunded ||
+		currentOrder.Status == lockpaymentorder.StatusFulfilled ||
+		currentOrder.Status == lockpaymentorder.StatusValidated ||
+		currentOrder.Status == lockpaymentorder.StatusSettled ||
+		currentOrder.Status == lockpaymentorder.StatusCancelled ||
+		currentOrder.Status == lockpaymentorder.StatusProcessing {
+		_ = tx.Rollback()
+		logger.WithFields(logger.Fields{
+			"OrderID":    orderID.String(),
+			"Status":     currentOrder.Status,
+			"ProviderID": provider.ID,
+		}).Warnf("Rejecting accept request for order in final/processing state")
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Order cannot be accepted: order is already %s", currentOrder.Status), nil)
+		return
+	}
+
 	// Log transaction status
 	var transactionLog *ent.TransactionLog
 	_, err = tx.PaymentOrder.
