@@ -370,6 +370,24 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order types.PaymentOrderFields) error {
 	orderIDPrefix := strings.Split(order.ID.String(), "-")[0]
 
+	// Both regular and OTC orders must have a provision bucket
+	if order.ProvisionBucket == nil {
+		logger.WithFields(logger.Fields{
+			"OrderID":   order.ID.String(),
+			"OrderType": order.OrderType,
+			"Reason":    "internal: Order missing provision bucket",
+		}).Errorf("AssignPaymentOrder.MissingProvisionBucket")
+		return fmt.Errorf("order %s (type: %s) is missing provision bucket", order.ID.String(), order.OrderType)
+	}
+	if order.ProvisionBucket.Edges.Currency == nil {
+		logger.WithFields(logger.Fields{
+			"OrderID":   order.ID.String(),
+			"OrderType": order.OrderType,
+			"Reason":    "internal: Provision bucket missing currency",
+		}).Errorf("AssignPaymentOrder.MissingCurrency")
+		return fmt.Errorf("provision bucket for order %s (type: %s) is missing currency", order.ID.String(), order.OrderType)
+	}
+
 	excludeList, err := storage.RedisClient.LRange(ctx, fmt.Sprintf("order_exclude_list_%s", order.ID), 0, -1).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{

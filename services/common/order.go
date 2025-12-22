@@ -125,6 +125,11 @@ func ProcessPaymentOrderFromBlockchain(
 			updateBuilder = updateBuilder.SetSender(paymentOrderFields.Sender)
 		}
 
+		// Update provision bucket if available (should always be set for regular orders)
+		if paymentOrderFields.ProvisionBucket != nil {
+			updateBuilder = updateBuilder.SetProvisionBucket(paymentOrderFields.ProvisionBucket)
+		}
+
 		_, err = updateBuilder.Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()
