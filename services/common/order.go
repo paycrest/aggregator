@@ -266,32 +266,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		}
 	}
 
-	// Update payment order status
-	paymentOrderUpdate := tx.PaymentOrder.
-		Update().
-		Where(
-			paymentorder.GatewayIDEQ(event.OrderId),
-			paymentorder.HasTokenWith(
-				tokenent.HasNetworkWith(
-					networkent.IdentifierEQ(network.Identifier),
-				),
-			),
-		).
-		SetBlockNumber(event.BlockNumber).
-		SetTxHash(event.TxHash).
-		SetStatus(paymentorder.StatusRefunded)
-
-	if transactionLog != nil {
-		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
-	}
-
-	_, err = paymentOrderUpdate.Save(ctx)
-	if err != nil {
-		return fmt.Errorf("UpdateOrderStatusRefunded.aggregator: %v", err)
-	}
-
-	// Release reserved balance for refunded orders
-	// Get the payment order to access provider and currency info
+	// Get the payment order first to access amount_paid for calculating amount_returned
 	paymentOrder, err := tx.PaymentOrder.
 		Query().
 		Where(
@@ -306,8 +281,45 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
 			pbq.WithCurrency()
 		}).
+		WithToken().
 		Only(ctx)
-	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusRefunded.fetchOrder: %v", err)
+	}
+
+	// Calculate the amount returned: amount_paid minus the refund fee
+	amountReturned := paymentOrder.AmountPaid.Sub(event.Fee)
+	if amountReturned.LessThan(decimal.Zero) {
+		amountReturned = decimal.Zero
+	}
+
+	// Update payment order status
+	paymentOrderUpdate := tx.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.GatewayIDEQ(event.OrderId),
+			paymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		SetBlockNumber(event.BlockNumber).
+		SetTxHash(event.TxHash).
+		SetStatus(paymentorder.StatusRefunded).
+		SetAmountReturned(amountReturned)
+
+	if transactionLog != nil {
+		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
+	}
+
+	_, err = paymentOrderUpdate.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusRefunded.aggregator: %v", err)
+	}
+
+	// Release reserved balance for refunded orders
+	if paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
 		// Only attempt balance operations if we have the required edge data
 		// Create a new balance service instance for this transaction
 		balanceService := svc.NewBalanceManagementService()
