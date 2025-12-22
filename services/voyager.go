@@ -706,8 +706,8 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 			}
 		}
 	} else {
-		// timestampFrom and timestampTo should be default to 7 days ago and now
-		timestampFrom := time.Now().Add(-7 * 24 * time.Hour).Unix()
+		// timestampFrom and timestampTo should be default to 3 days ago and now
+		timestampFrom := time.Now().Add(-3 * 24 * time.Hour).Unix()
 		params["timestampFrom"] = fmt.Sprintf("%d", timestampFrom)
 		params["timestampTo"] = fmt.Sprintf("%d", time.Now().Unix())
 	}
@@ -1249,6 +1249,93 @@ func TransformVoyagerEventToRPCFormat(event map[string]interface{}) (map[string]
 	return rpcEvent, nil
 }
 
+// TransformRPCEventToTransferFormat converts RPC event format (from GetEventsByTransactionHash) to RPC transfer format
+// This is needed when processing transaction hash events that should be treated as transfers
+func TransformRPCEventToTransferFormat(event map[string]interface{}) map[string]interface{} {
+	// RPC event format: transaction_hash, block_number, decoded.indexed_params, decoded.non_indexed_params
+	// RPC transfer format: transaction_hash, block_number, topics, decoded.non_indexed_params (from, to, value)
+	needsTransformation, _ := event["needs_transformation"].(bool)
+	if !needsTransformation {
+		return event
+	}
+
+	transactionHash, _ := event["transactionHash"].(string) 
+	blockNumber, _ := event["blockNumber"].(float64)
+	topics, _ := event["selector"].(string)
+	
+	// Check if this is a Transfer event
+	if topics != u.TransferStarknetSelector {
+		logger.WithFields(logger.Fields{
+			"TxHash": transactionHash,
+			"Topics": topics,
+		}).Warnf("Event is not a Transfer event, skipping transformation")
+		return nil
+	}
+	
+	dataDecoded, _ := event["dataDecoded"].([]interface{})
+	keys, _ := event["keys"].([]interface{})
+
+	if len(keys) == 0 {
+		return nil
+	}
+	
+	nonIndexedParams := make(map[string]interface{})
+
+	for _, keyItem := range dataDecoded {
+		if keyMap, ok := keyItem.(map[string]interface{}); ok {
+			keyName, _ := keyMap["name"].(string)
+			keyValue, _ := keyMap["value"].(string)
+			switch keyName {
+				case "from", "to":
+					nonIndexedParams[keyName] = keyValue
+				case "value":
+					transferAmount, err := u.ParseStringAsDecimals(keyValue)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"TxHash": transactionHash,
+							"Value":  keyValue,
+							"Error":  err.Error(),
+						}).Warnf("Failed to parse transfer value")
+						return nil
+					}
+					nonIndexedParams[keyName] = transferAmount
+			}
+		}
+	}
+
+	// Extract transfer fields
+	from, _ := nonIndexedParams["from"].(string)
+	to, _ := nonIndexedParams["to"].(string)
+	value, _ := nonIndexedParams["value"].(decimal.Decimal)
+	
+	if from == "" || to == "" || value.IsZero() {
+		logger.WithFields(logger.Fields{
+			"TxHash": transactionHash,
+			"From":   from,
+			"To":     to,
+			"Value":  value,
+		}).Warnf("Missing required transfer fields in RPC event")
+		return nil
+	}
+	
+	// Create RPC transfer format
+	rpcTransfer := map[string]interface{}{
+		"transaction_hash": transactionHash,
+		"block_number":     blockNumber,
+		"topics":           topics,
+		"decoded": map[string]interface{}{
+			"non_indexed_params": map[string]interface{}{
+				"from":  cryptoUtils.NormalizeStarknetAddress(from),
+				"to":    cryptoUtils.NormalizeStarknetAddress(to),
+				"value": value,
+			},
+			"indexed_params": map[string]interface{}{},
+		},
+	}
+	
+	return rpcTransfer
+}
+
 // GetAddressTokenTransfersImmediate fetches token transfers immediately without queuing
 func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, tokenAddress string, limit int, fromBlock int64, toBlock int64, fromAddress string, toAddress string) ([]map[string]interface{}, error) {
 	// Try Voyager API first - find a non-rate-limited worker
@@ -1272,16 +1359,6 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 		return s.getAddressTokenTransfersRPC(ctx, tokenAddress, limit, fromBlock, toBlock)
 	}
 
-	logger.WithFields(logger.Fields{
-		"TokenContract":    tokenAddress,
-		"ToAddress":        toAddress,
-		"FromBlock":        fromBlock,
-		"ToBlock":          toBlock,
-		"Limit":            limit,
-		"WorkerID":         worker.WorkerID,
-		"RateLimitedCount": rateLimitedCount,
-	}).Infof("Making immediate Voyager API call for token transfers")
-
 	request := VoyagerRequest{
 		ID:           fmt.Sprintf("transfers_%s_%d", toAddress, limit),
 		RequestType:  "transfers",
@@ -1302,6 +1379,10 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 			"TransferCount": len(transfers),
 			"WorkerID":      worker.WorkerID,
 		}).Infof("Voyager API call successful for token transfers")
+		// Mark Voyager data as needing transformation
+		for i := range transfers {
+			transfers[i]["needs_transformation"] = true
+		}
 		return transfers, nil
 	}
 
@@ -1316,7 +1397,14 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 		"FallbackToRPC": true,
 	}).Infof("Voyager failed, falling back to RPC for token transfers")
 
-	return s.getAddressTokenTransfersRPC(ctx, tokenAddress, limit, fromBlock, toBlock)
+	rpcTransfers, rpcErr := s.getAddressTokenTransfersRPC(ctx, tokenAddress, limit, fromBlock, toBlock)
+	if rpcErr == nil {
+		// Mark RPC data as NOT needing transformation
+		for i := range rpcTransfers {
+			rpcTransfers[i]["needs_transformation"] = false
+		}
+	}
+	return rpcTransfers, rpcErr
 }
 
 // getAddressTokenTransfersRPC fetches token transfers using RPC as fallback
@@ -1494,6 +1582,10 @@ func (s *VoyagerService) GetContractEventsImmediate(ctx context.Context, contrac
 
 	events, err := worker.makeVoyagerEventsAPICall(request)
 	if err == nil {
+		// Mark Voyager data as needing transformation
+		for i := range events {
+			events[i]["needs_transformation"] = true
+		}
 		return events, nil
 	}
 
@@ -1503,7 +1595,14 @@ func (s *VoyagerService) GetContractEventsImmediate(ctx context.Context, contrac
 		"FallbackToRPC": true,
 	}).Warnf("Voyager failed, falling back to RPC for contract events")
 
-	return s.getContractEventsRPC(ctx, contractAddress, limit, fromBlock, toBlock)
+	rpcEvents, rpcErr := s.getContractEventsRPC(ctx, contractAddress, limit, fromBlock, toBlock)
+	if rpcErr == nil {
+		// Mark RPC data as NOT needing transformation
+		for i := range rpcEvents {
+			rpcEvents[i]["needs_transformation"] = false
+		}
+	}
+	return rpcEvents, rpcErr
 }
 
 // getContractEventsRPC fetches contract events using RPC as fallback
@@ -1655,6 +1754,10 @@ func (s *VoyagerService) GetEventsByTransactionHashImmediate(ctx context.Context
 
 	events, err := worker.makeVoyagerEventsByTxAPICall(request)
 	if err == nil {
+		// Mark Voyager data as needing transformation
+		for i := range events {
+			events[i]["needs_transformation"] = true
+		}
 		return events, nil
 	}
 
@@ -1664,7 +1767,14 @@ func (s *VoyagerService) GetEventsByTransactionHashImmediate(ctx context.Context
 		"FallbackToRPC": true,
 	}).Warnf("Voyager failed, falling back to RPC for events by transaction hash")
 
-	return s.GetEventsByTransactionHashRPC(ctx, txHash)
+	rpcEvents, rpcErr := s.GetEventsByTransactionHashRPC(ctx, txHash)
+	if rpcErr == nil {
+		// Mark RPC data as NOT needing transformation
+		for i := range rpcEvents {
+			rpcEvents[i]["needs_transformation"] = false
+		}
+	}
+	return rpcEvents, rpcErr
 }
 
 // GetEventsByTransactionHashRPC fetches events by transaction hash using RPC as fallback
