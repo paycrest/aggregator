@@ -867,7 +867,7 @@ func SyncLockOrderFulfillments() {
 
 				_, err = storage.Client.LockPaymentOrder.
 					UpdateOneID(order.ID).
-					SetStatus(lockpaymentorder.StatusFulfilled).
+					SetStatus(lockpaymentorder.StatusCanceled).
 					Save(ctx)
 				if err != nil {
 					continue

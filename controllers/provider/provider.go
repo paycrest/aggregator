@@ -1078,7 +1078,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 
 		_, err = updateLockOrder.
-			SetStatus(lockpaymentorder.StatusFulfilled).
+			SetStatus(lockpaymentorder.StatusCanceled).
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
