@@ -426,9 +426,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	}
 
-	// Prevent receive address expiry for private orders
+	// Set extended expiry for private orders (10x normal validity)
 	if strings.HasPrefix(payload.Recipient.Memo, "P#P") {
-		receiveAddressExpiry = time.Time{}
+		receiveAddressExpiry = time.Now().Add(10 * orderConf.ReceiveAddressValidity)
 	}
 
 	// Create payment order and recipient in a transaction

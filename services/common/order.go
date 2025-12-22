@@ -702,26 +702,24 @@ func HandleReceiveAddressValidity(ctx context.Context, paymentOrder *ent.Payment
 				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
 			}
 		} else if isExpired && paymentOrder.Status != paymentorder.StatusExpired {
-			if paymentOrder.Memo == "" || !strings.HasPrefix(paymentOrder.Memo, "P#P") {
-				// Expire payment order
-				_, err := paymentOrder.
-					Update().
-					SetStatus(paymentorder.StatusExpired).
-					Save(ctx)
-				if err != nil {
-					return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
-				}
+			// Expire payment order
+			_, err := paymentOrder.
+				Update().
+				SetStatus(paymentorder.StatusExpired).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
+			}
 
-				// Send webhook notification for expired payment order
-				// The paymentOrder already has all necessary edges loaded from tasks.go
-				err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"OrderID":     paymentOrder.ID,
-						"MessageHash": paymentOrder.MessageHash,
-						"Error":       err.Error(),
-					}).Errorf("Failed to send expired payment order webhook")
-				}
+			// Send webhook notification for expired payment order
+			// The paymentOrder already has all necessary edges loaded from tasks.go
+			err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":     paymentOrder.ID,
+					"MessageHash": paymentOrder.MessageHash,
+					"Error":       err.Error(),
+				}).Errorf("Failed to send expired payment order webhook")
 			}
 		}
 	}

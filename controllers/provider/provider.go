@@ -579,7 +579,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// Fetch the order to check its current status before accepting
-	currentOrder, err := tx.LockPaymentOrder.Get(ctx, orderID)
+	currentOrder, err := tx.PaymentOrder.Get(ctx, orderID)
 	if err != nil {
 		_ = tx.Rollback()
 		if ent.IsNotFound(err) {
@@ -596,12 +596,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	// Check if order is already in a finalized state
 	// Prevent accepting orders that are refunded, fulfilled, validated, settled, cancelled, or processing
-	if currentOrder.Status == lockpaymentorder.StatusRefunded ||
-		currentOrder.Status == lockpaymentorder.StatusFulfilled ||
-		currentOrder.Status == lockpaymentorder.StatusValidated ||
-		currentOrder.Status == lockpaymentorder.StatusSettled ||
-		currentOrder.Status == lockpaymentorder.StatusCancelled ||
-		currentOrder.Status == lockpaymentorder.StatusProcessing {
+	if currentOrder.Status != paymentorder.StatusPending {
 		_ = tx.Rollback()
 		logger.WithFields(logger.Fields{
 			"OrderID":    orderID.String(),
