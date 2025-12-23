@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"entgo.io/ent/dialect/sql"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-co-op/gocron"
@@ -21,15 +20,12 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/paymentorderrecipient"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
@@ -40,6 +36,7 @@ import (
 	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/services/indexer"
 	orderService "github.com/paycrest/aggregator/services/order"
+	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -113,22 +110,15 @@ func RetryStaleUserOperations() error {
 	// Create initiated orders
 	orders, err := storage.Client.PaymentOrder.
 		Query().
-		Where(func(s *sql.Selector) {
-			ra := sql.Table(receiveaddress.Table)
-			s.LeftJoin(ra).On(s.C(paymentorder.FieldReceiveAddressText), ra.C(receiveaddress.FieldAddress)).
-				Where(sql.And(
-					sql.EQ(s.C(paymentorder.FieldStatus), paymentorder.StatusInitiated),
-					sql.EQ(ra.C(receiveaddress.FieldStatus), receiveaddress.StatusUsed),
-					sql.IsNull(s.C(paymentorder.FieldGatewayID)),
-				))
-		}).
 		Where(
+			paymentorder.StatusEQ(paymentorder.StatusInitiated),
+			paymentorder.FromAddressNEQ(""), // Receive address has been used (transfer received)
+			paymentorder.GatewayIDIsNil(),
 			paymentorder.Or(
 				paymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
-				paymentorder.HasRecipientWith(
-					paymentorderrecipient.MemoHasPrefix("P#P"),
-				),
-			)).
+				paymentorder.MemoHasPrefix("P#P"),
+			),
+		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -146,6 +136,16 @@ func RetryStaleUserOperations() error {
 				var service types.OrderService
 				if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 					service = orderService.NewOrderTron()
+				} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
+					client, err := starknetService.NewClient()
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":   fmt.Sprintf("%v", err),
+							"OrderID": order.ID.String(),
+						}).Errorf("RetryStaleUserOperations.CreateOrder.NewStarknetClient")
+						continue
+					}
+					service = orderService.NewOrderStarknet(client)
 				} else {
 					service = orderService.NewOrderEVM()
 				}
@@ -189,15 +189,15 @@ func RetryStaleUserOperations() error {
 	}(ctx)
 
 	// Settle order process
-	lockOrders, err := storage.Client.LockPaymentOrder.
+	lockOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
-			lockpaymentorder.HasFulfillmentsWith(
-				lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess),
+			paymentorder.StatusEQ(paymentorder.StatusValidated),
+			paymentorder.HasFulfillmentsWith(
+				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess),
 			),
-			lockpaymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
-			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
+			paymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
+			paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -214,6 +214,16 @@ func RetryStaleUserOperations() error {
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				service = orderService.NewOrderTron()
+			} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
+				client, err := starknetService.NewClient()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.SettleOrder.NewStarknetClient")
+					continue
+				}
+				service = orderService.NewOrderStarknet(client)
 			} else {
 				service = orderService.NewOrderEVM()
 			}
@@ -235,81 +245,81 @@ func RetryStaleUserOperations() error {
 	otcRefundTimeout := orderConf.OrderRefundTimeoutOtc
 	regularRefundTimeout := orderConf.OrderRefundTimeout
 
-	lockOrders, err = storage.Client.LockPaymentOrder.
+	lockOrders, err = storage.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.GatewayIDNEQ(""),
-			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
-			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusValidated),
-			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusSettled),
-			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusRefunded),
-			lockpaymentorder.Or(
+			paymentorder.GatewayIDNEQ(""),
+			paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
+			paymentorder.StatusNEQ(paymentorder.StatusValidated),
+			paymentorder.StatusNEQ(paymentorder.StatusSettled),
+			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
+			paymentorder.Or(
 				// Regular orders with normal refund timeout
-				lockpaymentorder.And(
-					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeRegular),
-					lockpaymentorder.Or(
-						lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
-						lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
+				paymentorder.And(
+					paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular),
+					paymentorder.Or(
+						paymentorder.StatusEQ(paymentorder.StatusPending),
+						paymentorder.StatusEQ(paymentorder.StatusCancelled),
 					),
-					lockpaymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
-					lockpaymentorder.Or(
-						lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
-						lockpaymentorder.HasFulfillmentsWith(
-							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
-							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
-							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+					paymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+					paymentorder.Or(
+						paymentorder.Not(paymentorder.HasFulfillments()),
+						paymentorder.HasFulfillmentsWith(
+							paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+							paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
+							paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
 						),
 					),
 				),
 				// Regular orders with status Fulfilled and failed fulfillments
-				lockpaymentorder.And(
-					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeRegular),
-					lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
-					lockpaymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
-					lockpaymentorder.HasFulfillmentsWith(
-						lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
-						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
-						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+				paymentorder.And(
+					paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular),
+					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+					paymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+					paymentorder.HasFulfillmentsWith(
+						paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
+						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
 					),
 				),
 				// OTC orders with OTC refund timeout
-				lockpaymentorder.And(
-					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeOtc),
-					lockpaymentorder.Or(
-						lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
-						lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
+				paymentorder.And(
+					paymentorder.OrderTypeEQ(paymentorder.OrderTypeOtc),
+					paymentorder.Or(
+						paymentorder.StatusEQ(paymentorder.StatusPending),
+						paymentorder.StatusEQ(paymentorder.StatusCancelled),
 					),
-					lockpaymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
-					lockpaymentorder.Or(
-						lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
-						lockpaymentorder.HasFulfillmentsWith(
-							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
-							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
-							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+					paymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
+					paymentorder.Or(
+						paymentorder.Not(paymentorder.HasFulfillments()),
+						paymentorder.HasFulfillmentsWith(
+							paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+							paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
+							paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
 						),
 					),
 				),
 				// OTC orders with status Fulfilled and failed fulfillments
-				lockpaymentorder.And(
-					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeOtc),
-					lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
-					lockpaymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
-					lockpaymentorder.HasFulfillmentsWith(
-						lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
-						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
-						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+				paymentorder.And(
+					paymentorder.OrderTypeEQ(paymentorder.OrderTypeOtc),
+					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+					paymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
+					paymentorder.HasFulfillmentsWith(
+						paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
+						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
 					),
 				),
 				// Private provider orders with status Fulfilled and failed fulfillments
-				lockpaymentorder.And(
-					lockpaymentorder.HasProviderWith(
+				paymentorder.And(
+					paymentorder.HasProviderWith(
 						providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePrivate),
 					),
-					lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
-					lockpaymentorder.HasFulfillmentsWith(
-						lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
-						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
-						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+					paymentorder.HasFulfillmentsWith(
+						paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
+						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
 					),
 				),
 			),
@@ -317,8 +327,6 @@ func RetryStaleUserOperations() error {
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
-		WithFulfillments().
-		WithProvider().
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("RetryStaleUserOperations: %w", err)
@@ -331,24 +339,19 @@ func RetryStaleUserOperations() error {
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				service = orderService.NewOrderTron()
+			} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
+				client, err := starknetService.NewClient()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.CreateOrder.NewStarknetClient")
+					continue
+				}
+				service = orderService.NewOrderStarknet(client)
 			} else {
 				service = orderService.NewOrderEVM()
 			}
-
-			if order.OrderType == lockpaymentorder.OrderTypeRegular && order.Status == lockpaymentorder.StatusPending && order.Edges.Provider != nil && len(order.Edges.Fulfillments) == 0 {
-				// Check if there's an active order request in Redis
-				exists, err := hasActiveOrderRequest(ctx, order.ID, "RetryStaleUserOperations")
-				if err != nil {
-					// If we can't check Redis, skip refund
-					continue
-				}
-				if exists {
-					// Active order request exists, don't refund (skip)
-					continue
-				}
-				// If order_request doesn't exist, proceed with refund check
-			}
-
 			err := service.RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
 			if err != nil {
 				logger.WithFields(logger.Fields{
@@ -399,6 +402,17 @@ func TaskIndexBlockchainEvents() error {
 			if strings.HasPrefix(network.Identifier, "tron") {
 				indexerInstance = indexer.NewIndexerTron()
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+				return
+			} else if strings.HasPrefix(network.Identifier, "starknet") {
+				indexerInstance, err = indexer.NewIndexerStarknet()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("TaskIndexBlockchainEvents.createStarknetIndexer")
+					return
+				}
+				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
 			} else {
 				indexerInstance, err = indexer.NewIndexerEVM()
 				if err != nil {
@@ -409,102 +423,96 @@ func TaskIndexBlockchainEvents() error {
 					return
 				}
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+			}
 
-				// Find payment orders with missed transfers
-				// Prioritize recent orders (created in last 30 minutes) - most likely to have transfers
-				recentCutoff := time.Now().Add(-30 * time.Minute)
-				paymentOrders, err := storage.Client.PaymentOrder.
-					Query().
-					Where(
-						paymentorder.StatusEQ(paymentorder.StatusInitiated),
-						paymentorder.TxHashIsNil(),
-						paymentorder.BlockNumberEQ(0),
-						paymentorder.AmountPaidEQ(decimal.Zero),
-						paymentorder.FromAddressIsNil(),
-						paymentorder.CreatedAtGTE(recentCutoff), // Focus on recent orders
-						paymentorder.HasReceiveAddressWith(
-							receiveaddress.StatusEQ(receiveaddress.StatusUnused),
+			// Find payment orders with missed transfers (for EVM and Starknet networks)
+			// Prioritize recent orders (created in last 30 minutes) - most likely to have transfers
+			recentCutoff := time.Now().Add(-30 * time.Minute)
+			paymentOrders, err := storage.Client.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.StatusEQ(paymentorder.StatusInitiated),
+					paymentorder.TxHashIsNil(),
+					paymentorder.BlockNumberEQ(0),
+					paymentorder.AmountPaidEQ(decimal.Zero),
+					paymentorder.FromAddressIsNil(),
+					paymentorder.CreatedAtGTE(recentCutoff), // Focus on recent orders
+					paymentorder.ReceiveAddressNEQ(""),      // Must have receive address
+					paymentorder.HasTokenWith(
+						tokenent.HasNetworkWith(
+							networkent.IDEQ(network.ID),
 						),
-						paymentorder.HasTokenWith(
-							tokenent.HasNetworkWith(
-								networkent.IDEQ(network.ID),
-							),
-						),
-					).
-					WithToken(func(tq *ent.TokenQuery) {
-						tq.WithNetwork()
-					}).
-					WithReceiveAddress().
-					Order(ent.Desc(paymentorder.FieldCreatedAt)).
-					Limit(50). // Limit to 50 most recent to avoid processing too many at once
-					All(ctx)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", err),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("TaskIndexBlockchainEvents.fetchPaymentOrders")
-					return
-				}
+					),
+				).
+				WithToken(func(tq *ent.TokenQuery) {
+					tq.WithNetwork()
+				}).
+				Order(ent.Desc(paymentorder.FieldCreatedAt)).
+				Limit(50). // Limit to 50 most recent to avoid processing too many at once
+				All(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             fmt.Sprintf("%v", err),
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("TaskIndexBlockchainEvents.fetchPaymentOrders")
+				return
+			}
 
-				// Index Transfer events in parallel using goroutines
-				if len(paymentOrders) > 0 {
-					var wg sync.WaitGroup
+			// Index Transfer events in parallel using goroutines
+			if len(paymentOrders) > 0 {
+				var wg sync.WaitGroup
 
-					for _, order := range paymentOrders {
-						if order.Edges.ReceiveAddress == nil {
-							continue
-						}
-
-						address := order.Edges.ReceiveAddress.Address
-						chainID := network.ChainID
-						indexKey := fmt.Sprintf("%s_%d", address, chainID)
-
-						// Check if address is currently being indexed by another task
-						if _, indexing := indexingAddresses.Load(indexKey); indexing {
-							// Check if indexing started too long ago (stale)
-							if startTime, ok := indexingAddresses.Load(indexKey); ok {
-								if time.Since(startTime.(time.Time)) > indexingTimeout {
-									indexingAddresses.Delete(indexKey) // Remove stale entry
-								} else {
-									continue // Skip, already being indexed
-								}
-							}
-						}
-
-						// Check if address was recently indexed (within cooldown period)
-						if lastIndexed, indexed := recentlyIndexed.Load(indexKey); indexed {
-							if time.Since(lastIndexed.(time.Time)) < indexingCooldown {
-								continue // Skip, recently indexed
-							}
-						}
-
-						// Mark as being indexed
-						indexingAddresses.Store(indexKey, time.Now())
-
-						wg.Add(1)
-						go func(order *ent.PaymentOrder, addr string, key string) {
-							defer wg.Done()
-							defer indexingAddresses.Delete(key) // Remove from indexing map when done
-
-							// Check circuit breaker before indexing (if Etherscan service is available)
-							// Note: This is a best-effort check, actual circuit breaker is in etherscan service
-
-							_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, addr, 0, 0, "")
-							if err != nil {
-								logger.WithFields(logger.Fields{
-									"Error":   fmt.Sprintf("%v", err),
-									"OrderID": order.ID.String(),
-								}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
-							} else {
-								// Mark as recently indexed on success
-								recentlyIndexed.Store(key, time.Now())
-							}
-						}(order, address, indexKey)
+				for _, order := range paymentOrders {
+					if order.ReceiveAddress == "" {
+						continue
 					}
 
-					// Wait for all transfer indexing to complete
-					wg.Wait()
+					address := order.ReceiveAddress
+					chainID := network.ChainID
+					indexKey := fmt.Sprintf("%s_%d", address, chainID)
+
+					// Check if address is currently being indexed by another task
+					if _, indexing := indexingAddresses.Load(indexKey); indexing {
+						// Check if indexing started too long ago (stale)
+						if startTime, ok := indexingAddresses.Load(indexKey); ok {
+							if time.Since(startTime.(time.Time)) > indexingTimeout {
+								indexingAddresses.Delete(indexKey) // Remove stale entry
+							} else {
+								continue // Skip, already being indexed
+							}
+						}
+					}
+
+					// Check if address was recently indexed (within cooldown period)
+					if lastIndexed, indexed := recentlyIndexed.Load(indexKey); indexed {
+						if time.Since(lastIndexed.(time.Time)) < indexingCooldown {
+							continue // Skip, recently indexed
+						}
+					}
+
+					// Mark as being indexed
+					indexingAddresses.Store(indexKey, time.Now())
+
+					wg.Add(1)
+					go func(order *ent.PaymentOrder, addr string, key string) {
+						defer wg.Done()
+						defer indexingAddresses.Delete(key) // Remove from indexing map when done
+
+						_, err := indexerInstance.IndexReceiveAddress(ctx, order.Edges.Token, addr, 0, 0, "")
+						if err != nil {
+							logger.WithFields(logger.Fields{
+								"Error":   fmt.Sprintf("%v", err),
+								"OrderID": order.ID.String(),
+							}).Errorf("TaskIndexBlockchainEvents.IndexReceiveAddress")
+						} else {
+							// Mark as recently indexed on success
+							recentlyIndexed.Store(key, time.Now())
+						}
+					}(order, address, indexKey)
 				}
+
+				// Wait for all transfer indexing to complete
+				wg.Wait()
 			}
 		}(network)
 	}
@@ -532,25 +540,9 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 	return int64(data["block"].([]interface{})[0].(map[string]interface{})["block_header"].(map[string]interface{})["raw_data"].(map[string]interface{})["timestamp"].(float64)), nil
 }
 
-// hasActiveOrderRequest checks if there's an active order_request entry in Redis for the given order ID.
-// Returns (exists bool, err error). If err != nil, exists will be false.
-func hasActiveOrderRequest(ctx context.Context, orderID uuid.UUID, logPrefix string) (bool, error) {
-	orderKey := fmt.Sprintf("order_request_%s", orderID)
-	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":    fmt.Sprintf("%v", err),
-			"OrderID":  orderID.String(),
-			"OrderKey": orderKey,
-		}).Errorf("%s: Failed to check order_request Redis entry", logPrefix)
-		return false, err
-	}
-	return exists > 0, nil
-}
-
 // reassignCancelledOrder reassigns cancelled orders to providers
-func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fulfillment *ent.LockOrderFulfillment) {
-	if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate && order.CancellationCount < orderConf.RefundCancellationCount && order.CreatedAt.After(time.Now().Add(-orderConf.OrderRefundTimeout-10*time.Second)) {
+func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfillment *ent.PaymentOrderFulfillment) {
+	if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate && order.CancellationCount < orderConf.RefundCancellationCount {
 		// Push provider ID to order exclude list
 		orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
 		_, err := storage.RedisClient.RPush(ctx, orderKey, order.Edges.Provider.ID).Result()
@@ -566,17 +558,17 @@ func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fu
 			}).Errorf("failed to set TTL for order exclude list")
 		}
 
-		_, err = storage.Client.LockPaymentOrder.
+		_, err = storage.Client.PaymentOrder.
 			UpdateOneID(order.ID).
 			ClearProvider().
-			SetStatus(lockpaymentorder.StatusPending).
+			SetStatus(paymentorder.StatusPending).
 			Save(ctx)
 		if err != nil {
 			return
 		}
 
 		if fulfillment != nil {
-			err = storage.Client.LockOrderFulfillment.
+			err = storage.Client.PaymentOrderFulfillment.
 				DeleteOneID(fulfillment.ID).
 				Exec(ctx)
 			if err != nil {
@@ -585,7 +577,7 @@ func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fu
 		}
 
 		// Reassign the order to a provider
-		lockPaymentOrder := types.LockPaymentOrderFields{
+		paymentOrder := types.PaymentOrderFields{
 			ID:                order.ID,
 			Token:             order.Edges.Token,
 			GatewayID:         order.GatewayID,
@@ -600,7 +592,7 @@ func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fu
 			ProvisionBucket:   order.Edges.ProvisionBucket,
 		}
 
-		err = services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, lockPaymentOrder)
+		err = services.NewPriorityQueueService().AssignPaymentOrder(ctx, paymentOrder)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":     fmt.Sprintf("%v", err),
@@ -612,105 +604,50 @@ func reassignCancelledOrder(ctx context.Context, order *ent.LockPaymentOrder, fu
 	}
 }
 
-// SyncLockOrderFulfillments syncs lock order fulfillments
+// SyncPaymentOrderFulfillments syncs payment order fulfillments
 // Only processes regular orders
 // TODO: refactor this to process OTC orders as well when OTC fulfillment validation is automated
-func SyncLockOrderFulfillments() {
+func SyncPaymentOrderFulfillments() {
 	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	// defer cancel()
 	ctx := context.Background()
 
-	updatePaymentOrderValidated := func(ctx context.Context, lockOrder *ent.LockPaymentOrder) {
-		if lockOrder == nil || lockOrder.MessageHash == "" {
-			return
-		}
-
-		paymentOrder, err := storage.Client.PaymentOrder.
-			Query().
-			Where(paymentorder.MessageHashEQ(lockOrder.MessageHash)).
-			WithSenderProfile().
-			WithRecipient().
-			WithToken(func(tq *ent.TokenQuery) {
-				tq.WithNetwork()
-			}).
-			Only(ctx)
-		if err != nil {
-			if !ent.IsNotFound(err) {
-				logger.WithFields(logger.Fields{
-					"Error":       fmt.Sprintf("%v", err),
-					"MessageHash": lockOrder.MessageHash,
-					"OrderID":     lockOrder.ID,
-				}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.query")
-			}
-			return
-		}
-
-		_, err = storage.Client.PaymentOrder.
-			Update().
-			Where(paymentorder.IDEQ(paymentOrder.ID)).
-			SetStatus(paymentorder.StatusValidated).
-			Save(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":       fmt.Sprintf("%v", err),
-				"MessageHash": lockOrder.MessageHash,
-				"OrderID":     lockOrder.ID,
-				"PaymentID":   paymentOrder.ID,
-			}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.update")
-			return
-		}
-
-		paymentOrder.Status = paymentorder.StatusValidated
-		if err := utils.SendPaymentOrderWebhook(ctx, paymentOrder); err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":       fmt.Sprintf("%v", err),
-				"MessageHash": lockOrder.MessageHash,
-				"OrderID":     lockOrder.ID,
-				"PaymentID":   paymentOrder.ID,
-			}).Errorf("SyncLockOrderFulfillments.UpdatePaymentOrderValidated.webhook")
-		}
-	}
-
 	// Query unvalidated lock orders (regular orders only - exclude OTC)
-	lockOrders, err := storage.Client.LockPaymentOrder.
+	paymentOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			// case 1: regular, pending, created older than 2 minutes, no fulfillments
-			lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeRegular), // Only regular orders
-			lockpaymentorder.Or(
-				lockpaymentorder.And(
-					lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
-					lockpaymentorder.Or(
-						lockpaymentorder.HasFulfillmentsWith(
-							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
-							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
-							lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+			paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular), // Only regular orders
+			paymentorder.Or(
+				paymentorder.And(
+					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+					paymentorder.Or(
+						paymentorder.HasFulfillmentsWith(
+							paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+							paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
+							paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
 						),
-						lockpaymentorder.HasFulfillmentsWith(
-							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending),
-							lockorderfulfillment.UpdatedAtLTE(time.Now().Add(-orderConf.OrderFulfillmentValidity)),
+						paymentorder.HasFulfillmentsWith(
+							paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending),
+							paymentorderfulfillment.UpdatedAtLTE(time.Now().Add(-orderConf.OrderFulfillmentValidity)),
 						),
-						lockpaymentorder.HasFulfillmentsWith(
-							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess),
+						paymentorder.HasFulfillmentsWith(
+							paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess),
 						),
 					),
 				),
-				lockpaymentorder.And(
-					lockpaymentorder.Or(
-						lockpaymentorder.StatusEQ(lockpaymentorder.StatusCancelled),
-						lockpaymentorder.StatusEQ(lockpaymentorder.StatusPending),
-					),
-					lockpaymentorder.Or(
-						lockpaymentorder.HasFulfillmentsWith(
-							lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending),
+				paymentorder.And(
+					paymentorder.StatusEQ(paymentorder.StatusCancelled),
+					paymentorder.Or(
+						paymentorder.HasFulfillmentsWith(
+							paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending),
 						),
-						lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
+						paymentorder.Not(paymentorder.HasFulfillments()),
 					),
 				),
-				lockpaymentorder.And(
-					lockpaymentorder.StatusEQ(lockpaymentorder.StatusProcessing),
-					lockpaymentorder.UpdatedAtLTE(time.Now().Add(-30*time.Second)),
-					lockpaymentorder.Not(lockpaymentorder.HasFulfillments()),
+				paymentorder.And(
+					paymentorder.StatusEQ(paymentorder.StatusProcessing),
+					paymentorder.UpdatedAtLTE(time.Now().Add(-30*time.Second)),
+					paymentorder.Not(paymentorder.HasFulfillments()),
 				),
 			),
 		).
@@ -729,26 +666,39 @@ func SyncLockOrderFulfillments() {
 		return
 	}
 
-	for _, order := range lockOrders {
+	for _, order := range paymentOrders {
 		if order.Edges.Provider == nil {
 			continue
 		}
+		if order.Edges.Provider.Edges.APIKey == nil {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.Edges.Provider.ID,
+				"Reason":     "internal: Provider APIKey is nil",
+			}).Errorf("SyncPaymentOrderFulfillments.MissingAPIKey")
+			continue
+		}
 		if len(order.Edges.Fulfillments) == 0 {
-			if order.Status == lockpaymentorder.StatusCancelled {
+			if order.Status == paymentorder.StatusCancelled {
 				reassignCancelledOrder(ctx, order, nil)
 				continue
 			}
 
-			// Check if there's an active order request before querying tx_status
-			if order.Status == lockpaymentorder.StatusPending {
-				exists, err := hasActiveOrderRequest(ctx, order.ID, "SyncLockOrderFulfillments")
-				if err != nil {
-					continue
-				}
-				if !exists {
-					// No active order request, skip tx_status check
-					continue
-				}
+			if order.Edges.ProvisionBucket == nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Reason":     "internal: ProvisionBucket is nil",
+				}).Errorf("SyncPaymentOrderFulfillments.MissingProvisionBucket")
+				continue
+			}
+			if order.Edges.ProvisionBucket.Edges.Currency == nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Reason":     "internal: ProvisionBucket Currency is nil",
+				}).Errorf("SyncPaymentOrderFulfillments.MissingCurrency")
+				continue
 			}
 
 			// Compute HMAC
@@ -759,7 +709,7 @@ func SyncLockOrderFulfillments() {
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.Edges.Provider.ID,
 					"Reason":     "internal: Failed to decode provider secret",
-				}).Errorf("SyncLockOrderFulfillments.DecodeSecret")
+				}).Errorf("SyncPaymentOrderFulfillments.DecodeSecret")
 				continue
 			}
 			decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
@@ -769,7 +719,7 @@ func SyncLockOrderFulfillments() {
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.Edges.Provider.ID,
 					"Reason":     "internal: Failed to decrypt provider secret",
-				}).Errorf("SyncLockOrderFulfillments.DecryptSecret")
+				}).Errorf("SyncPaymentOrderFulfillments.DecryptSecret")
 				continue
 			}
 
@@ -793,13 +743,13 @@ func SyncLockOrderFulfillments() {
 					"PayloadOrderId":  payload["orderId"],
 					"PayloadCurrency": payload["currency"],
 					"Reason":          "internal: Failed to send tx_status request to provider",
-				}).Errorf("SyncLockOrderFulfillments.SendTxStatusRequest")
+				}).Errorf("SyncPaymentOrderFulfillments.SendTxStatusRequest")
 
 				// Set status to pending on 400 error
 				if strings.Contains(fmt.Sprintf("%v", err), "400") {
-					_, updateErr := storage.Client.LockPaymentOrder.
+					_, updateErr := storage.Client.PaymentOrder.
 						UpdateOneID(order.ID).
-						SetStatus(lockpaymentorder.StatusPending).
+						SetStatus(paymentorder.StatusPending).
 						Save(ctx)
 					if updateErr != nil {
 						logger.WithFields(logger.Fields{
@@ -807,7 +757,7 @@ func SyncLockOrderFulfillments() {
 							"OrderID":    order.ID.String(),
 							"ProviderID": order.Edges.Provider.ID,
 							"Reason":     "internal: Failed to update order status",
-						}).Errorf("SyncLockOrderFulfillments.UpdateStatus")
+						}).Errorf("SyncPaymentOrderFulfillments.UpdateStatus")
 					}
 				}
 				continue
@@ -815,7 +765,7 @@ func SyncLockOrderFulfillments() {
 
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				if order.Status == lockpaymentorder.StatusProcessing && order.UpdatedAt.Add(orderConf.OrderFulfillmentValidity*2).Before(time.Now()) {
+				if order.Status == paymentorder.StatusProcessing && order.UpdatedAt.Add(orderConf.OrderFulfillmentValidity*2).Before(time.Now()) {
 					logger.WithFields(logger.Fields{
 						"Error":           fmt.Sprintf("%v", err),
 						"ProviderID":      order.Edges.Provider.ID,
@@ -823,7 +773,7 @@ func SyncLockOrderFulfillments() {
 						"PayloadCurrency": payload["currency"],
 					}).Errorf("Failed to parse JSON response after getting trx status from provider")
 					// delete lock order to trigger re-indexing
-					err := storage.Client.LockPaymentOrder.
+					err := storage.Client.PaymentOrder.
 						DeleteOneID(order.ID).
 						Exec(ctx)
 					if err != nil {
@@ -843,35 +793,51 @@ func SyncLockOrderFulfillments() {
 			txId := data["data"].(map[string]interface{})["txId"].(string)
 
 			if status == "failed" {
-				_, err = storage.Client.LockOrderFulfillment.
+				_, err = storage.Client.PaymentOrderFulfillment.
 					Create().
 					SetOrderID(order.ID).
 					SetPsp(psp).
 					SetTxID(txId).
-					SetValidationStatus(lockorderfulfillment.ValidationStatusFailed).
+					SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
 					SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
 					Save(ctx)
 				if err != nil {
 					continue
 				}
 
-				_, err = storage.Client.LockPaymentOrder.
-					UpdateOneID(order.ID).
-					SetStatus(lockpaymentorder.StatusFulfilled).
+				_, err = order.Update().
+					SetStatus(paymentorder.StatusFulfilled).
 					Save(ctx)
 				if err != nil {
 					continue
 				}
 
 			} else if status == "success" {
-				_, err = storage.Client.LockOrderFulfillment.
+				_, err = storage.Client.PaymentOrderFulfillment.
 					Create().
 					SetOrderID(order.ID).
 					SetPsp(psp).
 					SetTxID(txId).
-					SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
+					SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
 					Save(ctx)
 				if err != nil {
+					continue
+				}
+
+				if order.Edges.Token == nil {
+					logger.WithFields(logger.Fields{
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.Edges.Provider.ID,
+						"Reason":     "internal: Token is nil",
+					}).Errorf("SyncPaymentOrderFulfillments.MissingToken")
+					continue
+				}
+				if order.Edges.Token.Edges.Network == nil {
+					logger.WithFields(logger.Fields{
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.Edges.Provider.ID,
+						"Reason":     "internal: Token Network is nil",
+					}).Errorf("SyncPaymentOrderFulfillments.MissingNetwork")
 					continue
 				}
 
@@ -888,20 +854,43 @@ func SyncLockOrderFulfillments() {
 					continue
 				}
 
-				_, err = storage.Client.LockPaymentOrder.
+				_, err = storage.Client.PaymentOrder.
 					UpdateOneID(order.ID).
-					SetStatus(lockpaymentorder.StatusValidated).
+					SetStatus(paymentorder.StatusValidated).
 					AddTransactions(transactionLog).
 					Save(ctx)
-				if err == nil {
-					updatePaymentOrderValidated(ctx, order)
-				} else {
+				if err != nil {
 					continue
+				}
+
+				if err := utils.SendPaymentOrderWebhook(ctx, order); err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":       fmt.Sprintf("%v", err),
+						"MessageHash": order.MessageHash,
+						"OrderID":     order.ID,
+					}).Errorf("SyncPaymentOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 				}
 			}
 		} else {
+			if order.Edges.ProvisionBucket == nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Reason":     "internal: ProvisionBucket is nil",
+				}).Errorf("SyncPaymentOrderFulfillments.MissingProvisionBucket")
+				continue
+			}
+			if order.Edges.ProvisionBucket.Edges.Currency == nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Reason":     "internal: ProvisionBucket Currency is nil",
+				}).Errorf("SyncPaymentOrderFulfillments.MissingCurrency")
+				continue
+			}
+
 			for _, fulfillment := range order.Edges.Fulfillments {
-				if fulfillment.ValidationStatus == lockorderfulfillment.ValidationStatusPending {
+				if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusPending {
 					// Compute HMAC
 					decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
 					if err != nil {
@@ -948,9 +937,9 @@ func SyncLockOrderFulfillments() {
 						if res.RawResponse.StatusCode == 400 {
 							if time.Since(fulfillment.CreatedAt) > 5*time.Minute {
 								// Mark fulfillment as failed
-								_, updateErr := storage.Client.LockOrderFulfillment.
+								_, updateErr := storage.Client.PaymentOrderFulfillment.
 									UpdateOneID(fulfillment.ID).
-									SetValidationStatus(lockorderfulfillment.ValidationStatusFailed).
+									SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
 									SetValidationError("Failed to get transaction status after 5 minutes").
 									Save(ctx)
 								if updateErr != nil {
@@ -979,10 +968,10 @@ func SyncLockOrderFulfillments() {
 					status := data["data"].(map[string]interface{})["status"].(string)
 
 					if status == "failed" {
-						_, err = storage.Client.LockOrderFulfillment.
+						_, err = storage.Client.PaymentOrderFulfillment.
 							UpdateOneID(fulfillment.ID).
 							SetTxID(fulfillment.TxID).
-							SetValidationStatus(lockorderfulfillment.ValidationStatusFailed).
+							SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
 							SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
 							Save(ctx)
 						if err != nil {
@@ -990,19 +979,36 @@ func SyncLockOrderFulfillments() {
 						}
 
 						_, err = order.Update().
-							SetStatus(lockpaymentorder.StatusFulfilled).
+							SetStatus(paymentorder.StatusFulfilled).
 							Save(ctx)
 						if err != nil {
 							continue
 						}
 
 					} else if status == "success" {
-						_, err = storage.Client.LockOrderFulfillment.
+						_, err = storage.Client.PaymentOrderFulfillment.
 							UpdateOneID(fulfillment.ID).
 							SetTxID(fulfillment.TxID).
-							SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
+							SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
 							Save(ctx)
 						if err != nil {
+							continue
+						}
+
+						if order.Edges.Token == nil {
+							logger.WithFields(logger.Fields{
+								"OrderID":    order.ID.String(),
+								"ProviderID": order.Edges.Provider.ID,
+								"Reason":     "internal: Token is nil",
+							}).Errorf("SyncPaymentOrderFulfillments.MissingToken")
+							continue
+						}
+						if order.Edges.Token.Edges.Network == nil {
+							logger.WithFields(logger.Fields{
+								"OrderID":    order.ID.String(),
+								"ProviderID": order.Edges.Provider.ID,
+								"Reason":     "internal: Token Network is nil",
+							}).Errorf("SyncPaymentOrderFulfillments.MissingNetwork")
 							continue
 						}
 
@@ -1019,23 +1025,46 @@ func SyncLockOrderFulfillments() {
 							continue
 						}
 
-						_, err = storage.Client.LockPaymentOrder.
+						_, err = storage.Client.PaymentOrder.
 							UpdateOneID(order.ID).
-							SetStatus(lockpaymentorder.StatusValidated).
+							SetStatus(paymentorder.StatusValidated).
 							AddTransactions(transactionLog).
 							Save(ctx)
-						if err == nil {
-							updatePaymentOrderValidated(ctx, order)
-						} else {
+						if err != nil {
 							continue
+						}
+
+						if err := utils.SendPaymentOrderWebhook(ctx, order); err != nil {
+							logger.WithFields(logger.Fields{
+								"Error":       fmt.Sprintf("%v", err),
+								"MessageHash": order.MessageHash,
+								"OrderID":     order.ID,
+							}).Errorf("SyncPaymentOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 						}
 					}
 
-				} else if fulfillment.ValidationStatus == lockorderfulfillment.ValidationStatusFailed {
+				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed {
 					reassignCancelledOrder(ctx, order, fulfillment)
 					continue
 
-				} else if fulfillment.ValidationStatus == lockorderfulfillment.ValidationStatusSuccess {
+				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusSuccess {
+					if order.Edges.Token == nil {
+						logger.WithFields(logger.Fields{
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.Edges.Provider.ID,
+							"Reason":     "internal: Token is nil",
+						}).Errorf("SyncPaymentOrderFulfillments.MissingToken")
+						continue
+					}
+					if order.Edges.Token.Edges.Network == nil {
+						logger.WithFields(logger.Fields{
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.Edges.Provider.ID,
+							"Reason":     "internal: Token Network is nil",
+						}).Errorf("SyncPaymentOrderFulfillments.MissingNetwork")
+						continue
+					}
+
 					transactionLog, err := storage.Client.TransactionLog.
 						Create().
 						SetStatus(transactionlog.StatusOrderValidated).
@@ -1049,15 +1078,21 @@ func SyncLockOrderFulfillments() {
 						continue
 					}
 
-					_, err = storage.Client.LockPaymentOrder.
+					_, err = storage.Client.PaymentOrder.
 						UpdateOneID(order.ID).
-						SetStatus(lockpaymentorder.StatusValidated).
+						SetStatus(paymentorder.StatusValidated).
 						AddTransactions(transactionLog).
 						Save(ctx)
-					if err == nil {
-						updatePaymentOrderValidated(ctx, order)
-					} else {
+					if err != nil {
 						continue
+					}
+
+					if err := utils.SendPaymentOrderWebhook(ctx, order); err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":       fmt.Sprintf("%v", err),
+							"MessageHash": order.MessageHash,
+							"OrderID":     order.ID,
+						}).Errorf("SyncPaymentOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 					}
 				}
 			}
@@ -1081,10 +1116,10 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 		}
 
 		// Get the order from the database
-		order, err := storage.Client.LockPaymentOrder.
+		order, err := storage.Client.PaymentOrder.
 			Query().
 			Where(
-				lockpaymentorder.IDEQ(orderUUID),
+				paymentorder.IDEQ(orderUUID),
 			).
 			WithProvisionBucket().
 			WithProvider().
@@ -1108,7 +1143,7 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 		}
 
 		// Build order fields for reassignment
-		orderFields := types.LockPaymentOrderFields{
+		orderFields := types.PaymentOrderFields{
 			ID:                order.ID,
 			OrderType:         string(order.OrderType),
 			GatewayID:         order.GatewayID,
@@ -1133,9 +1168,9 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 		}
 
 		// Assign the order to a provider
-		err = services.NewPriorityQueueService().AssignLockPaymentOrder(ctx, orderFields)
+		err = services.NewPriorityQueueService().AssignPaymentOrder(ctx, orderFields)
 		if err != nil {
-			// logger.Errorf("ReassignStaleOrderRequest.AssignLockPaymentOrder: %v", err)
+			// logger.Errorf("ReassignStaleOrderRequest.AssignPaymentOrder: %v", err)
 			logger.WithFields(logger.Fields{
 				"Error":     fmt.Sprintf("%v", err),
 				"OrderID":   order.ID.String(),
@@ -1169,35 +1204,23 @@ func HandleReceiveAddressValidity() error {
 	ctx := context.Background()
 
 	// Fetch expired receive addresses that are due for validity check
-	addresses, err := storage.Client.ReceiveAddress.
+	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			receiveaddress.ValidUntilLTE(time.Now()),
-			receiveaddress.Or(
-				receiveaddress.StatusNEQ(receiveaddress.StatusUsed),
-				receiveaddress.And(
-					receiveaddress.StatusEQ(receiveaddress.StatusUsed),
-					receiveaddress.HasPaymentOrderWith(
-						paymentorder.StatusEQ(paymentorder.StatusInitiated),
-					),
-				),
-			),
-			receiveaddress.HasPaymentOrder(),
+			paymentorder.ReceiveAddressExpiryLTE(time.Now()),
+			paymentorder.StatusEQ(paymentorder.StatusInitiated),
 		).
-		WithPaymentOrder(func(po *ent.PaymentOrderQuery) {
-			po.WithToken(func(tq *ent.TokenQuery) {
-				tq.WithNetwork()
-			})
-			po.WithRecipient()
-			po.WithSenderProfile()
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
 		}).
+		WithSenderProfile().
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("HandleReceiveAddressValidity: %w", err)
 	}
 
-	for _, address := range addresses {
-		err := common.HandleReceiveAddressValidity(ctx, address, address.Edges.PaymentOrder)
+	for _, order := range orders {
+		err := common.HandleReceiveAddressValidity(ctx, order)
 		if err != nil {
 			continue
 		}
@@ -1223,7 +1246,6 @@ func ProcessExpiredOrdersRefunds() error {
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
-		WithReceiveAddress().
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("ProcessExpiredOrdersRefunds.fetchExpiredOrders: %w", err)
@@ -1245,11 +1267,11 @@ func ProcessExpiredOrdersRefunds() error {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			if order.Edges.ReceiveAddress == nil {
+			if order.ReceiveAddress == "" {
 				return
 			}
 
-			receiveAddress := order.Edges.ReceiveAddress.Address
+			receiveAddress := order.ReceiveAddress
 			tokenContract := order.Edges.Token.ContractAddress
 			network := order.Edges.Token.Edges.Network
 			rpcEndpoint := network.RPCEndpoint
@@ -1589,7 +1611,7 @@ func ResolvePaymentOrderMishaps() error {
 		return fmt.Errorf("ResolvePaymentOrderMishaps.fetchNetworks: %w", err)
 	}
 
-	// Process each network in parallel (EVM only)
+	// Process each network in parallel (EVM and Starknet)
 	for i, network := range networks {
 		// Skip Tron networks
 		if strings.HasPrefix(network.Identifier, "tron") {
@@ -1631,40 +1653,57 @@ func IndexGatewayEvents() error {
 		return fmt.Errorf("IndexGatewayEvents.fetchNetworks: %w", err)
 	}
 
-	// Process each network in parallel (EVM only)
-	for i, network := range networks {
+	// Process each network in parallel (EVM and Starknet)
+	for _, network := range networks {
 		// Skip Tron networks
 		if strings.HasPrefix(network.Identifier, "tron") {
 			continue
 		}
 
-		// Add a larger delay between starting goroutines to prevent overwhelming Etherscan
-		// Increased from 100ms to 500ms to respect 5 requests/second limit
-		if i > 0 {
-			time.Sleep(500 * time.Millisecond)
+		if strings.HasPrefix(network.Identifier, "starknet") {
+			go func(network *ent.Network) {
+				ctx := context.Background()
+				indexerInstance, indexerErr := indexer.NewIndexerStarknet()
+				if indexerErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", indexerErr),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("IndexGatewayEvents.createStarknetIndexer")
+					return
+				}
+				_, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("IndexGatewayEvents.indexStarknetGateway")
+					return
+				}
+			}(network)
+			continue
+		} else {
+			go func(network *ent.Network) {
+				ctx := context.Background()
+
+				// Index gateway events by fetching last 20 transactions of the gateway contract
+				indexerInstance, indexerErr := indexer.NewIndexerEVM()
+				if indexerErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", indexerErr),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("IndexGatewayEvents.createEVMIndexer")
+					return
+				}
+				_, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("IndexGatewayEvents.indexEVMGateway")
+					return
+				}
+			}(network)
 		}
-
-		go func(network *ent.Network) {
-			ctx := context.Background()
-
-			// Index gateway events by fetching last 20 transactions of the gateway contract
-			indexerInstance, indexerErr := indexer.NewIndexerEVM()
-			if indexerErr != nil {
-				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", indexerErr),
-					"NetworkIdentifier": network.Identifier,
-				}).Errorf("IndexGatewayEvents.createIndexer")
-				return
-			}
-			_, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"NetworkIdentifier": network.Identifier,
-				}).Errorf("IndexGatewayEvents.indexGateway")
-				return
-			}
-		}(network)
 	}
 
 	return nil
@@ -1682,11 +1721,10 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 		Query().
 		Where(
 			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			paymentorder.CreatedAtLTE(oldEnoughCutoff), // At least 30 seconds old
-			paymentorder.CreatedAtGTE(recentCutoff),    // But within last 2 hours
-			paymentorder.HasReceiveAddressWith(
-				receiveaddress.StatusNEQ(receiveaddress.StatusExpired),
-			),
+			paymentorder.CreatedAtLTE(oldEnoughCutoff),      // At least 30 seconds old
+			paymentorder.CreatedAtGTE(recentCutoff),         // But within last 2 hours
+			paymentorder.ReceiveAddressNEQ(""),              // Must have receive address
+			paymentorder.ReceiveAddressExpiryGT(time.Now()), // Not expired
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IDEQ(network.ID),
@@ -1696,7 +1734,6 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
-		WithReceiveAddress().
 		Order(ent.Desc(paymentorder.FieldCreatedAt)).
 		Limit(100). // Limit to avoid processing too many at once
 		All(ctx)
@@ -1710,23 +1747,37 @@ func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 
 	// For missed transfers, we need to check each order's specific receive address
 	// Process sequentially to avoid overwhelming the RPC node and for better error handling
-	indexerInstance, indexerErr := indexer.NewIndexerEVM()
-	if indexerErr != nil {
-		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", indexerErr),
-			"NetworkIdentifier": network.Identifier,
-		}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.createIndexer")
-		return
+	var indexerInstance types.Indexer
+	var indexerErr error
+
+	if strings.HasPrefix(network.Identifier, "starknet") {
+		indexerInstance, indexerErr = indexer.NewIndexerStarknet()
+		if indexerErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", indexerErr),
+				"NetworkIdentifier": network.Identifier,
+			}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.createStarknetIndexer")
+			return
+		}
+	} else {
+		indexerInstance, indexerErr = indexer.NewIndexerEVM()
+		if indexerErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":             fmt.Sprintf("%v", indexerErr),
+				"NetworkIdentifier": network.Identifier,
+			}).Errorf("ResolvePaymentOrderMishaps.resolveMissedEvents.createEVMIndexer")
+			return
+		}
 	}
 	processedCount := 0
 	errorCount := 0
 
 	for i, order := range orders {
-		if order.Edges.ReceiveAddress == nil {
+		if order.ReceiveAddress == "" {
 			continue
 		}
 
-		address := order.Edges.ReceiveAddress.Address
+		address := order.ReceiveAddress
 		chainID := network.ChainID
 		indexKey := fmt.Sprintf("%s_%d", address, chainID)
 
@@ -1814,17 +1865,17 @@ func ProcessStuckValidatedOrders() error {
 
 		go func(network *ent.Network) {
 			// Get stuck validated orders for this network
-			lockOrders, err := storage.Client.LockPaymentOrder.
+			lockOrders, err := storage.Client.PaymentOrder.
 				Query().
 				Where(
-					lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
-					lockpaymentorder.HasTokenWith(
+					paymentorder.StatusEQ(paymentorder.StatusValidated),
+					paymentorder.HasTokenWith(
 						tokenent.HasNetworkWith(
 							networkent.IDEQ(network.ID),
 						),
 					),
-					lockpaymentorder.HasProvider(),
-					lockpaymentorder.HasProvisionBucket(),
+					paymentorder.HasProvider(),
+					paymentorder.HasProvisionBucket(),
 				).
 				WithToken(func(tq *ent.TokenQuery) {
 					tq.WithNetwork()
@@ -1855,13 +1906,22 @@ func ProcessStuckValidatedOrders() error {
 			var indexerInstance types.Indexer
 			if strings.HasPrefix(network.Identifier, "tron") {
 				indexerInstance = indexer.NewIndexerTron()
+			} else if strings.HasPrefix(network.Identifier, "starknet") {
+				indexerInstance, err = indexer.NewIndexerStarknet()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":             fmt.Sprintf("%v", err),
+						"NetworkIdentifier": network.Identifier,
+					}).Errorf("ProcessStuckValidatedOrders.createStarknetIndexer")
+					return
+				}
 			} else {
 				indexerInstance, err = indexer.NewIndexerEVM()
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),
 						"NetworkIdentifier": network.Identifier,
-					}).Errorf("ProcessStuckValidatedOrders.createIndexer")
+					}).Errorf("ProcessStuckValidatedOrders.createEVMIndexer")
 					return
 				}
 			}
@@ -1869,7 +1929,7 @@ func ProcessStuckValidatedOrders() error {
 			// Process each stuck order
 			for _, order := range lockOrders {
 				// Get provider address for this order
-				providerAddress, err := common.GetProviderAddressFromLockOrder(ctx, order)
+				providerAddress, err := common.GetProviderAddressFromOrder(ctx, order)
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),
@@ -2173,10 +2233,10 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for RetryFailedWebhookNotifications: %v", err)
 	}
 
-	// Sync lock order fulfillments every 32 seconds
-	_, err = scheduler.Every(32).Seconds().Do(SyncLockOrderFulfillments)
+	// Sync payment order fulfillments every 32 seconds
+	_, err = scheduler.Every(32).Seconds().Do(SyncPaymentOrderFulfillments)
 	if err != nil {
-		logger.Errorf("StartCronJobs for SyncLockOrderFulfillments: %v", err)
+		logger.Errorf("StartCronJobs for SyncPaymentOrderFulfillments: %v", err)
 	}
 
 	// Handle receive address validity every 6 minutes

@@ -20,56 +20,56 @@ type IdentityVerificationRequestDelete struct {
 }
 
 // Where appends a list predicates to the IdentityVerificationRequestDelete builder.
-func (ivrd *IdentityVerificationRequestDelete) Where(ps ...predicate.IdentityVerificationRequest) *IdentityVerificationRequestDelete {
-	ivrd.mutation.Where(ps...)
-	return ivrd
+func (_d *IdentityVerificationRequestDelete) Where(ps ...predicate.IdentityVerificationRequest) *IdentityVerificationRequestDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (ivrd *IdentityVerificationRequestDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, ivrd.sqlExec, ivrd.mutation, ivrd.hooks)
+func (_d *IdentityVerificationRequestDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ivrd *IdentityVerificationRequestDelete) ExecX(ctx context.Context) int {
-	n, err := ivrd.Exec(ctx)
+func (_d *IdentityVerificationRequestDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (ivrd *IdentityVerificationRequestDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *IdentityVerificationRequestDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(identityverificationrequest.Table, sqlgraph.NewFieldSpec(identityverificationrequest.FieldID, field.TypeUUID))
-	if ps := ivrd.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, ivrd.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	ivrd.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // IdentityVerificationRequestDeleteOne is the builder for deleting a single IdentityVerificationRequest entity.
 type IdentityVerificationRequestDeleteOne struct {
-	ivrd *IdentityVerificationRequestDelete
+	_d *IdentityVerificationRequestDelete
 }
 
 // Where appends a list predicates to the IdentityVerificationRequestDelete builder.
-func (ivrdo *IdentityVerificationRequestDeleteOne) Where(ps ...predicate.IdentityVerificationRequest) *IdentityVerificationRequestDeleteOne {
-	ivrdo.ivrd.mutation.Where(ps...)
-	return ivrdo
+func (_d *IdentityVerificationRequestDeleteOne) Where(ps ...predicate.IdentityVerificationRequest) *IdentityVerificationRequestDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (ivrdo *IdentityVerificationRequestDeleteOne) Exec(ctx context.Context) error {
-	n, err := ivrdo.ivrd.Exec(ctx)
+func (_d *IdentityVerificationRequestDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (ivrdo *IdentityVerificationRequestDeleteOne) Exec(ctx context.Context) err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (ivrdo *IdentityVerificationRequestDeleteOne) ExecX(ctx context.Context) {
-	if err := ivrdo.Exec(ctx); err != nil {
+func (_d *IdentityVerificationRequestDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

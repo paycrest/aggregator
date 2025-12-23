@@ -25,64 +25,64 @@ type ProviderRatingCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (prc *ProviderRatingCreate) SetCreatedAt(t time.Time) *ProviderRatingCreate {
-	prc.mutation.SetCreatedAt(t)
-	return prc
+func (_c *ProviderRatingCreate) SetCreatedAt(v time.Time) *ProviderRatingCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (prc *ProviderRatingCreate) SetNillableCreatedAt(t *time.Time) *ProviderRatingCreate {
-	if t != nil {
-		prc.SetCreatedAt(*t)
+func (_c *ProviderRatingCreate) SetNillableCreatedAt(v *time.Time) *ProviderRatingCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return prc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (prc *ProviderRatingCreate) SetUpdatedAt(t time.Time) *ProviderRatingCreate {
-	prc.mutation.SetUpdatedAt(t)
-	return prc
+func (_c *ProviderRatingCreate) SetUpdatedAt(v time.Time) *ProviderRatingCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (prc *ProviderRatingCreate) SetNillableUpdatedAt(t *time.Time) *ProviderRatingCreate {
-	if t != nil {
-		prc.SetUpdatedAt(*t)
+func (_c *ProviderRatingCreate) SetNillableUpdatedAt(v *time.Time) *ProviderRatingCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return prc
+	return _c
 }
 
 // SetTrustScore sets the "trust_score" field.
-func (prc *ProviderRatingCreate) SetTrustScore(d decimal.Decimal) *ProviderRatingCreate {
-	prc.mutation.SetTrustScore(d)
-	return prc
+func (_c *ProviderRatingCreate) SetTrustScore(v decimal.Decimal) *ProviderRatingCreate {
+	_c.mutation.SetTrustScore(v)
+	return _c
 }
 
 // SetProviderProfileID sets the "provider_profile" edge to the ProviderProfile entity by ID.
-func (prc *ProviderRatingCreate) SetProviderProfileID(id string) *ProviderRatingCreate {
-	prc.mutation.SetProviderProfileID(id)
-	return prc
+func (_c *ProviderRatingCreate) SetProviderProfileID(id string) *ProviderRatingCreate {
+	_c.mutation.SetProviderProfileID(id)
+	return _c
 }
 
 // SetProviderProfile sets the "provider_profile" edge to the ProviderProfile entity.
-func (prc *ProviderRatingCreate) SetProviderProfile(p *ProviderProfile) *ProviderRatingCreate {
-	return prc.SetProviderProfileID(p.ID)
+func (_c *ProviderRatingCreate) SetProviderProfile(v *ProviderProfile) *ProviderRatingCreate {
+	return _c.SetProviderProfileID(v.ID)
 }
 
 // Mutation returns the ProviderRatingMutation object of the builder.
-func (prc *ProviderRatingCreate) Mutation() *ProviderRatingMutation {
-	return prc.mutation
+func (_c *ProviderRatingCreate) Mutation() *ProviderRatingMutation {
+	return _c.mutation
 }
 
 // Save creates the ProviderRating in the database.
-func (prc *ProviderRatingCreate) Save(ctx context.Context) (*ProviderRating, error) {
-	prc.defaults()
-	return withHooks(ctx, prc.sqlSave, prc.mutation, prc.hooks)
+func (_c *ProviderRatingCreate) Save(ctx context.Context) (*ProviderRating, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (prc *ProviderRatingCreate) SaveX(ctx context.Context) *ProviderRating {
-	v, err := prc.Save(ctx)
+func (_c *ProviderRatingCreate) SaveX(ctx context.Context) *ProviderRating {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -90,53 +90,53 @@ func (prc *ProviderRatingCreate) SaveX(ctx context.Context) *ProviderRating {
 }
 
 // Exec executes the query.
-func (prc *ProviderRatingCreate) Exec(ctx context.Context) error {
-	_, err := prc.Save(ctx)
+func (_c *ProviderRatingCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (prc *ProviderRatingCreate) ExecX(ctx context.Context) {
-	if err := prc.Exec(ctx); err != nil {
+func (_c *ProviderRatingCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (prc *ProviderRatingCreate) defaults() {
-	if _, ok := prc.mutation.CreatedAt(); !ok {
+func (_c *ProviderRatingCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := providerrating.DefaultCreatedAt()
-		prc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := prc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := providerrating.DefaultUpdatedAt()
-		prc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (prc *ProviderRatingCreate) check() error {
-	if _, ok := prc.mutation.CreatedAt(); !ok {
+func (_c *ProviderRatingCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ProviderRating.created_at"`)}
 	}
-	if _, ok := prc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderRating.updated_at"`)}
 	}
-	if _, ok := prc.mutation.TrustScore(); !ok {
+	if _, ok := _c.mutation.TrustScore(); !ok {
 		return &ValidationError{Name: "trust_score", err: errors.New(`ent: missing required field "ProviderRating.trust_score"`)}
 	}
-	if len(prc.mutation.ProviderProfileIDs()) == 0 {
+	if len(_c.mutation.ProviderProfileIDs()) == 0 {
 		return &ValidationError{Name: "provider_profile", err: errors.New(`ent: missing required edge "ProviderRating.provider_profile"`)}
 	}
 	return nil
 }
 
-func (prc *ProviderRatingCreate) sqlSave(ctx context.Context) (*ProviderRating, error) {
-	if err := prc.check(); err != nil {
+func (_c *ProviderRatingCreate) sqlSave(ctx context.Context) (*ProviderRating, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := prc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, prc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -144,30 +144,30 @@ func (prc *ProviderRatingCreate) sqlSave(ctx context.Context) (*ProviderRating, 
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	prc.mutation.id = &_node.ID
-	prc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (prc *ProviderRatingCreate) createSpec() (*ProviderRating, *sqlgraph.CreateSpec) {
+func (_c *ProviderRatingCreate) createSpec() (*ProviderRating, *sqlgraph.CreateSpec) {
 	var (
-		_node = &ProviderRating{config: prc.config}
+		_node = &ProviderRating{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(providerrating.Table, sqlgraph.NewFieldSpec(providerrating.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = prc.conflict
-	if value, ok := prc.mutation.CreatedAt(); ok {
+	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(providerrating.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := prc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerrating.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := prc.mutation.TrustScore(); ok {
+	if value, ok := _c.mutation.TrustScore(); ok {
 		_spec.SetField(providerrating.FieldTrustScore, field.TypeFloat64, value)
 		_node.TrustScore = value
 	}
-	if nodes := prc.mutation.ProviderProfileIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -203,10 +203,10 @@ func (prc *ProviderRatingCreate) createSpec() (*ProviderRating, *sqlgraph.Create
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (prc *ProviderRatingCreate) OnConflict(opts ...sql.ConflictOption) *ProviderRatingUpsertOne {
-	prc.conflict = opts
+func (_c *ProviderRatingCreate) OnConflict(opts ...sql.ConflictOption) *ProviderRatingUpsertOne {
+	_c.conflict = opts
 	return &ProviderRatingUpsertOne{
-		create: prc,
+		create: _c,
 	}
 }
 
@@ -216,10 +216,10 @@ func (prc *ProviderRatingCreate) OnConflict(opts ...sql.ConflictOption) *Provide
 //	client.ProviderRating.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (prc *ProviderRatingCreate) OnConflictColumns(columns ...string) *ProviderRatingUpsertOne {
-	prc.conflict = append(prc.conflict, sql.ConflictColumns(columns...))
+func (_c *ProviderRatingCreate) OnConflictColumns(columns ...string) *ProviderRatingUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProviderRatingUpsertOne{
-		create: prc,
+		create: _c,
 	}
 }
 
@@ -388,16 +388,16 @@ type ProviderRatingCreateBulk struct {
 }
 
 // Save creates the ProviderRating entities in the database.
-func (prcb *ProviderRatingCreateBulk) Save(ctx context.Context) ([]*ProviderRating, error) {
-	if prcb.err != nil {
-		return nil, prcb.err
+func (_c *ProviderRatingCreateBulk) Save(ctx context.Context) ([]*ProviderRating, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(prcb.builders))
-	nodes := make([]*ProviderRating, len(prcb.builders))
-	mutators := make([]Mutator, len(prcb.builders))
-	for i := range prcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*ProviderRating, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := prcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*ProviderRatingMutation)
@@ -411,12 +411,12 @@ func (prcb *ProviderRatingCreateBulk) Save(ctx context.Context) ([]*ProviderRati
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, prcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = prcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, prcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -440,7 +440,7 @@ func (prcb *ProviderRatingCreateBulk) Save(ctx context.Context) ([]*ProviderRati
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, prcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -448,8 +448,8 @@ func (prcb *ProviderRatingCreateBulk) Save(ctx context.Context) ([]*ProviderRati
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (prcb *ProviderRatingCreateBulk) SaveX(ctx context.Context) []*ProviderRating {
-	v, err := prcb.Save(ctx)
+func (_c *ProviderRatingCreateBulk) SaveX(ctx context.Context) []*ProviderRating {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -457,14 +457,14 @@ func (prcb *ProviderRatingCreateBulk) SaveX(ctx context.Context) []*ProviderRati
 }
 
 // Exec executes the query.
-func (prcb *ProviderRatingCreateBulk) Exec(ctx context.Context) error {
-	_, err := prcb.Save(ctx)
+func (_c *ProviderRatingCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (prcb *ProviderRatingCreateBulk) ExecX(ctx context.Context) {
-	if err := prcb.Exec(ctx); err != nil {
+func (_c *ProviderRatingCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -484,10 +484,10 @@ func (prcb *ProviderRatingCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (prcb *ProviderRatingCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderRatingUpsertBulk {
-	prcb.conflict = opts
+func (_c *ProviderRatingCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderRatingUpsertBulk {
+	_c.conflict = opts
 	return &ProviderRatingUpsertBulk{
-		create: prcb,
+		create: _c,
 	}
 }
 
@@ -497,10 +497,10 @@ func (prcb *ProviderRatingCreateBulk) OnConflict(opts ...sql.ConflictOption) *Pr
 //	client.ProviderRating.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (prcb *ProviderRatingCreateBulk) OnConflictColumns(columns ...string) *ProviderRatingUpsertBulk {
-	prcb.conflict = append(prcb.conflict, sql.ConflictColumns(columns...))
+func (_c *ProviderRatingCreateBulk) OnConflictColumns(columns ...string) *ProviderRatingUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProviderRatingUpsertBulk{
-		create: prcb,
+		create: _c,
 	}
 }
 

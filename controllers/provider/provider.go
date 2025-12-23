@@ -14,9 +14,8 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -47,8 +46,8 @@ func NewProviderController() *ProviderController {
 	}
 }
 
-// GetLockPaymentOrders controller fetches all assigned orders
-func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
+// GetPaymentOrders controller fetches all assigned orders
+func (ctrl *ProviderController) GetPaymentOrders(ctx *gin.Context) {
 	// Get provider profile from the context
 	providerCtx, ok := ctx.Get("provider")
 	if !ok {
@@ -81,35 +80,35 @@ func (ctrl *ProviderController) GetLockPaymentOrders(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Both 'from' and 'to' date parameters are required for export", nil)
 			return
 		}
-		ctrl.handleExportLockPaymentOrders(ctx, provider)
+		ctrl.handleExportPaymentOrders(ctx, provider)
 		return
 	}
 
 	// Handle search request
 	if isSearch {
-		ctrl.handleSearchLockPaymentOrders(ctx, provider, searchText)
+		ctrl.handleSearchPaymentOrders(ctx, provider, searchText)
 		return
 	}
 
 	// Handle normal listing
-	ctrl.handleListLockPaymentOrders(ctx, provider)
+	ctrl.handleListPaymentOrders(ctx, provider)
 }
 
-// handleListLockPaymentOrders handles normal lock payment order listing with pagination
-func (ctrl *ProviderController) handleListLockPaymentOrders(ctx *gin.Context, provider *ent.ProviderProfile) {
+// handleListPaymentOrders handles normal payment order listing with pagination
+func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provider *ent.ProviderProfile) {
 	// get page and pageSize query params
 	page, offset, pageSize := u.Paginate(ctx)
 
 	// Set ordering
 	ordering := ctx.Query("ordering")
-	order := ent.Desc(lockpaymentorder.FieldCreatedAt)
+	order := ent.Desc(paymentorder.FieldCreatedAt)
 	if ordering == "asc" {
-		order = ent.Asc(lockpaymentorder.FieldCreatedAt)
+		order = ent.Asc(paymentorder.FieldCreatedAt)
 	}
 
 	// Start building the base query filtering by provider only
-	lockPaymentOrderQuery := storage.Client.LockPaymentOrder.Query().Where(
-		lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 	)
 
 	// Only filter by currency if the query parameter is provided
@@ -147,8 +146,8 @@ func (ctrl *ProviderController) handleListLockPaymentOrders(ctx *gin.Context, pr
 		}
 
 		// Add the currency filter to the query using the institution codes
-		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
-			lockpaymentorder.InstitutionIn(institutionCodes...),
+		paymentOrderQuery = paymentOrderQuery.Where(
+			paymentorder.InstitutionIn(institutionCodes...),
 		)
 	} else {
 		// Currency is required for normal listing
@@ -157,23 +156,23 @@ func (ctrl *ProviderController) handleListLockPaymentOrders(ctx *gin.Context, pr
 	}
 
 	// Filter by status if provided
-	statusMap := map[string]lockpaymentorder.Status{
-		"pending":    lockpaymentorder.StatusPending,
-		"validated":  lockpaymentorder.StatusValidated,
-		"fulfilled":  lockpaymentorder.StatusFulfilled,
-		"cancelled":  lockpaymentorder.StatusCancelled,
-		"processing": lockpaymentorder.StatusProcessing,
-		"settled":    lockpaymentorder.StatusSettled,
+	statusMap := map[string]paymentorder.Status{
+		"pending":    paymentorder.StatusPending,
+		"validated":  paymentorder.StatusValidated,
+		"fulfilled":  paymentorder.StatusFulfilled,
+		"cancelled":  paymentorder.StatusCancelled,
+		"processing": paymentorder.StatusProcessing,
+		"settled":    paymentorder.StatusSettled,
 	}
 
 	statusQueryParam := ctx.Query("status")
 	if status, ok := statusMap[statusQueryParam]; ok {
-		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
-			lockpaymentorder.StatusEQ(status),
+		paymentOrderQuery = paymentOrderQuery.Where(
+			paymentorder.StatusEQ(status),
 		)
 	}
 
-	count, err := lockPaymentOrderQuery.Count(ctx)
+	count, err := paymentOrderQuery.Count(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
@@ -183,7 +182,7 @@ func (ctrl *ProviderController) handleListLockPaymentOrders(ctx *gin.Context, pr
 	// Apply pagination limits for normal listing
 
 	// Fetch all orders assigned to the provider
-	lockPaymentOrders, err := lockPaymentOrderQuery.
+	paymentOrders, err := paymentOrderQuery.
 		Limit(pageSize).
 		Offset(offset).
 		Order(order).
@@ -200,30 +199,44 @@ func (ctrl *ProviderController) handleListLockPaymentOrders(ctx *gin.Context, pr
 		return
 	}
 
-	var orders []types.LockPaymentOrderResponse
-	for _, order := range lockPaymentOrders {
-		orders = append(orders, types.LockPaymentOrderResponse{
-			ID:                  order.ID,
-			Token:               order.Edges.Token.Symbol,
-			GatewayID:           order.GatewayID,
-			Amount:              order.Amount,
-			AmountInUSD:         order.AmountInUsd,
-			Rate:                order.Rate,
-			Institution:         order.Institution,
-			AccountIdentifier:   order.AccountIdentifier,
-			AccountName:         order.AccountName,
-			TxHash:              order.TxHash,
-			Status:              order.Status,
-			Memo:                order.Memo,
-			Network:             order.Edges.Token.Edges.Network.Identifier,
-			CancellationReasons: order.CancellationReasons,
-			UpdatedAt:           order.UpdatedAt,
-			CreatedAt:           order.CreatedAt,
-		})
+	var orders []types.ProviderOrderResponse
+	for _, order := range paymentOrders {
+		orders = append(orders, func(order *ent.PaymentOrder) types.ProviderOrderResponse {
+			response := types.ProviderOrderResponse{
+				ID:                  order.ID,
+				Token:               order.Edges.Token.Symbol,
+				GatewayID:           order.GatewayID,
+				Amount:              order.Amount,
+				AmountInUSD:         order.AmountInUsd,
+				Rate:                order.Rate,
+				Institution:         order.Institution,
+				AccountIdentifier:   order.AccountIdentifier,
+				AccountName:         order.AccountName,
+				TxHash:              order.TxHash,
+				Status:              order.Status,
+				Memo:                order.Memo,
+				Network:             order.Edges.Token.Edges.Network.Identifier,
+				CancellationReasons: order.CancellationReasons,
+				UpdatedAt:           order.UpdatedAt,
+				CreatedAt:           order.CreatedAt,
+				OrderType:           order.OrderType,
+			}
+
+			if order.OrderType == paymentorder.OrderTypeOtc && order.Edges.Provider != nil {
+				switch order.Status {
+				case paymentorder.StatusPending:
+					response.OTCExpiry = order.UpdatedAt.Add(orderConf.OrderRequestValidityOtc)
+				case paymentorder.StatusProcessing:
+					response.OTCExpiry = order.UpdatedAt.Add(orderConf.OrderFulfillmentValidityOtc)
+				}
+			}
+
+			return response
+		}(order))
 	}
 
 	// return paginated orders (consistent format for both search and regular queries)
-	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.ProviderLockOrderList{
+	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.ProviderOrderList{
 		Page:         page,
 		PageSize:     pageSize,
 		TotalRecords: count,
@@ -231,35 +244,35 @@ func (ctrl *ProviderController) handleListLockPaymentOrders(ctx *gin.Context, pr
 	})
 }
 
-// handleSearchLockPaymentOrders handles search functionality for lock payment orders
-func (ctrl *ProviderController) handleSearchLockPaymentOrders(ctx *gin.Context, provider *ent.ProviderProfile, searchText string) {
+// handleSearchPaymentOrders handles search functionality for payment orders
+func (ctrl *ProviderController) handleSearchPaymentOrders(ctx *gin.Context, provider *ent.ProviderProfile, searchText string) {
 	// Build base query
-	lockPaymentOrderQuery := storage.Client.LockPaymentOrder.Query().Where(
-		lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 	)
 
 	// Apply text search across all relevant fields
-	var searchPredicates []predicate.LockPaymentOrder
+	var searchPredicates []predicate.PaymentOrder
 
 	// Try to parse search text as UUID for exact ID match
 	if searchUUID, err := uuid.Parse(searchText); err == nil {
-		searchPredicates = append(searchPredicates, lockpaymentorder.IDEQ(searchUUID))
+		searchPredicates = append(searchPredicates, paymentorder.IDEQ(searchUUID))
 	}
 
 	searchPredicates = append(searchPredicates,
-		lockpaymentorder.AccountIdentifierContains(searchText),
-		lockpaymentorder.AccountNameContains(searchText),
+		paymentorder.AccountIdentifierContainsFold(searchText),
+		paymentorder.AccountNameContainsFold(searchText),
 	)
 
-	lockPaymentOrderQuery = lockPaymentOrderQuery.Where(
-		lockpaymentorder.Or(searchPredicates...),
+	paymentOrderQuery = paymentOrderQuery.Where(
+		paymentorder.Or(searchPredicates...),
 	)
 
 	// Get total count
-	count, err := lockPaymentOrderQuery.Count(ctx)
+	count, err := paymentOrderQuery.Count(ctx)
 	if err != nil {
-		logger.Errorf("Failed to count lock payment orders: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search lock payment orders", nil)
+		logger.Errorf("Failed to count payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
 		return
 	}
 
@@ -273,23 +286,23 @@ func (ctrl *ProviderController) handleSearchLockPaymentOrders(ctx *gin.Context, 
 	}
 
 	// Execute query with default ordering (most recent first)
-	lockPaymentOrders, err := lockPaymentOrderQuery.
+	paymentOrders, err := paymentOrderQuery.
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
 		Limit(maxSearchResults).
-		Order(ent.Desc(lockpaymentorder.FieldCreatedAt), ent.Desc(lockpaymentorder.FieldID)).
+		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
 		All(ctx)
 	if err != nil {
-		logger.Errorf("Failed to fetch lock payment orders: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search lock payment orders", nil)
+		logger.Errorf("Failed to fetch payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
 		return
 	}
 
 	// Transform to response format
-	var orders []types.LockPaymentOrderResponse
-	for _, order := range lockPaymentOrders {
-		orders = append(orders, types.LockPaymentOrderResponse{
+	var orders []types.ProviderOrderResponse
+	for _, order := range paymentOrders {
+		orders = append(orders, types.ProviderOrderResponse{
 			ID:                  order.ID,
 			Token:               order.Edges.Token.Symbol,
 			GatewayID:           order.GatewayID,
@@ -306,11 +319,12 @@ func (ctrl *ProviderController) handleSearchLockPaymentOrders(ctx *gin.Context, 
 			CancellationReasons: order.CancellationReasons,
 			UpdatedAt:           order.UpdatedAt,
 			CreatedAt:           order.CreatedAt,
+			OrderType:           order.OrderType,
 		})
 	}
 
 	// Return search results using standard response format
-	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.ProviderLockOrderList{
+	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.ProviderOrderList{
 		Page:         1,
 		PageSize:     len(orders),
 		TotalRecords: count,
@@ -318,8 +332,8 @@ func (ctrl *ProviderController) handleSearchLockPaymentOrders(ctx *gin.Context, 
 	})
 }
 
-// handleExportLockPaymentOrders handles CSV export functionality for lock payment orders
-func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, provider *ent.ProviderProfile) {
+// handleExportPaymentOrders handles CSV export functionality for payment orders
+func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, provider *ent.ProviderProfile) {
 	// Parse date range parameters
 	fromDateStr := ctx.Query("from")
 	toDateStr := ctx.Query("to")
@@ -372,23 +386,23 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 	}
 
 	// Build query for provider's orders with date range filter
-	lockPaymentOrderQuery := storage.Client.LockPaymentOrder.Query().Where(
-		lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 	)
 
 	// Apply date range filters
 	if fromDate != nil {
-		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(lockpaymentorder.CreatedAtGTE(*fromDate))
+		paymentOrderQuery = paymentOrderQuery.Where(paymentorder.CreatedAtGTE(*fromDate))
 	}
 	if toDate != nil {
-		lockPaymentOrderQuery = lockPaymentOrderQuery.Where(lockpaymentorder.CreatedAtLTE(*toDate))
+		paymentOrderQuery = paymentOrderQuery.Where(paymentorder.CreatedAtLTE(*toDate))
 	}
 
 	// Get total count first
-	count, err := lockPaymentOrderQuery.Count(ctx)
+	count, err := paymentOrderQuery.Count(ctx)
 	if err != nil {
-		logger.Errorf("Failed to count lock payment orders for export: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export lock payment orders", nil)
+		logger.Errorf("Failed to count payment orders for export: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
 		return
 	}
 
@@ -406,7 +420,7 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 	}
 
 	// Execute query with eager loading
-	lockPaymentOrders, err := lockPaymentOrderQuery.
+	paymentOrders, err := paymentOrderQuery.
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -414,11 +428,11 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 			pbq.WithCurrency()
 		}).
 		Limit(maxExportLimit).
-		Order(ent.Desc(lockpaymentorder.FieldCreatedAt), ent.Desc(lockpaymentorder.FieldID)).
+		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
 		All(ctx)
 	if err != nil {
 		logger.Errorf("Failed to fetch lock payment orders for export: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export lock payment orders", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
 		return
 	}
 
@@ -455,14 +469,14 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 
 	if err := writer.Write(csvHeaders); err != nil {
 		logger.Errorf("Failed to write CSV headers: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export lock payment orders", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
 		return
 	}
 
 	institutionMap := make(map[string]string)
 	uniqueInstitutions := make(map[string]bool)
 
-	for _, order := range lockPaymentOrders {
+	for _, order := range paymentOrders {
 		if order.Institution != "" {
 			uniqueInstitutions[order.Institution] = true
 		}
@@ -479,34 +493,34 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 	}
 
 	// Write data rows
-	for _, lockPaymentOrder := range lockPaymentOrders {
+	for _, paymentOrder := range paymentOrders {
 		// Look up institution name from pre-fetched map
-		institutionName := lockPaymentOrder.Institution
-		if name, exists := institutionMap[lockPaymentOrder.Institution]; exists {
+		institutionName := paymentOrder.Institution
+		if name, exists := institutionMap[paymentOrder.Institution]; exists {
 			institutionName = name
 		}
 
 		var currencyCode string
-		if lockPaymentOrder.Edges.ProvisionBucket != nil && lockPaymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-			currencyCode = lockPaymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		if paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+			currencyCode = paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
 		}
 
 		row := []string{
-			lockPaymentOrder.ID.String(),
-			lockPaymentOrder.Amount.String(),
-			lockPaymentOrder.Edges.Token.Symbol,
-			lockPaymentOrder.Edges.Token.Edges.Network.Identifier,
-			lockPaymentOrder.Rate.String(),
-			lockPaymentOrder.Rate.Mul(lockPaymentOrder.Amount).String(),
-			string(lockPaymentOrder.Status),
+			paymentOrder.ID.String(),
+			paymentOrder.Amount.String(),
+			paymentOrder.Edges.Token.Symbol,
+			paymentOrder.Edges.Token.Edges.Network.Identifier,
+			paymentOrder.Rate.String(),
+			paymentOrder.Rate.Mul(paymentOrder.Amount).String(),
+			string(paymentOrder.Status),
 			institutionName,
-			lockPaymentOrder.AccountIdentifier,
-			lockPaymentOrder.AccountName,
+			paymentOrder.AccountIdentifier,
+			paymentOrder.AccountName,
 			currencyCode,
-			lockPaymentOrder.Memo,
-			lockPaymentOrder.TxHash,
-			lockPaymentOrder.CreatedAt.Format("2006-01-02 15:04:05"),
-			lockPaymentOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
+			paymentOrder.Memo,
+			paymentOrder.TxHash,
+			paymentOrder.CreatedAt.Format("2006-01-02 15:04:05"),
+			paymentOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
 		}
 
 		if err := writer.Write(row); err != nil {
@@ -515,7 +529,7 @@ func (ctrl *ProviderController) handleExportLockPaymentOrders(ctx *gin.Context, 
 		}
 	}
 	// CSV is automatically sent as response through ctx.Writer
-	logger.Infof("Successfully exported %d lock payment orders for provider %s", len(lockPaymentOrders), provider.ID)
+	logger.Infof("Successfully exported %d provider orders for provider %s", len(paymentOrders), provider.ID)
 }
 
 // AcceptOrder controller accepts an order
@@ -565,7 +579,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// Fetch the order to check its current status before accepting
-	currentOrder, err := tx.LockPaymentOrder.Get(ctx, orderID)
+	currentOrder, err := tx.PaymentOrder.Get(ctx, orderID)
 	if err != nil {
 		_ = tx.Rollback()
 		if ent.IsNotFound(err) {
@@ -582,12 +596,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	// Check if order is already in a finalized state
 	// Prevent accepting orders that are refunded, fulfilled, validated, settled, cancelled, or processing
-	if currentOrder.Status == lockpaymentorder.StatusRefunded ||
-		currentOrder.Status == lockpaymentorder.StatusFulfilled ||
-		currentOrder.Status == lockpaymentorder.StatusValidated ||
-		currentOrder.Status == lockpaymentorder.StatusSettled ||
-		currentOrder.Status == lockpaymentorder.StatusCancelled ||
-		currentOrder.Status == lockpaymentorder.StatusProcessing {
+	if currentOrder.Status != paymentorder.StatusPending {
 		_ = tx.Rollback()
 		logger.WithFields(logger.Fields{
 			"OrderID":    orderID.String(),
@@ -600,11 +609,11 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	// Log transaction status
 	var transactionLog *ent.TransactionLog
-	_, err = tx.LockPaymentOrder.
+	_, err = tx.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.IDEQ(orderID),
-			lockpaymentorder.HasTransactionsWith(
+			paymentorder.IDEQ(orderID),
+			paymentorder.HasTransactionsWith(
 				transactionlog.StatusEQ(transactionlog.StatusOrderProcessing),
 			),
 		).
@@ -630,9 +639,9 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// Update lock order status to processing
-	orderBuilder := tx.LockPaymentOrder.
+	orderBuilder := tx.PaymentOrder.
 		UpdateOneID(orderID).
-		SetStatus(lockpaymentorder.StatusProcessing).
+		SetStatus(paymentorder.StatusProcessing).
 		SetProviderID(provider.ID)
 
 	if transactionLog != nil {
@@ -656,7 +665,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		return
 	}
 
-	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &types.AcceptOrderResponse{
+	response := types.AcceptOrderResponse{
 		ID:                orderID,
 		Amount:            order.Amount.Mul(order.Rate).RoundBank(0),
 		Institution:       order.Institution,
@@ -664,7 +673,13 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		AccountName:       order.AccountName,
 		Memo:              order.Memo,
 		Metadata:          order.Metadata,
-	})
+	}
+
+	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusProcessing && order.Edges.Provider == provider {
+		response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &response)
 }
 
 // DeclineOrder controller declines an order
@@ -727,7 +742,7 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 
 // FulfillOrder controller fulfills an order
 func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
-	var payload types.FulfillLockOrderPayload
+	var payload types.FulfillOrderPayload
 
 	// Parse the order payload
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -761,21 +776,21 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		return
 	}
 
-	updateLockOrder := storage.Client.LockPaymentOrder.
+	updateLockOrder := storage.Client.PaymentOrder.
 		Update().
 		Where(
-			lockpaymentorder.IDEQ(orderID),
-			lockpaymentorder.Or(
-				lockpaymentorder.StatusEQ(lockpaymentorder.StatusProcessing),
-				lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
+			paymentorder.IDEQ(orderID),
+			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusProcessing),
+				paymentorder.StatusEQ(paymentorder.StatusFulfilled),
 			),
 		)
 
 	// Query or create lock order fulfillment
-	fulfillment, err := storage.Client.LockOrderFulfillment.
+	fulfillment, err := storage.Client.PaymentOrderFulfillment.
 		Query().
-		Where(lockorderfulfillment.TxIDEQ(payload.TxID)).
-		WithOrder(func(poq *ent.LockPaymentOrderQuery) {
+		Where(paymentorderfulfillment.TxIDEQ(payload.TxID)).
+		WithOrder(func(poq *ent.PaymentOrderQuery) {
 			poq.WithToken(func(tq *ent.TokenQuery) {
 				tq.WithNetwork()
 			})
@@ -787,7 +802,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			_, err = storage.Client.LockOrderFulfillment.
+			_, err = storage.Client.PaymentOrderFulfillment.
 				Create().
 				SetOrderID(orderID).
 				SetTxID(payload.TxID).
@@ -802,10 +817,10 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				return
 			}
 
-			fulfillment, err = storage.Client.LockOrderFulfillment.
+			fulfillment, err = storage.Client.PaymentOrderFulfillment.
 				Query().
-				Where(lockorderfulfillment.TxIDEQ(payload.TxID)).
-				WithOrder(func(poq *ent.LockPaymentOrderQuery) {
+				Where(paymentorderfulfillment.TxIDEQ(payload.TxID)).
+				WithOrder(func(poq *ent.PaymentOrderQuery) {
 					poq.WithToken(func(tq *ent.TokenQuery) {
 						tq.WithNetwork()
 					}).WithProvider().WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
@@ -843,9 +858,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	// This prevents attempting to fulfill already-settled orders and avoids balance release errors
 	if fulfillment.Edges.Order != nil {
 		orderStatus := fulfillment.Edges.Order.Status
-		if orderStatus == lockpaymentorder.StatusSettled ||
-			orderStatus == lockpaymentorder.StatusValidated ||
-			orderStatus == lockpaymentorder.StatusRefunded {
+		if orderStatus == paymentorder.StatusSettled ||
+			orderStatus == paymentorder.StatusValidated ||
+			orderStatus == paymentorder.StatusRefunded {
 			logger.WithFields(logger.Fields{
 				"OrderID": orderID.String(),
 				"Status":  orderStatus,
@@ -857,12 +872,12 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	}
 
 	switch payload.ValidationStatus {
-	case lockorderfulfillment.ValidationStatusSuccess:
+	case paymentorderfulfillment.ValidationStatusSuccess:
 		// Double-check order status (race condition protection)
 		orderStatus := fulfillment.Edges.Order.Status
-		if orderStatus == lockpaymentorder.StatusValidated ||
-			orderStatus == lockpaymentorder.StatusSettled ||
-			orderStatus == lockpaymentorder.StatusRefunded {
+		if orderStatus == paymentorder.StatusValidated ||
+			orderStatus == paymentorder.StatusSettled ||
+			orderStatus == paymentorder.StatusRefunded {
 			u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Order already %s", orderStatus), nil)
 			return
 		}
@@ -880,9 +895,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 
 		// Update fulfillment status within transaction
-		_, err = tx.LockOrderFulfillment.
+		_, err = tx.PaymentOrderFulfillment.
 			UpdateOneID(fulfillment.ID).
-			SetValidationStatus(lockorderfulfillment.ValidationStatusSuccess).
+			SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -917,13 +932,13 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 		// Check order status again before updating (race condition protection)
 		// This prevents updating orders that were settled by another process
-		currentOrder, err := tx.LockPaymentOrder.
+		currentOrder, err := tx.PaymentOrder.
 			Query().
-			Where(lockpaymentorder.IDEQ(orderID)).
+			Where(paymentorder.IDEQ(orderID)).
 			Only(ctx)
 		if err == nil && currentOrder != nil {
-			if currentOrder.Status == lockpaymentorder.StatusSettled ||
-				currentOrder.Status == lockpaymentorder.StatusRefunded {
+			if currentOrder.Status == paymentorder.StatusSettled ||
+				currentOrder.Status == paymentorder.StatusRefunded {
 				logger.WithFields(logger.Fields{
 					"OrderID": orderID.String(),
 					"Status":  currentOrder.Status,
@@ -936,10 +951,10 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 
 		// Update lock order status within transaction
-		_, err = tx.LockPaymentOrder.
+		_, err = tx.PaymentOrder.
 			Update().
-			Where(lockpaymentorder.IDEQ(orderID)).
-			SetStatus(lockpaymentorder.StatusValidated).
+			Where(paymentorder.IDEQ(orderID)).
+			SetStatus(paymentorder.StatusValidated).
 			AddTransactions(transactionLog).
 			Save(ctx)
 		if err != nil {
@@ -962,13 +977,13 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		if err != nil {
 			// Check if error is due to order already being settled (balance already released)
 			// If so, check order status and return success instead of error
-			checkOrder, checkErr := tx.LockPaymentOrder.
+			checkOrder, checkErr := tx.PaymentOrder.
 				Query().
-				Where(lockpaymentorder.IDEQ(orderID)).
+				Where(paymentorder.IDEQ(orderID)).
 				Only(ctx)
 			if checkErr == nil && checkOrder != nil {
-				if checkOrder.Status == lockpaymentorder.StatusSettled ||
-					checkOrder.Status == lockpaymentorder.StatusRefunded {
+				if checkOrder.Status == paymentorder.StatusSettled ||
+					checkOrder.Status == paymentorder.StatusRefunded {
 					logger.WithFields(logger.Fields{
 						"OrderID": orderID.String(),
 						"Status":  checkOrder.Status,
@@ -1008,41 +1023,13 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		orderKey := fmt.Sprintf("order_exclude_list_%s", orderID)
 		_ = storage.RedisClient.Del(ctx, orderKey).Err()
 
-		// Mark payment order as validated and send webhook notification to sender
-		paymentOrder, err := storage.Client.PaymentOrder.
-			Query().
-			Where(paymentorder.MessageHashEQ(fulfillment.Edges.Order.MessageHash)).
-			WithSenderProfile().
-			WithRecipient().
-			WithToken(func(tq *ent.TokenQuery) {
-				tq.WithNetwork()
-			}).
-			Only(ctx)
-		if err == nil && paymentOrder != nil {
-			_, err = storage.Client.PaymentOrder.
-				Update().
-				Where(paymentorder.MessageHashEQ(fulfillment.Edges.Order.MessageHash)).
-				SetStatus(paymentorder.StatusValidated).
-				Save(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"Trx Id":  payload.TxID,
-					"Network": paymentOrder.Edges.Token.Edges.Network.Identifier,
-				}).Errorf("Failed to update payment order status: %v", err)
-			} else {
-				// Ensure in-memory status reflects persisted change before webhook
-				paymentOrder.Status = paymentorder.StatusValidated
-			}
-
-			err = u.SendPaymentOrderWebhook(ctx, paymentOrder)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"Trx Id":  payload.TxID,
-					"Network": paymentOrder.Edges.Token.Edges.Network.Identifier,
-				}).Errorf("Failed to send webhook notification to sender: %v", err)
-			}
+		err = u.SendPaymentOrderWebhook(ctx, fulfillment.Edges.Order)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+			}).Errorf("Failed to send webhook notification to sender: %v", err)
 		}
 
 		// Settle order or fail silently
@@ -1062,9 +1049,9 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			}
 		}()
 
-	case lockorderfulfillment.ValidationStatusFailed:
+	case paymentorderfulfillment.ValidationStatusFailed:
 		_, err = fulfillment.Update().
-			SetValidationStatus(lockorderfulfillment.ValidationStatusFailed).
+			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
 			SetValidationError(payload.ValidationError).
 			Save(ctx)
 		if err != nil {
@@ -1078,7 +1065,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 
 		_, err = updateLockOrder.
-			SetStatus(lockpaymentorder.StatusFulfilled).
+			SetStatus(paymentorder.StatusFulfilled).
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -1127,7 +1114,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 
 		_, err = updateLockOrder.
-			SetStatus(lockpaymentorder.StatusFulfilled).
+			SetStatus(paymentorder.StatusFulfilled).
 			AddTransactions(transactionLog).
 			Save(ctx)
 		if err != nil {
@@ -1146,7 +1133,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 // CancelOrder controller cancels an order
 func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
-	var payload types.CancelLockOrderPayload
+	var payload types.CancelOrderPayload
 
 	// Parse the order payload
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -1179,12 +1166,12 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch lock payment order from db
-	order, err := storage.Client.LockPaymentOrder.
+	// Fetch payment order from db
+	order, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.IDEQ(orderID),
-			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			paymentorder.IDEQ(orderID),
+			paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -1199,13 +1186,13 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 			"Error":    fmt.Sprintf("%v", err),
 			"Reason":   payload.Reason,
 			"Order ID": orderID.String(),
-		}).Errorf("Failed to fetch lock payment order: %v", err)
+		}).Errorf("Failed to fetch payment order: %v", err)
 		u.APIResponse(ctx, http.StatusNotFound, "error", "Could not find payment order", nil)
 		return
 	}
 
 	// Get new cancellation count based on cancel reason
-	orderUpdate := storage.Client.LockPaymentOrder.UpdateOneID(orderID)
+	orderUpdate := storage.Client.PaymentOrder.UpdateOneID(orderID)
 	cancellationCount := order.CancellationCount
 	if payload.Reason == "Invalid recipient bank details" || provider.VisibilityMode == providerprofile.VisibilityModePrivate {
 		cancellationCount += orderConf.RefundCancellationCount // Allows us refund immediately for invalid recipient
@@ -1260,7 +1247,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 
 	// Update lock order status to cancelled
 	_, err = orderUpdate.
-		SetStatus(lockpaymentorder.StatusCancelled).
+		SetStatus(paymentorder.StatusCancelled).
 		SetCancellationCount(cancellationCount).
 		Save(ctx)
 	if err != nil {
@@ -1273,7 +1260,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		return
 	}
 
-	order.Status = lockpaymentorder.StatusCancelled
+	order.Status = paymentorder.StatusCancelled
 	order.CancellationCount = cancellationCount
 
 	// Release reserved balance for this cancelled order
@@ -1295,7 +1282,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 
 	// Check if order cancellation count is equal or greater than RefundCancellationCount in config,
 	// and the order has not been refunded, then trigger refund
-	if order.CancellationCount >= orderConf.RefundCancellationCount && order.Status == lockpaymentorder.StatusCancelled {
+	if order.CancellationCount >= orderConf.RefundCancellationCount && order.Status == paymentorder.StatusCancelled {
 		go func() {
 			var err error
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
@@ -1454,12 +1441,12 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	}
 
 	// Fetch provider stats
-	query := storage.Client.LockPaymentOrder.
+	query := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusSettled),
-			lockpaymentorder.InstitutionIn(institutionCodes...),
+			paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			paymentorder.StatusEQ(paymentorder.StatusSettled),
+			paymentorder.InstitutionIn(institutionCodes...),
 		)
 
 	// Get USD volume
@@ -1467,9 +1454,9 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Sum decimal.Decimal
 	}
 	err = query.
-		Where(lockpaymentorder.HasTokenWith(token.BaseCurrencyEQ("USD"))).
+		Where(paymentorder.HasTokenWith(token.BaseCurrencyEQ("USD"))).
 		Aggregate(
-			ent.Sum(lockpaymentorder.FieldAmount),
+			ent.Sum(paymentorder.FieldAmount),
 		).
 		Scan(ctx, &usdVolume)
 	if err != nil {
@@ -1488,11 +1475,11 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	}
 	err = query.
 		Where(
-			lockpaymentorder.HasTokenWith(token.BaseCurrencyEQ(currency)),
-			lockpaymentorder.HasTokenWith(token.BaseCurrencyNEQ("USD")),
+			paymentorder.HasTokenWith(token.BaseCurrencyEQ(currency)),
+			paymentorder.HasTokenWith(token.BaseCurrencyNEQ("USD")),
 		).
 		Aggregate(
-			ent.Sum(lockpaymentorder.FieldAmount),
+			ent.Sum(paymentorder.FieldAmount),
 		).
 		Scan(ctx, &localStablecoinVolume)
 	if err != nil {
@@ -1523,12 +1510,12 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	}
 
 	var totalFiatVolume decimal.Decimal
-	settledOrders, err := storage.Client.LockPaymentOrder.
+	settledOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusSettled),
-			lockpaymentorder.InstitutionIn(institutionCodes...),
+			paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			paymentorder.StatusEQ(paymentorder.StatusSettled),
+			paymentorder.InstitutionIn(institutionCodes...),
 		).
 		All(ctx)
 	if err != nil {
@@ -1544,11 +1531,11 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		totalFiatVolume = totalFiatVolume.Add(order.Amount.Mul(order.Rate).RoundBank(2))
 	}
 
-	count, err := storage.Client.LockPaymentOrder.
+	count, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-			lockpaymentorder.InstitutionIn(institutionCodes...),
+			paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			paymentorder.InstitutionIn(institutionCodes...),
 		).
 		Count(ctx)
 	if err != nil {
@@ -1672,8 +1659,8 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "Node info fetched successfully", data)
 }
 
-// GetLockPaymentOrderByID controller fetches a payment order by ID
-func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
+// GetPaymentOrderByID controller fetches a payment order by ID
+func (ctrl *ProviderController) GetPaymentOrderByID(ctx *gin.Context) {
 	// Get order ID from the URL
 	orderID := ctx.Param("id")
 
@@ -1699,11 +1686,11 @@ func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
 	provider := providerCtx.(*ent.ProviderProfile)
 
 	// Fetch payment order from the database
-	lockPaymentOrder, err := storage.Client.LockPaymentOrder.
+	paymentOrder, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.IDEQ(id),
-			lockpaymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			paymentorder.IDEQ(id),
+			paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -1715,13 +1702,13 @@ func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
 			"Order ID": orderID,
-		}).Errorf("Failed to fetch locked payment order: %v", err)
+		}).Errorf("Failed to fetch payment order: %v", err)
 		u.APIResponse(ctx, http.StatusNotFound, "error",
 			"Payment order not found", nil)
 		return
 	}
 	var transactions []types.TransactionLog
-	for _, transaction := range lockPaymentOrder.Edges.Transactions {
+	for _, transaction := range paymentOrder.Edges.Transactions {
 		transactions = append(transactions, types.TransactionLog{
 			ID:        transaction.ID,
 			GatewayId: transaction.GatewayID,
@@ -1732,24 +1719,25 @@ func (ctrl *ProviderController) GetLockPaymentOrderByID(ctx *gin.Context) {
 
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", &types.LockPaymentOrderResponse{
-		ID:                  lockPaymentOrder.ID,
-		Token:               lockPaymentOrder.Edges.Token.Symbol,
-		GatewayID:           lockPaymentOrder.GatewayID,
-		Amount:              lockPaymentOrder.Amount,
-		AmountInUSD:         lockPaymentOrder.AmountInUsd,
-		Rate:                lockPaymentOrder.Rate,
-		Institution:         lockPaymentOrder.Institution,
-		AccountIdentifier:   lockPaymentOrder.AccountIdentifier,
-		AccountName:         lockPaymentOrder.AccountName,
-		TxHash:              lockPaymentOrder.TxHash,
-		Status:              lockPaymentOrder.Status,
-		Memo:                lockPaymentOrder.Memo,
-		Network:             lockPaymentOrder.Edges.Token.Edges.Network.Identifier,
-		UpdatedAt:           lockPaymentOrder.UpdatedAt,
-		CreatedAt:           lockPaymentOrder.CreatedAt,
+	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", &types.ProviderOrderResponse{
+		ID:                  paymentOrder.ID,
+		Token:               paymentOrder.Edges.Token.Symbol,
+		GatewayID:           paymentOrder.GatewayID,
+		Amount:              paymentOrder.Amount,
+		AmountInUSD:         paymentOrder.AmountInUsd,
+		Rate:                paymentOrder.Rate,
+		Institution:         paymentOrder.Institution,
+		AccountIdentifier:   paymentOrder.AccountIdentifier,
+		AccountName:         paymentOrder.AccountName,
+		TxHash:              paymentOrder.TxHash,
+		Status:              paymentOrder.Status,
+		Memo:                paymentOrder.Memo,
+		Network:             paymentOrder.Edges.Token.Edges.Network.Identifier,
+		UpdatedAt:           paymentOrder.UpdatedAt,
+		CreatedAt:           paymentOrder.CreatedAt,
 		Transactions:        transactions,
-		CancellationReasons: lockPaymentOrder.CancellationReasons,
+		CancellationReasons: paymentOrder.CancellationReasons,
+		OrderType:           paymentOrder.OrderType,
 	})
 }
 

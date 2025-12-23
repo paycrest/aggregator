@@ -26,90 +26,90 @@ type ProviderFiatAccountCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (pfac *ProviderFiatAccountCreate) SetCreatedAt(t time.Time) *ProviderFiatAccountCreate {
-	pfac.mutation.SetCreatedAt(t)
-	return pfac
+func (_c *ProviderFiatAccountCreate) SetCreatedAt(v time.Time) *ProviderFiatAccountCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (pfac *ProviderFiatAccountCreate) SetNillableCreatedAt(t *time.Time) *ProviderFiatAccountCreate {
-	if t != nil {
-		pfac.SetCreatedAt(*t)
+func (_c *ProviderFiatAccountCreate) SetNillableCreatedAt(v *time.Time) *ProviderFiatAccountCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return pfac
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pfac *ProviderFiatAccountCreate) SetUpdatedAt(t time.Time) *ProviderFiatAccountCreate {
-	pfac.mutation.SetUpdatedAt(t)
-	return pfac
+func (_c *ProviderFiatAccountCreate) SetUpdatedAt(v time.Time) *ProviderFiatAccountCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (pfac *ProviderFiatAccountCreate) SetNillableUpdatedAt(t *time.Time) *ProviderFiatAccountCreate {
-	if t != nil {
-		pfac.SetUpdatedAt(*t)
+func (_c *ProviderFiatAccountCreate) SetNillableUpdatedAt(v *time.Time) *ProviderFiatAccountCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return pfac
+	return _c
 }
 
 // SetInstitution sets the "institution" field.
-func (pfac *ProviderFiatAccountCreate) SetInstitution(s string) *ProviderFiatAccountCreate {
-	pfac.mutation.SetInstitution(s)
-	return pfac
+func (_c *ProviderFiatAccountCreate) SetInstitution(v string) *ProviderFiatAccountCreate {
+	_c.mutation.SetInstitution(v)
+	return _c
 }
 
 // SetAccountIdentifier sets the "account_identifier" field.
-func (pfac *ProviderFiatAccountCreate) SetAccountIdentifier(s string) *ProviderFiatAccountCreate {
-	pfac.mutation.SetAccountIdentifier(s)
-	return pfac
+func (_c *ProviderFiatAccountCreate) SetAccountIdentifier(v string) *ProviderFiatAccountCreate {
+	_c.mutation.SetAccountIdentifier(v)
+	return _c
 }
 
 // SetAccountName sets the "account_name" field.
-func (pfac *ProviderFiatAccountCreate) SetAccountName(s string) *ProviderFiatAccountCreate {
-	pfac.mutation.SetAccountName(s)
-	return pfac
+func (_c *ProviderFiatAccountCreate) SetAccountName(v string) *ProviderFiatAccountCreate {
+	_c.mutation.SetAccountName(v)
+	return _c
 }
 
 // SetID sets the "id" field.
-func (pfac *ProviderFiatAccountCreate) SetID(u uuid.UUID) *ProviderFiatAccountCreate {
-	pfac.mutation.SetID(u)
-	return pfac
+func (_c *ProviderFiatAccountCreate) SetID(v uuid.UUID) *ProviderFiatAccountCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (pfac *ProviderFiatAccountCreate) SetNillableID(u *uuid.UUID) *ProviderFiatAccountCreate {
-	if u != nil {
-		pfac.SetID(*u)
+func (_c *ProviderFiatAccountCreate) SetNillableID(v *uuid.UUID) *ProviderFiatAccountCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return pfac
+	return _c
 }
 
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
-func (pfac *ProviderFiatAccountCreate) SetProviderID(id string) *ProviderFiatAccountCreate {
-	pfac.mutation.SetProviderID(id)
-	return pfac
+func (_c *ProviderFiatAccountCreate) SetProviderID(id string) *ProviderFiatAccountCreate {
+	_c.mutation.SetProviderID(id)
+	return _c
 }
 
 // SetProvider sets the "provider" edge to the ProviderProfile entity.
-func (pfac *ProviderFiatAccountCreate) SetProvider(p *ProviderProfile) *ProviderFiatAccountCreate {
-	return pfac.SetProviderID(p.ID)
+func (_c *ProviderFiatAccountCreate) SetProvider(v *ProviderProfile) *ProviderFiatAccountCreate {
+	return _c.SetProviderID(v.ID)
 }
 
 // Mutation returns the ProviderFiatAccountMutation object of the builder.
-func (pfac *ProviderFiatAccountCreate) Mutation() *ProviderFiatAccountMutation {
-	return pfac.mutation
+func (_c *ProviderFiatAccountCreate) Mutation() *ProviderFiatAccountMutation {
+	return _c.mutation
 }
 
 // Save creates the ProviderFiatAccount in the database.
-func (pfac *ProviderFiatAccountCreate) Save(ctx context.Context) (*ProviderFiatAccount, error) {
-	pfac.defaults()
-	return withHooks(ctx, pfac.sqlSave, pfac.mutation, pfac.hooks)
+func (_c *ProviderFiatAccountCreate) Save(ctx context.Context) (*ProviderFiatAccount, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (pfac *ProviderFiatAccountCreate) SaveX(ctx context.Context) *ProviderFiatAccount {
-	v, err := pfac.Save(ctx)
+func (_c *ProviderFiatAccountCreate) SaveX(ctx context.Context) *ProviderFiatAccount {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -117,78 +117,78 @@ func (pfac *ProviderFiatAccountCreate) SaveX(ctx context.Context) *ProviderFiatA
 }
 
 // Exec executes the query.
-func (pfac *ProviderFiatAccountCreate) Exec(ctx context.Context) error {
-	_, err := pfac.Save(ctx)
+func (_c *ProviderFiatAccountCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pfac *ProviderFiatAccountCreate) ExecX(ctx context.Context) {
-	if err := pfac.Exec(ctx); err != nil {
+func (_c *ProviderFiatAccountCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pfac *ProviderFiatAccountCreate) defaults() {
-	if _, ok := pfac.mutation.CreatedAt(); !ok {
+func (_c *ProviderFiatAccountCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := providerfiataccount.DefaultCreatedAt()
-		pfac.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := pfac.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := providerfiataccount.DefaultUpdatedAt()
-		pfac.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := pfac.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := providerfiataccount.DefaultID()
-		pfac.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pfac *ProviderFiatAccountCreate) check() error {
-	if _, ok := pfac.mutation.CreatedAt(); !ok {
+func (_c *ProviderFiatAccountCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ProviderFiatAccount.created_at"`)}
 	}
-	if _, ok := pfac.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderFiatAccount.updated_at"`)}
 	}
-	if _, ok := pfac.mutation.Institution(); !ok {
+	if _, ok := _c.mutation.Institution(); !ok {
 		return &ValidationError{Name: "institution", err: errors.New(`ent: missing required field "ProviderFiatAccount.institution"`)}
 	}
-	if v, ok := pfac.mutation.Institution(); ok {
+	if v, ok := _c.mutation.Institution(); ok {
 		if err := providerfiataccount.InstitutionValidator(v); err != nil {
 			return &ValidationError{Name: "institution", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.institution": %w`, err)}
 		}
 	}
-	if _, ok := pfac.mutation.AccountIdentifier(); !ok {
+	if _, ok := _c.mutation.AccountIdentifier(); !ok {
 		return &ValidationError{Name: "account_identifier", err: errors.New(`ent: missing required field "ProviderFiatAccount.account_identifier"`)}
 	}
-	if v, ok := pfac.mutation.AccountIdentifier(); ok {
+	if v, ok := _c.mutation.AccountIdentifier(); ok {
 		if err := providerfiataccount.AccountIdentifierValidator(v); err != nil {
 			return &ValidationError{Name: "account_identifier", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.account_identifier": %w`, err)}
 		}
 	}
-	if _, ok := pfac.mutation.AccountName(); !ok {
+	if _, ok := _c.mutation.AccountName(); !ok {
 		return &ValidationError{Name: "account_name", err: errors.New(`ent: missing required field "ProviderFiatAccount.account_name"`)}
 	}
-	if v, ok := pfac.mutation.AccountName(); ok {
+	if v, ok := _c.mutation.AccountName(); ok {
 		if err := providerfiataccount.AccountNameValidator(v); err != nil {
 			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "ProviderFiatAccount.account_name": %w`, err)}
 		}
 	}
-	if len(pfac.mutation.ProviderIDs()) == 0 {
+	if len(_c.mutation.ProviderIDs()) == 0 {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderFiatAccount.provider"`)}
 	}
 	return nil
 }
 
-func (pfac *ProviderFiatAccountCreate) sqlSave(ctx context.Context) (*ProviderFiatAccount, error) {
-	if err := pfac.check(); err != nil {
+func (_c *ProviderFiatAccountCreate) sqlSave(ctx context.Context) (*ProviderFiatAccount, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := pfac.createSpec()
-	if err := sqlgraph.CreateNode(ctx, pfac.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -201,42 +201,42 @@ func (pfac *ProviderFiatAccountCreate) sqlSave(ctx context.Context) (*ProviderFi
 			return nil, err
 		}
 	}
-	pfac.mutation.id = &_node.ID
-	pfac.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (pfac *ProviderFiatAccountCreate) createSpec() (*ProviderFiatAccount, *sqlgraph.CreateSpec) {
+func (_c *ProviderFiatAccountCreate) createSpec() (*ProviderFiatAccount, *sqlgraph.CreateSpec) {
 	var (
-		_node = &ProviderFiatAccount{config: pfac.config}
+		_node = &ProviderFiatAccount{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(providerfiataccount.Table, sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = pfac.conflict
-	if id, ok := pfac.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := pfac.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(providerfiataccount.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := pfac.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerfiataccount.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := pfac.mutation.Institution(); ok {
+	if value, ok := _c.mutation.Institution(); ok {
 		_spec.SetField(providerfiataccount.FieldInstitution, field.TypeString, value)
 		_node.Institution = value
 	}
-	if value, ok := pfac.mutation.AccountIdentifier(); ok {
+	if value, ok := _c.mutation.AccountIdentifier(); ok {
 		_spec.SetField(providerfiataccount.FieldAccountIdentifier, field.TypeString, value)
 		_node.AccountIdentifier = value
 	}
-	if value, ok := pfac.mutation.AccountName(); ok {
+	if value, ok := _c.mutation.AccountName(); ok {
 		_spec.SetField(providerfiataccount.FieldAccountName, field.TypeString, value)
 		_node.AccountName = value
 	}
-	if nodes := pfac.mutation.ProviderIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -272,10 +272,10 @@ func (pfac *ProviderFiatAccountCreate) createSpec() (*ProviderFiatAccount, *sqlg
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (pfac *ProviderFiatAccountCreate) OnConflict(opts ...sql.ConflictOption) *ProviderFiatAccountUpsertOne {
-	pfac.conflict = opts
+func (_c *ProviderFiatAccountCreate) OnConflict(opts ...sql.ConflictOption) *ProviderFiatAccountUpsertOne {
+	_c.conflict = opts
 	return &ProviderFiatAccountUpsertOne{
-		create: pfac,
+		create: _c,
 	}
 }
 
@@ -285,10 +285,10 @@ func (pfac *ProviderFiatAccountCreate) OnConflict(opts ...sql.ConflictOption) *P
 //	client.ProviderFiatAccount.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pfac *ProviderFiatAccountCreate) OnConflictColumns(columns ...string) *ProviderFiatAccountUpsertOne {
-	pfac.conflict = append(pfac.conflict, sql.ConflictColumns(columns...))
+func (_c *ProviderFiatAccountCreate) OnConflictColumns(columns ...string) *ProviderFiatAccountUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProviderFiatAccountUpsertOne{
-		create: pfac,
+		create: _c,
 	}
 }
 
@@ -507,16 +507,16 @@ type ProviderFiatAccountCreateBulk struct {
 }
 
 // Save creates the ProviderFiatAccount entities in the database.
-func (pfacb *ProviderFiatAccountCreateBulk) Save(ctx context.Context) ([]*ProviderFiatAccount, error) {
-	if pfacb.err != nil {
-		return nil, pfacb.err
+func (_c *ProviderFiatAccountCreateBulk) Save(ctx context.Context) ([]*ProviderFiatAccount, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(pfacb.builders))
-	nodes := make([]*ProviderFiatAccount, len(pfacb.builders))
-	mutators := make([]Mutator, len(pfacb.builders))
-	for i := range pfacb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*ProviderFiatAccount, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := pfacb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*ProviderFiatAccountMutation)
@@ -530,12 +530,12 @@ func (pfacb *ProviderFiatAccountCreateBulk) Save(ctx context.Context) ([]*Provid
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, pfacb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = pfacb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, pfacb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -555,7 +555,7 @@ func (pfacb *ProviderFiatAccountCreateBulk) Save(ctx context.Context) ([]*Provid
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, pfacb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -563,8 +563,8 @@ func (pfacb *ProviderFiatAccountCreateBulk) Save(ctx context.Context) ([]*Provid
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pfacb *ProviderFiatAccountCreateBulk) SaveX(ctx context.Context) []*ProviderFiatAccount {
-	v, err := pfacb.Save(ctx)
+func (_c *ProviderFiatAccountCreateBulk) SaveX(ctx context.Context) []*ProviderFiatAccount {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -572,14 +572,14 @@ func (pfacb *ProviderFiatAccountCreateBulk) SaveX(ctx context.Context) []*Provid
 }
 
 // Exec executes the query.
-func (pfacb *ProviderFiatAccountCreateBulk) Exec(ctx context.Context) error {
-	_, err := pfacb.Save(ctx)
+func (_c *ProviderFiatAccountCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pfacb *ProviderFiatAccountCreateBulk) ExecX(ctx context.Context) {
-	if err := pfacb.Exec(ctx); err != nil {
+func (_c *ProviderFiatAccountCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -599,10 +599,10 @@ func (pfacb *ProviderFiatAccountCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (pfacb *ProviderFiatAccountCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderFiatAccountUpsertBulk {
-	pfacb.conflict = opts
+func (_c *ProviderFiatAccountCreateBulk) OnConflict(opts ...sql.ConflictOption) *ProviderFiatAccountUpsertBulk {
+	_c.conflict = opts
 	return &ProviderFiatAccountUpsertBulk{
-		create: pfacb,
+		create: _c,
 	}
 }
 
@@ -612,10 +612,10 @@ func (pfacb *ProviderFiatAccountCreateBulk) OnConflict(opts ...sql.ConflictOptio
 //	client.ProviderFiatAccount.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (pfacb *ProviderFiatAccountCreateBulk) OnConflictColumns(columns ...string) *ProviderFiatAccountUpsertBulk {
-	pfacb.conflict = append(pfacb.conflict, sql.ConflictColumns(columns...))
+func (_c *ProviderFiatAccountCreateBulk) OnConflictColumns(columns ...string) *ProviderFiatAccountUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &ProviderFiatAccountUpsertBulk{
-		create: pfacb,
+		create: _c,
 	}
 }
 

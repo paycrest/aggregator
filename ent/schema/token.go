@@ -23,7 +23,7 @@ func (Token) Mixin() []ent.Mixin {
 func (Token) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("symbol").MaxLen((10)),
-		field.String("contract_address").MaxLen(60),
+		field.String("contract_address").MaxLen(70),
 		field.Int8("decimals"),
 		field.Bool("is_enabled").Default(false),
 		field.String("base_currency").Default("USD"),
@@ -38,8 +38,6 @@ func (Token) Edges() []ent.Edge {
 			Required().
 			Unique(),
 		edge.To("payment_orders", PaymentOrder.Type).
-			Annotations(entsql.OnDelete(entsql.Cascade)),
-		edge.To("lock_payment_orders", LockPaymentOrder.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("sender_order_tokens", SenderOrderToken.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),

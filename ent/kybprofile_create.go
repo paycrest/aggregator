@@ -27,187 +27,187 @@ type KYBProfileCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (kpc *KYBProfileCreate) SetCreatedAt(t time.Time) *KYBProfileCreate {
-	kpc.mutation.SetCreatedAt(t)
-	return kpc
+func (_c *KYBProfileCreate) SetCreatedAt(v time.Time) *KYBProfileCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (kpc *KYBProfileCreate) SetNillableCreatedAt(t *time.Time) *KYBProfileCreate {
-	if t != nil {
-		kpc.SetCreatedAt(*t)
+func (_c *KYBProfileCreate) SetNillableCreatedAt(v *time.Time) *KYBProfileCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return kpc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (kpc *KYBProfileCreate) SetUpdatedAt(t time.Time) *KYBProfileCreate {
-	kpc.mutation.SetUpdatedAt(t)
-	return kpc
+func (_c *KYBProfileCreate) SetUpdatedAt(v time.Time) *KYBProfileCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (kpc *KYBProfileCreate) SetNillableUpdatedAt(t *time.Time) *KYBProfileCreate {
-	if t != nil {
-		kpc.SetUpdatedAt(*t)
+func (_c *KYBProfileCreate) SetNillableUpdatedAt(v *time.Time) *KYBProfileCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return kpc
+	return _c
 }
 
 // SetMobileNumber sets the "mobile_number" field.
-func (kpc *KYBProfileCreate) SetMobileNumber(s string) *KYBProfileCreate {
-	kpc.mutation.SetMobileNumber(s)
-	return kpc
+func (_c *KYBProfileCreate) SetMobileNumber(v string) *KYBProfileCreate {
+	_c.mutation.SetMobileNumber(v)
+	return _c
 }
 
 // SetCompanyName sets the "company_name" field.
-func (kpc *KYBProfileCreate) SetCompanyName(s string) *KYBProfileCreate {
-	kpc.mutation.SetCompanyName(s)
-	return kpc
+func (_c *KYBProfileCreate) SetCompanyName(v string) *KYBProfileCreate {
+	_c.mutation.SetCompanyName(v)
+	return _c
 }
 
 // SetRegisteredBusinessAddress sets the "registered_business_address" field.
-func (kpc *KYBProfileCreate) SetRegisteredBusinessAddress(s string) *KYBProfileCreate {
-	kpc.mutation.SetRegisteredBusinessAddress(s)
-	return kpc
+func (_c *KYBProfileCreate) SetRegisteredBusinessAddress(v string) *KYBProfileCreate {
+	_c.mutation.SetRegisteredBusinessAddress(v)
+	return _c
 }
 
 // SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
-func (kpc *KYBProfileCreate) SetCertificateOfIncorporationURL(s string) *KYBProfileCreate {
-	kpc.mutation.SetCertificateOfIncorporationURL(s)
-	return kpc
+func (_c *KYBProfileCreate) SetCertificateOfIncorporationURL(v string) *KYBProfileCreate {
+	_c.mutation.SetCertificateOfIncorporationURL(v)
+	return _c
 }
 
 // SetArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field.
-func (kpc *KYBProfileCreate) SetArticlesOfIncorporationURL(s string) *KYBProfileCreate {
-	kpc.mutation.SetArticlesOfIncorporationURL(s)
-	return kpc
+func (_c *KYBProfileCreate) SetArticlesOfIncorporationURL(v string) *KYBProfileCreate {
+	_c.mutation.SetArticlesOfIncorporationURL(v)
+	return _c
 }
 
 // SetBusinessLicenseURL sets the "business_license_url" field.
-func (kpc *KYBProfileCreate) SetBusinessLicenseURL(s string) *KYBProfileCreate {
-	kpc.mutation.SetBusinessLicenseURL(s)
-	return kpc
+func (_c *KYBProfileCreate) SetBusinessLicenseURL(v string) *KYBProfileCreate {
+	_c.mutation.SetBusinessLicenseURL(v)
+	return _c
 }
 
 // SetNillableBusinessLicenseURL sets the "business_license_url" field if the given value is not nil.
-func (kpc *KYBProfileCreate) SetNillableBusinessLicenseURL(s *string) *KYBProfileCreate {
-	if s != nil {
-		kpc.SetBusinessLicenseURL(*s)
+func (_c *KYBProfileCreate) SetNillableBusinessLicenseURL(v *string) *KYBProfileCreate {
+	if v != nil {
+		_c.SetBusinessLicenseURL(*v)
 	}
-	return kpc
+	return _c
 }
 
 // SetProofOfBusinessAddressURL sets the "proof_of_business_address_url" field.
-func (kpc *KYBProfileCreate) SetProofOfBusinessAddressURL(s string) *KYBProfileCreate {
-	kpc.mutation.SetProofOfBusinessAddressURL(s)
-	return kpc
+func (_c *KYBProfileCreate) SetProofOfBusinessAddressURL(v string) *KYBProfileCreate {
+	_c.mutation.SetProofOfBusinessAddressURL(v)
+	return _c
 }
 
 // SetAmlPolicyURL sets the "aml_policy_url" field.
-func (kpc *KYBProfileCreate) SetAmlPolicyURL(s string) *KYBProfileCreate {
-	kpc.mutation.SetAmlPolicyURL(s)
-	return kpc
+func (_c *KYBProfileCreate) SetAmlPolicyURL(v string) *KYBProfileCreate {
+	_c.mutation.SetAmlPolicyURL(v)
+	return _c
 }
 
 // SetNillableAmlPolicyURL sets the "aml_policy_url" field if the given value is not nil.
-func (kpc *KYBProfileCreate) SetNillableAmlPolicyURL(s *string) *KYBProfileCreate {
-	if s != nil {
-		kpc.SetAmlPolicyURL(*s)
+func (_c *KYBProfileCreate) SetNillableAmlPolicyURL(v *string) *KYBProfileCreate {
+	if v != nil {
+		_c.SetAmlPolicyURL(*v)
 	}
-	return kpc
+	return _c
 }
 
 // SetKycPolicyURL sets the "kyc_policy_url" field.
-func (kpc *KYBProfileCreate) SetKycPolicyURL(s string) *KYBProfileCreate {
-	kpc.mutation.SetKycPolicyURL(s)
-	return kpc
+func (_c *KYBProfileCreate) SetKycPolicyURL(v string) *KYBProfileCreate {
+	_c.mutation.SetKycPolicyURL(v)
+	return _c
 }
 
 // SetNillableKycPolicyURL sets the "kyc_policy_url" field if the given value is not nil.
-func (kpc *KYBProfileCreate) SetNillableKycPolicyURL(s *string) *KYBProfileCreate {
-	if s != nil {
-		kpc.SetKycPolicyURL(*s)
+func (_c *KYBProfileCreate) SetNillableKycPolicyURL(v *string) *KYBProfileCreate {
+	if v != nil {
+		_c.SetKycPolicyURL(*v)
 	}
-	return kpc
+	return _c
 }
 
 // SetKybRejectionComment sets the "kyb_rejection_comment" field.
-func (kpc *KYBProfileCreate) SetKybRejectionComment(s string) *KYBProfileCreate {
-	kpc.mutation.SetKybRejectionComment(s)
-	return kpc
+func (_c *KYBProfileCreate) SetKybRejectionComment(v string) *KYBProfileCreate {
+	_c.mutation.SetKybRejectionComment(v)
+	return _c
 }
 
 // SetNillableKybRejectionComment sets the "kyb_rejection_comment" field if the given value is not nil.
-func (kpc *KYBProfileCreate) SetNillableKybRejectionComment(s *string) *KYBProfileCreate {
-	if s != nil {
-		kpc.SetKybRejectionComment(*s)
+func (_c *KYBProfileCreate) SetNillableKybRejectionComment(v *string) *KYBProfileCreate {
+	if v != nil {
+		_c.SetKybRejectionComment(*v)
 	}
-	return kpc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (kpc *KYBProfileCreate) SetID(u uuid.UUID) *KYBProfileCreate {
-	kpc.mutation.SetID(u)
-	return kpc
+func (_c *KYBProfileCreate) SetID(v uuid.UUID) *KYBProfileCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (kpc *KYBProfileCreate) SetNillableID(u *uuid.UUID) *KYBProfileCreate {
-	if u != nil {
-		kpc.SetID(*u)
+func (_c *KYBProfileCreate) SetNillableID(v *uuid.UUID) *KYBProfileCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return kpc
+	return _c
 }
 
 // AddBeneficialOwnerIDs adds the "beneficial_owners" edge to the BeneficialOwner entity by IDs.
-func (kpc *KYBProfileCreate) AddBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileCreate {
-	kpc.mutation.AddBeneficialOwnerIDs(ids...)
-	return kpc
+func (_c *KYBProfileCreate) AddBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileCreate {
+	_c.mutation.AddBeneficialOwnerIDs(ids...)
+	return _c
 }
 
 // AddBeneficialOwners adds the "beneficial_owners" edges to the BeneficialOwner entity.
-func (kpc *KYBProfileCreate) AddBeneficialOwners(b ...*BeneficialOwner) *KYBProfileCreate {
-	ids := make([]uuid.UUID, len(b))
-	for i := range b {
-		ids[i] = b[i].ID
+func (_c *KYBProfileCreate) AddBeneficialOwners(v ...*BeneficialOwner) *KYBProfileCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return kpc.AddBeneficialOwnerIDs(ids...)
+	return _c.AddBeneficialOwnerIDs(ids...)
 }
 
 // SetUserID sets the "user" edge to the User entity by ID.
-func (kpc *KYBProfileCreate) SetUserID(id uuid.UUID) *KYBProfileCreate {
-	kpc.mutation.SetUserID(id)
-	return kpc
+func (_c *KYBProfileCreate) SetUserID(id uuid.UUID) *KYBProfileCreate {
+	_c.mutation.SetUserID(id)
+	return _c
 }
 
 // SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
-func (kpc *KYBProfileCreate) SetNillableUserID(id *uuid.UUID) *KYBProfileCreate {
+func (_c *KYBProfileCreate) SetNillableUserID(id *uuid.UUID) *KYBProfileCreate {
 	if id != nil {
-		kpc = kpc.SetUserID(*id)
+		_c = _c.SetUserID(*id)
 	}
-	return kpc
+	return _c
 }
 
 // SetUser sets the "user" edge to the User entity.
-func (kpc *KYBProfileCreate) SetUser(u *User) *KYBProfileCreate {
-	return kpc.SetUserID(u.ID)
+func (_c *KYBProfileCreate) SetUser(v *User) *KYBProfileCreate {
+	return _c.SetUserID(v.ID)
 }
 
 // Mutation returns the KYBProfileMutation object of the builder.
-func (kpc *KYBProfileCreate) Mutation() *KYBProfileMutation {
-	return kpc.mutation
+func (_c *KYBProfileCreate) Mutation() *KYBProfileMutation {
+	return _c.mutation
 }
 
 // Save creates the KYBProfile in the database.
-func (kpc *KYBProfileCreate) Save(ctx context.Context) (*KYBProfile, error) {
-	kpc.defaults()
-	return withHooks(ctx, kpc.sqlSave, kpc.mutation, kpc.hooks)
+func (_c *KYBProfileCreate) Save(ctx context.Context) (*KYBProfile, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (kpc *KYBProfileCreate) SaveX(ctx context.Context) *KYBProfile {
-	v, err := kpc.Save(ctx)
+func (_c *KYBProfileCreate) SaveX(ctx context.Context) *KYBProfile {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -215,69 +215,69 @@ func (kpc *KYBProfileCreate) SaveX(ctx context.Context) *KYBProfile {
 }
 
 // Exec executes the query.
-func (kpc *KYBProfileCreate) Exec(ctx context.Context) error {
-	_, err := kpc.Save(ctx)
+func (_c *KYBProfileCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (kpc *KYBProfileCreate) ExecX(ctx context.Context) {
-	if err := kpc.Exec(ctx); err != nil {
+func (_c *KYBProfileCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (kpc *KYBProfileCreate) defaults() {
-	if _, ok := kpc.mutation.CreatedAt(); !ok {
+func (_c *KYBProfileCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := kybprofile.DefaultCreatedAt()
-		kpc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := kpc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := kybprofile.DefaultUpdatedAt()
-		kpc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := kpc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := kybprofile.DefaultID()
-		kpc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (kpc *KYBProfileCreate) check() error {
-	if _, ok := kpc.mutation.CreatedAt(); !ok {
+func (_c *KYBProfileCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "KYBProfile.created_at"`)}
 	}
-	if _, ok := kpc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "KYBProfile.updated_at"`)}
 	}
-	if _, ok := kpc.mutation.MobileNumber(); !ok {
+	if _, ok := _c.mutation.MobileNumber(); !ok {
 		return &ValidationError{Name: "mobile_number", err: errors.New(`ent: missing required field "KYBProfile.mobile_number"`)}
 	}
-	if _, ok := kpc.mutation.CompanyName(); !ok {
+	if _, ok := _c.mutation.CompanyName(); !ok {
 		return &ValidationError{Name: "company_name", err: errors.New(`ent: missing required field "KYBProfile.company_name"`)}
 	}
-	if _, ok := kpc.mutation.RegisteredBusinessAddress(); !ok {
+	if _, ok := _c.mutation.RegisteredBusinessAddress(); !ok {
 		return &ValidationError{Name: "registered_business_address", err: errors.New(`ent: missing required field "KYBProfile.registered_business_address"`)}
 	}
-	if _, ok := kpc.mutation.CertificateOfIncorporationURL(); !ok {
+	if _, ok := _c.mutation.CertificateOfIncorporationURL(); !ok {
 		return &ValidationError{Name: "certificate_of_incorporation_url", err: errors.New(`ent: missing required field "KYBProfile.certificate_of_incorporation_url"`)}
 	}
-	if _, ok := kpc.mutation.ArticlesOfIncorporationURL(); !ok {
+	if _, ok := _c.mutation.ArticlesOfIncorporationURL(); !ok {
 		return &ValidationError{Name: "articles_of_incorporation_url", err: errors.New(`ent: missing required field "KYBProfile.articles_of_incorporation_url"`)}
 	}
-	if _, ok := kpc.mutation.ProofOfBusinessAddressURL(); !ok {
+	if _, ok := _c.mutation.ProofOfBusinessAddressURL(); !ok {
 		return &ValidationError{Name: "proof_of_business_address_url", err: errors.New(`ent: missing required field "KYBProfile.proof_of_business_address_url"`)}
 	}
 	return nil
 }
 
-func (kpc *KYBProfileCreate) sqlSave(ctx context.Context) (*KYBProfile, error) {
-	if err := kpc.check(); err != nil {
+func (_c *KYBProfileCreate) sqlSave(ctx context.Context) (*KYBProfile, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := kpc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, kpc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -290,70 +290,70 @@ func (kpc *KYBProfileCreate) sqlSave(ctx context.Context) (*KYBProfile, error) {
 			return nil, err
 		}
 	}
-	kpc.mutation.id = &_node.ID
-	kpc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (kpc *KYBProfileCreate) createSpec() (*KYBProfile, *sqlgraph.CreateSpec) {
+func (_c *KYBProfileCreate) createSpec() (*KYBProfile, *sqlgraph.CreateSpec) {
 	var (
-		_node = &KYBProfile{config: kpc.config}
+		_node = &KYBProfile{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(kybprofile.Table, sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = kpc.conflict
-	if id, ok := kpc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := kpc.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(kybprofile.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := kpc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(kybprofile.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := kpc.mutation.MobileNumber(); ok {
+	if value, ok := _c.mutation.MobileNumber(); ok {
 		_spec.SetField(kybprofile.FieldMobileNumber, field.TypeString, value)
 		_node.MobileNumber = value
 	}
-	if value, ok := kpc.mutation.CompanyName(); ok {
+	if value, ok := _c.mutation.CompanyName(); ok {
 		_spec.SetField(kybprofile.FieldCompanyName, field.TypeString, value)
 		_node.CompanyName = value
 	}
-	if value, ok := kpc.mutation.RegisteredBusinessAddress(); ok {
+	if value, ok := _c.mutation.RegisteredBusinessAddress(); ok {
 		_spec.SetField(kybprofile.FieldRegisteredBusinessAddress, field.TypeString, value)
 		_node.RegisteredBusinessAddress = value
 	}
-	if value, ok := kpc.mutation.CertificateOfIncorporationURL(); ok {
+	if value, ok := _c.mutation.CertificateOfIncorporationURL(); ok {
 		_spec.SetField(kybprofile.FieldCertificateOfIncorporationURL, field.TypeString, value)
 		_node.CertificateOfIncorporationURL = value
 	}
-	if value, ok := kpc.mutation.ArticlesOfIncorporationURL(); ok {
+	if value, ok := _c.mutation.ArticlesOfIncorporationURL(); ok {
 		_spec.SetField(kybprofile.FieldArticlesOfIncorporationURL, field.TypeString, value)
 		_node.ArticlesOfIncorporationURL = value
 	}
-	if value, ok := kpc.mutation.BusinessLicenseURL(); ok {
+	if value, ok := _c.mutation.BusinessLicenseURL(); ok {
 		_spec.SetField(kybprofile.FieldBusinessLicenseURL, field.TypeString, value)
 		_node.BusinessLicenseURL = &value
 	}
-	if value, ok := kpc.mutation.ProofOfBusinessAddressURL(); ok {
+	if value, ok := _c.mutation.ProofOfBusinessAddressURL(); ok {
 		_spec.SetField(kybprofile.FieldProofOfBusinessAddressURL, field.TypeString, value)
 		_node.ProofOfBusinessAddressURL = value
 	}
-	if value, ok := kpc.mutation.AmlPolicyURL(); ok {
+	if value, ok := _c.mutation.AmlPolicyURL(); ok {
 		_spec.SetField(kybprofile.FieldAmlPolicyURL, field.TypeString, value)
 		_node.AmlPolicyURL = value
 	}
-	if value, ok := kpc.mutation.KycPolicyURL(); ok {
+	if value, ok := _c.mutation.KycPolicyURL(); ok {
 		_spec.SetField(kybprofile.FieldKycPolicyURL, field.TypeString, value)
 		_node.KycPolicyURL = &value
 	}
-	if value, ok := kpc.mutation.KybRejectionComment(); ok {
+	if value, ok := _c.mutation.KybRejectionComment(); ok {
 		_spec.SetField(kybprofile.FieldKybRejectionComment, field.TypeString, value)
 		_node.KybRejectionComment = &value
 	}
-	if nodes := kpc.mutation.BeneficialOwnersIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.BeneficialOwnersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -369,7 +369,7 @@ func (kpc *KYBProfileCreate) createSpec() (*KYBProfile, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := kpc.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -405,10 +405,10 @@ func (kpc *KYBProfileCreate) createSpec() (*KYBProfile, *sqlgraph.CreateSpec) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (kpc *KYBProfileCreate) OnConflict(opts ...sql.ConflictOption) *KYBProfileUpsertOne {
-	kpc.conflict = opts
+func (_c *KYBProfileCreate) OnConflict(opts ...sql.ConflictOption) *KYBProfileUpsertOne {
+	_c.conflict = opts
 	return &KYBProfileUpsertOne{
-		create: kpc,
+		create: _c,
 	}
 }
 
@@ -418,10 +418,10 @@ func (kpc *KYBProfileCreate) OnConflict(opts ...sql.ConflictOption) *KYBProfileU
 //	client.KYBProfile.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (kpc *KYBProfileCreate) OnConflictColumns(columns ...string) *KYBProfileUpsertOne {
-	kpc.conflict = append(kpc.conflict, sql.ConflictColumns(columns...))
+func (_c *KYBProfileCreate) OnConflictColumns(columns ...string) *KYBProfileUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &KYBProfileUpsertOne{
-		create: kpc,
+		create: _c,
 	}
 }
 
@@ -874,16 +874,16 @@ type KYBProfileCreateBulk struct {
 }
 
 // Save creates the KYBProfile entities in the database.
-func (kpcb *KYBProfileCreateBulk) Save(ctx context.Context) ([]*KYBProfile, error) {
-	if kpcb.err != nil {
-		return nil, kpcb.err
+func (_c *KYBProfileCreateBulk) Save(ctx context.Context) ([]*KYBProfile, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(kpcb.builders))
-	nodes := make([]*KYBProfile, len(kpcb.builders))
-	mutators := make([]Mutator, len(kpcb.builders))
-	for i := range kpcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*KYBProfile, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := kpcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*KYBProfileMutation)
@@ -897,12 +897,12 @@ func (kpcb *KYBProfileCreateBulk) Save(ctx context.Context) ([]*KYBProfile, erro
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, kpcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = kpcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, kpcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -922,7 +922,7 @@ func (kpcb *KYBProfileCreateBulk) Save(ctx context.Context) ([]*KYBProfile, erro
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, kpcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -930,8 +930,8 @@ func (kpcb *KYBProfileCreateBulk) Save(ctx context.Context) ([]*KYBProfile, erro
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (kpcb *KYBProfileCreateBulk) SaveX(ctx context.Context) []*KYBProfile {
-	v, err := kpcb.Save(ctx)
+func (_c *KYBProfileCreateBulk) SaveX(ctx context.Context) []*KYBProfile {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -939,14 +939,14 @@ func (kpcb *KYBProfileCreateBulk) SaveX(ctx context.Context) []*KYBProfile {
 }
 
 // Exec executes the query.
-func (kpcb *KYBProfileCreateBulk) Exec(ctx context.Context) error {
-	_, err := kpcb.Save(ctx)
+func (_c *KYBProfileCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (kpcb *KYBProfileCreateBulk) ExecX(ctx context.Context) {
-	if err := kpcb.Exec(ctx); err != nil {
+func (_c *KYBProfileCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -966,10 +966,10 @@ func (kpcb *KYBProfileCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (kpcb *KYBProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *KYBProfileUpsertBulk {
-	kpcb.conflict = opts
+func (_c *KYBProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *KYBProfileUpsertBulk {
+	_c.conflict = opts
 	return &KYBProfileUpsertBulk{
-		create: kpcb,
+		create: _c,
 	}
 }
 
@@ -979,10 +979,10 @@ func (kpcb *KYBProfileCreateBulk) OnConflict(opts ...sql.ConflictOption) *KYBPro
 //	client.KYBProfile.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (kpcb *KYBProfileCreateBulk) OnConflictColumns(columns ...string) *KYBProfileUpsertBulk {
-	kpcb.conflict = append(kpcb.conflict, sql.ConflictColumns(columns...))
+func (_c *KYBProfileCreateBulk) OnConflictColumns(columns ...string) *KYBProfileUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &KYBProfileUpsertBulk{
-		create: kpcb,
+		create: _c,
 	}
 }
 

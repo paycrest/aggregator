@@ -12,11 +12,9 @@ import (
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
@@ -24,7 +22,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	"github.com/paycrest/aggregator/ent/schema"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -33,6 +30,7 @@ import (
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/ent/verificationtoken"
 	"github.com/paycrest/aggregator/ent/webhookretryattempt"
+	"github.com/shopspring/decimal"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -140,79 +138,6 @@ func init() {
 	kybprofileDescID := kybprofileFields[0].Descriptor()
 	// kybprofile.DefaultID holds the default value on creation for the id field.
 	kybprofile.DefaultID = kybprofileDescID.Default.(func() uuid.UUID)
-	linkedaddressMixin := schema.LinkedAddress{}.Mixin()
-	linkedaddressMixinFields0 := linkedaddressMixin[0].Fields()
-	_ = linkedaddressMixinFields0
-	linkedaddressFields := schema.LinkedAddress{}.Fields()
-	_ = linkedaddressFields
-	// linkedaddressDescCreatedAt is the schema descriptor for created_at field.
-	linkedaddressDescCreatedAt := linkedaddressMixinFields0[0].Descriptor()
-	// linkedaddress.DefaultCreatedAt holds the default value on creation for the created_at field.
-	linkedaddress.DefaultCreatedAt = linkedaddressDescCreatedAt.Default.(func() time.Time)
-	// linkedaddressDescUpdatedAt is the schema descriptor for updated_at field.
-	linkedaddressDescUpdatedAt := linkedaddressMixinFields0[1].Descriptor()
-	// linkedaddress.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	linkedaddress.DefaultUpdatedAt = linkedaddressDescUpdatedAt.Default.(func() time.Time)
-	// linkedaddress.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	linkedaddress.UpdateDefaultUpdatedAt = linkedaddressDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// linkedaddressDescTxHash is the schema descriptor for tx_hash field.
-	linkedaddressDescTxHash := linkedaddressFields[8].Descriptor()
-	// linkedaddress.TxHashValidator is a validator for the "tx_hash" field. It is called by the builders before save.
-	linkedaddress.TxHashValidator = linkedaddressDescTxHash.Validators[0].(func(string) error)
-	lockorderfulfillmentMixin := schema.LockOrderFulfillment{}.Mixin()
-	lockorderfulfillmentMixinFields0 := lockorderfulfillmentMixin[0].Fields()
-	_ = lockorderfulfillmentMixinFields0
-	lockorderfulfillmentFields := schema.LockOrderFulfillment{}.Fields()
-	_ = lockorderfulfillmentFields
-	// lockorderfulfillmentDescCreatedAt is the schema descriptor for created_at field.
-	lockorderfulfillmentDescCreatedAt := lockorderfulfillmentMixinFields0[0].Descriptor()
-	// lockorderfulfillment.DefaultCreatedAt holds the default value on creation for the created_at field.
-	lockorderfulfillment.DefaultCreatedAt = lockorderfulfillmentDescCreatedAt.Default.(func() time.Time)
-	// lockorderfulfillmentDescUpdatedAt is the schema descriptor for updated_at field.
-	lockorderfulfillmentDescUpdatedAt := lockorderfulfillmentMixinFields0[1].Descriptor()
-	// lockorderfulfillment.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	lockorderfulfillment.DefaultUpdatedAt = lockorderfulfillmentDescUpdatedAt.Default.(func() time.Time)
-	// lockorderfulfillment.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	lockorderfulfillment.UpdateDefaultUpdatedAt = lockorderfulfillmentDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// lockorderfulfillmentDescID is the schema descriptor for id field.
-	lockorderfulfillmentDescID := lockorderfulfillmentFields[0].Descriptor()
-	// lockorderfulfillment.DefaultID holds the default value on creation for the id field.
-	lockorderfulfillment.DefaultID = lockorderfulfillmentDescID.Default.(func() uuid.UUID)
-	lockpaymentorderMixin := schema.LockPaymentOrder{}.Mixin()
-	lockpaymentorderMixinFields0 := lockpaymentorderMixin[0].Fields()
-	_ = lockpaymentorderMixinFields0
-	lockpaymentorderFields := schema.LockPaymentOrder{}.Fields()
-	_ = lockpaymentorderFields
-	// lockpaymentorderDescCreatedAt is the schema descriptor for created_at field.
-	lockpaymentorderDescCreatedAt := lockpaymentorderMixinFields0[0].Descriptor()
-	// lockpaymentorder.DefaultCreatedAt holds the default value on creation for the created_at field.
-	lockpaymentorder.DefaultCreatedAt = lockpaymentorderDescCreatedAt.Default.(func() time.Time)
-	// lockpaymentorderDescUpdatedAt is the schema descriptor for updated_at field.
-	lockpaymentorderDescUpdatedAt := lockpaymentorderMixinFields0[1].Descriptor()
-	// lockpaymentorder.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	lockpaymentorder.DefaultUpdatedAt = lockpaymentorderDescUpdatedAt.Default.(func() time.Time)
-	// lockpaymentorder.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	lockpaymentorder.UpdateDefaultUpdatedAt = lockpaymentorderDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// lockpaymentorderDescTxHash is the schema descriptor for tx_hash field.
-	lockpaymentorderDescTxHash := lockpaymentorderFields[7].Descriptor()
-	// lockpaymentorder.TxHashValidator is a validator for the "tx_hash" field. It is called by the builders before save.
-	lockpaymentorder.TxHashValidator = lockpaymentorderDescTxHash.Validators[0].(func(string) error)
-	// lockpaymentorderDescCancellationCount is the schema descriptor for cancellation_count field.
-	lockpaymentorderDescCancellationCount := lockpaymentorderFields[15].Descriptor()
-	// lockpaymentorder.DefaultCancellationCount holds the default value on creation for the cancellation_count field.
-	lockpaymentorder.DefaultCancellationCount = lockpaymentorderDescCancellationCount.Default.(int)
-	// lockpaymentorderDescCancellationReasons is the schema descriptor for cancellation_reasons field.
-	lockpaymentorderDescCancellationReasons := lockpaymentorderFields[16].Descriptor()
-	// lockpaymentorder.DefaultCancellationReasons holds the default value on creation for the cancellation_reasons field.
-	lockpaymentorder.DefaultCancellationReasons = lockpaymentorderDescCancellationReasons.Default.([]string)
-	// lockpaymentorderDescMessageHash is the schema descriptor for message_hash field.
-	lockpaymentorderDescMessageHash := lockpaymentorderFields[17].Descriptor()
-	// lockpaymentorder.MessageHashValidator is a validator for the "message_hash" field. It is called by the builders before save.
-	lockpaymentorder.MessageHashValidator = lockpaymentorderDescMessageHash.Validators[0].(func(string) error)
-	// lockpaymentorderDescID is the schema descriptor for id field.
-	lockpaymentorderDescID := lockpaymentorderFields[0].Descriptor()
-	// lockpaymentorder.DefaultID holds the default value on creation for the id field.
-	lockpaymentorder.DefaultID = lockpaymentorderDescID.Default.(func() uuid.UUID)
 	networkMixin := schema.Network{}.Mixin()
 	networkMixinFields0 := networkMixin[0].Fields()
 	_ = networkMixinFields0
@@ -247,46 +172,121 @@ func init() {
 	paymentorder.DefaultUpdatedAt = paymentorderDescUpdatedAt.Default.(func() time.Time)
 	// paymentorder.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	paymentorder.UpdateDefaultUpdatedAt = paymentorderDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// paymentorderDescAmountPaid is the schema descriptor for amount_paid field.
+	paymentorderDescAmountPaid := paymentorderFields[4].Descriptor()
+	// paymentorder.DefaultAmountPaid holds the default value on creation for the amount_paid field.
+	paymentorder.DefaultAmountPaid = paymentorderDescAmountPaid.Default.(func() decimal.Decimal)
+	// paymentorderDescAmountReturned is the schema descriptor for amount_returned field.
+	paymentorderDescAmountReturned := paymentorderFields[5].Descriptor()
+	// paymentorder.DefaultAmountReturned holds the default value on creation for the amount_returned field.
+	paymentorder.DefaultAmountReturned = paymentorderDescAmountReturned.Default.(func() decimal.Decimal)
+	// paymentorderDescPercentSettled is the schema descriptor for percent_settled field.
+	paymentorderDescPercentSettled := paymentorderFields[6].Descriptor()
+	// paymentorder.DefaultPercentSettled holds the default value on creation for the percent_settled field.
+	paymentorder.DefaultPercentSettled = paymentorderDescPercentSettled.Default.(func() decimal.Decimal)
+	// paymentorderDescSenderFee is the schema descriptor for sender_fee field.
+	paymentorderDescSenderFee := paymentorderFields[7].Descriptor()
+	// paymentorder.DefaultSenderFee holds the default value on creation for the sender_fee field.
+	paymentorder.DefaultSenderFee = paymentorderDescSenderFee.Default.(func() decimal.Decimal)
+	// paymentorderDescNetworkFee is the schema descriptor for network_fee field.
+	paymentorderDescNetworkFee := paymentorderFields[8].Descriptor()
+	// paymentorder.DefaultNetworkFee holds the default value on creation for the network_fee field.
+	paymentorder.DefaultNetworkFee = paymentorderDescNetworkFee.Default.(func() decimal.Decimal)
+	// paymentorderDescProtocolFee is the schema descriptor for protocol_fee field.
+	paymentorderDescProtocolFee := paymentorderFields[9].Descriptor()
+	// paymentorder.DefaultProtocolFee holds the default value on creation for the protocol_fee field.
+	paymentorder.DefaultProtocolFee = paymentorderDescProtocolFee.Default.(func() decimal.Decimal)
+	// paymentorderDescOrderPercent is the schema descriptor for order_percent field.
+	paymentorderDescOrderPercent := paymentorderFields[10].Descriptor()
+	// paymentorder.DefaultOrderPercent holds the default value on creation for the order_percent field.
+	paymentorder.DefaultOrderPercent = paymentorderDescOrderPercent.Default.(func() decimal.Decimal)
+	// paymentorderDescFeePercent is the schema descriptor for fee_percent field.
+	paymentorderDescFeePercent := paymentorderFields[11].Descriptor()
+	// paymentorder.DefaultFeePercent holds the default value on creation for the fee_percent field.
+	paymentorder.DefaultFeePercent = paymentorderDescFeePercent.Default.(func() decimal.Decimal)
 	// paymentorderDescTxHash is the schema descriptor for tx_hash field.
-	paymentorderDescTxHash := paymentorderFields[8].Descriptor()
+	paymentorderDescTxHash := paymentorderFields[12].Descriptor()
 	// paymentorder.TxHashValidator is a validator for the "tx_hash" field. It is called by the builders before save.
 	paymentorder.TxHashValidator = paymentorderDescTxHash.Validators[0].(func(string) error)
 	// paymentorderDescBlockNumber is the schema descriptor for block_number field.
-	paymentorderDescBlockNumber := paymentorderFields[9].Descriptor()
+	paymentorderDescBlockNumber := paymentorderFields[13].Descriptor()
 	// paymentorder.DefaultBlockNumber holds the default value on creation for the block_number field.
 	paymentorder.DefaultBlockNumber = paymentorderDescBlockNumber.Default.(int64)
-	// paymentorderDescFromAddress is the schema descriptor for from_address field.
-	paymentorderDescFromAddress := paymentorderFields[10].Descriptor()
-	// paymentorder.FromAddressValidator is a validator for the "from_address" field. It is called by the builders before save.
-	paymentorder.FromAddressValidator = paymentorderDescFromAddress.Validators[0].(func(string) error)
-	// paymentorderDescReturnAddress is the schema descriptor for return_address field.
-	paymentorderDescReturnAddress := paymentorderFields[11].Descriptor()
-	// paymentorder.ReturnAddressValidator is a validator for the "return_address" field. It is called by the builders before save.
-	paymentorder.ReturnAddressValidator = paymentorderDescReturnAddress.Validators[0].(func(string) error)
-	// paymentorderDescReceiveAddressText is the schema descriptor for receive_address_text field.
-	paymentorderDescReceiveAddressText := paymentorderFields[12].Descriptor()
-	// paymentorder.ReceiveAddressTextValidator is a validator for the "receive_address_text" field. It is called by the builders before save.
-	paymentorder.ReceiveAddressTextValidator = paymentorderDescReceiveAddressText.Validators[0].(func(string) error)
-	// paymentorderDescFeeAddress is the schema descriptor for fee_address field.
-	paymentorderDescFeeAddress := paymentorderFields[14].Descriptor()
-	// paymentorder.FeeAddressValidator is a validator for the "fee_address" field. It is called by the builders before save.
-	paymentorder.FeeAddressValidator = paymentorderDescFeeAddress.Validators[0].(func(string) error)
 	// paymentorderDescGatewayID is the schema descriptor for gateway_id field.
 	paymentorderDescGatewayID := paymentorderFields[15].Descriptor()
 	// paymentorder.GatewayIDValidator is a validator for the "gateway_id" field. It is called by the builders before save.
 	paymentorder.GatewayIDValidator = paymentorderDescGatewayID.Validators[0].(func(string) error)
-	// paymentorderDescMessageHash is the schema descriptor for message_hash field.
-	paymentorderDescMessageHash := paymentorderFields[16].Descriptor()
-	// paymentorder.MessageHashValidator is a validator for the "message_hash" field. It is called by the builders before save.
-	paymentorder.MessageHashValidator = paymentorderDescMessageHash.Validators[0].(func(string) error)
+	// paymentorderDescFromAddress is the schema descriptor for from_address field.
+	paymentorderDescFromAddress := paymentorderFields[16].Descriptor()
+	// paymentorder.FromAddressValidator is a validator for the "from_address" field. It is called by the builders before save.
+	paymentorder.FromAddressValidator = paymentorderDescFromAddress.Validators[0].(func(string) error)
+	// paymentorderDescReturnAddress is the schema descriptor for return_address field.
+	paymentorderDescReturnAddress := paymentorderFields[17].Descriptor()
+	// paymentorder.ReturnAddressValidator is a validator for the "return_address" field. It is called by the builders before save.
+	paymentorder.ReturnAddressValidator = paymentorderDescReturnAddress.Validators[0].(func(string) error)
+	// paymentorderDescReceiveAddress is the schema descriptor for receive_address field.
+	paymentorderDescReceiveAddress := paymentorderFields[18].Descriptor()
+	// paymentorder.ReceiveAddressValidator is a validator for the "receive_address" field. It is called by the builders before save.
+	paymentorder.ReceiveAddressValidator = paymentorderDescReceiveAddress.Validators[0].(func(string) error)
+	// paymentorderDescFeeAddress is the schema descriptor for fee_address field.
+	paymentorderDescFeeAddress := paymentorderFields[21].Descriptor()
+	// paymentorder.FeeAddressValidator is a validator for the "fee_address" field. It is called by the builders before save.
+	paymentorder.FeeAddressValidator = paymentorderDescFeeAddress.Validators[0].(func(string) error)
+	// paymentorderDescInstitution is the schema descriptor for institution field.
+	paymentorderDescInstitution := paymentorderFields[22].Descriptor()
+	// paymentorder.InstitutionValidator is a validator for the "institution" field. It is called by the builders before save.
+	paymentorder.InstitutionValidator = paymentorderDescInstitution.Validators[0].(func(string) error)
+	// paymentorderDescAccountIdentifier is the schema descriptor for account_identifier field.
+	paymentorderDescAccountIdentifier := paymentorderFields[23].Descriptor()
+	// paymentorder.AccountIdentifierValidator is a validator for the "account_identifier" field. It is called by the builders before save.
+	paymentorder.AccountIdentifierValidator = paymentorderDescAccountIdentifier.Validators[0].(func(string) error)
+	// paymentorderDescAccountName is the schema descriptor for account_name field.
+	paymentorderDescAccountName := paymentorderFields[24].Descriptor()
+	// paymentorder.AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
+	paymentorder.AccountNameValidator = paymentorderDescAccountName.Validators[0].(func(string) error)
+	// paymentorderDescMemo is the schema descriptor for memo field.
+	paymentorderDescMemo := paymentorderFields[25].Descriptor()
+	// paymentorder.MemoValidator is a validator for the "memo" field. It is called by the builders before save.
+	paymentorder.MemoValidator = paymentorderDescMemo.Validators[0].(func(string) error)
+	// paymentorderDescSender is the schema descriptor for sender field.
+	paymentorderDescSender := paymentorderFields[27].Descriptor()
+	// paymentorder.SenderValidator is a validator for the "sender" field. It is called by the builders before save.
+	paymentorder.SenderValidator = paymentorderDescSender.Validators[0].(func(string) error)
 	// paymentorderDescReference is the schema descriptor for reference field.
-	paymentorderDescReference := paymentorderFields[17].Descriptor()
+	paymentorderDescReference := paymentorderFields[28].Descriptor()
 	// paymentorder.ReferenceValidator is a validator for the "reference" field. It is called by the builders before save.
 	paymentorder.ReferenceValidator = paymentorderDescReference.Validators[0].(func(string) error)
+	// paymentorderDescCancellationCount is the schema descriptor for cancellation_count field.
+	paymentorderDescCancellationCount := paymentorderFields[29].Descriptor()
+	// paymentorder.DefaultCancellationCount holds the default value on creation for the cancellation_count field.
+	paymentorder.DefaultCancellationCount = paymentorderDescCancellationCount.Default.(int)
+	// paymentorderDescCancellationReasons is the schema descriptor for cancellation_reasons field.
+	paymentorderDescCancellationReasons := paymentorderFields[30].Descriptor()
+	// paymentorder.DefaultCancellationReasons holds the default value on creation for the cancellation_reasons field.
+	paymentorder.DefaultCancellationReasons = paymentorderDescCancellationReasons.Default.([]string)
 	// paymentorderDescID is the schema descriptor for id field.
 	paymentorderDescID := paymentorderFields[0].Descriptor()
 	// paymentorder.DefaultID holds the default value on creation for the id field.
 	paymentorder.DefaultID = paymentorderDescID.Default.(func() uuid.UUID)
+	paymentorderfulfillmentMixin := schema.PaymentOrderFulfillment{}.Mixin()
+	paymentorderfulfillmentMixinFields0 := paymentorderfulfillmentMixin[0].Fields()
+	_ = paymentorderfulfillmentMixinFields0
+	paymentorderfulfillmentFields := schema.PaymentOrderFulfillment{}.Fields()
+	_ = paymentorderfulfillmentFields
+	// paymentorderfulfillmentDescCreatedAt is the schema descriptor for created_at field.
+	paymentorderfulfillmentDescCreatedAt := paymentorderfulfillmentMixinFields0[0].Descriptor()
+	// paymentorderfulfillment.DefaultCreatedAt holds the default value on creation for the created_at field.
+	paymentorderfulfillment.DefaultCreatedAt = paymentorderfulfillmentDescCreatedAt.Default.(func() time.Time)
+	// paymentorderfulfillmentDescUpdatedAt is the schema descriptor for updated_at field.
+	paymentorderfulfillmentDescUpdatedAt := paymentorderfulfillmentMixinFields0[1].Descriptor()
+	// paymentorderfulfillment.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	paymentorderfulfillment.DefaultUpdatedAt = paymentorderfulfillmentDescUpdatedAt.Default.(func() time.Time)
+	// paymentorderfulfillment.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	paymentorderfulfillment.UpdateDefaultUpdatedAt = paymentorderfulfillmentDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// paymentorderfulfillmentDescID is the schema descriptor for id field.
+	paymentorderfulfillmentDescID := paymentorderfulfillmentFields[0].Descriptor()
+	// paymentorderfulfillment.DefaultID holds the default value on creation for the id field.
+	paymentorderfulfillment.DefaultID = paymentorderfulfillmentDescID.Default.(func() uuid.UUID)
 	paymentwebhookMixin := schema.PaymentWebhook{}.Mixin()
 	paymentwebhookMixinFields0 := paymentwebhookMixin[0].Fields()
 	_ = paymentwebhookMixinFields0
@@ -509,25 +509,6 @@ func init() {
 	provisionbucketDescCreatedAt := provisionbucketFields[2].Descriptor()
 	// provisionbucket.DefaultCreatedAt holds the default value on creation for the created_at field.
 	provisionbucket.DefaultCreatedAt = provisionbucketDescCreatedAt.Default.(func() time.Time)
-	receiveaddressMixin := schema.ReceiveAddress{}.Mixin()
-	receiveaddressMixinFields0 := receiveaddressMixin[0].Fields()
-	_ = receiveaddressMixinFields0
-	receiveaddressFields := schema.ReceiveAddress{}.Fields()
-	_ = receiveaddressFields
-	// receiveaddressDescCreatedAt is the schema descriptor for created_at field.
-	receiveaddressDescCreatedAt := receiveaddressMixinFields0[0].Descriptor()
-	// receiveaddress.DefaultCreatedAt holds the default value on creation for the created_at field.
-	receiveaddress.DefaultCreatedAt = receiveaddressDescCreatedAt.Default.(func() time.Time)
-	// receiveaddressDescUpdatedAt is the schema descriptor for updated_at field.
-	receiveaddressDescUpdatedAt := receiveaddressMixinFields0[1].Descriptor()
-	// receiveaddress.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	receiveaddress.DefaultUpdatedAt = receiveaddressDescUpdatedAt.Default.(func() time.Time)
-	// receiveaddress.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	receiveaddress.UpdateDefaultUpdatedAt = receiveaddressDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// receiveaddressDescTxHash is the schema descriptor for tx_hash field.
-	receiveaddressDescTxHash := receiveaddressFields[5].Descriptor()
-	// receiveaddress.TxHashValidator is a validator for the "tx_hash" field. It is called by the builders before save.
-	receiveaddress.TxHashValidator = receiveaddressDescTxHash.Validators[0].(func(string) error)
 	senderordertokenMixin := schema.SenderOrderToken{}.Mixin()
 	senderordertokenMixinFields0 := senderordertokenMixin[0].Fields()
 	_ = senderordertokenMixinFields0
@@ -700,6 +681,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.4"                                         // Version of ent codegen.
-	Sum     = "h1:/DhDraSLXIkBhyiVoJeSshr4ZYi7femzhj6/TckzZuI=" // Sum of ent codegen.
+	Version = "v0.14.5"                                         // Version of ent codegen.
+	Sum     = "h1:Rj2WOYJtCkWyFo6a+5wB3EfBRP0rnx1fMk6gGA0UUe4=" // Sum of ent codegen.
 )

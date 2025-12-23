@@ -20,56 +20,56 @@ type SenderOrderTokenDelete struct {
 }
 
 // Where appends a list predicates to the SenderOrderTokenDelete builder.
-func (sotd *SenderOrderTokenDelete) Where(ps ...predicate.SenderOrderToken) *SenderOrderTokenDelete {
-	sotd.mutation.Where(ps...)
-	return sotd
+func (_d *SenderOrderTokenDelete) Where(ps ...predicate.SenderOrderToken) *SenderOrderTokenDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (sotd *SenderOrderTokenDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, sotd.sqlExec, sotd.mutation, sotd.hooks)
+func (_d *SenderOrderTokenDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (sotd *SenderOrderTokenDelete) ExecX(ctx context.Context) int {
-	n, err := sotd.Exec(ctx)
+func (_d *SenderOrderTokenDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (sotd *SenderOrderTokenDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *SenderOrderTokenDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(senderordertoken.Table, sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt))
-	if ps := sotd.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, sotd.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	sotd.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // SenderOrderTokenDeleteOne is the builder for deleting a single SenderOrderToken entity.
 type SenderOrderTokenDeleteOne struct {
-	sotd *SenderOrderTokenDelete
+	_d *SenderOrderTokenDelete
 }
 
 // Where appends a list predicates to the SenderOrderTokenDelete builder.
-func (sotdo *SenderOrderTokenDeleteOne) Where(ps ...predicate.SenderOrderToken) *SenderOrderTokenDeleteOne {
-	sotdo.sotd.mutation.Where(ps...)
-	return sotdo
+func (_d *SenderOrderTokenDeleteOne) Where(ps ...predicate.SenderOrderToken) *SenderOrderTokenDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (sotdo *SenderOrderTokenDeleteOne) Exec(ctx context.Context) error {
-	n, err := sotdo.sotd.Exec(ctx)
+func (_d *SenderOrderTokenDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (sotdo *SenderOrderTokenDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (sotdo *SenderOrderTokenDeleteOne) ExecX(ctx context.Context) {
-	if err := sotdo.Exec(ctx); err != nil {
+func (_d *SenderOrderTokenDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

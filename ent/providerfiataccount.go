@@ -78,7 +78,7 @@ func (*ProviderFiatAccount) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ProviderFiatAccount fields.
-func (pfa *ProviderFiatAccount) assignValues(columns []string, values []any) error {
+func (_m *ProviderFiatAccount) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -88,47 +88,47 @@ func (pfa *ProviderFiatAccount) assignValues(columns []string, values []any) err
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
-				pfa.ID = *value
+				_m.ID = *value
 			}
 		case providerfiataccount.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				pfa.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case providerfiataccount.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				pfa.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case providerfiataccount.FieldInstitution:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field institution", values[i])
 			} else if value.Valid {
-				pfa.Institution = value.String
+				_m.Institution = value.String
 			}
 		case providerfiataccount.FieldAccountIdentifier:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_identifier", values[i])
 			} else if value.Valid {
-				pfa.AccountIdentifier = value.String
+				_m.AccountIdentifier = value.String
 			}
 		case providerfiataccount.FieldAccountName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_name", values[i])
 			} else if value.Valid {
-				pfa.AccountName = value.String
+				_m.AccountName = value.String
 			}
 		case providerfiataccount.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_profile_fiat_accounts", values[i])
 			} else if value.Valid {
-				pfa.provider_profile_fiat_accounts = new(string)
-				*pfa.provider_profile_fiat_accounts = value.String
+				_m.provider_profile_fiat_accounts = new(string)
+				*_m.provider_profile_fiat_accounts = value.String
 			}
 		default:
-			pfa.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -136,52 +136,52 @@ func (pfa *ProviderFiatAccount) assignValues(columns []string, values []any) err
 
 // Value returns the ent.Value that was dynamically selected and assigned to the ProviderFiatAccount.
 // This includes values selected through modifiers, order, etc.
-func (pfa *ProviderFiatAccount) Value(name string) (ent.Value, error) {
-	return pfa.selectValues.Get(name)
+func (_m *ProviderFiatAccount) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryProvider queries the "provider" edge of the ProviderFiatAccount entity.
-func (pfa *ProviderFiatAccount) QueryProvider() *ProviderProfileQuery {
-	return NewProviderFiatAccountClient(pfa.config).QueryProvider(pfa)
+func (_m *ProviderFiatAccount) QueryProvider() *ProviderProfileQuery {
+	return NewProviderFiatAccountClient(_m.config).QueryProvider(_m)
 }
 
 // Update returns a builder for updating this ProviderFiatAccount.
 // Note that you need to call ProviderFiatAccount.Unwrap() before calling this method if this ProviderFiatAccount
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (pfa *ProviderFiatAccount) Update() *ProviderFiatAccountUpdateOne {
-	return NewProviderFiatAccountClient(pfa.config).UpdateOne(pfa)
+func (_m *ProviderFiatAccount) Update() *ProviderFiatAccountUpdateOne {
+	return NewProviderFiatAccountClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the ProviderFiatAccount entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (pfa *ProviderFiatAccount) Unwrap() *ProviderFiatAccount {
-	_tx, ok := pfa.config.driver.(*txDriver)
+func (_m *ProviderFiatAccount) Unwrap() *ProviderFiatAccount {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ProviderFiatAccount is not a transactional entity")
 	}
-	pfa.config.driver = _tx.drv
-	return pfa
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (pfa *ProviderFiatAccount) String() string {
+func (_m *ProviderFiatAccount) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProviderFiatAccount(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", pfa.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(pfa.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(pfa.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("institution=")
-	builder.WriteString(pfa.Institution)
+	builder.WriteString(_m.Institution)
 	builder.WriteString(", ")
 	builder.WriteString("account_identifier=")
-	builder.WriteString(pfa.AccountIdentifier)
+	builder.WriteString(_m.AccountIdentifier)
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
-	builder.WriteString(pfa.AccountName)
+	builder.WriteString(_m.AccountName)
 	builder.WriteByte(')')
 	return builder.String()
 }

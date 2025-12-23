@@ -45,15 +45,13 @@ type TokenEdges struct {
 	Network *Network `json:"network,omitempty"`
 	// PaymentOrders holds the value of the payment_orders edge.
 	PaymentOrders []*PaymentOrder `json:"payment_orders,omitempty"`
-	// LockPaymentOrders holds the value of the lock_payment_orders edge.
-	LockPaymentOrders []*LockPaymentOrder `json:"lock_payment_orders,omitempty"`
 	// SenderOrderTokens holds the value of the sender_order_tokens edge.
 	SenderOrderTokens []*SenderOrderToken `json:"sender_order_tokens,omitempty"`
 	// ProviderOrderTokens holds the value of the provider_order_tokens edge.
 	ProviderOrderTokens []*ProviderOrderToken `json:"provider_order_tokens,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [4]bool
 }
 
 // NetworkOrErr returns the Network value or an error if the edge
@@ -76,19 +74,10 @@ func (e TokenEdges) PaymentOrdersOrErr() ([]*PaymentOrder, error) {
 	return nil, &NotLoadedError{edge: "payment_orders"}
 }
 
-// LockPaymentOrdersOrErr returns the LockPaymentOrders value or an error if the edge
-// was not loaded in eager-loading.
-func (e TokenEdges) LockPaymentOrdersOrErr() ([]*LockPaymentOrder, error) {
-	if e.loadedTypes[2] {
-		return e.LockPaymentOrders, nil
-	}
-	return nil, &NotLoadedError{edge: "lock_payment_orders"}
-}
-
 // SenderOrderTokensOrErr returns the SenderOrderTokens value or an error if the edge
 // was not loaded in eager-loading.
 func (e TokenEdges) SenderOrderTokensOrErr() ([]*SenderOrderToken, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[2] {
 		return e.SenderOrderTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "sender_order_tokens"}
@@ -97,7 +86,7 @@ func (e TokenEdges) SenderOrderTokensOrErr() ([]*SenderOrderToken, error) {
 // ProviderOrderTokensOrErr returns the ProviderOrderTokens value or an error if the edge
 // was not loaded in eager-loading.
 func (e TokenEdges) ProviderOrderTokensOrErr() ([]*ProviderOrderToken, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[3] {
 		return e.ProviderOrderTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "provider_order_tokens"}
@@ -127,7 +116,7 @@ func (*Token) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Token fields.
-func (t *Token) assignValues(columns []string, values []any) error {
+func (_m *Token) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -138,58 +127,58 @@ func (t *Token) assignValues(columns []string, values []any) error {
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			t.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case token.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				t.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case token.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				t.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case token.FieldSymbol:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field symbol", values[i])
 			} else if value.Valid {
-				t.Symbol = value.String
+				_m.Symbol = value.String
 			}
 		case token.FieldContractAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field contract_address", values[i])
 			} else if value.Valid {
-				t.ContractAddress = value.String
+				_m.ContractAddress = value.String
 			}
 		case token.FieldDecimals:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field decimals", values[i])
 			} else if value.Valid {
-				t.Decimals = int8(value.Int64)
+				_m.Decimals = int8(value.Int64)
 			}
 		case token.FieldIsEnabled:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_enabled", values[i])
 			} else if value.Valid {
-				t.IsEnabled = value.Bool
+				_m.IsEnabled = value.Bool
 			}
 		case token.FieldBaseCurrency:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field base_currency", values[i])
 			} else if value.Valid {
-				t.BaseCurrency = value.String
+				_m.BaseCurrency = value.String
 			}
 		case token.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field network_tokens", value)
 			} else if value.Valid {
-				t.network_tokens = new(int)
-				*t.network_tokens = int(value.Int64)
+				_m.network_tokens = new(int)
+				*_m.network_tokens = int(value.Int64)
 			}
 		default:
-			t.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -197,78 +186,73 @@ func (t *Token) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the Token.
 // This includes values selected through modifiers, order, etc.
-func (t *Token) Value(name string) (ent.Value, error) {
-	return t.selectValues.Get(name)
+func (_m *Token) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryNetwork queries the "network" edge of the Token entity.
-func (t *Token) QueryNetwork() *NetworkQuery {
-	return NewTokenClient(t.config).QueryNetwork(t)
+func (_m *Token) QueryNetwork() *NetworkQuery {
+	return NewTokenClient(_m.config).QueryNetwork(_m)
 }
 
 // QueryPaymentOrders queries the "payment_orders" edge of the Token entity.
-func (t *Token) QueryPaymentOrders() *PaymentOrderQuery {
-	return NewTokenClient(t.config).QueryPaymentOrders(t)
-}
-
-// QueryLockPaymentOrders queries the "lock_payment_orders" edge of the Token entity.
-func (t *Token) QueryLockPaymentOrders() *LockPaymentOrderQuery {
-	return NewTokenClient(t.config).QueryLockPaymentOrders(t)
+func (_m *Token) QueryPaymentOrders() *PaymentOrderQuery {
+	return NewTokenClient(_m.config).QueryPaymentOrders(_m)
 }
 
 // QuerySenderOrderTokens queries the "sender_order_tokens" edge of the Token entity.
-func (t *Token) QuerySenderOrderTokens() *SenderOrderTokenQuery {
-	return NewTokenClient(t.config).QuerySenderOrderTokens(t)
+func (_m *Token) QuerySenderOrderTokens() *SenderOrderTokenQuery {
+	return NewTokenClient(_m.config).QuerySenderOrderTokens(_m)
 }
 
 // QueryProviderOrderTokens queries the "provider_order_tokens" edge of the Token entity.
-func (t *Token) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
-	return NewTokenClient(t.config).QueryProviderOrderTokens(t)
+func (_m *Token) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
+	return NewTokenClient(_m.config).QueryProviderOrderTokens(_m)
 }
 
 // Update returns a builder for updating this Token.
 // Note that you need to call Token.Unwrap() before calling this method if this Token
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (t *Token) Update() *TokenUpdateOne {
-	return NewTokenClient(t.config).UpdateOne(t)
+func (_m *Token) Update() *TokenUpdateOne {
+	return NewTokenClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the Token entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (t *Token) Unwrap() *Token {
-	_tx, ok := t.config.driver.(*txDriver)
+func (_m *Token) Unwrap() *Token {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: Token is not a transactional entity")
 	}
-	t.config.driver = _tx.drv
-	return t
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (t *Token) String() string {
+func (_m *Token) String() string {
 	var builder strings.Builder
 	builder.WriteString("Token(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", t.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(t.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(t.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("symbol=")
-	builder.WriteString(t.Symbol)
+	builder.WriteString(_m.Symbol)
 	builder.WriteString(", ")
 	builder.WriteString("contract_address=")
-	builder.WriteString(t.ContractAddress)
+	builder.WriteString(_m.ContractAddress)
 	builder.WriteString(", ")
 	builder.WriteString("decimals=")
-	builder.WriteString(fmt.Sprintf("%v", t.Decimals))
+	builder.WriteString(fmt.Sprintf("%v", _m.Decimals))
 	builder.WriteString(", ")
 	builder.WriteString("is_enabled=")
-	builder.WriteString(fmt.Sprintf("%v", t.IsEnabled))
+	builder.WriteString(fmt.Sprintf("%v", _m.IsEnabled))
 	builder.WriteString(", ")
 	builder.WriteString("base_currency=")
-	builder.WriteString(t.BaseCurrency)
+	builder.WriteString(_m.BaseCurrency)
 	builder.WriteByte(')')
 	return builder.String()
 }

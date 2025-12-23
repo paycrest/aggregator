@@ -56,7 +56,7 @@ func (s *IndexerEVM) IndexReceiveAddressWithBypass(ctx context.Context, token *e
 
 	if txHash != "" {
 		// Index transfer events for this specific transaction
-		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash, nil)
+		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
 		if err != nil {
 			logger.Errorf("Error processing receive address transaction %s: %v", txHash[:10]+"...", err)
 			return eventCounts, err
@@ -75,7 +75,7 @@ func (s *IndexerEVM) IndexReceiveAddressWithBypass(ctx context.Context, token *e
 }
 
 // indexReceiveAddressByTransaction processes a specific transaction for receive address transfers
-func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string, transactionEvents map[string]interface{}) (*types.EventCounts, error) {
+func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
 
@@ -193,7 +193,7 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 			toAddress: transferEvent,
 		}
 
-		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent, token)
+		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent)
 		if err != nil {
 			logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
 			continue
@@ -322,19 +322,19 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 }
 
 // getAddressTransactionHistoryWithFallback tries etherscan first and falls back to engine or blockscout
-func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Context, token *ent.Token, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, token, chainID, address, limit, fromBlock, toBlock, false)
+func (s *IndexerEVM) getAddressTransactionHistoryWithFallback(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
+	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, chainID, address, limit, fromBlock, toBlock, false)
 }
 
 // getAddressTransactionHistoryImmediate tries etherscan immediately without queuing and falls back to engine or blockscout
 // This is used for reindexing requests that need immediate processing
 func (s *IndexerEVM) getAddressTransactionHistoryImmediate(ctx context.Context, token *ent.Token, address string, limit int, fromBlock int64, toBlock int64) ([]map[string]interface{}, error) {
-	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, token, token.Edges.Network.ChainID, address, limit, fromBlock, toBlock, true)
+	return s.getAddressTransactionHistoryWithFallbackAndBypass(ctx, token.Edges.Network.ChainID, address, limit, fromBlock, toBlock, true)
 }
 
 // getAddressTransactionHistoryWithFallbackAndBypass tries etherscan first and falls back to engine or blockscout
 // with option to bypass queue for immediate processing
-func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx context.Context, token *ent.Token, chainID int64, address string, limit int, fromBlock int64, toBlock int64, bypassQueue bool) ([]map[string]interface{}, error) {
+func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx context.Context, chainID int64, address string, limit int, fromBlock int64, toBlock int64, bypassQueue bool) ([]map[string]interface{}, error) {
 	var err error
 
 	// Try etherscan first (except for Lisk which are not supported)
@@ -412,7 +412,7 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 	if bypassQueue {
 		transactions, err = s.getAddressTransactionHistoryImmediate(ctx, token, userAddress, limit, fromBlock, toBlock)
 	} else {
-		transactions, err = s.getAddressTransactionHistoryWithFallback(ctx, token, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
+		transactions, err = s.getAddressTransactionHistoryWithFallback(ctx, token.Edges.Network.ChainID, userAddress, limit, fromBlock, toBlock)
 	}
 	if err != nil {
 		return eventCounts, fmt.Errorf("failed to get transaction history: %w", err)
@@ -427,9 +427,11 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 		return eventCounts, nil
 	}
 
-	logger.Infof(logMessage)
+	if logMessage != "" {
+		logger.Infof("%s", logMessage)
+	}
 
-	// Process each transaction to find transfer events to linked addresses
+	// Process each transaction to find transfer events to receive addresses
 	for i, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
 		if !ok || txHash == "" {
@@ -440,7 +442,7 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 		}
 
 		// Index transfer events for this specific transaction
-		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash, tx)
+		counts, err := s.indexReceiveAddressByTransaction(ctx, token, txHash)
 		if err != nil {
 			logger.Errorf("Error processing transaction %s: %v", txHash[:10]+"...", err)
 			continue // Skip transactions with errors
@@ -459,7 +461,7 @@ func (s *IndexerEVM) IndexGateway(ctx context.Context, network *ent.Network, add
 
 	if txHash != "" {
 		// Index gateway events for this specific transaction
-		counts, err := s.indexGatewayByTransaction(ctx, network, txHash, nil)
+		counts, err := s.indexGatewayByTransaction(ctx, network, txHash)
 		if err != nil {
 			logger.Errorf("Error processing gateway transaction %s: %v", txHash[:10]+"...", err)
 			return eventCounts, err
@@ -519,7 +521,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 	}
 
 	// Get gateway contract's transaction history with fallback
-	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, nil, network.ChainID, address, limit, fromBlock, toBlock)
+	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, network.ChainID, address, limit, fromBlock, toBlock)
 	if err != nil {
 		return fmt.Errorf("failed to get gateway transaction history: %w", err)
 	}
@@ -533,7 +535,9 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 		return nil
 	}
 
-	logger.Infof(logMessage)
+	if logMessage != "" {
+		logger.Infof("%s", logMessage)
+	}
 
 	// Process each transaction to find gateway events
 	for i, tx := range transactions {
@@ -546,7 +550,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 		}
 
 		// Index gateway events for this specific transaction
-		_, err := s.indexGatewayByTransaction(ctx, network, txHash, tx)
+		_, err := s.indexGatewayByTransaction(ctx, network, txHash)
 		if err != nil {
 			logger.Errorf("Error processing gateway transaction %s: %v", txHash[:10]+"...", err)
 			continue // Skip transactions with errors
@@ -557,7 +561,7 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 }
 
 // indexGatewayByTransaction processes a specific transaction for gateway events
-func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string, transactionEvent map[string]interface{}) (*types.EventCounts, error) {
+func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent.Network, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
 	// Process all events in a single pass
@@ -1002,7 +1006,7 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 	}
 
 	// Get provider address's transaction history with fallback
-	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, nil, network.ChainID, providerAddress, limit, fromBlock, toBlock)
+	transactions, err := s.getAddressTransactionHistoryWithFallback(ctx, network.ChainID, providerAddress, limit, fromBlock, toBlock)
 	if err != nil {
 		return fmt.Errorf("failed to get provider transaction history: %w", err)
 	}
@@ -1016,7 +1020,9 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 		return nil
 	}
 
-	logger.Infof(logMessage)
+	if logMessage != "" {
+		logger.Infof("%s", logMessage)
+	}
 
 	// Process each transaction to find OrderSettled events
 	for i, tx := range transactions {

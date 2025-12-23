@@ -5,6 +5,9 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/NethermindEth/juno/core/felt"
+	"github.com/NethermindEth/starknet.go/account"
+	"github.com/NethermindEth/starknet.go/rpc"
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -12,9 +15,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/institution"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/transactionlog"
@@ -48,7 +50,6 @@ func (e *ethRPC) Commit() common.Hash {
 
 // Helper function to create client
 func NewEthClient(endpoint string) (RPCClient, error) {
-
 	ethClient, err := ethclient.Dial(endpoint)
 	if err != nil {
 		return nil, err
@@ -174,18 +175,6 @@ type RegisterResponse struct {
 	Email     string    `json:"email"`
 }
 
-// LockOrderResponse is the response for the lock payment order model
-type LockOrderResponse struct {
-	ID                uuid.UUID               `json:"id"`
-	Amount            decimal.Decimal         `json:"amount"`
-	Token             string                  `json:"token"`
-	Institution       string                  `json:"institution"`
-	AccountIdentifier string                  `json:"accountIdentifier"`
-	AccountName       string                  `json:"accountName"`
-	Status            lockpaymentorder.Status `json:"status"`
-	UpdatedAt         time.Time               `json:"updatedAt"`
-}
-
 // AcceptOrderResponse is the response for the accept order endpoint
 type AcceptOrderResponse struct {
 	ID                uuid.UUID              `json:"id"`
@@ -197,16 +186,16 @@ type AcceptOrderResponse struct {
 	Metadata          map[string]interface{} `json:"metadata"`
 }
 
-// FulfillLockOrderPayload is the payload for the fulfill order endpoint
-type FulfillLockOrderPayload struct {
-	PSP              string                                `json:"psp" binding:"required"`
-	TxID             string                                `json:"txId" binding:"required"`
-	ValidationStatus lockorderfulfillment.ValidationStatus `json:"validationStatus"`
-	ValidationError  string                                `json:"validationError"`
+// FulfillOrderPayload is the payload for the fulfill order endpoint
+type FulfillOrderPayload struct {
+	PSP              string                                   `json:"psp" binding:"required"`
+	TxID             string                                   `json:"txId" binding:"required"`
+	ValidationStatus paymentorderfulfillment.ValidationStatus `json:"validationStatus"`
+	ValidationError  string                                   `json:"validationError"`
 }
 
-// CancelLockOrderPayload is the payload for the cancel order endpoint
-type CancelLockOrderPayload struct {
+// CancelOrderPayload is the payload for the cancel order endpoint
+type CancelOrderPayload struct {
 	Reason string `json:"reason" binding:"required"`
 }
 
@@ -357,8 +346,8 @@ type ERC20Transfer struct {
 	Value *big.Int
 }
 
-// LockPaymentOrderFields is the fields for a lock payment order
-type LockPaymentOrderFields struct {
+// PaymentOrderFields is the fields for a payment order
+type PaymentOrderFields struct {
 	ID                uuid.UUID
 	OrderType         string
 	Token             *ent.Token
@@ -392,54 +381,56 @@ type TransactionLog struct {
 	CreatedAt time.Time             `json:"created_at" binding:"required"`
 }
 
-// LockPaymentOrderResponse is the response for a lock payment order
-type LockPaymentOrderResponse struct {
-	ID                  uuid.UUID               `json:"id"`
-	Token               string                  `json:"token"`
-	GatewayID           string                  `json:"gatewayId"`
-	Amount              decimal.Decimal         `json:"amount"`
-	AmountInUSD         decimal.Decimal         `json:"amountInUsd"`
-	Rate                decimal.Decimal         `json:"rate"`
-	BlockNumber         int64                   `json:"blockNumber"`
-	TxHash              string                  `json:"txHash"`
-	Institution         string                  `json:"institution"`
-	AccountIdentifier   string                  `json:"accountIdentifier"`
-	AccountName         string                  `json:"accountName"`
-	ProviderID          string                  `json:"providerId"`
-	Memo                string                  `json:"memo"`
-	Network             string                  `json:"network"`
-	Status              lockpaymentorder.Status `json:"status"`
-	UpdatedAt           time.Time               `json:"updatedAt"`
-	CreatedAt           time.Time               `json:"createdAt"`
-	Transactions        []TransactionLog        `json:"transactionLogs"`
-	CancellationReasons []string                `json:"cancellationReasons"`
+// ProviderOrderResponse is the response for a provider payment o
+type ProviderOrderResponse struct {
+	ID                  uuid.UUID              `json:"id"`
+	Token               string                 `json:"token"`
+	GatewayID           string                 `json:"gatewayId"`
+	Amount              decimal.Decimal        `json:"amount"`
+	AmountInUSD         decimal.Decimal        `json:"amountInUsd"`
+	Rate                decimal.Decimal        `json:"rate"`
+	BlockNumber         int64                  `json:"blockNumber"`
+	TxHash              string                 `json:"txHash"`
+	Institution         string                 `json:"institution"`
+	AccountIdentifier   string                 `json:"accountIdentifier"`
+	AccountName         string                 `json:"accountName"`
+	ProviderID          string                 `json:"providerId"`
+	Memo                string                 `json:"memo"`
+	Network             string                 `json:"network"`
+	Status              paymentorder.Status    `json:"status"`
+	UpdatedAt           time.Time              `json:"updatedAt"`
+	CreatedAt           time.Time              `json:"createdAt"`
+	Transactions        []TransactionLog       `json:"transactionLogs"`
+	CancellationReasons []string               `json:"cancellationReasons"`
+	OrderType           paymentorder.OrderType `json:"orderType"`
+	OTCExpiry           time.Time              `json:"otcExpiry,omitempty"`
 }
 
-type LockPaymentOrderTxReceipt struct {
-	Status    lockpaymentorder.Status `json:"status"`
-	TxHash    string                  `json:"txHash"`
-	Timestamp time.Time               `json:"timestamp"`
+type PaymentOrderTxReceipt struct {
+	Status    paymentorder.Status `json:"status"`
+	TxHash    string              `json:"txHash"`
+	Timestamp time.Time           `json:"timestamp"`
 }
 
-type LockPaymentOrderSplitOrder struct {
+type PaymentOrderSplitOrder struct {
 	SplitOrderID uuid.UUID       `json:"splitOrderId"`
 	Amount       decimal.Decimal `json:"amount"`
 	Rate         decimal.Decimal `json:"rate"`
 	OrderPercent decimal.Decimal `json:"orderPercent"`
 }
 
-type LockPaymentOrderStatusResponse struct {
-	OrderID       string                       `json:"orderId"`
-	Amount        decimal.Decimal              `json:"amount"`
-	AmountInUSD   decimal.Decimal              `json:"amountInUsd"`
-	Token         string                       `json:"token"`
-	Network       string                       `json:"network"`
-	SettlePercent decimal.Decimal              `json:"settlePercent"`
-	Status        lockpaymentorder.Status      `json:"status"`
-	TxHash        string                       `json:"txHash"`
-	Settlements   []LockPaymentOrderSplitOrder `json:"settlements"`
-	TxReceipts    []LockPaymentOrderTxReceipt  `json:"txReceipts"`
-	UpdatedAt     time.Time                    `json:"updatedAt"`
+type ProviderOrderStatusResponse struct {
+	OrderID       string                   `json:"orderId"`
+	Amount        decimal.Decimal          `json:"amount"`
+	AmountInUSD   decimal.Decimal          `json:"amountInUsd"`
+	Token         string                   `json:"token"`
+	Network       string                   `json:"network"`
+	SettlePercent decimal.Decimal          `json:"settlePercent"`
+	Status        paymentorder.Status      `json:"status"`
+	TxHash        string                   `json:"txHash"`
+	Settlements   []PaymentOrderSplitOrder `json:"settlements"`
+	TxReceipts    []PaymentOrderTxReceipt  `json:"txReceipts"`
+	UpdatedAt     time.Time                `json:"updatedAt"`
 }
 
 // PaymentOrderRecipient describes a payment order recipient
@@ -481,30 +472,31 @@ type ReceiveAddressResponse struct {
 	OrderType      string          `json:"orderType"`
 }
 
-// PaymentOrderResponse is the response type for a payment order
-type PaymentOrderResponse struct {
-	ID             uuid.UUID             `json:"id"`
-	Amount         decimal.Decimal       `json:"amount"`
-	AmountInUSD    decimal.Decimal       `json:"amountInUsd"`
-	AmountPaid     decimal.Decimal       `json:"amountPaid"`
-	AmountReturned decimal.Decimal       `json:"amountReturned"`
-	Token          string                `json:"token"`
-	SenderFee      decimal.Decimal       `json:"senderFee"`
-	TransactionFee decimal.Decimal       `json:"transactionFee"`
-	Rate           decimal.Decimal       `json:"rate"`
-	Network        string                `json:"network"`
-	GatewayID      string                `json:"gatewayId"`
-	Recipient      PaymentOrderRecipient `json:"recipient"`
-	FromAddress    string                `json:"fromAddress"`
-	ReturnAddress  string                `json:"returnAddress"`
-	ReceiveAddress string                `json:"receiveAddress"`
-	FeeAddress     string                `json:"feeAddress"`
-	Reference      string                `json:"reference"`
-	CreatedAt      time.Time             `json:"createdAt"`
-	UpdatedAt      time.Time             `json:"updatedAt"`
-	TxHash         string                `json:"txHash"`
-	Status         paymentorder.Status   `json:"status"`
-	Transactions   []TransactionLog      `json:"transactionLogs"`
+// SenderOrderResponse is the response type for a sender payment order
+type SenderOrderResponse struct {
+	ID             uuid.UUID              `json:"id"`
+	Amount         decimal.Decimal        `json:"amount"`
+	AmountInUSD    decimal.Decimal        `json:"amountInUsd"`
+	AmountPaid     decimal.Decimal        `json:"amountPaid"`
+	AmountReturned decimal.Decimal        `json:"amountReturned"`
+	Token          string                 `json:"token"`
+	SenderFee      decimal.Decimal        `json:"senderFee"`
+	TransactionFee decimal.Decimal        `json:"transactionFee"`
+	Rate           decimal.Decimal        `json:"rate"`
+	Network        string                 `json:"network"`
+	GatewayID      string                 `json:"gatewayId"`
+	Recipient      PaymentOrderRecipient  `json:"recipient"`
+	FromAddress    string                 `json:"fromAddress"`
+	ReturnAddress  string                 `json:"returnAddress"`
+	ReceiveAddress string                 `json:"receiveAddress"`
+	FeeAddress     string                 `json:"feeAddress"`
+	Reference      string                 `json:"reference"`
+	CreatedAt      time.Time              `json:"createdAt"`
+	UpdatedAt      time.Time              `json:"updatedAt"`
+	TxHash         string                 `json:"txHash"`
+	Status         paymentorder.Status    `json:"status"`
+	Transactions   []TransactionLog       `json:"transactionLogs"`
+	OrderType      paymentorder.OrderType `json:"orderType"`
 }
 
 // PaymentOrderWebhookData is the data type for a payment order webhook
@@ -618,26 +610,26 @@ type ResetPasswordTokenPayload struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
-// ProviderLockOrderList is the struct for a list of provider lock orders
-type ProviderLockOrderList struct {
-	TotalRecords int                        `json:"total"`
-	Page         int                        `json:"page"`
-	PageSize     int                        `json:"pageSize"`
-	Orders       []LockPaymentOrderResponse `json:"orders"`
+// ProviderOrderList is the struct for a list of provider orders
+type ProviderOrderList struct {
+	TotalRecords int                     `json:"total"`
+	Page         int                     `json:"page"`
+	PageSize     int                     `json:"pageSize"`
+	Orders       []ProviderOrderResponse `json:"orders"`
 }
 
 // SenderOrderList is the struct for a list of sender payment orders
 type SenderPaymentOrderList struct {
-	TotalRecords int                    `json:"total"`
-	Page         int                    `json:"page"`
-	PageSize     int                    `json:"pageSize"`
-	Orders       []PaymentOrderResponse `json:"orders"`
+	TotalRecords int                   `json:"total"`
+	Page         int                   `json:"page"`
+	PageSize     int                   `json:"pageSize"`
+	Orders       []SenderOrderResponse `json:"orders"`
 }
 
 // SenderPaymentOrderSearchList is the response for search payment orders endpoint
 type SenderPaymentOrderSearchList struct {
-	TotalRecords int                    `json:"total"`
-	Orders       []PaymentOrderResponse `json:"orders"`
+	TotalRecords int                   `json:"total"`
+	Orders       []SenderOrderResponse `json:"orders"`
 }
 
 // ChangePasswordPayload is the payload for the change password endpoint
@@ -836,6 +828,18 @@ type ThirdwebDecodedEvent struct {
 	Name             string                 `json:"name"`
 	IndexedParams    map[string]interface{} `json:"indexed_params"`
 	NonIndexedParams map[string]interface{} `json:"non_indexed_params"`
+}
+
+// StarknetEventsData represents the structure for Starknet event data
+type StarknetEventsData struct {
+	Events rpc.EmittedEvent `json:"events"`
+}
+
+// StarknetDeterministicAccountInfo represents the structure for Starknet deterministic account info
+type StarknetDeterministicAccountInfo struct {
+	Salt       *felt.Felt
+	PublicKey  *felt.Felt
+	NewAccount *account.Account
 }
 
 // WebhookSignatureVerification represents the result of signature verification

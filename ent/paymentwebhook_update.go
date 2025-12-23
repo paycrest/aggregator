@@ -26,123 +26,123 @@ type PaymentWebhookUpdate struct {
 }
 
 // Where appends a list predicates to the PaymentWebhookUpdate builder.
-func (pwu *PaymentWebhookUpdate) Where(ps ...predicate.PaymentWebhook) *PaymentWebhookUpdate {
-	pwu.mutation.Where(ps...)
-	return pwu
+func (_u *PaymentWebhookUpdate) Where(ps ...predicate.PaymentWebhook) *PaymentWebhookUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pwu *PaymentWebhookUpdate) SetUpdatedAt(t time.Time) *PaymentWebhookUpdate {
-	pwu.mutation.SetUpdatedAt(t)
-	return pwu
+func (_u *PaymentWebhookUpdate) SetUpdatedAt(v time.Time) *PaymentWebhookUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetWebhookID sets the "webhook_id" field.
-func (pwu *PaymentWebhookUpdate) SetWebhookID(s string) *PaymentWebhookUpdate {
-	pwu.mutation.SetWebhookID(s)
-	return pwu
+func (_u *PaymentWebhookUpdate) SetWebhookID(v string) *PaymentWebhookUpdate {
+	_u.mutation.SetWebhookID(v)
+	return _u
 }
 
 // SetNillableWebhookID sets the "webhook_id" field if the given value is not nil.
-func (pwu *PaymentWebhookUpdate) SetNillableWebhookID(s *string) *PaymentWebhookUpdate {
-	if s != nil {
-		pwu.SetWebhookID(*s)
+func (_u *PaymentWebhookUpdate) SetNillableWebhookID(v *string) *PaymentWebhookUpdate {
+	if v != nil {
+		_u.SetWebhookID(*v)
 	}
-	return pwu
+	return _u
 }
 
 // SetWebhookSecret sets the "webhook_secret" field.
-func (pwu *PaymentWebhookUpdate) SetWebhookSecret(s string) *PaymentWebhookUpdate {
-	pwu.mutation.SetWebhookSecret(s)
-	return pwu
+func (_u *PaymentWebhookUpdate) SetWebhookSecret(v string) *PaymentWebhookUpdate {
+	_u.mutation.SetWebhookSecret(v)
+	return _u
 }
 
 // SetNillableWebhookSecret sets the "webhook_secret" field if the given value is not nil.
-func (pwu *PaymentWebhookUpdate) SetNillableWebhookSecret(s *string) *PaymentWebhookUpdate {
-	if s != nil {
-		pwu.SetWebhookSecret(*s)
+func (_u *PaymentWebhookUpdate) SetNillableWebhookSecret(v *string) *PaymentWebhookUpdate {
+	if v != nil {
+		_u.SetWebhookSecret(*v)
 	}
-	return pwu
+	return _u
 }
 
 // SetCallbackURL sets the "callback_url" field.
-func (pwu *PaymentWebhookUpdate) SetCallbackURL(s string) *PaymentWebhookUpdate {
-	pwu.mutation.SetCallbackURL(s)
-	return pwu
+func (_u *PaymentWebhookUpdate) SetCallbackURL(v string) *PaymentWebhookUpdate {
+	_u.mutation.SetCallbackURL(v)
+	return _u
 }
 
 // SetNillableCallbackURL sets the "callback_url" field if the given value is not nil.
-func (pwu *PaymentWebhookUpdate) SetNillableCallbackURL(s *string) *PaymentWebhookUpdate {
-	if s != nil {
-		pwu.SetCallbackURL(*s)
+func (_u *PaymentWebhookUpdate) SetNillableCallbackURL(v *string) *PaymentWebhookUpdate {
+	if v != nil {
+		_u.SetCallbackURL(*v)
 	}
-	return pwu
+	return _u
 }
 
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
-func (pwu *PaymentWebhookUpdate) SetPaymentOrderID(id uuid.UUID) *PaymentWebhookUpdate {
-	pwu.mutation.SetPaymentOrderID(id)
-	return pwu
+func (_u *PaymentWebhookUpdate) SetPaymentOrderID(id uuid.UUID) *PaymentWebhookUpdate {
+	_u.mutation.SetPaymentOrderID(id)
+	return _u
 }
 
 // SetNillablePaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID if the given value is not nil.
-func (pwu *PaymentWebhookUpdate) SetNillablePaymentOrderID(id *uuid.UUID) *PaymentWebhookUpdate {
+func (_u *PaymentWebhookUpdate) SetNillablePaymentOrderID(id *uuid.UUID) *PaymentWebhookUpdate {
 	if id != nil {
-		pwu = pwu.SetPaymentOrderID(*id)
+		_u = _u.SetPaymentOrderID(*id)
 	}
-	return pwu
+	return _u
 }
 
 // SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
-func (pwu *PaymentWebhookUpdate) SetPaymentOrder(p *PaymentOrder) *PaymentWebhookUpdate {
-	return pwu.SetPaymentOrderID(p.ID)
+func (_u *PaymentWebhookUpdate) SetPaymentOrder(v *PaymentOrder) *PaymentWebhookUpdate {
+	return _u.SetPaymentOrderID(v.ID)
 }
 
 // SetNetworkID sets the "network" edge to the Network entity by ID.
-func (pwu *PaymentWebhookUpdate) SetNetworkID(id int) *PaymentWebhookUpdate {
-	pwu.mutation.SetNetworkID(id)
-	return pwu
+func (_u *PaymentWebhookUpdate) SetNetworkID(id int) *PaymentWebhookUpdate {
+	_u.mutation.SetNetworkID(id)
+	return _u
 }
 
 // SetNillableNetworkID sets the "network" edge to the Network entity by ID if the given value is not nil.
-func (pwu *PaymentWebhookUpdate) SetNillableNetworkID(id *int) *PaymentWebhookUpdate {
+func (_u *PaymentWebhookUpdate) SetNillableNetworkID(id *int) *PaymentWebhookUpdate {
 	if id != nil {
-		pwu = pwu.SetNetworkID(*id)
+		_u = _u.SetNetworkID(*id)
 	}
-	return pwu
+	return _u
 }
 
 // SetNetwork sets the "network" edge to the Network entity.
-func (pwu *PaymentWebhookUpdate) SetNetwork(n *Network) *PaymentWebhookUpdate {
-	return pwu.SetNetworkID(n.ID)
+func (_u *PaymentWebhookUpdate) SetNetwork(v *Network) *PaymentWebhookUpdate {
+	return _u.SetNetworkID(v.ID)
 }
 
 // Mutation returns the PaymentWebhookMutation object of the builder.
-func (pwu *PaymentWebhookUpdate) Mutation() *PaymentWebhookMutation {
-	return pwu.mutation
+func (_u *PaymentWebhookUpdate) Mutation() *PaymentWebhookMutation {
+	return _u.mutation
 }
 
 // ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
-func (pwu *PaymentWebhookUpdate) ClearPaymentOrder() *PaymentWebhookUpdate {
-	pwu.mutation.ClearPaymentOrder()
-	return pwu
+func (_u *PaymentWebhookUpdate) ClearPaymentOrder() *PaymentWebhookUpdate {
+	_u.mutation.ClearPaymentOrder()
+	return _u
 }
 
 // ClearNetwork clears the "network" edge to the Network entity.
-func (pwu *PaymentWebhookUpdate) ClearNetwork() *PaymentWebhookUpdate {
-	pwu.mutation.ClearNetwork()
-	return pwu
+func (_u *PaymentWebhookUpdate) ClearNetwork() *PaymentWebhookUpdate {
+	_u.mutation.ClearNetwork()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (pwu *PaymentWebhookUpdate) Save(ctx context.Context) (int, error) {
-	pwu.defaults()
-	return withHooks(ctx, pwu.sqlSave, pwu.mutation, pwu.hooks)
+func (_u *PaymentWebhookUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pwu *PaymentWebhookUpdate) SaveX(ctx context.Context) int {
-	affected, err := pwu.Save(ctx)
+func (_u *PaymentWebhookUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -150,39 +150,39 @@ func (pwu *PaymentWebhookUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (pwu *PaymentWebhookUpdate) Exec(ctx context.Context) error {
-	_, err := pwu.Save(ctx)
+func (_u *PaymentWebhookUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pwu *PaymentWebhookUpdate) ExecX(ctx context.Context) {
-	if err := pwu.Exec(ctx); err != nil {
+func (_u *PaymentWebhookUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pwu *PaymentWebhookUpdate) defaults() {
-	if _, ok := pwu.mutation.UpdatedAt(); !ok {
+func (_u *PaymentWebhookUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := paymentwebhook.UpdateDefaultUpdatedAt()
-		pwu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pwu *PaymentWebhookUpdate) check() error {
-	if v, ok := pwu.mutation.WebhookID(); ok {
+func (_u *PaymentWebhookUpdate) check() error {
+	if v, ok := _u.mutation.WebhookID(); ok {
 		if err := paymentwebhook.WebhookIDValidator(v); err != nil {
 			return &ValidationError{Name: "webhook_id", err: fmt.Errorf(`ent: validator failed for field "PaymentWebhook.webhook_id": %w`, err)}
 		}
 	}
-	if v, ok := pwu.mutation.WebhookSecret(); ok {
+	if v, ok := _u.mutation.WebhookSecret(); ok {
 		if err := paymentwebhook.WebhookSecretValidator(v); err != nil {
 			return &ValidationError{Name: "webhook_secret", err: fmt.Errorf(`ent: validator failed for field "PaymentWebhook.webhook_secret": %w`, err)}
 		}
 	}
-	if v, ok := pwu.mutation.CallbackURL(); ok {
+	if v, ok := _u.mutation.CallbackURL(); ok {
 		if err := paymentwebhook.CallbackURLValidator(v); err != nil {
 			return &ValidationError{Name: "callback_url", err: fmt.Errorf(`ent: validator failed for field "PaymentWebhook.callback_url": %w`, err)}
 		}
@@ -190,31 +190,31 @@ func (pwu *PaymentWebhookUpdate) check() error {
 	return nil
 }
 
-func (pwu *PaymentWebhookUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	if err := pwu.check(); err != nil {
-		return n, err
+func (_u *PaymentWebhookUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(paymentwebhook.Table, paymentwebhook.Columns, sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID))
-	if ps := pwu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pwu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentwebhook.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := pwu.mutation.WebhookID(); ok {
+	if value, ok := _u.mutation.WebhookID(); ok {
 		_spec.SetField(paymentwebhook.FieldWebhookID, field.TypeString, value)
 	}
-	if value, ok := pwu.mutation.WebhookSecret(); ok {
+	if value, ok := _u.mutation.WebhookSecret(); ok {
 		_spec.SetField(paymentwebhook.FieldWebhookSecret, field.TypeString, value)
 	}
-	if value, ok := pwu.mutation.CallbackURL(); ok {
+	if value, ok := _u.mutation.CallbackURL(); ok {
 		_spec.SetField(paymentwebhook.FieldCallbackURL, field.TypeString, value)
 	}
-	if pwu.mutation.PaymentOrderCleared() {
+	if _u.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -227,7 +227,7 @@ func (pwu *PaymentWebhookUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pwu.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -243,7 +243,7 @@ func (pwu *PaymentWebhookUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pwu.mutation.NetworkCleared() {
+	if _u.mutation.NetworkCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -256,7 +256,7 @@ func (pwu *PaymentWebhookUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pwu.mutation.NetworkIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.NetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -272,7 +272,7 @@ func (pwu *PaymentWebhookUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, pwu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentwebhook.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -280,8 +280,8 @@ func (pwu *PaymentWebhookUpdate) sqlSave(ctx context.Context) (n int, err error)
 		}
 		return 0, err
 	}
-	pwu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // PaymentWebhookUpdateOne is the builder for updating a single PaymentWebhook entity.
@@ -293,130 +293,130 @@ type PaymentWebhookUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (pwuo *PaymentWebhookUpdateOne) SetUpdatedAt(t time.Time) *PaymentWebhookUpdateOne {
-	pwuo.mutation.SetUpdatedAt(t)
-	return pwuo
+func (_u *PaymentWebhookUpdateOne) SetUpdatedAt(v time.Time) *PaymentWebhookUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetWebhookID sets the "webhook_id" field.
-func (pwuo *PaymentWebhookUpdateOne) SetWebhookID(s string) *PaymentWebhookUpdateOne {
-	pwuo.mutation.SetWebhookID(s)
-	return pwuo
+func (_u *PaymentWebhookUpdateOne) SetWebhookID(v string) *PaymentWebhookUpdateOne {
+	_u.mutation.SetWebhookID(v)
+	return _u
 }
 
 // SetNillableWebhookID sets the "webhook_id" field if the given value is not nil.
-func (pwuo *PaymentWebhookUpdateOne) SetNillableWebhookID(s *string) *PaymentWebhookUpdateOne {
-	if s != nil {
-		pwuo.SetWebhookID(*s)
+func (_u *PaymentWebhookUpdateOne) SetNillableWebhookID(v *string) *PaymentWebhookUpdateOne {
+	if v != nil {
+		_u.SetWebhookID(*v)
 	}
-	return pwuo
+	return _u
 }
 
 // SetWebhookSecret sets the "webhook_secret" field.
-func (pwuo *PaymentWebhookUpdateOne) SetWebhookSecret(s string) *PaymentWebhookUpdateOne {
-	pwuo.mutation.SetWebhookSecret(s)
-	return pwuo
+func (_u *PaymentWebhookUpdateOne) SetWebhookSecret(v string) *PaymentWebhookUpdateOne {
+	_u.mutation.SetWebhookSecret(v)
+	return _u
 }
 
 // SetNillableWebhookSecret sets the "webhook_secret" field if the given value is not nil.
-func (pwuo *PaymentWebhookUpdateOne) SetNillableWebhookSecret(s *string) *PaymentWebhookUpdateOne {
-	if s != nil {
-		pwuo.SetWebhookSecret(*s)
+func (_u *PaymentWebhookUpdateOne) SetNillableWebhookSecret(v *string) *PaymentWebhookUpdateOne {
+	if v != nil {
+		_u.SetWebhookSecret(*v)
 	}
-	return pwuo
+	return _u
 }
 
 // SetCallbackURL sets the "callback_url" field.
-func (pwuo *PaymentWebhookUpdateOne) SetCallbackURL(s string) *PaymentWebhookUpdateOne {
-	pwuo.mutation.SetCallbackURL(s)
-	return pwuo
+func (_u *PaymentWebhookUpdateOne) SetCallbackURL(v string) *PaymentWebhookUpdateOne {
+	_u.mutation.SetCallbackURL(v)
+	return _u
 }
 
 // SetNillableCallbackURL sets the "callback_url" field if the given value is not nil.
-func (pwuo *PaymentWebhookUpdateOne) SetNillableCallbackURL(s *string) *PaymentWebhookUpdateOne {
-	if s != nil {
-		pwuo.SetCallbackURL(*s)
+func (_u *PaymentWebhookUpdateOne) SetNillableCallbackURL(v *string) *PaymentWebhookUpdateOne {
+	if v != nil {
+		_u.SetCallbackURL(*v)
 	}
-	return pwuo
+	return _u
 }
 
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
-func (pwuo *PaymentWebhookUpdateOne) SetPaymentOrderID(id uuid.UUID) *PaymentWebhookUpdateOne {
-	pwuo.mutation.SetPaymentOrderID(id)
-	return pwuo
+func (_u *PaymentWebhookUpdateOne) SetPaymentOrderID(id uuid.UUID) *PaymentWebhookUpdateOne {
+	_u.mutation.SetPaymentOrderID(id)
+	return _u
 }
 
 // SetNillablePaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID if the given value is not nil.
-func (pwuo *PaymentWebhookUpdateOne) SetNillablePaymentOrderID(id *uuid.UUID) *PaymentWebhookUpdateOne {
+func (_u *PaymentWebhookUpdateOne) SetNillablePaymentOrderID(id *uuid.UUID) *PaymentWebhookUpdateOne {
 	if id != nil {
-		pwuo = pwuo.SetPaymentOrderID(*id)
+		_u = _u.SetPaymentOrderID(*id)
 	}
-	return pwuo
+	return _u
 }
 
 // SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
-func (pwuo *PaymentWebhookUpdateOne) SetPaymentOrder(p *PaymentOrder) *PaymentWebhookUpdateOne {
-	return pwuo.SetPaymentOrderID(p.ID)
+func (_u *PaymentWebhookUpdateOne) SetPaymentOrder(v *PaymentOrder) *PaymentWebhookUpdateOne {
+	return _u.SetPaymentOrderID(v.ID)
 }
 
 // SetNetworkID sets the "network" edge to the Network entity by ID.
-func (pwuo *PaymentWebhookUpdateOne) SetNetworkID(id int) *PaymentWebhookUpdateOne {
-	pwuo.mutation.SetNetworkID(id)
-	return pwuo
+func (_u *PaymentWebhookUpdateOne) SetNetworkID(id int) *PaymentWebhookUpdateOne {
+	_u.mutation.SetNetworkID(id)
+	return _u
 }
 
 // SetNillableNetworkID sets the "network" edge to the Network entity by ID if the given value is not nil.
-func (pwuo *PaymentWebhookUpdateOne) SetNillableNetworkID(id *int) *PaymentWebhookUpdateOne {
+func (_u *PaymentWebhookUpdateOne) SetNillableNetworkID(id *int) *PaymentWebhookUpdateOne {
 	if id != nil {
-		pwuo = pwuo.SetNetworkID(*id)
+		_u = _u.SetNetworkID(*id)
 	}
-	return pwuo
+	return _u
 }
 
 // SetNetwork sets the "network" edge to the Network entity.
-func (pwuo *PaymentWebhookUpdateOne) SetNetwork(n *Network) *PaymentWebhookUpdateOne {
-	return pwuo.SetNetworkID(n.ID)
+func (_u *PaymentWebhookUpdateOne) SetNetwork(v *Network) *PaymentWebhookUpdateOne {
+	return _u.SetNetworkID(v.ID)
 }
 
 // Mutation returns the PaymentWebhookMutation object of the builder.
-func (pwuo *PaymentWebhookUpdateOne) Mutation() *PaymentWebhookMutation {
-	return pwuo.mutation
+func (_u *PaymentWebhookUpdateOne) Mutation() *PaymentWebhookMutation {
+	return _u.mutation
 }
 
 // ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
-func (pwuo *PaymentWebhookUpdateOne) ClearPaymentOrder() *PaymentWebhookUpdateOne {
-	pwuo.mutation.ClearPaymentOrder()
-	return pwuo
+func (_u *PaymentWebhookUpdateOne) ClearPaymentOrder() *PaymentWebhookUpdateOne {
+	_u.mutation.ClearPaymentOrder()
+	return _u
 }
 
 // ClearNetwork clears the "network" edge to the Network entity.
-func (pwuo *PaymentWebhookUpdateOne) ClearNetwork() *PaymentWebhookUpdateOne {
-	pwuo.mutation.ClearNetwork()
-	return pwuo
+func (_u *PaymentWebhookUpdateOne) ClearNetwork() *PaymentWebhookUpdateOne {
+	_u.mutation.ClearNetwork()
+	return _u
 }
 
 // Where appends a list predicates to the PaymentWebhookUpdate builder.
-func (pwuo *PaymentWebhookUpdateOne) Where(ps ...predicate.PaymentWebhook) *PaymentWebhookUpdateOne {
-	pwuo.mutation.Where(ps...)
-	return pwuo
+func (_u *PaymentWebhookUpdateOne) Where(ps ...predicate.PaymentWebhook) *PaymentWebhookUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (pwuo *PaymentWebhookUpdateOne) Select(field string, fields ...string) *PaymentWebhookUpdateOne {
-	pwuo.fields = append([]string{field}, fields...)
-	return pwuo
+func (_u *PaymentWebhookUpdateOne) Select(field string, fields ...string) *PaymentWebhookUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated PaymentWebhook entity.
-func (pwuo *PaymentWebhookUpdateOne) Save(ctx context.Context) (*PaymentWebhook, error) {
-	pwuo.defaults()
-	return withHooks(ctx, pwuo.sqlSave, pwuo.mutation, pwuo.hooks)
+func (_u *PaymentWebhookUpdateOne) Save(ctx context.Context) (*PaymentWebhook, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (pwuo *PaymentWebhookUpdateOne) SaveX(ctx context.Context) *PaymentWebhook {
-	node, err := pwuo.Save(ctx)
+func (_u *PaymentWebhookUpdateOne) SaveX(ctx context.Context) *PaymentWebhook {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -424,39 +424,39 @@ func (pwuo *PaymentWebhookUpdateOne) SaveX(ctx context.Context) *PaymentWebhook 
 }
 
 // Exec executes the query on the entity.
-func (pwuo *PaymentWebhookUpdateOne) Exec(ctx context.Context) error {
-	_, err := pwuo.Save(ctx)
+func (_u *PaymentWebhookUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pwuo *PaymentWebhookUpdateOne) ExecX(ctx context.Context) {
-	if err := pwuo.Exec(ctx); err != nil {
+func (_u *PaymentWebhookUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (pwuo *PaymentWebhookUpdateOne) defaults() {
-	if _, ok := pwuo.mutation.UpdatedAt(); !ok {
+func (_u *PaymentWebhookUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := paymentwebhook.UpdateDefaultUpdatedAt()
-		pwuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (pwuo *PaymentWebhookUpdateOne) check() error {
-	if v, ok := pwuo.mutation.WebhookID(); ok {
+func (_u *PaymentWebhookUpdateOne) check() error {
+	if v, ok := _u.mutation.WebhookID(); ok {
 		if err := paymentwebhook.WebhookIDValidator(v); err != nil {
 			return &ValidationError{Name: "webhook_id", err: fmt.Errorf(`ent: validator failed for field "PaymentWebhook.webhook_id": %w`, err)}
 		}
 	}
-	if v, ok := pwuo.mutation.WebhookSecret(); ok {
+	if v, ok := _u.mutation.WebhookSecret(); ok {
 		if err := paymentwebhook.WebhookSecretValidator(v); err != nil {
 			return &ValidationError{Name: "webhook_secret", err: fmt.Errorf(`ent: validator failed for field "PaymentWebhook.webhook_secret": %w`, err)}
 		}
 	}
-	if v, ok := pwuo.mutation.CallbackURL(); ok {
+	if v, ok := _u.mutation.CallbackURL(); ok {
 		if err := paymentwebhook.CallbackURLValidator(v); err != nil {
 			return &ValidationError{Name: "callback_url", err: fmt.Errorf(`ent: validator failed for field "PaymentWebhook.callback_url": %w`, err)}
 		}
@@ -464,17 +464,17 @@ func (pwuo *PaymentWebhookUpdateOne) check() error {
 	return nil
 }
 
-func (pwuo *PaymentWebhookUpdateOne) sqlSave(ctx context.Context) (_node *PaymentWebhook, err error) {
-	if err := pwuo.check(); err != nil {
+func (_u *PaymentWebhookUpdateOne) sqlSave(ctx context.Context) (_node *PaymentWebhook, err error) {
+	if err := _u.check(); err != nil {
 		return _node, err
 	}
 	_spec := sqlgraph.NewUpdateSpec(paymentwebhook.Table, paymentwebhook.Columns, sqlgraph.NewFieldSpec(paymentwebhook.FieldID, field.TypeUUID))
-	id, ok := pwuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "PaymentWebhook.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := pwuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, paymentwebhook.FieldID)
 		for _, f := range fields {
@@ -486,26 +486,26 @@ func (pwuo *PaymentWebhookUpdateOne) sqlSave(ctx context.Context) (_node *Paymen
 			}
 		}
 	}
-	if ps := pwuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := pwuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(paymentwebhook.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := pwuo.mutation.WebhookID(); ok {
+	if value, ok := _u.mutation.WebhookID(); ok {
 		_spec.SetField(paymentwebhook.FieldWebhookID, field.TypeString, value)
 	}
-	if value, ok := pwuo.mutation.WebhookSecret(); ok {
+	if value, ok := _u.mutation.WebhookSecret(); ok {
 		_spec.SetField(paymentwebhook.FieldWebhookSecret, field.TypeString, value)
 	}
-	if value, ok := pwuo.mutation.CallbackURL(); ok {
+	if value, ok := _u.mutation.CallbackURL(); ok {
 		_spec.SetField(paymentwebhook.FieldCallbackURL, field.TypeString, value)
 	}
-	if pwuo.mutation.PaymentOrderCleared() {
+	if _u.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -518,7 +518,7 @@ func (pwuo *PaymentWebhookUpdateOne) sqlSave(ctx context.Context) (_node *Paymen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pwuo.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.PaymentOrderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -534,7 +534,7 @@ func (pwuo *PaymentWebhookUpdateOne) sqlSave(ctx context.Context) (_node *Paymen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if pwuo.mutation.NetworkCleared() {
+	if _u.mutation.NetworkCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -547,7 +547,7 @@ func (pwuo *PaymentWebhookUpdateOne) sqlSave(ctx context.Context) (_node *Paymen
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pwuo.mutation.NetworkIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.NetworkIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -563,10 +563,10 @@ func (pwuo *PaymentWebhookUpdateOne) sqlSave(ctx context.Context) (_node *Paymen
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &PaymentWebhook{config: pwuo.config}
+	_node = &PaymentWebhook{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, pwuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{paymentwebhook.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -574,6 +574,6 @@ func (pwuo *PaymentWebhookUpdateOne) sqlSave(ctx context.Context) (_node *Paymen
 		}
 		return nil, err
 	}
-	pwuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

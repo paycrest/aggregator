@@ -36,44 +36,44 @@ type ProviderOrderTokenQuery struct {
 }
 
 // Where adds a new predicate for the ProviderOrderTokenQuery builder.
-func (potq *ProviderOrderTokenQuery) Where(ps ...predicate.ProviderOrderToken) *ProviderOrderTokenQuery {
-	potq.predicates = append(potq.predicates, ps...)
-	return potq
+func (_q *ProviderOrderTokenQuery) Where(ps ...predicate.ProviderOrderToken) *ProviderOrderTokenQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (potq *ProviderOrderTokenQuery) Limit(limit int) *ProviderOrderTokenQuery {
-	potq.ctx.Limit = &limit
-	return potq
+func (_q *ProviderOrderTokenQuery) Limit(limit int) *ProviderOrderTokenQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (potq *ProviderOrderTokenQuery) Offset(offset int) *ProviderOrderTokenQuery {
-	potq.ctx.Offset = &offset
-	return potq
+func (_q *ProviderOrderTokenQuery) Offset(offset int) *ProviderOrderTokenQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (potq *ProviderOrderTokenQuery) Unique(unique bool) *ProviderOrderTokenQuery {
-	potq.ctx.Unique = &unique
-	return potq
+func (_q *ProviderOrderTokenQuery) Unique(unique bool) *ProviderOrderTokenQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (potq *ProviderOrderTokenQuery) Order(o ...providerordertoken.OrderOption) *ProviderOrderTokenQuery {
-	potq.order = append(potq.order, o...)
-	return potq
+func (_q *ProviderOrderTokenQuery) Order(o ...providerordertoken.OrderOption) *ProviderOrderTokenQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryProvider chains the current query on the "provider" edge.
-func (potq *ProviderOrderTokenQuery) QueryProvider() *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: potq.config}).Query()
+func (_q *ProviderOrderTokenQuery) QueryProvider() *ProviderProfileQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := potq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := potq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -82,20 +82,20 @@ func (potq *ProviderOrderTokenQuery) QueryProvider() *ProviderProfileQuery {
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, providerordertoken.ProviderTable, providerordertoken.ProviderColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(potq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryToken chains the current query on the "token" edge.
-func (potq *ProviderOrderTokenQuery) QueryToken() *TokenQuery {
-	query := (&TokenClient{config: potq.config}).Query()
+func (_q *ProviderOrderTokenQuery) QueryToken() *TokenQuery {
+	query := (&TokenClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := potq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := potq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -104,20 +104,20 @@ func (potq *ProviderOrderTokenQuery) QueryToken() *TokenQuery {
 			sqlgraph.To(token.Table, token.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, providerordertoken.TokenTable, providerordertoken.TokenColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(potq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryCurrency chains the current query on the "currency" edge.
-func (potq *ProviderOrderTokenQuery) QueryCurrency() *FiatCurrencyQuery {
-	query := (&FiatCurrencyClient{config: potq.config}).Query()
+func (_q *ProviderOrderTokenQuery) QueryCurrency() *FiatCurrencyQuery {
+	query := (&FiatCurrencyClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := potq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := potq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -126,7 +126,7 @@ func (potq *ProviderOrderTokenQuery) QueryCurrency() *FiatCurrencyQuery {
 			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, providerordertoken.CurrencyTable, providerordertoken.CurrencyColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(potq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -134,8 +134,8 @@ func (potq *ProviderOrderTokenQuery) QueryCurrency() *FiatCurrencyQuery {
 
 // First returns the first ProviderOrderToken entity from the query.
 // Returns a *NotFoundError when no ProviderOrderToken was found.
-func (potq *ProviderOrderTokenQuery) First(ctx context.Context) (*ProviderOrderToken, error) {
-	nodes, err := potq.Limit(1).All(setContextOp(ctx, potq.ctx, ent.OpQueryFirst))
+func (_q *ProviderOrderTokenQuery) First(ctx context.Context) (*ProviderOrderToken, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -146,8 +146,8 @@ func (potq *ProviderOrderTokenQuery) First(ctx context.Context) (*ProviderOrderT
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (potq *ProviderOrderTokenQuery) FirstX(ctx context.Context) *ProviderOrderToken {
-	node, err := potq.First(ctx)
+func (_q *ProviderOrderTokenQuery) FirstX(ctx context.Context) *ProviderOrderToken {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -156,9 +156,9 @@ func (potq *ProviderOrderTokenQuery) FirstX(ctx context.Context) *ProviderOrderT
 
 // FirstID returns the first ProviderOrderToken ID from the query.
 // Returns a *NotFoundError when no ProviderOrderToken ID was found.
-func (potq *ProviderOrderTokenQuery) FirstID(ctx context.Context) (id int, err error) {
+func (_q *ProviderOrderTokenQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = potq.Limit(1).IDs(setContextOp(ctx, potq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -169,8 +169,8 @@ func (potq *ProviderOrderTokenQuery) FirstID(ctx context.Context) (id int, err e
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (potq *ProviderOrderTokenQuery) FirstIDX(ctx context.Context) int {
-	id, err := potq.FirstID(ctx)
+func (_q *ProviderOrderTokenQuery) FirstIDX(ctx context.Context) int {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -180,8 +180,8 @@ func (potq *ProviderOrderTokenQuery) FirstIDX(ctx context.Context) int {
 // Only returns a single ProviderOrderToken entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one ProviderOrderToken entity is found.
 // Returns a *NotFoundError when no ProviderOrderToken entities are found.
-func (potq *ProviderOrderTokenQuery) Only(ctx context.Context) (*ProviderOrderToken, error) {
-	nodes, err := potq.Limit(2).All(setContextOp(ctx, potq.ctx, ent.OpQueryOnly))
+func (_q *ProviderOrderTokenQuery) Only(ctx context.Context) (*ProviderOrderToken, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -196,8 +196,8 @@ func (potq *ProviderOrderTokenQuery) Only(ctx context.Context) (*ProviderOrderTo
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (potq *ProviderOrderTokenQuery) OnlyX(ctx context.Context) *ProviderOrderToken {
-	node, err := potq.Only(ctx)
+func (_q *ProviderOrderTokenQuery) OnlyX(ctx context.Context) *ProviderOrderToken {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -207,9 +207,9 @@ func (potq *ProviderOrderTokenQuery) OnlyX(ctx context.Context) *ProviderOrderTo
 // OnlyID is like Only, but returns the only ProviderOrderToken ID in the query.
 // Returns a *NotSingularError when more than one ProviderOrderToken ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (potq *ProviderOrderTokenQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *ProviderOrderTokenQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = potq.Limit(2).IDs(setContextOp(ctx, potq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -224,8 +224,8 @@ func (potq *ProviderOrderTokenQuery) OnlyID(ctx context.Context) (id int, err er
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (potq *ProviderOrderTokenQuery) OnlyIDX(ctx context.Context) int {
-	id, err := potq.OnlyID(ctx)
+func (_q *ProviderOrderTokenQuery) OnlyIDX(ctx context.Context) int {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -233,18 +233,18 @@ func (potq *ProviderOrderTokenQuery) OnlyIDX(ctx context.Context) int {
 }
 
 // All executes the query and returns a list of ProviderOrderTokens.
-func (potq *ProviderOrderTokenQuery) All(ctx context.Context) ([]*ProviderOrderToken, error) {
-	ctx = setContextOp(ctx, potq.ctx, ent.OpQueryAll)
-	if err := potq.prepareQuery(ctx); err != nil {
+func (_q *ProviderOrderTokenQuery) All(ctx context.Context) ([]*ProviderOrderToken, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*ProviderOrderToken, *ProviderOrderTokenQuery]()
-	return withInterceptors[[]*ProviderOrderToken](ctx, potq, qr, potq.inters)
+	return withInterceptors[[]*ProviderOrderToken](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (potq *ProviderOrderTokenQuery) AllX(ctx context.Context) []*ProviderOrderToken {
-	nodes, err := potq.All(ctx)
+func (_q *ProviderOrderTokenQuery) AllX(ctx context.Context) []*ProviderOrderToken {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -252,20 +252,20 @@ func (potq *ProviderOrderTokenQuery) AllX(ctx context.Context) []*ProviderOrderT
 }
 
 // IDs executes the query and returns a list of ProviderOrderToken IDs.
-func (potq *ProviderOrderTokenQuery) IDs(ctx context.Context) (ids []int, err error) {
-	if potq.ctx.Unique == nil && potq.path != nil {
-		potq.Unique(true)
+func (_q *ProviderOrderTokenQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, potq.ctx, ent.OpQueryIDs)
-	if err = potq.Select(providerordertoken.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(providerordertoken.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (potq *ProviderOrderTokenQuery) IDsX(ctx context.Context) []int {
-	ids, err := potq.IDs(ctx)
+func (_q *ProviderOrderTokenQuery) IDsX(ctx context.Context) []int {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -273,17 +273,17 @@ func (potq *ProviderOrderTokenQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (potq *ProviderOrderTokenQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, potq.ctx, ent.OpQueryCount)
-	if err := potq.prepareQuery(ctx); err != nil {
+func (_q *ProviderOrderTokenQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, potq, querierCount[*ProviderOrderTokenQuery](), potq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*ProviderOrderTokenQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (potq *ProviderOrderTokenQuery) CountX(ctx context.Context) int {
-	count, err := potq.Count(ctx)
+func (_q *ProviderOrderTokenQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -291,9 +291,9 @@ func (potq *ProviderOrderTokenQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (potq *ProviderOrderTokenQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, potq.ctx, ent.OpQueryExist)
-	switch _, err := potq.FirstID(ctx); {
+func (_q *ProviderOrderTokenQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -304,8 +304,8 @@ func (potq *ProviderOrderTokenQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (potq *ProviderOrderTokenQuery) ExistX(ctx context.Context) bool {
-	exist, err := potq.Exist(ctx)
+func (_q *ProviderOrderTokenQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -314,56 +314,56 @@ func (potq *ProviderOrderTokenQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the ProviderOrderTokenQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (potq *ProviderOrderTokenQuery) Clone() *ProviderOrderTokenQuery {
-	if potq == nil {
+func (_q *ProviderOrderTokenQuery) Clone() *ProviderOrderTokenQuery {
+	if _q == nil {
 		return nil
 	}
 	return &ProviderOrderTokenQuery{
-		config:       potq.config,
-		ctx:          potq.ctx.Clone(),
-		order:        append([]providerordertoken.OrderOption{}, potq.order...),
-		inters:       append([]Interceptor{}, potq.inters...),
-		predicates:   append([]predicate.ProviderOrderToken{}, potq.predicates...),
-		withProvider: potq.withProvider.Clone(),
-		withToken:    potq.withToken.Clone(),
-		withCurrency: potq.withCurrency.Clone(),
+		config:       _q.config,
+		ctx:          _q.ctx.Clone(),
+		order:        append([]providerordertoken.OrderOption{}, _q.order...),
+		inters:       append([]Interceptor{}, _q.inters...),
+		predicates:   append([]predicate.ProviderOrderToken{}, _q.predicates...),
+		withProvider: _q.withProvider.Clone(),
+		withToken:    _q.withToken.Clone(),
+		withCurrency: _q.withCurrency.Clone(),
 		// clone intermediate query.
-		sql:  potq.sql.Clone(),
-		path: potq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithProvider tells the query-builder to eager-load the nodes that are connected to
 // the "provider" edge. The optional arguments are used to configure the query builder of the edge.
-func (potq *ProviderOrderTokenQuery) WithProvider(opts ...func(*ProviderProfileQuery)) *ProviderOrderTokenQuery {
-	query := (&ProviderProfileClient{config: potq.config}).Query()
+func (_q *ProviderOrderTokenQuery) WithProvider(opts ...func(*ProviderProfileQuery)) *ProviderOrderTokenQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	potq.withProvider = query
-	return potq
+	_q.withProvider = query
+	return _q
 }
 
 // WithToken tells the query-builder to eager-load the nodes that are connected to
 // the "token" edge. The optional arguments are used to configure the query builder of the edge.
-func (potq *ProviderOrderTokenQuery) WithToken(opts ...func(*TokenQuery)) *ProviderOrderTokenQuery {
-	query := (&TokenClient{config: potq.config}).Query()
+func (_q *ProviderOrderTokenQuery) WithToken(opts ...func(*TokenQuery)) *ProviderOrderTokenQuery {
+	query := (&TokenClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	potq.withToken = query
-	return potq
+	_q.withToken = query
+	return _q
 }
 
 // WithCurrency tells the query-builder to eager-load the nodes that are connected to
 // the "currency" edge. The optional arguments are used to configure the query builder of the edge.
-func (potq *ProviderOrderTokenQuery) WithCurrency(opts ...func(*FiatCurrencyQuery)) *ProviderOrderTokenQuery {
-	query := (&FiatCurrencyClient{config: potq.config}).Query()
+func (_q *ProviderOrderTokenQuery) WithCurrency(opts ...func(*FiatCurrencyQuery)) *ProviderOrderTokenQuery {
+	query := (&FiatCurrencyClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	potq.withCurrency = query
-	return potq
+	_q.withCurrency = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -380,10 +380,10 @@ func (potq *ProviderOrderTokenQuery) WithCurrency(opts ...func(*FiatCurrencyQuer
 //		GroupBy(providerordertoken.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (potq *ProviderOrderTokenQuery) GroupBy(field string, fields ...string) *ProviderOrderTokenGroupBy {
-	potq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &ProviderOrderTokenGroupBy{build: potq}
-	grbuild.flds = &potq.ctx.Fields
+func (_q *ProviderOrderTokenQuery) GroupBy(field string, fields ...string) *ProviderOrderTokenGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &ProviderOrderTokenGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = providerordertoken.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -401,57 +401,57 @@ func (potq *ProviderOrderTokenQuery) GroupBy(field string, fields ...string) *Pr
 //	client.ProviderOrderToken.Query().
 //		Select(providerordertoken.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (potq *ProviderOrderTokenQuery) Select(fields ...string) *ProviderOrderTokenSelect {
-	potq.ctx.Fields = append(potq.ctx.Fields, fields...)
-	sbuild := &ProviderOrderTokenSelect{ProviderOrderTokenQuery: potq}
+func (_q *ProviderOrderTokenQuery) Select(fields ...string) *ProviderOrderTokenSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &ProviderOrderTokenSelect{ProviderOrderTokenQuery: _q}
 	sbuild.label = providerordertoken.Label
-	sbuild.flds, sbuild.scan = &potq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a ProviderOrderTokenSelect configured with the given aggregations.
-func (potq *ProviderOrderTokenQuery) Aggregate(fns ...AggregateFunc) *ProviderOrderTokenSelect {
-	return potq.Select().Aggregate(fns...)
+func (_q *ProviderOrderTokenQuery) Aggregate(fns ...AggregateFunc) *ProviderOrderTokenSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (potq *ProviderOrderTokenQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range potq.inters {
+func (_q *ProviderOrderTokenQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, potq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range potq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !providerordertoken.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if potq.path != nil {
-		prev, err := potq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		potq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (potq *ProviderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProviderOrderToken, error) {
+func (_q *ProviderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProviderOrderToken, error) {
 	var (
 		nodes       = []*ProviderOrderToken{}
-		withFKs     = potq.withFKs
-		_spec       = potq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [3]bool{
-			potq.withProvider != nil,
-			potq.withToken != nil,
-			potq.withCurrency != nil,
+			_q.withProvider != nil,
+			_q.withToken != nil,
+			_q.withCurrency != nil,
 		}
 	)
-	if potq.withProvider != nil || potq.withToken != nil || potq.withCurrency != nil {
+	if _q.withProvider != nil || _q.withToken != nil || _q.withCurrency != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -461,7 +461,7 @@ func (potq *ProviderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryH
 		return (*ProviderOrderToken).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &ProviderOrderToken{config: potq.config}
+		node := &ProviderOrderToken{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -469,26 +469,26 @@ func (potq *ProviderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryH
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, potq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := potq.withProvider; query != nil {
-		if err := potq.loadProvider(ctx, query, nodes, nil,
+	if query := _q.withProvider; query != nil {
+		if err := _q.loadProvider(ctx, query, nodes, nil,
 			func(n *ProviderOrderToken, e *ProviderProfile) { n.Edges.Provider = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := potq.withToken; query != nil {
-		if err := potq.loadToken(ctx, query, nodes, nil,
+	if query := _q.withToken; query != nil {
+		if err := _q.loadToken(ctx, query, nodes, nil,
 			func(n *ProviderOrderToken, e *Token) { n.Edges.Token = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := potq.withCurrency; query != nil {
-		if err := potq.loadCurrency(ctx, query, nodes, nil,
+	if query := _q.withCurrency; query != nil {
+		if err := _q.loadCurrency(ctx, query, nodes, nil,
 			func(n *ProviderOrderToken, e *FiatCurrency) { n.Edges.Currency = e }); err != nil {
 			return nil, err
 		}
@@ -496,7 +496,7 @@ func (potq *ProviderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryH
 	return nodes, nil
 }
 
-func (potq *ProviderOrderTokenQuery) loadProvider(ctx context.Context, query *ProviderProfileQuery, nodes []*ProviderOrderToken, init func(*ProviderOrderToken), assign func(*ProviderOrderToken, *ProviderProfile)) error {
+func (_q *ProviderOrderTokenQuery) loadProvider(ctx context.Context, query *ProviderProfileQuery, nodes []*ProviderOrderToken, init func(*ProviderOrderToken), assign func(*ProviderOrderToken, *ProviderProfile)) error {
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*ProviderOrderToken)
 	for i := range nodes {
@@ -528,7 +528,7 @@ func (potq *ProviderOrderTokenQuery) loadProvider(ctx context.Context, query *Pr
 	}
 	return nil
 }
-func (potq *ProviderOrderTokenQuery) loadToken(ctx context.Context, query *TokenQuery, nodes []*ProviderOrderToken, init func(*ProviderOrderToken), assign func(*ProviderOrderToken, *Token)) error {
+func (_q *ProviderOrderTokenQuery) loadToken(ctx context.Context, query *TokenQuery, nodes []*ProviderOrderToken, init func(*ProviderOrderToken), assign func(*ProviderOrderToken, *Token)) error {
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*ProviderOrderToken)
 	for i := range nodes {
@@ -560,7 +560,7 @@ func (potq *ProviderOrderTokenQuery) loadToken(ctx context.Context, query *Token
 	}
 	return nil
 }
-func (potq *ProviderOrderTokenQuery) loadCurrency(ctx context.Context, query *FiatCurrencyQuery, nodes []*ProviderOrderToken, init func(*ProviderOrderToken), assign func(*ProviderOrderToken, *FiatCurrency)) error {
+func (_q *ProviderOrderTokenQuery) loadCurrency(ctx context.Context, query *FiatCurrencyQuery, nodes []*ProviderOrderToken, init func(*ProviderOrderToken), assign func(*ProviderOrderToken, *FiatCurrency)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProviderOrderToken)
 	for i := range nodes {
@@ -593,24 +593,24 @@ func (potq *ProviderOrderTokenQuery) loadCurrency(ctx context.Context, query *Fi
 	return nil
 }
 
-func (potq *ProviderOrderTokenQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := potq.querySpec()
-	_spec.Node.Columns = potq.ctx.Fields
-	if len(potq.ctx.Fields) > 0 {
-		_spec.Unique = potq.ctx.Unique != nil && *potq.ctx.Unique
+func (_q *ProviderOrderTokenQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, potq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (potq *ProviderOrderTokenQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *ProviderOrderTokenQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(providerordertoken.Table, providerordertoken.Columns, sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt))
-	_spec.From = potq.sql
-	if unique := potq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if potq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := potq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, providerordertoken.FieldID)
 		for i := range fields {
@@ -619,20 +619,20 @@ func (potq *ProviderOrderTokenQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := potq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := potq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := potq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := potq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -642,33 +642,33 @@ func (potq *ProviderOrderTokenQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (potq *ProviderOrderTokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(potq.driver.Dialect())
+func (_q *ProviderOrderTokenQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(providerordertoken.Table)
-	columns := potq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = providerordertoken.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if potq.sql != nil {
-		selector = potq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if potq.ctx.Unique != nil && *potq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range potq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range potq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := potq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := potq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -681,41 +681,41 @@ type ProviderOrderTokenGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (potgb *ProviderOrderTokenGroupBy) Aggregate(fns ...AggregateFunc) *ProviderOrderTokenGroupBy {
-	potgb.fns = append(potgb.fns, fns...)
-	return potgb
+func (_g *ProviderOrderTokenGroupBy) Aggregate(fns ...AggregateFunc) *ProviderOrderTokenGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (potgb *ProviderOrderTokenGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, potgb.build.ctx, ent.OpQueryGroupBy)
-	if err := potgb.build.prepareQuery(ctx); err != nil {
+func (_g *ProviderOrderTokenGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProviderOrderTokenQuery, *ProviderOrderTokenGroupBy](ctx, potgb.build, potgb, potgb.build.inters, v)
+	return scanWithInterceptors[*ProviderOrderTokenQuery, *ProviderOrderTokenGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (potgb *ProviderOrderTokenGroupBy) sqlScan(ctx context.Context, root *ProviderOrderTokenQuery, v any) error {
+func (_g *ProviderOrderTokenGroupBy) sqlScan(ctx context.Context, root *ProviderOrderTokenQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(potgb.fns))
-	for _, fn := range potgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*potgb.flds)+len(potgb.fns))
-		for _, f := range *potgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*potgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := potgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -729,27 +729,27 @@ type ProviderOrderTokenSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (pots *ProviderOrderTokenSelect) Aggregate(fns ...AggregateFunc) *ProviderOrderTokenSelect {
-	pots.fns = append(pots.fns, fns...)
-	return pots
+func (_s *ProviderOrderTokenSelect) Aggregate(fns ...AggregateFunc) *ProviderOrderTokenSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pots *ProviderOrderTokenSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pots.ctx, ent.OpQuerySelect)
-	if err := pots.prepareQuery(ctx); err != nil {
+func (_s *ProviderOrderTokenSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProviderOrderTokenQuery, *ProviderOrderTokenSelect](ctx, pots.ProviderOrderTokenQuery, pots, pots.inters, v)
+	return scanWithInterceptors[*ProviderOrderTokenQuery, *ProviderOrderTokenSelect](ctx, _s.ProviderOrderTokenQuery, _s, _s.inters, v)
 }
 
-func (pots *ProviderOrderTokenSelect) sqlScan(ctx context.Context, root *ProviderOrderTokenQuery, v any) error {
+func (_s *ProviderOrderTokenSelect) sqlScan(ctx context.Context, root *ProviderOrderTokenQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(pots.fns))
-	for _, fn := range pots.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*pots.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -757,7 +757,7 @@ func (pots *ProviderOrderTokenSelect) sqlScan(ctx context.Context, root *Provide
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pots.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

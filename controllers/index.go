@@ -23,13 +23,11 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
-	"github.com/paycrest/aggregator/ent/linkedaddress"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
@@ -72,6 +70,7 @@ type Controller struct {
 
 // NewController creates a new instance of AuthController with injected services
 func NewController() *Controller {
+
 	return &Controller{
 		orderService:          orderSvc.NewOrderEVM(),
 		priorityQueueService:  svc.NewPriorityQueueService(),
@@ -328,8 +327,8 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "Account name was fetched successfully", accountName)
 }
 
-// GetLockPaymentOrderStatus controller fetches a payment order status by ID
-func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
+// GetProviderOrderStatus controller fetches a payment order status by ID
+func (ctrl *Controller) GetProviderOrderStatus(ctx *gin.Context) {
 	// Get order and chain ID from the URL
 	orderID := ctx.Param("id")
 	chainID, err := strconv.ParseInt(ctx.Param("chain_id"), 10, 64)
@@ -339,11 +338,11 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	}
 
 	// Fetch related payment orders from the database
-	orders, err := storage.Client.LockPaymentOrder.
+	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.GatewayIDEQ(orderID),
-			lockpaymentorder.HasTokenWith(
+			paymentorder.GatewayIDEQ(orderID),
+			paymentorder.HasTokenWith(
 				tokenEnt.HasNetworkWith(
 					networkent.ChainIDEQ(chainID),
 				),
@@ -364,8 +363,8 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 		return
 	}
 
-	var settlements []types.LockPaymentOrderSplitOrder
-	var receipts []types.LockPaymentOrderTxReceipt
+	var settlements []types.PaymentOrderSplitOrder
+	var receipts []types.PaymentOrderTxReceipt
 	var settlePercent decimal.Decimal
 	var totalAmount decimal.Decimal
 	var totalAmountInUSD decimal.Decimal
@@ -373,13 +372,13 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	for _, order := range orders {
 		for _, transaction := range order.Edges.Transactions {
 			if u.ContainsString([]string{"order_settled", "order_created", "order_refunded"}, transaction.Status.String()) {
-				var status lockpaymentorder.Status
+				var status paymentorder.Status
 				if transaction.Status.String() == "order_created" {
-					status = lockpaymentorder.StatusPending
+					status = paymentorder.StatusPending
 				} else {
-					status = lockpaymentorder.Status(strings.TrimPrefix(transaction.Status.String(), "order_"))
+					status = paymentorder.Status(strings.TrimPrefix(transaction.Status.String(), "order_"))
 				}
-				receipts = append(receipts, types.LockPaymentOrderTxReceipt{
+				receipts = append(receipts, types.PaymentOrderTxReceipt{
 					Status:    status,
 					TxHash:    transaction.TxHash,
 					Timestamp: transaction.CreatedAt,
@@ -387,7 +386,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 			}
 		}
 
-		settlements = append(settlements, types.LockPaymentOrderSplitOrder{
+		settlements = append(settlements, types.PaymentOrderSplitOrder{
 			SplitOrderID: order.ID,
 			Amount:       order.Amount,
 			Rate:         order.Rate,
@@ -400,7 +399,7 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	}
 
 	// Sort receipts by latest timestamp
-	slices.SortStableFunc(receipts, func(a, b types.LockPaymentOrderTxReceipt) int {
+	slices.SortStableFunc(receipts, func(a, b types.PaymentOrderTxReceipt) int {
 		return b.Timestamp.Compare(a.Timestamp)
 	})
 
@@ -410,11 +409,11 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	}
 
 	status := orders[0].Status
-	if status == lockpaymentorder.StatusCancelled {
-		status = lockpaymentorder.StatusProcessing
+	if status == paymentorder.StatusCancelled {
+		status = paymentorder.StatusProcessing
 	}
 
-	response := &types.LockPaymentOrderStatusResponse{
+	response := &types.ProviderOrderStatusResponse{
 		OrderID:       orders[0].GatewayID,
 		Amount:        totalAmount,
 		AmountInUSD:   totalAmountInUSD,
@@ -429,230 +428,6 @@ func (ctrl *Controller) GetLockPaymentOrderStatus(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Order status fetched successfully", response)
-}
-
-// CreateLinkedAddress controller creates a new linked address
-func (ctrl *Controller) CreateLinkedAddress(ctx *gin.Context) {
-	var payload types.NewLinkedAddressRequest
-
-	if err := ctx.ShouldBindJSON(&payload); err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":             fmt.Sprintf("%v", err),
-			"Institution":       payload.Institution,
-			"AccountIdentifier": payload.AccountIdentifier,
-		}).Errorf("Failed to validate payload when creating linked address")
-		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Failed to validate payload", u.GetErrorData(err))
-		return
-	}
-
-	ownerAddress, _ := ctx.Get("owner_address")
-
-	// Generate smart account
-	address, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, "")
-	if err != nil {
-		logger.Errorf("Error: Failed to create linked address: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create linked address", nil)
-		return
-	}
-
-	// Create a new linked address
-	linkedAddress, err := storage.Client.LinkedAddress.
-		Create().
-		SetAddress(address).
-		SetInstitution(payload.Institution).
-		SetAccountIdentifier(payload.AccountIdentifier).
-		SetAccountName(payload.AccountName).
-		SetOwnerAddress(ownerAddress.(string)).
-		Save(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":        fmt.Sprintf("%v", err),
-			"Institution":  payload.Institution,
-			"OwnerAddress": ownerAddress,
-			"Address":      address,
-		}).Errorf("Failed to set linked address")
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create linked address", nil)
-		return
-	}
-
-	u.APIResponse(ctx, http.StatusOK, "success", "Linked address created successfully", &types.NewLinkedAddressResponse{
-		LinkedAddress:     linkedAddress.Address,
-		Institution:       linkedAddress.Institution,
-		AccountIdentifier: linkedAddress.AccountIdentifier,
-		AccountName:       linkedAddress.AccountName,
-		UpdatedAt:         linkedAddress.UpdatedAt,
-		CreatedAt:         linkedAddress.CreatedAt,
-	})
-}
-
-// GetLinkedAddress controller fetches a linked address
-func (ctrl *Controller) GetLinkedAddress(ctx *gin.Context) {
-	// Get owner address from the URL
-	owner_address := ctx.Query("owner_address")
-
-	linkedAddress, err := storage.Client.LinkedAddress.
-		Query().
-		Where(
-			linkedaddress.OwnerAddressEQ(owner_address),
-		).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Linked address not found", nil)
-			return
-		} else {
-			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"OwnerAddress": owner_address,
-			}).Errorf("Failed to fetch linked address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch linked address", nil)
-			return
-		}
-	}
-
-	institution, err := storage.Client.Institution.
-		Query().
-		Where(institution.CodeEQ(linkedAddress.Institution)).
-		WithFiatCurrency().
-		Only(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":                    fmt.Sprintf("%v", err),
-			"OwnerAddress":             owner_address,
-			"LinkedAddressInstitution": linkedAddress.Institution,
-		}).Errorf("Failed to fetch linked address")
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch linked address", nil)
-		return
-	}
-
-	ownerAddressFromAuth, _ := ctx.Get("owner_address")
-
-	response := &types.LinkedAddressResponse{
-		LinkedAddress: linkedAddress.Address,
-		Currency:      institution.Edges.FiatCurrency.Code,
-	}
-
-	if ownerAddressFromAuth != nil {
-		response.AccountIdentifier = linkedAddress.AccountIdentifier
-		response.AccountName = linkedAddress.AccountName
-		response.Institution = institution.Name
-	}
-
-	u.APIResponse(ctx, http.StatusOK, "success", "Linked address fetched successfully", response)
-}
-
-// GetLinkedAddressTransactions controller fetches transactions for a linked address
-func (ctrl *Controller) GetLinkedAddressTransactions(ctx *gin.Context) {
-	// Get linked address from the URL
-	linked_address := ctx.Param("linked_address")
-
-	linkedAddress, err := storage.Client.LinkedAddress.
-		Query().
-		Where(
-			linkedaddress.AddressEQ(linked_address),
-		).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Linked address not found", nil)
-			return
-		} else {
-			logger.WithFields(logger.Fields{
-				"Error":         fmt.Sprintf("%v", err),
-				"LinkedAddress": linked_address,
-			}).Errorf("Failed to fetch linked address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch linked address", nil)
-			return
-		}
-	}
-
-	// Get page and pageSize query params
-	page, offset, pageSize := u.Paginate(ctx)
-
-	// Fetch related transactions from the database
-	paymentOrderQuery := linkedAddress.QueryPaymentOrders()
-
-	count, err := paymentOrderQuery.Count(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":                     fmt.Sprintf("%v", err),
-			"LinkedAddress":             linked_address,
-			"LinkedAddressID":           linkedAddress.ID,
-			"LinkedAddressOwnerAddress": linkedAddress.OwnerAddress,
-		}).Errorf("Failed to count payment orders for linked address")
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch transactions", nil)
-		return
-	}
-
-	paymentOrders, err := paymentOrderQuery.
-		Limit(pageSize).
-		Offset(offset).
-		WithRecipient().
-		WithToken(func(tq *ent.TokenQuery) {
-			tq.WithNetwork()
-		}).
-		All(ctx)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":                     fmt.Sprintf("%v", err),
-			"LinkedAddress":             linked_address,
-			"LinkedAddressID":           linkedAddress.ID,
-			"LinkedAddressOwnerAddress": linkedAddress.OwnerAddress,
-		}).Errorf("Failed to fetch fetch payment orders for linked address")
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch transactions", nil)
-		return
-	}
-
-	orders := make([]types.LinkedAddressTransaction, 0, len(paymentOrders))
-
-	for _, paymentOrder := range paymentOrders {
-		institution, err := storage.Client.Institution.
-			Query().
-			Where(institution.CodeEQ(paymentOrder.Edges.Recipient.Institution)).
-			WithFiatCurrency().
-			Only(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":                     fmt.Sprintf("%v", err),
-				"LinkedAddress":             linked_address,
-				"LinkedAddressID":           linkedAddress.ID,
-				"LinkedAddressOwnerAddress": linkedAddress.OwnerAddress,
-				"PaymentOrderID":            paymentOrder.ID,
-			}).Errorf("Failed to get institution for linked address")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment orders", nil)
-			return
-		}
-
-		orders = append(orders, types.LinkedAddressTransaction{
-			ID:      paymentOrder.ID,
-			Amount:  paymentOrder.Amount,
-			Token:   paymentOrder.Edges.Token.Symbol,
-			Rate:    paymentOrder.Rate,
-			Network: paymentOrder.Edges.Token.Edges.Network.Identifier,
-			Recipient: types.LinkedAddressTransactionRecipient{
-				Currency:          institution.Edges.FiatCurrency.Code,
-				Institution:       institution.Name,
-				AccountIdentifier: paymentOrder.Edges.Recipient.AccountIdentifier,
-				AccountName:       paymentOrder.Edges.Recipient.AccountName,
-			},
-			FromAddress:   paymentOrder.FromAddress,
-			ReturnAddress: paymentOrder.ReturnAddress,
-			GatewayID:     paymentOrder.GatewayID,
-			TxHash:        paymentOrder.TxHash,
-			CreatedAt:     paymentOrder.CreatedAt,
-			UpdatedAt:     paymentOrder.UpdatedAt,
-			Status:        paymentOrder.Status,
-		})
-	}
-
-	u.APIResponse(ctx, http.StatusOK, "success", "Transactions fetched successfully", &types.LinkedAddressTransactionList{
-		Page:         page,
-		PageSize:     pageSize,
-		TotalRecords: count,
-		Transactions: orders,
-	})
-
 }
 
 // verifyWalletSignature verifies the Ethereum signature for wallet verification
@@ -2155,7 +1930,7 @@ func (ctrl *Controller) handleTransferEvent(ctx *gin.Context, event types.Thirdw
 		toAddress: transferEvent,
 	}
 
-	err = common.ProcessTransfers(ctx, ctrl.orderService, ctrl.priorityQueueService, []string{toAddress}, addressToEvent, token)
+	err = common.ProcessTransfers(ctx, ctrl.orderService, ctrl.priorityQueueService, []string{toAddress}, addressToEvent)
 	if err != nil {
 		return fmt.Errorf("failed to process transfer: %w", err)
 	}
@@ -2269,12 +2044,12 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx *gin.Context, event types.Th
 	}
 
 	// Process settled order using existing logic
-	lockOrder, err := storage.Client.LockPaymentOrder.
+	lockOrder, err := storage.Client.PaymentOrder.
 		Query().
-		Where(lockpaymentorder.GatewayIDEQ(settledEvent.OrderId)).
+		Where(paymentorder.GatewayIDEQ(settledEvent.OrderId)).
 		Only(ctx)
 	if err != nil {
-		return fmt.Errorf("lock payment order not found: %w", err)
+		return fmt.Errorf("payment order not found: %w", err)
 	}
 
 	err = common.UpdateOrderStatusSettled(ctx, network, settledEvent, lockOrder.MessageHash)
@@ -2328,12 +2103,12 @@ func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.T
 	}
 
 	// Process refunded order using existing logic
-	lockOrder, err := storage.Client.LockPaymentOrder.
+	lockOrder, err := storage.Client.PaymentOrder.
 		Query().
-		Where(lockpaymentorder.GatewayIDEQ(refundedEvent.OrderId)).
+		Where(paymentorder.GatewayIDEQ(refundedEvent.OrderId)).
 		Only(ctx)
 	if err != nil {
-		return fmt.Errorf("lock payment order not found: %w", err)
+		return fmt.Errorf("payment order not found: %w", err)
 	}
 
 	err = common.UpdateOrderStatusRefunded(ctx, network, refundedEvent, lockOrder.MessageHash)
@@ -2351,32 +2126,16 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 
 	// Get the second path param, which can be a tx_hash or an address
 	pathParam := ctx.Param("tx_hash_or_address")
+	
+	// Validate that pathParam is a valid tx_hash or address
+	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash or address", nil)
+		return
+	}
 
 	// Get optional parameters from query string
 	fromBlockStr := ctx.Query("from_block")
 	toBlockStr := ctx.Query("to_block")
-
-	// Determine if pathParam is a tx_hash or address based on length
-	var txHash, address string
-	if pathParam != "" && strings.HasPrefix(pathParam, "0x") {
-		if len(pathParam) == 66 {
-			txHash = pathParam
-		} else if len(pathParam) == 42 {
-			address = pathParam
-		}
-	}
-
-	// Validate that pathParam is a valid tx_hash or address
-	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash (66 chars) or address (42 chars)", nil)
-		return
-	}
-
-	// Validate that at least one indexing method is provided
-	if txHash == "" && address == "" && (fromBlockStr == "" || toBlockStr == "") {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Must provide either a valid transaction hash, address, or from_block/to_block range", nil)
-		return
-	}
 
 	// Parse block range if provided
 	var fromBlock, toBlock int64
@@ -2432,7 +2191,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 			).
 			Only(ctx)
 	}
-
+	
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found or not supported for current environment", nil)
@@ -2446,11 +2205,45 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 		return
 	}
 
+	// Determine if pathParam is a tx_hash or address based on length
+	var txHash, address string
+	if pathParam != "" && strings.HasPrefix(pathParam, "0x") {
+		if strings.HasPrefix(network.Identifier, "starknet") {
+			if len(pathParam) == 65 {
+				txHash = pathParam
+			} else if len(pathParam) == 66 {
+				address = pathParam
+			}
+		} else {
+			if len(pathParam) == 66 {
+				txHash = pathParam
+			} else if len(pathParam) == 42 {
+				address = pathParam
+			}
+		}
+	}
+
+	// Validate that at least one indexing method is provided
+	if txHash == "" && address == "" && (fromBlockStr == "" || toBlockStr == "") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Must provide either a valid transaction hash, address, or from_block/to_block range", nil)
+		return
+	}
+
 	// Create indexer instance based on network type
 	var indexerInstance types.Indexer
 	var indexerErr error
 	if strings.HasPrefix(network.Identifier, "tron") {
 		indexerInstance = indexer.NewIndexerTron()
+	} else if strings.HasPrefix(network.Identifier, "starknet") {
+		indexerInstance, indexerErr = indexer.NewIndexerStarknet()
+		if indexerErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":        fmt.Sprintf("%v", indexerErr),
+				"NetworkParam": networkParam,
+			}).Errorf("Failed to create Starknet indexer")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
+			return
+		}
 	} else {
 		indexerInstance, indexerErr = indexer.NewIndexerEVM()
 		if indexerErr != nil {
@@ -2599,16 +2392,16 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 			}()
 		} else {
 			// Check if the address is a receive address in the database
-			receiveAddress, err := storage.Client.ReceiveAddress.
+			paymentOrder, err := storage.Client.PaymentOrder.
 				Query().
-				Where(receiveaddress.AddressEQ(address)).
+				Where(paymentorder.ReceiveAddressEQ(address)).
 				First(ctx)
 
-			if err == nil && receiveAddress != nil {
+			if err == nil && paymentOrder != nil {
 				logger.WithFields(logger.Fields{
-					"NetworkParam":     networkParam,
-					"Address":          address,
-					"ReceiveAddressID": receiveAddress.ID,
+					"NetworkParam":   networkParam,
+					"Address":        address,
+					"PaymentOrderID": paymentOrder.ID,
 				}).Infof("Found receive address in database, starting transfer event indexing")
 
 				// This is a receive address, index transfer events
@@ -2773,11 +2566,24 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 	var indexerInstance types.Indexer
 	if strings.HasPrefix(network.Identifier, "tron") {
 		indexerInstance = indexer.NewIndexerTron()
+	} else if strings.HasPrefix(network.Identifier, "starknet") {
+		indexerInstance, err = indexer.NewIndexerStarknet()
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Network": network.Identifier,
+			}).Errorf("Failed to create Starknet indexer")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
+			return
+		}
 	} else {
 		indexerInstance, err = indexer.NewIndexerEVM()
 		if err != nil {
-			logger.Errorf("Failed to create indexer: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create indexer", nil)
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Network": network.Identifier,
+			}).Errorf("Failed to create EVM indexer")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
 			return
 		}
 	}

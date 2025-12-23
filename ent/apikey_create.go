@@ -27,92 +27,92 @@ type APIKeyCreate struct {
 }
 
 // SetSecret sets the "secret" field.
-func (akc *APIKeyCreate) SetSecret(s string) *APIKeyCreate {
-	akc.mutation.SetSecret(s)
-	return akc
+func (_c *APIKeyCreate) SetSecret(v string) *APIKeyCreate {
+	_c.mutation.SetSecret(v)
+	return _c
 }
 
 // SetID sets the "id" field.
-func (akc *APIKeyCreate) SetID(u uuid.UUID) *APIKeyCreate {
-	akc.mutation.SetID(u)
-	return akc
+func (_c *APIKeyCreate) SetID(v uuid.UUID) *APIKeyCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (akc *APIKeyCreate) SetNillableID(u *uuid.UUID) *APIKeyCreate {
-	if u != nil {
-		akc.SetID(*u)
+func (_c *APIKeyCreate) SetNillableID(v *uuid.UUID) *APIKeyCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return akc
+	return _c
 }
 
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
-func (akc *APIKeyCreate) SetSenderProfileID(id uuid.UUID) *APIKeyCreate {
-	akc.mutation.SetSenderProfileID(id)
-	return akc
+func (_c *APIKeyCreate) SetSenderProfileID(id uuid.UUID) *APIKeyCreate {
+	_c.mutation.SetSenderProfileID(id)
+	return _c
 }
 
 // SetNillableSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID if the given value is not nil.
-func (akc *APIKeyCreate) SetNillableSenderProfileID(id *uuid.UUID) *APIKeyCreate {
+func (_c *APIKeyCreate) SetNillableSenderProfileID(id *uuid.UUID) *APIKeyCreate {
 	if id != nil {
-		akc = akc.SetSenderProfileID(*id)
+		_c = _c.SetSenderProfileID(*id)
 	}
-	return akc
+	return _c
 }
 
 // SetSenderProfile sets the "sender_profile" edge to the SenderProfile entity.
-func (akc *APIKeyCreate) SetSenderProfile(s *SenderProfile) *APIKeyCreate {
-	return akc.SetSenderProfileID(s.ID)
+func (_c *APIKeyCreate) SetSenderProfile(v *SenderProfile) *APIKeyCreate {
+	return _c.SetSenderProfileID(v.ID)
 }
 
 // SetProviderProfileID sets the "provider_profile" edge to the ProviderProfile entity by ID.
-func (akc *APIKeyCreate) SetProviderProfileID(id string) *APIKeyCreate {
-	akc.mutation.SetProviderProfileID(id)
-	return akc
+func (_c *APIKeyCreate) SetProviderProfileID(id string) *APIKeyCreate {
+	_c.mutation.SetProviderProfileID(id)
+	return _c
 }
 
 // SetNillableProviderProfileID sets the "provider_profile" edge to the ProviderProfile entity by ID if the given value is not nil.
-func (akc *APIKeyCreate) SetNillableProviderProfileID(id *string) *APIKeyCreate {
+func (_c *APIKeyCreate) SetNillableProviderProfileID(id *string) *APIKeyCreate {
 	if id != nil {
-		akc = akc.SetProviderProfileID(*id)
+		_c = _c.SetProviderProfileID(*id)
 	}
-	return akc
+	return _c
 }
 
 // SetProviderProfile sets the "provider_profile" edge to the ProviderProfile entity.
-func (akc *APIKeyCreate) SetProviderProfile(p *ProviderProfile) *APIKeyCreate {
-	return akc.SetProviderProfileID(p.ID)
+func (_c *APIKeyCreate) SetProviderProfile(v *ProviderProfile) *APIKeyCreate {
+	return _c.SetProviderProfileID(v.ID)
 }
 
 // AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (akc *APIKeyCreate) AddPaymentOrderIDs(ids ...uuid.UUID) *APIKeyCreate {
-	akc.mutation.AddPaymentOrderIDs(ids...)
-	return akc
+func (_c *APIKeyCreate) AddPaymentOrderIDs(ids ...uuid.UUID) *APIKeyCreate {
+	_c.mutation.AddPaymentOrderIDs(ids...)
+	return _c
 }
 
 // AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (akc *APIKeyCreate) AddPaymentOrders(p ...*PaymentOrder) *APIKeyCreate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+func (_c *APIKeyCreate) AddPaymentOrders(v ...*PaymentOrder) *APIKeyCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return akc.AddPaymentOrderIDs(ids...)
+	return _c.AddPaymentOrderIDs(ids...)
 }
 
 // Mutation returns the APIKeyMutation object of the builder.
-func (akc *APIKeyCreate) Mutation() *APIKeyMutation {
-	return akc.mutation
+func (_c *APIKeyCreate) Mutation() *APIKeyMutation {
+	return _c.mutation
 }
 
 // Save creates the APIKey in the database.
-func (akc *APIKeyCreate) Save(ctx context.Context) (*APIKey, error) {
-	akc.defaults()
-	return withHooks(ctx, akc.sqlSave, akc.mutation, akc.hooks)
+func (_c *APIKeyCreate) Save(ctx context.Context) (*APIKey, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (akc *APIKeyCreate) SaveX(ctx context.Context) *APIKey {
-	v, err := akc.Save(ctx)
+func (_c *APIKeyCreate) SaveX(ctx context.Context) *APIKey {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -120,32 +120,32 @@ func (akc *APIKeyCreate) SaveX(ctx context.Context) *APIKey {
 }
 
 // Exec executes the query.
-func (akc *APIKeyCreate) Exec(ctx context.Context) error {
-	_, err := akc.Save(ctx)
+func (_c *APIKeyCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (akc *APIKeyCreate) ExecX(ctx context.Context) {
-	if err := akc.Exec(ctx); err != nil {
+func (_c *APIKeyCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (akc *APIKeyCreate) defaults() {
-	if _, ok := akc.mutation.ID(); !ok {
+func (_c *APIKeyCreate) defaults() {
+	if _, ok := _c.mutation.ID(); !ok {
 		v := apikey.DefaultID()
-		akc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (akc *APIKeyCreate) check() error {
-	if _, ok := akc.mutation.Secret(); !ok {
+func (_c *APIKeyCreate) check() error {
+	if _, ok := _c.mutation.Secret(); !ok {
 		return &ValidationError{Name: "secret", err: errors.New(`ent: missing required field "APIKey.secret"`)}
 	}
-	if v, ok := akc.mutation.Secret(); ok {
+	if v, ok := _c.mutation.Secret(); ok {
 		if err := apikey.SecretValidator(v); err != nil {
 			return &ValidationError{Name: "secret", err: fmt.Errorf(`ent: validator failed for field "APIKey.secret": %w`, err)}
 		}
@@ -153,12 +153,12 @@ func (akc *APIKeyCreate) check() error {
 	return nil
 }
 
-func (akc *APIKeyCreate) sqlSave(ctx context.Context) (*APIKey, error) {
-	if err := akc.check(); err != nil {
+func (_c *APIKeyCreate) sqlSave(ctx context.Context) (*APIKey, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := akc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, akc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -171,26 +171,26 @@ func (akc *APIKeyCreate) sqlSave(ctx context.Context) (*APIKey, error) {
 			return nil, err
 		}
 	}
-	akc.mutation.id = &_node.ID
-	akc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (akc *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
+func (_c *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
 	var (
-		_node = &APIKey{config: akc.config}
+		_node = &APIKey{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(apikey.Table, sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = akc.conflict
-	if id, ok := akc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := akc.mutation.Secret(); ok {
+	if value, ok := _c.mutation.Secret(); ok {
 		_spec.SetField(apikey.FieldSecret, field.TypeString, value)
 		_node.Secret = value
 	}
-	if nodes := akc.mutation.SenderProfileIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -207,7 +207,7 @@ func (akc *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
 		_node.sender_profile_api_key = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := akc.mutation.ProviderProfileIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -224,7 +224,7 @@ func (akc *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
 		_node.provider_profile_api_key = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := akc.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -259,10 +259,10 @@ func (akc *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
 //			SetSecret(v+v).
 //		}).
 //		Exec(ctx)
-func (akc *APIKeyCreate) OnConflict(opts ...sql.ConflictOption) *APIKeyUpsertOne {
-	akc.conflict = opts
+func (_c *APIKeyCreate) OnConflict(opts ...sql.ConflictOption) *APIKeyUpsertOne {
+	_c.conflict = opts
 	return &APIKeyUpsertOne{
-		create: akc,
+		create: _c,
 	}
 }
 
@@ -272,10 +272,10 @@ func (akc *APIKeyCreate) OnConflict(opts ...sql.ConflictOption) *APIKeyUpsertOne
 //	client.APIKey.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (akc *APIKeyCreate) OnConflictColumns(columns ...string) *APIKeyUpsertOne {
-	akc.conflict = append(akc.conflict, sql.ConflictColumns(columns...))
+func (_c *APIKeyCreate) OnConflictColumns(columns ...string) *APIKeyUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &APIKeyUpsertOne{
-		create: akc,
+		create: _c,
 	}
 }
 
@@ -413,16 +413,16 @@ type APIKeyCreateBulk struct {
 }
 
 // Save creates the APIKey entities in the database.
-func (akcb *APIKeyCreateBulk) Save(ctx context.Context) ([]*APIKey, error) {
-	if akcb.err != nil {
-		return nil, akcb.err
+func (_c *APIKeyCreateBulk) Save(ctx context.Context) ([]*APIKey, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(akcb.builders))
-	nodes := make([]*APIKey, len(akcb.builders))
-	mutators := make([]Mutator, len(akcb.builders))
-	for i := range akcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*APIKey, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := akcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*APIKeyMutation)
@@ -436,12 +436,12 @@ func (akcb *APIKeyCreateBulk) Save(ctx context.Context) ([]*APIKey, error) {
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, akcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = akcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, akcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -461,7 +461,7 @@ func (akcb *APIKeyCreateBulk) Save(ctx context.Context) ([]*APIKey, error) {
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, akcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -469,8 +469,8 @@ func (akcb *APIKeyCreateBulk) Save(ctx context.Context) ([]*APIKey, error) {
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (akcb *APIKeyCreateBulk) SaveX(ctx context.Context) []*APIKey {
-	v, err := akcb.Save(ctx)
+func (_c *APIKeyCreateBulk) SaveX(ctx context.Context) []*APIKey {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -478,14 +478,14 @@ func (akcb *APIKeyCreateBulk) SaveX(ctx context.Context) []*APIKey {
 }
 
 // Exec executes the query.
-func (akcb *APIKeyCreateBulk) Exec(ctx context.Context) error {
-	_, err := akcb.Save(ctx)
+func (_c *APIKeyCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (akcb *APIKeyCreateBulk) ExecX(ctx context.Context) {
-	if err := akcb.Exec(ctx); err != nil {
+func (_c *APIKeyCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -505,10 +505,10 @@ func (akcb *APIKeyCreateBulk) ExecX(ctx context.Context) {
 //			SetSecret(v+v).
 //		}).
 //		Exec(ctx)
-func (akcb *APIKeyCreateBulk) OnConflict(opts ...sql.ConflictOption) *APIKeyUpsertBulk {
-	akcb.conflict = opts
+func (_c *APIKeyCreateBulk) OnConflict(opts ...sql.ConflictOption) *APIKeyUpsertBulk {
+	_c.conflict = opts
 	return &APIKeyUpsertBulk{
-		create: akcb,
+		create: _c,
 	}
 }
 
@@ -518,10 +518,10 @@ func (akcb *APIKeyCreateBulk) OnConflict(opts ...sql.ConflictOption) *APIKeyUpse
 //	client.APIKey.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (akcb *APIKeyCreateBulk) OnConflictColumns(columns ...string) *APIKeyUpsertBulk {
-	akcb.conflict = append(akcb.conflict, sql.ConflictColumns(columns...))
+func (_c *APIKeyCreateBulk) OnConflictColumns(columns ...string) *APIKeyUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &APIKeyUpsertBulk{
-		create: akcb,
+		create: _c,
 	}
 }
 

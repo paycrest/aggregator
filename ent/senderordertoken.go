@@ -100,7 +100,7 @@ func (*SenderOrderToken) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the SenderOrderToken fields.
-func (sot *SenderOrderToken) assignValues(columns []string, values []any) error {
+func (_m *SenderOrderToken) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -111,59 +111,59 @@ func (sot *SenderOrderToken) assignValues(columns []string, values []any) error 
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			sot.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case senderordertoken.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				sot.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case senderordertoken.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				sot.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case senderordertoken.FieldFeePercent:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field fee_percent", values[i])
 			} else if value != nil {
-				sot.FeePercent = *value
+				_m.FeePercent = *value
 			}
 		case senderordertoken.FieldMaxFeeCap:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field max_fee_cap", values[i])
 			} else if value != nil {
-				sot.MaxFeeCap = *value
+				_m.MaxFeeCap = *value
 			}
 		case senderordertoken.FieldFeeAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field fee_address", values[i])
 			} else if value.Valid {
-				sot.FeeAddress = value.String
+				_m.FeeAddress = value.String
 			}
 		case senderordertoken.FieldRefundAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field refund_address", values[i])
 			} else if value.Valid {
-				sot.RefundAddress = value.String
+				_m.RefundAddress = value.String
 			}
 		case senderordertoken.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field sender_profile_order_tokens", values[i])
 			} else if value.Valid {
-				sot.sender_profile_order_tokens = new(uuid.UUID)
-				*sot.sender_profile_order_tokens = *value.S.(*uuid.UUID)
+				_m.sender_profile_order_tokens = new(uuid.UUID)
+				*_m.sender_profile_order_tokens = *value.S.(*uuid.UUID)
 			}
 		case senderordertoken.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field token_sender_order_tokens", value)
 			} else if value.Valid {
-				sot.token_sender_order_tokens = new(int)
-				*sot.token_sender_order_tokens = int(value.Int64)
+				_m.token_sender_order_tokens = new(int)
+				*_m.token_sender_order_tokens = int(value.Int64)
 			}
 		default:
-			sot.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -171,60 +171,60 @@ func (sot *SenderOrderToken) assignValues(columns []string, values []any) error 
 
 // Value returns the ent.Value that was dynamically selected and assigned to the SenderOrderToken.
 // This includes values selected through modifiers, order, etc.
-func (sot *SenderOrderToken) Value(name string) (ent.Value, error) {
-	return sot.selectValues.Get(name)
+func (_m *SenderOrderToken) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QuerySender queries the "sender" edge of the SenderOrderToken entity.
-func (sot *SenderOrderToken) QuerySender() *SenderProfileQuery {
-	return NewSenderOrderTokenClient(sot.config).QuerySender(sot)
+func (_m *SenderOrderToken) QuerySender() *SenderProfileQuery {
+	return NewSenderOrderTokenClient(_m.config).QuerySender(_m)
 }
 
 // QueryToken queries the "token" edge of the SenderOrderToken entity.
-func (sot *SenderOrderToken) QueryToken() *TokenQuery {
-	return NewSenderOrderTokenClient(sot.config).QueryToken(sot)
+func (_m *SenderOrderToken) QueryToken() *TokenQuery {
+	return NewSenderOrderTokenClient(_m.config).QueryToken(_m)
 }
 
 // Update returns a builder for updating this SenderOrderToken.
 // Note that you need to call SenderOrderToken.Unwrap() before calling this method if this SenderOrderToken
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (sot *SenderOrderToken) Update() *SenderOrderTokenUpdateOne {
-	return NewSenderOrderTokenClient(sot.config).UpdateOne(sot)
+func (_m *SenderOrderToken) Update() *SenderOrderTokenUpdateOne {
+	return NewSenderOrderTokenClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the SenderOrderToken entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (sot *SenderOrderToken) Unwrap() *SenderOrderToken {
-	_tx, ok := sot.config.driver.(*txDriver)
+func (_m *SenderOrderToken) Unwrap() *SenderOrderToken {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: SenderOrderToken is not a transactional entity")
 	}
-	sot.config.driver = _tx.drv
-	return sot
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (sot *SenderOrderToken) String() string {
+func (_m *SenderOrderToken) String() string {
 	var builder strings.Builder
 	builder.WriteString("SenderOrderToken(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", sot.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(sot.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(sot.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("fee_percent=")
-	builder.WriteString(fmt.Sprintf("%v", sot.FeePercent))
+	builder.WriteString(fmt.Sprintf("%v", _m.FeePercent))
 	builder.WriteString(", ")
 	builder.WriteString("max_fee_cap=")
-	builder.WriteString(fmt.Sprintf("%v", sot.MaxFeeCap))
+	builder.WriteString(fmt.Sprintf("%v", _m.MaxFeeCap))
 	builder.WriteString(", ")
 	builder.WriteString("fee_address=")
-	builder.WriteString(sot.FeeAddress)
+	builder.WriteString(_m.FeeAddress)
 	builder.WriteString(", ")
 	builder.WriteString("refund_address=")
-	builder.WriteString(sot.RefundAddress)
+	builder.WriteString(_m.RefundAddress)
 	builder.WriteByte(')')
 	return builder.String()
 }

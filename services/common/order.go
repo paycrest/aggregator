@@ -14,14 +14,12 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providercurrencies"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
-	"github.com/paycrest/aggregator/ent/receiveaddress"
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
@@ -41,494 +39,194 @@ var (
 	orderConf  = config.OrderConfig()
 )
 
-// CreateLockPaymentOrder saves a lock payment order in the database
-func CreateLockPaymentOrder(
+// ProcessPaymentOrderFromBlockchain processes a payment order from blockchain event.
+// It either creates a new order or updates an existing API-created order (with messageHash but no gatewayID)
+// with on-chain details when the OrderCreatedEvent is indexed.
+func ProcessPaymentOrderFromBlockchain(
 	ctx context.Context,
 	network *ent.Network,
 	event *types.OrderCreatedEvent,
 	refundOrder func(context.Context, *ent.Network, string) error,
-	assignLockPaymentOrder func(context.Context, types.LockPaymentOrderFields) error,
+	assignPaymentOrder func(context.Context, types.PaymentOrderFields) error,
 ) error {
-	// Check for existing address with txHash
-	orderCount, err := db.Client.LockPaymentOrder.
+	// Check if order already exists with gatewayID (already indexed from blockchain)
+	existingOrderWithGatewayID, err := db.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.Or(
-				lockpaymentorder.TxHashEQ(event.TxHash),
-				lockpaymentorder.MessageHashEQ(event.MessageHash),
-				lockpaymentorder.GatewayIDEQ(event.OrderId),
-			),
-			lockpaymentorder.HasTokenWith(
-				tokenent.HasNetworkWith(
-					networkent.IdentifierEQ(network.Identifier),
-				),
-			),
-		).
-		Count(ctx)
-	if err != nil {
-		return fmt.Errorf("CreateLockPaymentOrder.db: %v", err)
-	}
-
-	if orderCount > 0 {
-		// This transfer has already been indexed
-		return nil
-	}
-
-	// Fetch PaymentOrder synchronously once (for orderType determination and async update)
-	var paymentOrder *ent.PaymentOrder
-	var paymentOrderErr error
-
-	// Update payment order with the gateway ID asynchronously
-	// This ensures the payment order is updated without blocking the main flow
-	go func() {
-		// Retry loop to wait for payment order to be created if blockchain event is indexed first
-		maxRetries := 30
-		retryDelay := 500 * time.Millisecond
-
-		err := utils.Retry(maxRetries, retryDelay, func() error {
-			// Use local variables to avoid data race with main flow
-			localPaymentOrder, localErr := db.Client.PaymentOrder.
-				Query().
-				Where(
-					paymentorder.MessageHashEQ(event.MessageHash),
-				).
-				Only(ctx)
-			if localErr != nil {
-				if ent.IsNotFound(localErr) {
-					return localErr // Return error to trigger retry
-				} else {
-					// Other error occurred, log and return error to trigger retry
-					logger.WithFields(logger.Fields{
-						"MessageHash": event.MessageHash,
-						"TxHash":      event.TxHash,
-						"Error":       localErr.Error(),
-					}).Errorf("Failed to fetch payment order")
-					return localErr
-				}
-			}
-
-			// Payment order found, update it
-			_, updateErr := db.Client.PaymentOrder.
-				Update().
-				Where(paymentorder.IDEQ(localPaymentOrder.ID)).
-				SetTxHash(event.TxHash).
-				SetBlockNumber(int64(event.BlockNumber)).
-				SetGatewayID(event.OrderId).
-				SetStatus(paymentorder.StatusPending).
-				Save(ctx)
-			if updateErr != nil {
-				logger.Errorf("Failed to update payment order: %v", updateErr)
-			} else {
-				// Refetch the updated payment order for webhook
-				updatedPaymentOrder, fetchErr := db.Client.PaymentOrder.
-					Query().
-					Where(paymentorder.IDEQ(localPaymentOrder.ID)).
-					WithSenderProfile().
-					Only(ctx)
-				if fetchErr != nil {
-					logger.WithFields(logger.Fields{
-						"OrderID": localPaymentOrder.ID,
-						"Error":   fetchErr.Error(),
-					}).Errorf("Failed to refetch payment order for webhook")
-				} else {
-					// Send webhook notification to sender
-					err = utils.SendPaymentOrderWebhook(ctx, updatedPaymentOrder)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"OrderID":  updatedPaymentOrder.ID,
-							"SenderID": updatedPaymentOrder.Edges.SenderProfile.ID,
-							"Error":    err.Error(),
-						}).Errorf("Failed to send payment order webhook")
-					}
-				}
-			}
-
-			return nil // Success, no retry needed
-		})
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"MessageHash": event.MessageHash,
-				"MaxRetries":  maxRetries,
-			}).Warnf("Payment order not found after %d attempts, continuing without payment order update", maxRetries)
-		}
-	}()
-
-	// Get token from db
-	token, err := db.Client.Token.
-		Query().
-		Where(
-			tokenent.ContractAddressEQ(event.Token),
-			tokenent.HasNetworkWith(
-				networkent.IDEQ(network.ID),
-			),
-		).
-		WithNetwork().
-		Only(ctx)
-	if err != nil {
-		return createBasicLockPaymentOrderAndCancel(ctx, event, network, nil, nil, "Token lookup failed", refundOrder)
-	}
-
-	// Get order recipient from message hash
-	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
-	if err != nil {
-		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, nil, "Message hash decryption failed", refundOrder)
-	}
-
-	// Get provision bucket
-	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
-	if err != nil {
-		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Institution lookup failed", refundOrder)
-	}
-
-	currency, err := db.Client.FiatCurrency.
-		Query().
-		Where(
-			fiatcurrency.IsEnabledEQ(true),
-			fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
-		).
-		Only(ctx)
-	if err != nil {
-		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Currency lookup failed", refundOrder)
-	}
-
-	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
-	event.ProtocolFee = event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
-
-	provisionBucket, isLessThanMin, err := GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":    fmt.Sprintf("%v", err),
-			"Amount":   event.Amount,
-			"Currency": currency,
-		}).Errorf("failed to fetch provision bucket when creating lock payment order")
-
-		return createBasicLockPaymentOrderAndCancel(ctx, event, network, token, recipient, "Provision bucket lookup failed", refundOrder)
-	}
-
-	// Create lock payment order fields
-	lockPaymentOrder := types.LockPaymentOrderFields{
-		Token:             token,
-		Network:           network,
-		GatewayID:         event.OrderId,
-		Amount:            event.Amount,
-		Rate:              event.Rate,
-		ProtocolFee:       event.ProtocolFee,
-		AmountInUSD:       utils.CalculatePaymentOrderAmountInUSD(event.Amount, token, institution),
-		BlockNumber:       int64(event.BlockNumber),
-		TxHash:            event.TxHash,
-		Institution:       recipient.Institution,
-		AccountIdentifier: recipient.AccountIdentifier,
-		AccountName:       recipient.AccountName,
-		Sender:            event.Sender,
-		ProviderID:        recipient.ProviderID,
-		Memo:              recipient.Memo,
-		MessageHash:       event.MessageHash,
-		Metadata:          recipient.Metadata,
-		ProvisionBucket:   provisionBucket,
-		OrderType:         "regular",
-	}
-
-	if isLessThanMin {
-		err := HandleCancellation(ctx, nil, &lockPaymentOrder, "Amount is less than the minimum bucket", refundOrder)
-		if err != nil {
-			return fmt.Errorf("failed to handle cancellation: %w", err)
-		}
-		return nil
-	}
-
-	// Determine order type - always validate rate to ensure we're working with current rates, limits, and provider availability
-	// This is important because there may be a delay between order creation and indexing, during which rates/limits may have changed
-	var rateResult utils.RateValidationResult
-	paymentOrder, paymentOrderErr = db.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.MessageHashEQ(event.MessageHash),
-		).
-		Only(ctx)
-	rateResult, rateErr := utils.ValidateRate(
-		ctx,
-		token,
-		currency,
-		event.Amount,
-		lockPaymentOrder.ProviderID,
-		token.Edges.Network.Identifier,
-	)
-
-	if rateResult.Rate == decimal.NewFromInt(1) && lockPaymentOrder.Rate != decimal.NewFromInt(1) {
-		// Rate validation failed - cancel the order
-		err := HandleCancellation(ctx, nil, &lockPaymentOrder, "Rate validation failed", refundOrder)
-		if err != nil {
-			return fmt.Errorf("failed to handle cancellation: %w", err)
-		}
-		return nil
-	}
-
-	if rateErr != nil {
-		// Rate validation failed - cancel the order
-		err := HandleCancellation(ctx, nil, &lockPaymentOrder, fmt.Sprintf("Rate validation failed: %s", rateErr.Error()), refundOrder)
-		if err != nil {
-			return fmt.Errorf("failed to handle cancellation: %w", err)
-		}
-		return nil
-	}
-
-	// Check if event rate is within 0.1% tolerance of validated rate
-	tolerance := rateResult.Rate.Mul(decimal.NewFromFloat(0.001)) // 0.1% tolerance
-	rateDiff := event.Rate.Sub(rateResult.Rate).Abs()
-
-	if rateDiff.GreaterThan(tolerance) {
-		// Rate is outside tolerance - cancel the order
-		err := HandleCancellation(ctx, nil, &lockPaymentOrder, "Rate validation failed", refundOrder)
-		if err != nil {
-			return fmt.Errorf("failed to handle cancellation: %w", err)
-		}
-		return nil
-	}
-
-	// Use order type from ValidateRate result (always use current validation)
-	lockPaymentOrder.OrderType = rateResult.OrderType.String()
-
-	// If PaymentOrder exists, log a warning if order type differs (for debugging)
-	if paymentOrderErr == nil && paymentOrder != nil {
-		if paymentOrder.OrderType.String() != lockPaymentOrder.OrderType {
-			logger.WithFields(logger.Fields{
-				"MessageHash":      event.MessageHash,
-				"PaymentOrderType": paymentOrder.OrderType.String(),
-				"ValidatedType":    lockPaymentOrder.OrderType,
-			}).Warnf("Order type changed between PaymentOrder creation and indexing")
-		}
-	}
-
-	// If order type is OTC, set provider ID from rate result
-	if lockPaymentOrder.OrderType == "otc" && rateResult.ProviderID != "" {
-		lockPaymentOrder.ProviderID = rateResult.ProviderID
-	}
-
-	// Handle private order checks
-	isPrivate := false
-	if lockPaymentOrder.ProviderID != "" {
-		orderToken, err := db.Client.ProviderOrderToken.
-			Query().
-			Where(
-				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
-				providerordertoken.HasProviderWith(
-					providerprofile.IDEQ(lockPaymentOrder.ProviderID),
-					providerprofile.HasProviderCurrenciesWith(
-						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
-						providercurrencies.IsAvailableEQ(true),
-					),
-					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
-				),
-				providerordertoken.HasTokenWith(tokenent.IDEQ(token.ID)),
-				providerordertoken.HasCurrencyWith(
-					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
-				),
-				providerordertoken.AddressNEQ(""),
-			).
-			WithProvider().
-			Only(ctx)
-		if err != nil {
-			if ent.IsNotFound(err) {
-				// Provider could not be available for several reasons
-				// 1. Provider is not available
-				// 2. Provider does not support the token
-				// 3. Provider does not support the network
-				// 4. Provider does not support the currency
-				// 5. Provider have not configured a settlement address for the network
-				_ = HandleCancellation(ctx, nil, &lockPaymentOrder, "Provider not available", refundOrder)
-				return nil
-			} else {
-				return fmt.Errorf("%s - failed to fetch provider: %w", lockPaymentOrder.GatewayID, err)
-			}
-		}
-
-		// Check if provider is private - private orders don't require provision buckets
-		if orderToken != nil && orderToken.Edges.Provider != nil && orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
-			isPrivate = true
-		}
-	}
-
-	if provisionBucket == nil && !isPrivate {
-		// TODO: Activate this when split order is tested and working
-		// Split lock payment order into multiple orders
-		// err = s.splitLockPaymentOrder(
-		// 	ctx, client, lockPaymentOrder, currency,
-		// )
-		// if err != nil {
-		// 	return fmt.Errorf("%s - failed to split lock payment order: %w", lockPaymentOrder.GatewayID, err)
-		// }
-
-		err = HandleCancellation(ctx, nil, &lockPaymentOrder, "Amount is larger than the maximum bucket", refundOrder)
-		if err != nil {
-			return fmt.Errorf("failed to handle cancellation: %w", err)
-		}
-		return nil
-	} else {
-		// Create LockPaymentOrder and recipient in a transaction
-		tx, err := db.Client.Tx(ctx)
-		if err != nil {
-			return fmt.Errorf("%s failed to initiate db transaction %w", lockPaymentOrder.GatewayID, err)
-		}
-
-		var transactionLog *ent.TransactionLog
-		_, err = tx.TransactionLog.
-			Query().
-			Where(
-				transactionlog.StatusEQ(transactionlog.StatusOrderCreated),
-				transactionlog.TxHashEQ(lockPaymentOrder.TxHash),
-				transactionlog.GatewayIDEQ(lockPaymentOrder.GatewayID),
-			).
-			Only(ctx)
-		if err != nil {
-			if !ent.IsNotFound(err) {
-				return fmt.Errorf("%s - failed to fetch transaction Log: %w", lockPaymentOrder.GatewayID, err)
-			} else {
-				transactionLog, err = tx.TransactionLog.
-					Create().
-					SetStatus(transactionlog.StatusOrderCreated).
-					SetTxHash(lockPaymentOrder.TxHash).
-					SetNetwork(network.Identifier).
-					SetGatewayID(lockPaymentOrder.GatewayID).
-					SetMetadata(
-						map[string]interface{}{
-							"Token":           lockPaymentOrder.Token,
-							"GatewayID":       lockPaymentOrder.GatewayID,
-							"Amount":          lockPaymentOrder.Amount,
-							"Rate":            lockPaymentOrder.Rate,
-							"Memo":            lockPaymentOrder.Memo,
-							"Metadata":        lockPaymentOrder.Metadata,
-							"ProviderID":      lockPaymentOrder.ProviderID,
-							"ProvisionBucket": lockPaymentOrder.ProvisionBucket,
-						}).
-					Save(ctx)
-				if err != nil {
-					return fmt.Errorf("%s - failed to create transaction Log : %w", lockPaymentOrder.GatewayID, err)
-				}
-			}
-		}
-
-		// Create lock payment order in db
-		orderBuilder := tx.LockPaymentOrder.
-			Create().
-			SetToken(lockPaymentOrder.Token).
-			SetGatewayID(lockPaymentOrder.GatewayID).
-			SetAmount(lockPaymentOrder.Amount).
-			SetRate(lockPaymentOrder.Rate).
-			SetProtocolFee(lockPaymentOrder.ProtocolFee).
-			SetOrderPercent(decimal.NewFromInt(100)).
-			SetAmountInUsd(lockPaymentOrder.AmountInUSD).
-			SetBlockNumber(lockPaymentOrder.BlockNumber).
-			SetTxHash(lockPaymentOrder.TxHash).
-			SetInstitution(lockPaymentOrder.Institution).
-			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
-			SetAccountName(lockPaymentOrder.AccountName).
-			SetSender(lockPaymentOrder.Sender).
-			SetMessageHash(lockPaymentOrder.MessageHash).
-			SetSender(lockPaymentOrder.Sender).
-			SetMemo(lockPaymentOrder.Memo).
-			SetMetadata(lockPaymentOrder.Metadata).
-			SetProvisionBucket(lockPaymentOrder.ProvisionBucket).
-			SetOrderType(lockpaymentorder.OrderType(lockPaymentOrder.OrderType))
-
-		if lockPaymentOrder.ProviderID != "" {
-			orderBuilder = orderBuilder.SetProviderID(lockPaymentOrder.ProviderID)
-		}
-
-		if transactionLog != nil {
-			orderBuilder = orderBuilder.AddTransactions(transactionLog)
-		}
-
-		orderCreated, err := orderBuilder.Save(ctx)
-		if err != nil {
-			return fmt.Errorf("%s - failed to create lock payment order: %w", lockPaymentOrder.GatewayID, err)
-		}
-
-		// Commit the transaction
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("%s - failed to create lock payment order: %w", lockPaymentOrder.GatewayID, err)
-		}
-
-		// Delete the transfer webhook now that lock payment order is created
-		err = deleteTransferWebhook(ctx, event.TxHash)
-		if err != nil {
-			logger.Errorf("Failed to delete transfer webhook for lock payment order: %v", err)
-			// Don't fail the entire operation if webhook deletion fails
-		}
-
-		// Check AML compliance
-		if serverConf.Environment == "production" && !strings.HasPrefix(network.Identifier, "tron") {
-			ok, err := CheckAMLCompliance(network.RPCEndpoint, event.TxHash)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":    fmt.Sprintf("%v", err),
-					"endpoint": network.RPCEndpoint,
-					"TxHash":   event.TxHash,
-				}).Errorf("Failed to check AML Compliance")
-			}
-
-			if !ok && err == nil {
-				err := HandleCancellation(ctx, orderCreated, nil, "AML compliance check failed", refundOrder)
-				if err != nil {
-					return fmt.Errorf("checkAMLCompliance.RefundOrder: %w", err)
-				}
-				return nil
-			}
-		}
-
-		// Assign the lock payment order to a provider
-		lockPaymentOrder.ID = orderCreated.ID
-		_ = assignLockPaymentOrder(ctx, lockPaymentOrder)
-	}
-
-	return nil
-}
-
-// UpdateOrderStatusRefunded updates the status of a payment order to refunded
-func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event *types.OrderRefundedEvent, messageHash string) error {
-	// Fetch payment order
-	paymentOrderExists := true
-	paymentOrder, err := db.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.MessageHashEQ(messageHash),
+			paymentorder.GatewayIDEQ(event.OrderId),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
 			),
 		).
-		WithSenderProfile().
-		WithLinkedAddress().
 		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			// Try to find by gateway_id as fallback (for orders created via InitiatePaymentOrder)
-			paymentOrder, err = db.Client.PaymentOrder.
-				Query().
-				Where(
-					paymentorder.GatewayIDEQ(event.OrderId),
-					paymentorder.HasTokenWith(
-						tokenent.HasNetworkWith(
-							networkent.IdentifierEQ(network.Identifier),
-						),
+	if err != nil && !ent.IsNotFound(err) {
+		return fmt.Errorf("ProcessPaymentOrderFromBlockchain.db: %v", err)
+	}
+	if existingOrderWithGatewayID != nil {
+		// Order already indexed with gatewayID, skip
+		return nil
+	}
+
+	// Check if order exists with messageHash but no gatewayID (API-created order awaiting on-chain details)
+	var existingOrderWithMessageHash *ent.PaymentOrder
+	if event.MessageHash != "" {
+		existingOrderWithMessageHash, err = db.Client.PaymentOrder.
+			Query().
+			Where(
+				paymentorder.MessageHashEQ(event.MessageHash),
+				paymentorder.GatewayIDIsNil(),
+				paymentorder.HasTokenWith(
+					tokenent.HasNetworkWith(
+						networkent.IdentifierEQ(network.Identifier),
 					),
-				).
-				WithSenderProfile().
-				WithLinkedAddress().
-				Only(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					// Payment order does not exist, no need to update
-					paymentOrderExists = false
-				} else {
-					return fmt.Errorf("UpdateOrderStatusRefunded.fetchOrderByGatewayId: %v", err)
-				}
-			}
-		} else {
-			return fmt.Errorf("UpdateOrderStatusRefunded.fetchOrderByMessageHash: %v", err)
+				),
+			).
+			Only(ctx)
+		if err != nil && !ent.IsNotFound(err) {
+			return fmt.Errorf("ProcessPaymentOrderFromBlockchain.db: %v", err)
 		}
 	}
 
+	// Validate and prepare payment order data
+	paymentOrderFields, _, _, _, _, err := validateAndPreparePaymentOrderData(ctx, network, event, refundOrder)
+	if err != nil {
+		return err
+	}
+	if paymentOrderFields == nil {
+		// Order was cancelled during validation
+		return nil
+	}
+
+	// If order exists with messageHash but no gatewayID, update it with on-chain details
+	if existingOrderWithMessageHash != nil {
+		tx, err := db.Client.Tx(ctx)
+		if err != nil {
+			return fmt.Errorf("%s failed to initiate db transaction for update: %w", paymentOrderFields.GatewayID, err)
+		}
+
+		// Update existing order with on-chain details
+		updateBuilder := tx.PaymentOrder.
+			Update().
+			Where(paymentorder.IDEQ(existingOrderWithMessageHash.ID)).
+			SetGatewayID(paymentOrderFields.GatewayID).
+			SetTxHash(paymentOrderFields.TxHash).
+			SetBlockNumber(paymentOrderFields.BlockNumber).
+			SetStatus(paymentorder.StatusPending)
+
+		// Update protocol fee if needed
+		if paymentOrderFields.ProtocolFee.GreaterThan(decimal.Zero) {
+			updateBuilder = updateBuilder.SetProtocolFee(paymentOrderFields.ProtocolFee)
+		}
+
+		// Update sender if provided
+		if paymentOrderFields.Sender != "" {
+			updateBuilder = updateBuilder.SetSender(paymentOrderFields.Sender)
+		}
+
+		// Update provision bucket if available (should always be set for regular orders)
+		if paymentOrderFields.ProvisionBucket != nil {
+			updateBuilder = updateBuilder.SetProvisionBucket(paymentOrderFields.ProvisionBucket)
+		}
+
+		_, err = updateBuilder.Save(ctx)
+		if err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("%s - failed to update payment order with on-chain details: %w", paymentOrderFields.GatewayID, err)
+		}
+
+		// Ensure transaction log exists
+		transactionLog, err := ensureTransactionLog(ctx, tx, network, paymentOrderFields)
+		if err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+
+		// Link transaction log to payment order if it was newly created
+		if transactionLog != nil {
+			_, err = tx.PaymentOrder.
+				Update().
+				Where(paymentorder.IDEQ(existingOrderWithMessageHash.ID)).
+				AddTransactions(transactionLog).
+				Save(ctx)
+			if err != nil {
+				_ = tx.Rollback()
+				return fmt.Errorf("%s - failed to link transaction log: %w", paymentOrderFields.GatewayID, err)
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("%s - failed to update payment order: %w", paymentOrderFields.GatewayID, err)
+		}
+
+		// Handle post-processing: webhook, AML check, provider assignment
+		return processPaymentOrderPostCreation(ctx, existingOrderWithMessageHash, network, event, paymentOrderFields, refundOrder, assignPaymentOrder)
+	}
+
+	// Create new payment order
+	tx, err := db.Client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("%s failed to initiate db transaction %w", paymentOrderFields.GatewayID, err)
+	}
+
+	// Ensure transaction log exists
+	transactionLog, err := ensureTransactionLog(ctx, tx, network, paymentOrderFields)
+	if err != nil {
+		return err
+	}
+
+	// Create payment order in db
+	orderBuilder := tx.PaymentOrder.
+		Create().
+		SetToken(paymentOrderFields.Token).
+		SetGatewayID(paymentOrderFields.GatewayID).
+		SetAmount(paymentOrderFields.Amount).
+		SetRate(paymentOrderFields.Rate).
+		SetProtocolFee(paymentOrderFields.ProtocolFee).
+		SetOrderPercent(decimal.NewFromInt(100)).
+		SetAmountInUsd(paymentOrderFields.AmountInUSD).
+		SetBlockNumber(paymentOrderFields.BlockNumber).
+		SetTxHash(paymentOrderFields.TxHash).
+		SetInstitution(paymentOrderFields.Institution).
+		SetAccountIdentifier(paymentOrderFields.AccountIdentifier).
+		SetAccountName(paymentOrderFields.AccountName).
+		SetSender(paymentOrderFields.Sender).
+		SetMessageHash(paymentOrderFields.MessageHash).
+		SetMemo(paymentOrderFields.Memo).
+		SetMetadata(paymentOrderFields.Metadata).
+		SetProvisionBucket(paymentOrderFields.ProvisionBucket).
+		SetOrderType(paymentorder.OrderType(paymentOrderFields.OrderType)).
+		SetStatus(paymentorder.StatusPending)
+
+	// Set provider if ProviderID exists
+	if paymentOrderFields.ProviderID != "" {
+		provider, err := tx.ProviderProfile.Query().Where(providerprofile.IDEQ(paymentOrderFields.ProviderID)).Only(ctx)
+		if err == nil && provider != nil {
+			orderBuilder = orderBuilder.SetProvider(provider)
+		}
+	}
+
+	if transactionLog != nil {
+		orderBuilder = orderBuilder.AddTransactions(transactionLog)
+	}
+
+	orderCreated, err := orderBuilder.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - failed to create payment order: %w", paymentOrderFields.GatewayID, err)
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("%s - failed to create payment order: %w", paymentOrderFields.GatewayID, err)
+	}
+
+	// Handle post-processing: webhook, AML check, provider assignment
+	return processPaymentOrderPostCreation(ctx, orderCreated, network, event, paymentOrderFields, refundOrder, assignPaymentOrder)
+}
+
+// UpdateOrderStatusRefunded updates the status of a payment order to refunded
+func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event *types.OrderRefundedEvent, messageHash string) error {
 	tx, err := db.Client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusRefunded.dbtransaction %v", err)
@@ -573,12 +271,12 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		}
 	}
 
-	// Aggregator side status update
-	lockPaymentOrderUpdate := tx.LockPaymentOrder.
+	// Update payment order status
+	paymentOrderUpdate := tx.PaymentOrder.
 		Update().
 		Where(
-			lockpaymentorder.GatewayIDEQ(event.OrderId),
-			lockpaymentorder.HasTokenWith(
+			paymentorder.GatewayIDEQ(event.OrderId),
+			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
@@ -586,24 +284,24 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		).
 		SetBlockNumber(event.BlockNumber).
 		SetTxHash(event.TxHash).
-		SetStatus(lockpaymentorder.StatusRefunded)
+		SetStatus(paymentorder.StatusRefunded)
 
 	if transactionLog != nil {
-		lockPaymentOrderUpdate = lockPaymentOrderUpdate.AddTransactions(transactionLog)
+		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
 	}
 
-	_, err = lockPaymentOrderUpdate.Save(ctx)
+	_, err = paymentOrderUpdate.Save(ctx)
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusRefunded.aggregator: %v", err)
 	}
 
 	// Release reserved balance for refunded orders
-	// Get the lock payment order to access provider and currency info
-	lockOrder, err := tx.LockPaymentOrder.
+	// Get the payment order to access provider and currency info
+	paymentOrder, err := tx.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.GatewayIDEQ(event.OrderId),
-			lockpaymentorder.HasTokenWith(
+			paymentorder.GatewayIDEQ(event.OrderId),
+			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
@@ -614,14 +312,14 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			pbq.WithCurrency()
 		}).
 		Only(ctx)
-	if err == nil && lockOrder != nil && lockOrder.Edges.Provider != nil && lockOrder.Edges.ProvisionBucket != nil && lockOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
 		// Only attempt balance operations if we have the required edge data
 		// Create a new balance service instance for this transaction
 		balanceService := svc.NewBalanceManagementService()
 
-		providerID := lockOrder.Edges.Provider.ID
-		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := lockOrder.Amount.Mul(lockOrder.Rate).RoundBank(0)
+		providerID := paymentOrder.Edges.Provider.ID
+		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
 
 		err = balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
 		if err != nil {
@@ -636,55 +334,21 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		}
 	}
 
-	// Sender side status update
-	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusRefunded {
-		paymentOrderUpdate := tx.PaymentOrder.
-			Update().
-			Where(
-				paymentorder.IDEQ(paymentOrder.ID),
-			).
-			SetTxHash(event.TxHash).
-			SetBlockNumber(event.BlockNumber).
-			SetGatewayID(event.OrderId).
-			SetStatus(paymentorder.StatusRefunded)
-
-		if paymentOrder.Edges.LinkedAddress != nil {
-			paymentOrderUpdate = paymentOrderUpdate.SetGatewayID("")
-		}
-
-		if transactionLog != nil {
-			paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
-		}
-
-		_, err = paymentOrderUpdate.Save(ctx)
-		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusRefunded.sender: %v", err)
-		}
-
-		// Update the local paymentOrder object for webhook
-		paymentOrder.Status = paymentorder.StatusRefunded
-		paymentOrder.TxHash = event.TxHash
-		paymentOrder.BlockNumber = event.BlockNumber
-		paymentOrder.GatewayID = event.OrderId
-	}
-
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("UpdateOrderStatusRefunded.commit %v", err)
 	}
 
 	// Clean up order exclude list from Redis (best effort, don't fail if it errors)
-	if lockOrder != nil {
-		orderKey := fmt.Sprintf("order_exclude_list_%s", lockOrder.ID)
+	if paymentOrder != nil {
+		orderKey := fmt.Sprintf("order_exclude_list_%s", paymentOrder.ID)
 		_ = db.RedisClient.Del(ctx, orderKey).Err()
 	}
 
-	if paymentOrderExists && paymentOrder.Status == paymentorder.StatusRefunded {
-		// Send webhook notification to sender
-		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
-		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusRefunded.webhook: %v", err)
-		}
+	// Send webhook notification to sender
+	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusRefunded.webhook: %v", err)
 	}
 
 	return nil
@@ -692,48 +356,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 
 // UpdateOrderStatusSettled updates the status of a payment order to settled
 func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *types.OrderSettledEvent, messageHash string) error {
-	// Fetch payment order
-	paymentOrderExists := true
-	paymentOrder, err := db.Client.PaymentOrder.
-		Query().
-		Where(
-			paymentorder.MessageHashEQ(messageHash),
-			paymentorder.HasTokenWith(
-				tokenent.HasNetworkWith(
-					networkent.IdentifierEQ(network.Identifier),
-				),
-			),
-		).
-		WithSenderProfile().
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			// Try to find by gateway_id as fallback (for orders created via InitiatePaymentOrder)
-			paymentOrder, err = db.Client.PaymentOrder.
-				Query().
-				Where(
-					paymentorder.GatewayIDEQ(event.OrderId),
-					paymentorder.HasTokenWith(
-						tokenent.HasNetworkWith(
-							networkent.IdentifierEQ(network.Identifier),
-						),
-					),
-				).
-				WithSenderProfile().
-				Only(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					// Payment order does not exist, no need to update
-					paymentOrderExists = false
-				} else {
-					return fmt.Errorf("UpdateOrderStatusSettled.fetchOrderByGatewayId: %v", err)
-				}
-			}
-		} else {
-			return fmt.Errorf("UpdateOrderStatusSettled.fetchOrderByMessageHash: %v", err)
-		}
-	}
-
 	tx, err := db.Client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettled.db: %v", err)
@@ -776,17 +398,17 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		}
 	}
 
-	// Aggregator side status update
+	// Update payment order status
 	splitOrderId, err := uuid.Parse(string(ethcommon.FromHex(event.SplitOrderId)))
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettled.splitOrderId: %v", err)
 	}
 
-	lockPaymentOrderUpdate := tx.LockPaymentOrder.
+	paymentOrderUpdate := tx.PaymentOrder.
 		Update().
 		Where(
-			lockpaymentorder.IDEQ(splitOrderId),
-			lockpaymentorder.HasTokenWith(
+			paymentorder.IDEQ(splitOrderId),
+			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
@@ -794,24 +416,25 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		).
 		SetBlockNumber(event.BlockNumber).
 		SetTxHash(event.TxHash).
-		SetStatus(lockpaymentorder.StatusSettled)
+		SetStatus(paymentorder.StatusSettled).
+		AddPercentSettled(event.SettlePercent)
 
 	if transactionLog != nil {
-		lockPaymentOrderUpdate = lockPaymentOrderUpdate.AddTransactions(transactionLog)
+		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
 	}
 
-	_, err = lockPaymentOrderUpdate.Save(ctx)
+	_, err = paymentOrderUpdate.Save(ctx)
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettled.aggregator: %v", err)
 	}
 
 	// Update provider balance for settled orders
-	// Get the lock payment order to access provider and currency info
-	lockOrder, err := tx.LockPaymentOrder.
+	// Get the payment order to access provider and currency info
+	paymentOrder, err := tx.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.IDEQ(splitOrderId),
-			lockpaymentorder.HasTokenWith(
+			paymentorder.IDEQ(splitOrderId),
+			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
@@ -822,14 +445,14 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			pbq.WithCurrency()
 		}).
 		Only(ctx)
-	if err == nil && lockOrder != nil && lockOrder.Edges.Provider != nil && lockOrder.Edges.ProvisionBucket != nil && lockOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
 		// Only attempt balance operations if we have the required edge data
 		// Create a new balance service instance for this transaction
 		balanceService := svc.NewBalanceManagementService()
 
-		providerID := lockOrder.Edges.Provider.ID
-		currency := lockOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := lockOrder.Amount.Mul(lockOrder.Rate).RoundBank(0)
+		providerID := paymentOrder.Edges.Provider.ID
+		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
 
 		// Get current balance to update it appropriately
 		currentBalance, err := balanceService.GetProviderBalance(ctx, providerID, currency)
@@ -864,67 +487,21 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		}
 	}
 
-	settledPercent := decimal.NewFromInt(0)
-
-	// Sender side status update
-	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusSettled {
-		paymentOrderUpdate := tx.PaymentOrder.
-			Update().
-			Where(
-				paymentorder.IDEQ(paymentOrder.ID),
-			).
-			SetBlockNumber(event.BlockNumber).
-			SetTxHash(event.TxHash).
-			SetGatewayID(event.OrderId)
-
-		// Convert settled percent to BPS and update
-		settledPercent = paymentOrder.PercentSettled.Add(event.SettlePercent.Div(decimal.NewFromInt(1000)))
-
-		// If settled percent is 100%, mark order as settled
-		if settledPercent.GreaterThanOrEqual(decimal.NewFromInt(100)) {
-			settledPercent = decimal.NewFromInt(100)
-			paymentOrderUpdate = paymentOrderUpdate.SetStatus(paymentorder.StatusSettled)
-		}
-
-		if transactionLog != nil {
-			paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
-		}
-
-		_, err = paymentOrderUpdate.
-			SetPercentSettled(settledPercent).
-			Save(ctx)
-		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettled.sender: %v", err)
-		}
-
-		paymentOrder.BlockNumber = event.BlockNumber
-		paymentOrder.GatewayID = event.OrderId
-		paymentOrder.TxHash = event.TxHash
-		paymentOrder.PercentSettled = settledPercent
-	}
-
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettled.sender %v", err)
 	}
 
 	// Clean up order exclude list from Redis (best effort, don't fail if it errors)
-	if lockOrder != nil {
-		orderKey := fmt.Sprintf("order_exclude_list_%s", lockOrder.ID)
+	if paymentOrder != nil {
+		orderKey := fmt.Sprintf("order_exclude_list_%s", paymentOrder.ID)
 		_ = db.RedisClient.Del(ctx, orderKey).Err()
 	}
 
-	if paymentOrderExists && paymentOrder.Status != paymentorder.StatusSettled {
-		if settledPercent.GreaterThanOrEqual(decimal.NewFromInt(100)) {
-			paymentOrder.Status = paymentorder.StatusSettled
-		}
-
-		// Send webhook notification to sender
-		err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
-		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettled.webhook: %v", err)
-		}
-
+	// Send webhook notification to sender
+	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusSettled.webhook: %v", err)
 	}
 
 	return nil
@@ -968,56 +545,59 @@ func GetProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *e
 	return provisionBucket, false, nil
 }
 
-// HandleCancellation handles the cancellation of a lock payment order.
-func HandleCancellation(ctx context.Context, createdLockPaymentOrder *ent.LockPaymentOrder, lockPaymentOrder *types.LockPaymentOrderFields, cancellationReason string, refundOrder func(context.Context, *ent.Network, string) error) error {
-	// lockPaymentOrder and createdLockPaymentOrder are mutually exclusive
-	if (createdLockPaymentOrder == nil && lockPaymentOrder == nil) || (createdLockPaymentOrder != nil && lockPaymentOrder != nil) {
+// HandleCancellation handles the cancellation of a payment order.
+func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrder, paymentOrderFields *types.PaymentOrderFields, cancellationReason string, refundOrder func(context.Context, *ent.Network, string) error) error {
+	// paymentOrderFields and createdPaymentOrder are mutually exclusive
+	if (createdPaymentOrder == nil && paymentOrderFields == nil) || (createdPaymentOrder != nil && paymentOrderFields != nil) {
 		return nil
 	}
 
-	if lockPaymentOrder != nil {
-		orderBuilder := db.Client.LockPaymentOrder.
+	if paymentOrderFields != nil {
+		orderBuilder := db.Client.PaymentOrder.
 			Create().
-			SetToken(lockPaymentOrder.Token).
-			SetGatewayID(lockPaymentOrder.GatewayID).
-			SetAmount(lockPaymentOrder.Amount).
-			SetRate(lockPaymentOrder.Rate).
-			SetProtocolFee(lockPaymentOrder.ProtocolFee).
+			SetToken(paymentOrderFields.Token).
+			SetGatewayID(paymentOrderFields.GatewayID).
+			SetAmount(paymentOrderFields.Amount).
+			SetRate(paymentOrderFields.Rate).
+			SetProtocolFee(paymentOrderFields.ProtocolFee).
 			SetOrderPercent(decimal.NewFromInt(100)).
-			SetBlockNumber(lockPaymentOrder.BlockNumber).
-			SetTxHash(lockPaymentOrder.TxHash).
-			SetInstitution(lockPaymentOrder.Institution).
-			SetAccountIdentifier(lockPaymentOrder.AccountIdentifier).
-			SetAccountName(lockPaymentOrder.AccountName).
-			SetSender(lockPaymentOrder.Sender).
-			SetAmountInUsd(lockPaymentOrder.AmountInUSD).
-			SetMemo(lockPaymentOrder.Memo).
-			SetMetadata(lockPaymentOrder.Metadata).
+			SetBlockNumber(paymentOrderFields.BlockNumber).
+			SetTxHash(paymentOrderFields.TxHash).
+			SetInstitution(paymentOrderFields.Institution).
+			SetAccountIdentifier(paymentOrderFields.AccountIdentifier).
+			SetAccountName(paymentOrderFields.AccountName).
+			SetSender(paymentOrderFields.Sender).
+			SetAmountInUsd(paymentOrderFields.AmountInUSD).
+			SetMemo(paymentOrderFields.Memo).
+			SetMetadata(paymentOrderFields.Metadata).
 			SetCancellationCount(3).
 			SetCancellationReasons([]string{cancellationReason}).
-			SetStatus(lockpaymentorder.StatusCancelled)
+			SetStatus(paymentorder.StatusCancelled)
 
 		// Only set ProvisionBucket if it's not nil
-		if lockPaymentOrder.ProvisionBucket != nil {
-			orderBuilder = orderBuilder.SetProvisionBucket(lockPaymentOrder.ProvisionBucket)
+		if paymentOrderFields.ProvisionBucket != nil {
+			orderBuilder = orderBuilder.SetProvisionBucket(paymentOrderFields.ProvisionBucket)
 		}
 
-		if lockPaymentOrder.ProviderID != "" {
-			orderBuilder = orderBuilder.
-				SetProviderID(lockPaymentOrder.ProviderID)
+		// Set provider if ProviderID exists
+		if paymentOrderFields.ProviderID != "" {
+			provider, err := db.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(paymentOrderFields.ProviderID)).Only(ctx)
+			if err == nil && provider != nil {
+				orderBuilder = orderBuilder.SetProvider(provider)
+			}
 		}
 
 		order, err := orderBuilder.Save(ctx)
 		if err != nil {
-			return fmt.Errorf("%s - failed to create lock payment order: %w", lockPaymentOrder.GatewayID, err)
+			return fmt.Errorf("%s - failed to create payment order: %w", paymentOrderFields.GatewayID, err)
 		}
 
-		network, err := lockPaymentOrder.Token.QueryNetwork().Only(ctx)
+		network, err := paymentOrderFields.Token.QueryNetwork().Only(ctx)
 		if err != nil {
-			return fmt.Errorf("%s - failed to fetch network: %w", lockPaymentOrder.GatewayID, err)
+			return fmt.Errorf("%s - failed to fetch network: %w", paymentOrderFields.GatewayID, err)
 		}
 
-		err = refundOrder(ctx, network, lockPaymentOrder.GatewayID)
+		err = refundOrder(ctx, network, paymentOrderFields.GatewayID)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
@@ -1027,32 +607,32 @@ func HandleCancellation(ctx context.Context, createdLockPaymentOrder *ent.LockPa
 			}).Errorf("Handle cancellation failed to refund order")
 		}
 
-	} else if createdLockPaymentOrder != nil {
-		_, err := db.Client.LockPaymentOrder.
+	} else if createdPaymentOrder != nil {
+		_, err := db.Client.PaymentOrder.
 			Update().
 			Where(
-				lockpaymentorder.IDEQ(createdLockPaymentOrder.ID),
+				paymentorder.IDEQ(createdPaymentOrder.ID),
 			).
 			SetCancellationCount(3).
 			SetCancellationReasons([]string{cancellationReason}).
-			SetStatus(lockpaymentorder.StatusCancelled).
+			SetStatus(paymentorder.StatusCancelled).
 			Save(ctx)
 		if err != nil {
-			return fmt.Errorf("%s - failed to update lock payment order: %w", createdLockPaymentOrder.GatewayID, err)
+			return fmt.Errorf("%s - failed to update payment order: %w", createdPaymentOrder.GatewayID, err)
 		}
 
-		network, err := createdLockPaymentOrder.QueryToken().QueryNetwork().Only(ctx)
+		network, err := createdPaymentOrder.QueryToken().QueryNetwork().Only(ctx)
 		if err != nil {
-			return fmt.Errorf("%s - failed to fetch network: %w", createdLockPaymentOrder.GatewayID, err)
+			return fmt.Errorf("%s - failed to fetch network: %w", createdPaymentOrder.GatewayID, err)
 		}
 
-		err = refundOrder(ctx, network, createdLockPaymentOrder.GatewayID)
+		err = refundOrder(ctx, network, createdPaymentOrder.GatewayID)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
-				"OrderID":      fmt.Sprintf("0x%v", hex.EncodeToString(createdLockPaymentOrder.ID[:])),
-				"OrderTrxHash": createdLockPaymentOrder.TxHash,
-				"GatewayID":    createdLockPaymentOrder.GatewayID,
+				"OrderID":      fmt.Sprintf("0x%v", hex.EncodeToString(createdPaymentOrder.ID[:])),
+				"OrderTrxHash": createdPaymentOrder.TxHash,
+				"GatewayID":    createdPaymentOrder.GatewayID,
 			}).Errorf("Handle cancellation failed to refund order")
 		}
 	}
@@ -1104,35 +684,26 @@ func CheckAMLCompliance(rpcUrl string, txHash string) (bool, error) {
 }
 
 // HandleReceiveAddressValidity handles the validity of a receive address.
-func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.ReceiveAddress, paymentOrder *ent.PaymentOrder) error {
-	if receiveAddress.ValidUntil.IsZero() {
+func HandleReceiveAddressValidity(ctx context.Context, paymentOrder *ent.PaymentOrder) error {
+	if paymentOrder.ReceiveAddressExpiry.IsZero() {
 		return nil
 	}
 
-	if receiveAddress.Status != receiveaddress.StatusUsed {
-		validUntilIsFarGone := receiveAddress.ValidUntil.Before(time.Now().Add(-(2 * time.Minute)))
-		isExpired := receiveAddress.ValidUntil.Before(time.Now())
+	if paymentOrder.Status != paymentorder.StatusPending && paymentOrder.Status != paymentorder.StatusExpired {
+		validUntilIsFarGone := paymentOrder.ReceiveAddressExpiry.Before(time.Now().Add(-(2 * time.Minute)))
+		isExpired := paymentOrder.ReceiveAddressExpiry.Before(time.Now())
 
 		if validUntilIsFarGone {
-			_, err := receiveAddress.
+			_, err := paymentOrder.
 				Update().
-				SetValidUntil(time.Now().Add(orderConf.ReceiveAddressValidity)).
+				SetReceiveAddressExpiry(time.Now().Add(orderConf.ReceiveAddressValidity)).
 				Save(ctx)
 			if err != nil {
 				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
 			}
-		} else if isExpired && receiveAddress.Status != receiveaddress.StatusExpired && paymentOrder.Status != paymentorder.StatusExpired && !strings.HasPrefix(paymentOrder.Edges.Recipient.Memo, "P#P") {
-			// Receive address hasn't received payment after validity period, mark status as expired
-			_, err := receiveAddress.
-				Update().
-				SetStatus(receiveaddress.StatusExpired).
-				Save(ctx)
-			if err != nil {
-				return fmt.Errorf("HandleReceiveAddressValidity.db: %v", err)
-			}
-
+		} else if isExpired && paymentOrder.Status != paymentorder.StatusExpired {
 			// Expire payment order
-			_, err = paymentOrder.
+			_, err := paymentOrder.
 				Update().
 				SetStatus(paymentorder.StatusExpired).
 				Save(ctx)
@@ -1145,9 +716,9 @@ func HandleReceiveAddressValidity(ctx context.Context, receiveAddress *ent.Recei
 			err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"OrderID":  paymentOrder.ID,
-					"SenderID": paymentOrder.Edges.SenderProfile.ID,
-					"Error":    err.Error(),
+					"OrderID":     paymentOrder.ID,
+					"MessageHash": paymentOrder.MessageHash,
+					"Error":       err.Error(),
 				}).Errorf("Failed to send expired payment order webhook")
 			}
 		}
@@ -1190,8 +761,314 @@ func deleteTransferWebhook(ctx context.Context, txHash string) error {
 	return nil
 }
 
-// createBasicLockPaymentOrderAndCancel creates a basic lock payment order and cancels it with the given reason
-func createBasicLockPaymentOrderAndCancel(
+// ensureTransactionLog ensures a transaction log exists for the order, creating it if needed.
+// Returns the transaction log and any error.
+func ensureTransactionLog(
+	ctx context.Context,
+	tx *ent.Tx,
+	network *ent.Network,
+	paymentOrderFields *types.PaymentOrderFields,
+) (*ent.TransactionLog, error) {
+	// Check if transaction log already exists
+	existingLog, err := tx.TransactionLog.
+		Query().
+		Where(
+			transactionlog.StatusEQ(transactionlog.StatusOrderCreated),
+			transactionlog.TxHashEQ(paymentOrderFields.TxHash),
+			transactionlog.GatewayIDEQ(paymentOrderFields.GatewayID),
+		).
+		Only(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return nil, fmt.Errorf("%s - failed to fetch transaction log: %w", paymentOrderFields.GatewayID, err)
+	}
+	if existingLog != nil {
+		return existingLog, nil
+	}
+
+	// Create new transaction log
+	transactionLog, err := tx.TransactionLog.
+		Create().
+		SetStatus(transactionlog.StatusOrderCreated).
+		SetTxHash(paymentOrderFields.TxHash).
+		SetNetwork(network.Identifier).
+		SetGatewayID(paymentOrderFields.GatewayID).
+		SetMetadata(
+			map[string]interface{}{
+				"Token":           paymentOrderFields.Token,
+				"GatewayID":       paymentOrderFields.GatewayID,
+				"Amount":          paymentOrderFields.Amount,
+				"Rate":            paymentOrderFields.Rate,
+				"Memo":            paymentOrderFields.Memo,
+				"Metadata":        paymentOrderFields.Metadata,
+				"ProviderID":      paymentOrderFields.ProviderID,
+				"ProvisionBucket": paymentOrderFields.ProvisionBucket,
+			}).
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%s - failed to create transaction log: %w", paymentOrderFields.GatewayID, err)
+	}
+
+	return transactionLog, nil
+}
+
+// processPaymentOrderPostCreation handles post-creation tasks: webhook deletion, webhook sending, AML check, and provider assignment.
+func processPaymentOrderPostCreation(
+	ctx context.Context,
+	paymentOrder *ent.PaymentOrder,
+	network *ent.Network,
+	event *types.OrderCreatedEvent,
+	paymentOrderFields *types.PaymentOrderFields,
+	refundOrder func(context.Context, *ent.Network, string) error,
+	assignPaymentOrder func(context.Context, types.PaymentOrderFields) error,
+) error {
+	// Delete the transfer webhook now that payment order is created/updated
+	err := deleteTransferWebhook(ctx, event.TxHash)
+	if err != nil {
+		logger.Errorf("Failed to delete transfer webhook for payment order: %v", err)
+		// Don't fail the entire operation if webhook deletion fails
+	}
+
+	// Send webhook notification to sender
+	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"OrderID":     paymentOrder.ID,
+			"MessageHash": paymentOrder.MessageHash,
+			"Error":       err.Error(),
+		}).Errorf("Failed to send payment order webhook")
+	}
+
+	// Check AML compliance
+	if serverConf.Environment == "production" && !strings.HasPrefix(network.Identifier, "tron") {
+		ok, err := CheckAMLCompliance(network.RPCEndpoint, event.TxHash)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", err),
+				"endpoint": network.RPCEndpoint,
+				"TxHash":   event.TxHash,
+			}).Errorf("Failed to check AML Compliance")
+		}
+
+		if !ok && err == nil {
+			err := HandleCancellation(ctx, paymentOrder, nil, "AML compliance check failed", refundOrder)
+			if err != nil {
+				return fmt.Errorf("checkAMLCompliance.RefundOrder: %w", err)
+			}
+			return nil
+		}
+	}
+
+	// Assign the payment order to a provider
+	paymentOrderFields.ID = paymentOrder.ID
+	_ = assignPaymentOrder(ctx, *paymentOrderFields)
+
+	return nil
+}
+
+// validateAndPreparePaymentOrderData validates the blockchain event data and prepares payment order fields.
+// Returns the prepared fields, token, institution, currency, provision bucket, and any error.
+func validateAndPreparePaymentOrderData(
+	ctx context.Context,
+	network *ent.Network,
+	event *types.OrderCreatedEvent,
+	refundOrder func(context.Context, *ent.Network, string) error,
+) (*types.PaymentOrderFields, *ent.Token, *ent.Institution, *ent.FiatCurrency, *ent.ProvisionBucket, error) {
+	// Get token from db
+	token, err := db.Client.Token.
+		Query().
+		Where(
+			tokenent.ContractAddressEQ(event.Token),
+			tokenent.HasNetworkWith(
+				networkent.IDEQ(network.ID),
+			),
+		).
+		WithNetwork().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// Cannot call createBasicPaymentOrderAndCancel without token - refund directly
+			refundErr := refundOrder(ctx, network, event.OrderId)
+			if refundErr != nil {
+				return nil, nil, nil, nil, nil, fmt.Errorf("token lookup failed and refund failed: %w", refundErr)
+			}
+		}
+		return nil, nil, nil, nil, nil, nil
+	}
+
+	// Get order recipient from message hash
+	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
+	if err != nil {
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, "Message hash decryption failed", refundOrder)
+	}
+
+	// Get institution
+	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
+	if err != nil {
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Institution lookup failed", refundOrder)
+	}
+
+	// Get currency
+	currency, err := db.Client.FiatCurrency.
+		Query().
+		Where(
+			fiatcurrency.IsEnabledEQ(true),
+			fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+		).
+		Only(ctx)
+	if err != nil {
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Currency lookup failed", refundOrder)
+	}
+
+	// Adjust amounts for token decimals
+	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+	event.ProtocolFee = event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+
+	// Get provision bucket
+	provisionBucket, isLessThanMin, err := GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"Amount":   event.Amount,
+			"Currency": currency,
+		}).Errorf("failed to fetch provision bucket when creating payment order")
+
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Provision bucket lookup failed", refundOrder)
+	}
+
+	// Create payment order fields
+	paymentOrderFields := &types.PaymentOrderFields{
+		Token:             token,
+		Network:           network,
+		GatewayID:         event.OrderId,
+		Amount:            event.Amount,
+		Rate:              event.Rate,
+		ProtocolFee:       event.ProtocolFee,
+		AmountInUSD:       utils.CalculatePaymentOrderAmountInUSD(event.Amount, token, institution),
+		BlockNumber:       int64(event.BlockNumber),
+		TxHash:            event.TxHash,
+		Institution:       recipient.Institution,
+		AccountIdentifier: recipient.AccountIdentifier,
+		AccountName:       recipient.AccountName,
+		Sender:            event.Sender,
+		ProviderID:        recipient.ProviderID,
+		Memo:              recipient.Memo,
+		MessageHash:       event.MessageHash,
+		Metadata:          recipient.Metadata,
+		ProvisionBucket:   provisionBucket,
+		OrderType:         "regular",
+	}
+
+	if isLessThanMin {
+		err := HandleCancellation(ctx, nil, paymentOrderFields, "Amount is less than the minimum bucket", refundOrder)
+		if err != nil {
+			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
+		}
+		return nil, nil, nil, nil, nil, nil
+	}
+
+	// Validate rate
+	rateResult, rateErr := utils.ValidateRate(
+		ctx,
+		token,
+		currency,
+		event.Amount,
+		paymentOrderFields.ProviderID,
+		token.Edges.Network.Identifier,
+	)
+
+	if rateResult.Rate == decimal.NewFromInt(1) && paymentOrderFields.Rate != decimal.NewFromInt(1) {
+		err := HandleCancellation(ctx, nil, paymentOrderFields, "Rate validation failed", refundOrder)
+		if err != nil {
+			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
+		}
+		return nil, nil, nil, nil, nil, nil
+	}
+
+	if rateErr != nil {
+		err := HandleCancellation(ctx, nil, paymentOrderFields, fmt.Sprintf("Rate validation failed: %s", rateErr.Error()), refundOrder)
+		if err != nil {
+			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
+		}
+		return nil, nil, nil, nil, nil, nil
+	}
+
+	// Check if event rate is within 0.1% tolerance of validated rate
+	tolerance := rateResult.Rate.Mul(decimal.NewFromFloat(0.001)) // 0.1% tolerance
+	rateDiff := event.Rate.Sub(rateResult.Rate).Abs()
+
+	if rateDiff.GreaterThan(tolerance) {
+		err := HandleCancellation(ctx, nil, paymentOrderFields, "Rate validation failed", refundOrder)
+		if err != nil {
+			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
+		}
+		return nil, nil, nil, nil, nil, nil
+	}
+
+	// Use order type from ValidateRate result
+	paymentOrderFields.OrderType = rateResult.OrderType.String()
+
+	// If order type is OTC, set provider ID from rate result
+	if paymentOrderFields.OrderType == "otc" && rateResult.ProviderID != "" {
+		paymentOrderFields.ProviderID = rateResult.ProviderID
+	}
+
+	// Handle private order checks
+	isPrivate := false
+	if paymentOrderFields.ProviderID != "" {
+		orderToken, err := db.Client.ProviderOrderToken.
+			Query().
+			Where(
+				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
+				providerordertoken.HasProviderWith(
+					providerprofile.IDEQ(paymentOrderFields.ProviderID),
+					providerprofile.HasProviderCurrenciesWith(
+						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
+						providercurrencies.IsAvailableEQ(true),
+					),
+					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
+				),
+				providerordertoken.HasTokenWith(tokenent.IDEQ(token.ID)),
+				providerordertoken.HasCurrencyWith(
+					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
+				),
+				providerordertoken.AddressNEQ(""),
+			).
+			WithProvider().
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				// Provider could not be available for several reasons
+				// 1. Provider is not available
+				// 2. Provider does not support the token
+				// 3. Provider does not support the network
+				// 4. Provider does not support the currency
+				// 5. Provider have not configured a settlement address for the network
+				_ = HandleCancellation(ctx, nil, paymentOrderFields, "Provider not available", refundOrder)
+				return nil, nil, nil, nil, nil, nil
+			} else {
+				return nil, nil, nil, nil, nil, fmt.Errorf("%s - failed to fetch provider: %w", paymentOrderFields.GatewayID, err)
+			}
+		}
+
+		// Check if provider is private - private orders don't require provision buckets
+		if orderToken != nil && orderToken.Edges.Provider != nil && orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+			isPrivate = true
+		}
+	}
+
+	if provisionBucket == nil && !isPrivate {
+		err := HandleCancellation(ctx, nil, paymentOrderFields, "Amount is larger than the maximum bucket", refundOrder)
+		if err != nil {
+			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
+		}
+		return nil, nil, nil, nil, nil, nil
+	}
+
+	return paymentOrderFields, token, institution, currency, provisionBucket, nil
+}
+
+// createBasicPaymentOrderAndCancel creates a basic payment order and cancels it with the given reason
+func createBasicPaymentOrderAndCancel(
 	ctx context.Context,
 	event *types.OrderCreatedEvent,
 	network *ent.Network,
@@ -1204,8 +1081,8 @@ func createBasicLockPaymentOrderAndCancel(
 	adjustedAmount := event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 	adjustedProtocolFee := event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 
-	// Create a basic lock payment order for cancellation
-	lockPaymentOrder := types.LockPaymentOrderFields{
+	// Create a basic payment order for cancellation
+	paymentOrder := types.PaymentOrderFields{
 		Token:       token,
 		Network:     network,
 		GatewayID:   event.OrderId,
@@ -1230,15 +1107,15 @@ func createBasicLockPaymentOrderAndCancel(
 
 	// Add recipient fields if available
 	if recipient != nil {
-		lockPaymentOrder.Institution = recipient.Institution
-		lockPaymentOrder.AccountIdentifier = recipient.AccountIdentifier
-		lockPaymentOrder.AccountName = recipient.AccountName
-		lockPaymentOrder.ProviderID = recipient.ProviderID
-		lockPaymentOrder.Memo = recipient.Memo
-		lockPaymentOrder.Metadata = recipient.Metadata
+		paymentOrder.Institution = recipient.Institution
+		paymentOrder.AccountIdentifier = recipient.AccountIdentifier
+		paymentOrder.AccountName = recipient.AccountName
+		paymentOrder.ProviderID = recipient.ProviderID
+		paymentOrder.Memo = recipient.Memo
+		paymentOrder.Metadata = recipient.Metadata
 	}
 
-	err := HandleCancellation(ctx, nil, &lockPaymentOrder, cancellationReason, refundOrder)
+	err := HandleCancellation(ctx, nil, &paymentOrder, cancellationReason, refundOrder)
 	if err != nil {
 		return fmt.Errorf("failed to handle cancellation due to %s: %w", cancellationReason, err)
 	}

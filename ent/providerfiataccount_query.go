@@ -32,44 +32,44 @@ type ProviderFiatAccountQuery struct {
 }
 
 // Where adds a new predicate for the ProviderFiatAccountQuery builder.
-func (pfaq *ProviderFiatAccountQuery) Where(ps ...predicate.ProviderFiatAccount) *ProviderFiatAccountQuery {
-	pfaq.predicates = append(pfaq.predicates, ps...)
-	return pfaq
+func (_q *ProviderFiatAccountQuery) Where(ps ...predicate.ProviderFiatAccount) *ProviderFiatAccountQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (pfaq *ProviderFiatAccountQuery) Limit(limit int) *ProviderFiatAccountQuery {
-	pfaq.ctx.Limit = &limit
-	return pfaq
+func (_q *ProviderFiatAccountQuery) Limit(limit int) *ProviderFiatAccountQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (pfaq *ProviderFiatAccountQuery) Offset(offset int) *ProviderFiatAccountQuery {
-	pfaq.ctx.Offset = &offset
-	return pfaq
+func (_q *ProviderFiatAccountQuery) Offset(offset int) *ProviderFiatAccountQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (pfaq *ProviderFiatAccountQuery) Unique(unique bool) *ProviderFiatAccountQuery {
-	pfaq.ctx.Unique = &unique
-	return pfaq
+func (_q *ProviderFiatAccountQuery) Unique(unique bool) *ProviderFiatAccountQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (pfaq *ProviderFiatAccountQuery) Order(o ...providerfiataccount.OrderOption) *ProviderFiatAccountQuery {
-	pfaq.order = append(pfaq.order, o...)
-	return pfaq
+func (_q *ProviderFiatAccountQuery) Order(o ...providerfiataccount.OrderOption) *ProviderFiatAccountQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryProvider chains the current query on the "provider" edge.
-func (pfaq *ProviderFiatAccountQuery) QueryProvider() *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: pfaq.config}).Query()
+func (_q *ProviderFiatAccountQuery) QueryProvider() *ProviderProfileQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := pfaq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := pfaq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -78,7 +78,7 @@ func (pfaq *ProviderFiatAccountQuery) QueryProvider() *ProviderProfileQuery {
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, providerfiataccount.ProviderTable, providerfiataccount.ProviderColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(pfaq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -86,8 +86,8 @@ func (pfaq *ProviderFiatAccountQuery) QueryProvider() *ProviderProfileQuery {
 
 // First returns the first ProviderFiatAccount entity from the query.
 // Returns a *NotFoundError when no ProviderFiatAccount was found.
-func (pfaq *ProviderFiatAccountQuery) First(ctx context.Context) (*ProviderFiatAccount, error) {
-	nodes, err := pfaq.Limit(1).All(setContextOp(ctx, pfaq.ctx, ent.OpQueryFirst))
+func (_q *ProviderFiatAccountQuery) First(ctx context.Context) (*ProviderFiatAccount, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +98,8 @@ func (pfaq *ProviderFiatAccountQuery) First(ctx context.Context) (*ProviderFiatA
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (pfaq *ProviderFiatAccountQuery) FirstX(ctx context.Context) *ProviderFiatAccount {
-	node, err := pfaq.First(ctx)
+func (_q *ProviderFiatAccountQuery) FirstX(ctx context.Context) *ProviderFiatAccount {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -108,9 +108,9 @@ func (pfaq *ProviderFiatAccountQuery) FirstX(ctx context.Context) *ProviderFiatA
 
 // FirstID returns the first ProviderFiatAccount ID from the query.
 // Returns a *NotFoundError when no ProviderFiatAccount ID was found.
-func (pfaq *ProviderFiatAccountQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *ProviderFiatAccountQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pfaq.Limit(1).IDs(setContextOp(ctx, pfaq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -121,8 +121,8 @@ func (pfaq *ProviderFiatAccountQuery) FirstID(ctx context.Context) (id uuid.UUID
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (pfaq *ProviderFiatAccountQuery) FirstIDX(ctx context.Context) uuid.UUID {
-	id, err := pfaq.FirstID(ctx)
+func (_q *ProviderFiatAccountQuery) FirstIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -132,8 +132,8 @@ func (pfaq *ProviderFiatAccountQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Only returns a single ProviderFiatAccount entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one ProviderFiatAccount entity is found.
 // Returns a *NotFoundError when no ProviderFiatAccount entities are found.
-func (pfaq *ProviderFiatAccountQuery) Only(ctx context.Context) (*ProviderFiatAccount, error) {
-	nodes, err := pfaq.Limit(2).All(setContextOp(ctx, pfaq.ctx, ent.OpQueryOnly))
+func (_q *ProviderFiatAccountQuery) Only(ctx context.Context) (*ProviderFiatAccount, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +148,8 @@ func (pfaq *ProviderFiatAccountQuery) Only(ctx context.Context) (*ProviderFiatAc
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (pfaq *ProviderFiatAccountQuery) OnlyX(ctx context.Context) *ProviderFiatAccount {
-	node, err := pfaq.Only(ctx)
+func (_q *ProviderFiatAccountQuery) OnlyX(ctx context.Context) *ProviderFiatAccount {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -159,9 +159,9 @@ func (pfaq *ProviderFiatAccountQuery) OnlyX(ctx context.Context) *ProviderFiatAc
 // OnlyID is like Only, but returns the only ProviderFiatAccount ID in the query.
 // Returns a *NotSingularError when more than one ProviderFiatAccount ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (pfaq *ProviderFiatAccountQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+func (_q *ProviderFiatAccountQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pfaq.Limit(2).IDs(setContextOp(ctx, pfaq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -176,8 +176,8 @@ func (pfaq *ProviderFiatAccountQuery) OnlyID(ctx context.Context) (id uuid.UUID,
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (pfaq *ProviderFiatAccountQuery) OnlyIDX(ctx context.Context) uuid.UUID {
-	id, err := pfaq.OnlyID(ctx)
+func (_q *ProviderFiatAccountQuery) OnlyIDX(ctx context.Context) uuid.UUID {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -185,18 +185,18 @@ func (pfaq *ProviderFiatAccountQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 }
 
 // All executes the query and returns a list of ProviderFiatAccounts.
-func (pfaq *ProviderFiatAccountQuery) All(ctx context.Context) ([]*ProviderFiatAccount, error) {
-	ctx = setContextOp(ctx, pfaq.ctx, ent.OpQueryAll)
-	if err := pfaq.prepareQuery(ctx); err != nil {
+func (_q *ProviderFiatAccountQuery) All(ctx context.Context) ([]*ProviderFiatAccount, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*ProviderFiatAccount, *ProviderFiatAccountQuery]()
-	return withInterceptors[[]*ProviderFiatAccount](ctx, pfaq, qr, pfaq.inters)
+	return withInterceptors[[]*ProviderFiatAccount](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (pfaq *ProviderFiatAccountQuery) AllX(ctx context.Context) []*ProviderFiatAccount {
-	nodes, err := pfaq.All(ctx)
+func (_q *ProviderFiatAccountQuery) AllX(ctx context.Context) []*ProviderFiatAccount {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -204,20 +204,20 @@ func (pfaq *ProviderFiatAccountQuery) AllX(ctx context.Context) []*ProviderFiatA
 }
 
 // IDs executes the query and returns a list of ProviderFiatAccount IDs.
-func (pfaq *ProviderFiatAccountQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
-	if pfaq.ctx.Unique == nil && pfaq.path != nil {
-		pfaq.Unique(true)
+func (_q *ProviderFiatAccountQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, pfaq.ctx, ent.OpQueryIDs)
-	if err = pfaq.Select(providerfiataccount.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(providerfiataccount.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (pfaq *ProviderFiatAccountQuery) IDsX(ctx context.Context) []uuid.UUID {
-	ids, err := pfaq.IDs(ctx)
+func (_q *ProviderFiatAccountQuery) IDsX(ctx context.Context) []uuid.UUID {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -225,17 +225,17 @@ func (pfaq *ProviderFiatAccountQuery) IDsX(ctx context.Context) []uuid.UUID {
 }
 
 // Count returns the count of the given query.
-func (pfaq *ProviderFiatAccountQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, pfaq.ctx, ent.OpQueryCount)
-	if err := pfaq.prepareQuery(ctx); err != nil {
+func (_q *ProviderFiatAccountQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, pfaq, querierCount[*ProviderFiatAccountQuery](), pfaq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*ProviderFiatAccountQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (pfaq *ProviderFiatAccountQuery) CountX(ctx context.Context) int {
-	count, err := pfaq.Count(ctx)
+func (_q *ProviderFiatAccountQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -243,9 +243,9 @@ func (pfaq *ProviderFiatAccountQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (pfaq *ProviderFiatAccountQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, pfaq.ctx, ent.OpQueryExist)
-	switch _, err := pfaq.FirstID(ctx); {
+func (_q *ProviderFiatAccountQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -256,8 +256,8 @@ func (pfaq *ProviderFiatAccountQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (pfaq *ProviderFiatAccountQuery) ExistX(ctx context.Context) bool {
-	exist, err := pfaq.Exist(ctx)
+func (_q *ProviderFiatAccountQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -266,32 +266,32 @@ func (pfaq *ProviderFiatAccountQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the ProviderFiatAccountQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (pfaq *ProviderFiatAccountQuery) Clone() *ProviderFiatAccountQuery {
-	if pfaq == nil {
+func (_q *ProviderFiatAccountQuery) Clone() *ProviderFiatAccountQuery {
+	if _q == nil {
 		return nil
 	}
 	return &ProviderFiatAccountQuery{
-		config:       pfaq.config,
-		ctx:          pfaq.ctx.Clone(),
-		order:        append([]providerfiataccount.OrderOption{}, pfaq.order...),
-		inters:       append([]Interceptor{}, pfaq.inters...),
-		predicates:   append([]predicate.ProviderFiatAccount{}, pfaq.predicates...),
-		withProvider: pfaq.withProvider.Clone(),
+		config:       _q.config,
+		ctx:          _q.ctx.Clone(),
+		order:        append([]providerfiataccount.OrderOption{}, _q.order...),
+		inters:       append([]Interceptor{}, _q.inters...),
+		predicates:   append([]predicate.ProviderFiatAccount{}, _q.predicates...),
+		withProvider: _q.withProvider.Clone(),
 		// clone intermediate query.
-		sql:  pfaq.sql.Clone(),
-		path: pfaq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithProvider tells the query-builder to eager-load the nodes that are connected to
 // the "provider" edge. The optional arguments are used to configure the query builder of the edge.
-func (pfaq *ProviderFiatAccountQuery) WithProvider(opts ...func(*ProviderProfileQuery)) *ProviderFiatAccountQuery {
-	query := (&ProviderProfileClient{config: pfaq.config}).Query()
+func (_q *ProviderFiatAccountQuery) WithProvider(opts ...func(*ProviderProfileQuery)) *ProviderFiatAccountQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	pfaq.withProvider = query
-	return pfaq
+	_q.withProvider = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -308,10 +308,10 @@ func (pfaq *ProviderFiatAccountQuery) WithProvider(opts ...func(*ProviderProfile
 //		GroupBy(providerfiataccount.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (pfaq *ProviderFiatAccountQuery) GroupBy(field string, fields ...string) *ProviderFiatAccountGroupBy {
-	pfaq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &ProviderFiatAccountGroupBy{build: pfaq}
-	grbuild.flds = &pfaq.ctx.Fields
+func (_q *ProviderFiatAccountQuery) GroupBy(field string, fields ...string) *ProviderFiatAccountGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &ProviderFiatAccountGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = providerfiataccount.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -329,55 +329,55 @@ func (pfaq *ProviderFiatAccountQuery) GroupBy(field string, fields ...string) *P
 //	client.ProviderFiatAccount.Query().
 //		Select(providerfiataccount.FieldCreatedAt).
 //		Scan(ctx, &v)
-func (pfaq *ProviderFiatAccountQuery) Select(fields ...string) *ProviderFiatAccountSelect {
-	pfaq.ctx.Fields = append(pfaq.ctx.Fields, fields...)
-	sbuild := &ProviderFiatAccountSelect{ProviderFiatAccountQuery: pfaq}
+func (_q *ProviderFiatAccountQuery) Select(fields ...string) *ProviderFiatAccountSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &ProviderFiatAccountSelect{ProviderFiatAccountQuery: _q}
 	sbuild.label = providerfiataccount.Label
-	sbuild.flds, sbuild.scan = &pfaq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a ProviderFiatAccountSelect configured with the given aggregations.
-func (pfaq *ProviderFiatAccountQuery) Aggregate(fns ...AggregateFunc) *ProviderFiatAccountSelect {
-	return pfaq.Select().Aggregate(fns...)
+func (_q *ProviderFiatAccountQuery) Aggregate(fns ...AggregateFunc) *ProviderFiatAccountSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (pfaq *ProviderFiatAccountQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range pfaq.inters {
+func (_q *ProviderFiatAccountQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, pfaq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range pfaq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !providerfiataccount.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if pfaq.path != nil {
-		prev, err := pfaq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		pfaq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (pfaq *ProviderFiatAccountQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProviderFiatAccount, error) {
+func (_q *ProviderFiatAccountQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProviderFiatAccount, error) {
 	var (
 		nodes       = []*ProviderFiatAccount{}
-		withFKs     = pfaq.withFKs
-		_spec       = pfaq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [1]bool{
-			pfaq.withProvider != nil,
+			_q.withProvider != nil,
 		}
 	)
-	if pfaq.withProvider != nil {
+	if _q.withProvider != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -387,7 +387,7 @@ func (pfaq *ProviderFiatAccountQuery) sqlAll(ctx context.Context, hooks ...query
 		return (*ProviderFiatAccount).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &ProviderFiatAccount{config: pfaq.config}
+		node := &ProviderFiatAccount{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -395,14 +395,14 @@ func (pfaq *ProviderFiatAccountQuery) sqlAll(ctx context.Context, hooks ...query
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, pfaq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := pfaq.withProvider; query != nil {
-		if err := pfaq.loadProvider(ctx, query, nodes, nil,
+	if query := _q.withProvider; query != nil {
+		if err := _q.loadProvider(ctx, query, nodes, nil,
 			func(n *ProviderFiatAccount, e *ProviderProfile) { n.Edges.Provider = e }); err != nil {
 			return nil, err
 		}
@@ -410,7 +410,7 @@ func (pfaq *ProviderFiatAccountQuery) sqlAll(ctx context.Context, hooks ...query
 	return nodes, nil
 }
 
-func (pfaq *ProviderFiatAccountQuery) loadProvider(ctx context.Context, query *ProviderProfileQuery, nodes []*ProviderFiatAccount, init func(*ProviderFiatAccount), assign func(*ProviderFiatAccount, *ProviderProfile)) error {
+func (_q *ProviderFiatAccountQuery) loadProvider(ctx context.Context, query *ProviderProfileQuery, nodes []*ProviderFiatAccount, init func(*ProviderFiatAccount), assign func(*ProviderFiatAccount, *ProviderProfile)) error {
 	ids := make([]string, 0, len(nodes))
 	nodeids := make(map[string][]*ProviderFiatAccount)
 	for i := range nodes {
@@ -443,24 +443,24 @@ func (pfaq *ProviderFiatAccountQuery) loadProvider(ctx context.Context, query *P
 	return nil
 }
 
-func (pfaq *ProviderFiatAccountQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := pfaq.querySpec()
-	_spec.Node.Columns = pfaq.ctx.Fields
-	if len(pfaq.ctx.Fields) > 0 {
-		_spec.Unique = pfaq.ctx.Unique != nil && *pfaq.ctx.Unique
+func (_q *ProviderFiatAccountQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, pfaq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (pfaq *ProviderFiatAccountQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *ProviderFiatAccountQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(providerfiataccount.Table, providerfiataccount.Columns, sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID))
-	_spec.From = pfaq.sql
-	if unique := pfaq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if pfaq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := pfaq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, providerfiataccount.FieldID)
 		for i := range fields {
@@ -469,20 +469,20 @@ func (pfaq *ProviderFiatAccountQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := pfaq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := pfaq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := pfaq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := pfaq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -492,33 +492,33 @@ func (pfaq *ProviderFiatAccountQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (pfaq *ProviderFiatAccountQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(pfaq.driver.Dialect())
+func (_q *ProviderFiatAccountQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(providerfiataccount.Table)
-	columns := pfaq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = providerfiataccount.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if pfaq.sql != nil {
-		selector = pfaq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if pfaq.ctx.Unique != nil && *pfaq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range pfaq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range pfaq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := pfaq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := pfaq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -531,41 +531,41 @@ type ProviderFiatAccountGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (pfagb *ProviderFiatAccountGroupBy) Aggregate(fns ...AggregateFunc) *ProviderFiatAccountGroupBy {
-	pfagb.fns = append(pfagb.fns, fns...)
-	return pfagb
+func (_g *ProviderFiatAccountGroupBy) Aggregate(fns ...AggregateFunc) *ProviderFiatAccountGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pfagb *ProviderFiatAccountGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pfagb.build.ctx, ent.OpQueryGroupBy)
-	if err := pfagb.build.prepareQuery(ctx); err != nil {
+func (_g *ProviderFiatAccountGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProviderFiatAccountQuery, *ProviderFiatAccountGroupBy](ctx, pfagb.build, pfagb, pfagb.build.inters, v)
+	return scanWithInterceptors[*ProviderFiatAccountQuery, *ProviderFiatAccountGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (pfagb *ProviderFiatAccountGroupBy) sqlScan(ctx context.Context, root *ProviderFiatAccountQuery, v any) error {
+func (_g *ProviderFiatAccountGroupBy) sqlScan(ctx context.Context, root *ProviderFiatAccountQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(pfagb.fns))
-	for _, fn := range pfagb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*pfagb.flds)+len(pfagb.fns))
-		for _, f := range *pfagb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*pfagb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pfagb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -579,27 +579,27 @@ type ProviderFiatAccountSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (pfas *ProviderFiatAccountSelect) Aggregate(fns ...AggregateFunc) *ProviderFiatAccountSelect {
-	pfas.fns = append(pfas.fns, fns...)
-	return pfas
+func (_s *ProviderFiatAccountSelect) Aggregate(fns ...AggregateFunc) *ProviderFiatAccountSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pfas *ProviderFiatAccountSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pfas.ctx, ent.OpQuerySelect)
-	if err := pfas.prepareQuery(ctx); err != nil {
+func (_s *ProviderFiatAccountSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProviderFiatAccountQuery, *ProviderFiatAccountSelect](ctx, pfas.ProviderFiatAccountQuery, pfas, pfas.inters, v)
+	return scanWithInterceptors[*ProviderFiatAccountQuery, *ProviderFiatAccountSelect](ctx, _s.ProviderFiatAccountQuery, _s, _s.inters, v)
 }
 
-func (pfas *ProviderFiatAccountSelect) sqlScan(ctx context.Context, root *ProviderFiatAccountQuery, v any) error {
+func (_s *ProviderFiatAccountSelect) sqlScan(ctx context.Context, root *ProviderFiatAccountQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(pfas.fns))
-	for _, fn := range pfas.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*pfas.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -607,7 +607,7 @@ func (pfas *ProviderFiatAccountSelect) sqlScan(ctx context.Context, root *Provid
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pfas.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

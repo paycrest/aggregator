@@ -23,107 +23,107 @@ type WebhookRetryAttemptCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (wrac *WebhookRetryAttemptCreate) SetCreatedAt(t time.Time) *WebhookRetryAttemptCreate {
-	wrac.mutation.SetCreatedAt(t)
-	return wrac
+func (_c *WebhookRetryAttemptCreate) SetCreatedAt(v time.Time) *WebhookRetryAttemptCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (wrac *WebhookRetryAttemptCreate) SetNillableCreatedAt(t *time.Time) *WebhookRetryAttemptCreate {
-	if t != nil {
-		wrac.SetCreatedAt(*t)
+func (_c *WebhookRetryAttemptCreate) SetNillableCreatedAt(v *time.Time) *WebhookRetryAttemptCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return wrac
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (wrac *WebhookRetryAttemptCreate) SetUpdatedAt(t time.Time) *WebhookRetryAttemptCreate {
-	wrac.mutation.SetUpdatedAt(t)
-	return wrac
+func (_c *WebhookRetryAttemptCreate) SetUpdatedAt(v time.Time) *WebhookRetryAttemptCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (wrac *WebhookRetryAttemptCreate) SetNillableUpdatedAt(t *time.Time) *WebhookRetryAttemptCreate {
-	if t != nil {
-		wrac.SetUpdatedAt(*t)
+func (_c *WebhookRetryAttemptCreate) SetNillableUpdatedAt(v *time.Time) *WebhookRetryAttemptCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return wrac
+	return _c
 }
 
 // SetAttemptNumber sets the "attempt_number" field.
-func (wrac *WebhookRetryAttemptCreate) SetAttemptNumber(i int) *WebhookRetryAttemptCreate {
-	wrac.mutation.SetAttemptNumber(i)
-	return wrac
+func (_c *WebhookRetryAttemptCreate) SetAttemptNumber(v int) *WebhookRetryAttemptCreate {
+	_c.mutation.SetAttemptNumber(v)
+	return _c
 }
 
 // SetNextRetryTime sets the "next_retry_time" field.
-func (wrac *WebhookRetryAttemptCreate) SetNextRetryTime(t time.Time) *WebhookRetryAttemptCreate {
-	wrac.mutation.SetNextRetryTime(t)
-	return wrac
+func (_c *WebhookRetryAttemptCreate) SetNextRetryTime(v time.Time) *WebhookRetryAttemptCreate {
+	_c.mutation.SetNextRetryTime(v)
+	return _c
 }
 
 // SetNillableNextRetryTime sets the "next_retry_time" field if the given value is not nil.
-func (wrac *WebhookRetryAttemptCreate) SetNillableNextRetryTime(t *time.Time) *WebhookRetryAttemptCreate {
-	if t != nil {
-		wrac.SetNextRetryTime(*t)
+func (_c *WebhookRetryAttemptCreate) SetNillableNextRetryTime(v *time.Time) *WebhookRetryAttemptCreate {
+	if v != nil {
+		_c.SetNextRetryTime(*v)
 	}
-	return wrac
+	return _c
 }
 
 // SetPayload sets the "payload" field.
-func (wrac *WebhookRetryAttemptCreate) SetPayload(m map[string]interface{}) *WebhookRetryAttemptCreate {
-	wrac.mutation.SetPayload(m)
-	return wrac
+func (_c *WebhookRetryAttemptCreate) SetPayload(v map[string]interface{}) *WebhookRetryAttemptCreate {
+	_c.mutation.SetPayload(v)
+	return _c
 }
 
 // SetSignature sets the "signature" field.
-func (wrac *WebhookRetryAttemptCreate) SetSignature(s string) *WebhookRetryAttemptCreate {
-	wrac.mutation.SetSignature(s)
-	return wrac
+func (_c *WebhookRetryAttemptCreate) SetSignature(v string) *WebhookRetryAttemptCreate {
+	_c.mutation.SetSignature(v)
+	return _c
 }
 
 // SetNillableSignature sets the "signature" field if the given value is not nil.
-func (wrac *WebhookRetryAttemptCreate) SetNillableSignature(s *string) *WebhookRetryAttemptCreate {
-	if s != nil {
-		wrac.SetSignature(*s)
+func (_c *WebhookRetryAttemptCreate) SetNillableSignature(v *string) *WebhookRetryAttemptCreate {
+	if v != nil {
+		_c.SetSignature(*v)
 	}
-	return wrac
+	return _c
 }
 
 // SetWebhookURL sets the "webhook_url" field.
-func (wrac *WebhookRetryAttemptCreate) SetWebhookURL(s string) *WebhookRetryAttemptCreate {
-	wrac.mutation.SetWebhookURL(s)
-	return wrac
+func (_c *WebhookRetryAttemptCreate) SetWebhookURL(v string) *WebhookRetryAttemptCreate {
+	_c.mutation.SetWebhookURL(v)
+	return _c
 }
 
 // SetStatus sets the "status" field.
-func (wrac *WebhookRetryAttemptCreate) SetStatus(w webhookretryattempt.Status) *WebhookRetryAttemptCreate {
-	wrac.mutation.SetStatus(w)
-	return wrac
+func (_c *WebhookRetryAttemptCreate) SetStatus(v webhookretryattempt.Status) *WebhookRetryAttemptCreate {
+	_c.mutation.SetStatus(v)
+	return _c
 }
 
 // SetNillableStatus sets the "status" field if the given value is not nil.
-func (wrac *WebhookRetryAttemptCreate) SetNillableStatus(w *webhookretryattempt.Status) *WebhookRetryAttemptCreate {
-	if w != nil {
-		wrac.SetStatus(*w)
+func (_c *WebhookRetryAttemptCreate) SetNillableStatus(v *webhookretryattempt.Status) *WebhookRetryAttemptCreate {
+	if v != nil {
+		_c.SetStatus(*v)
 	}
-	return wrac
+	return _c
 }
 
 // Mutation returns the WebhookRetryAttemptMutation object of the builder.
-func (wrac *WebhookRetryAttemptCreate) Mutation() *WebhookRetryAttemptMutation {
-	return wrac.mutation
+func (_c *WebhookRetryAttemptCreate) Mutation() *WebhookRetryAttemptMutation {
+	return _c.mutation
 }
 
 // Save creates the WebhookRetryAttempt in the database.
-func (wrac *WebhookRetryAttemptCreate) Save(ctx context.Context) (*WebhookRetryAttempt, error) {
-	wrac.defaults()
-	return withHooks(ctx, wrac.sqlSave, wrac.mutation, wrac.hooks)
+func (_c *WebhookRetryAttemptCreate) Save(ctx context.Context) (*WebhookRetryAttempt, error) {
+	_c.defaults()
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (wrac *WebhookRetryAttemptCreate) SaveX(ctx context.Context) *WebhookRetryAttempt {
-	v, err := wrac.Save(ctx)
+func (_c *WebhookRetryAttemptCreate) SaveX(ctx context.Context) *WebhookRetryAttempt {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -131,62 +131,62 @@ func (wrac *WebhookRetryAttemptCreate) SaveX(ctx context.Context) *WebhookRetryA
 }
 
 // Exec executes the query.
-func (wrac *WebhookRetryAttemptCreate) Exec(ctx context.Context) error {
-	_, err := wrac.Save(ctx)
+func (_c *WebhookRetryAttemptCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (wrac *WebhookRetryAttemptCreate) ExecX(ctx context.Context) {
-	if err := wrac.Exec(ctx); err != nil {
+func (_c *WebhookRetryAttemptCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (wrac *WebhookRetryAttemptCreate) defaults() {
-	if _, ok := wrac.mutation.CreatedAt(); !ok {
+func (_c *WebhookRetryAttemptCreate) defaults() {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := webhookretryattempt.DefaultCreatedAt()
-		wrac.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := wrac.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := webhookretryattempt.DefaultUpdatedAt()
-		wrac.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := wrac.mutation.NextRetryTime(); !ok {
+	if _, ok := _c.mutation.NextRetryTime(); !ok {
 		v := webhookretryattempt.DefaultNextRetryTime()
-		wrac.mutation.SetNextRetryTime(v)
+		_c.mutation.SetNextRetryTime(v)
 	}
-	if _, ok := wrac.mutation.Status(); !ok {
+	if _, ok := _c.mutation.Status(); !ok {
 		v := webhookretryattempt.DefaultStatus
-		wrac.mutation.SetStatus(v)
+		_c.mutation.SetStatus(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (wrac *WebhookRetryAttemptCreate) check() error {
-	if _, ok := wrac.mutation.CreatedAt(); !ok {
+func (_c *WebhookRetryAttemptCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "WebhookRetryAttempt.created_at"`)}
 	}
-	if _, ok := wrac.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "WebhookRetryAttempt.updated_at"`)}
 	}
-	if _, ok := wrac.mutation.AttemptNumber(); !ok {
+	if _, ok := _c.mutation.AttemptNumber(); !ok {
 		return &ValidationError{Name: "attempt_number", err: errors.New(`ent: missing required field "WebhookRetryAttempt.attempt_number"`)}
 	}
-	if _, ok := wrac.mutation.NextRetryTime(); !ok {
+	if _, ok := _c.mutation.NextRetryTime(); !ok {
 		return &ValidationError{Name: "next_retry_time", err: errors.New(`ent: missing required field "WebhookRetryAttempt.next_retry_time"`)}
 	}
-	if _, ok := wrac.mutation.Payload(); !ok {
+	if _, ok := _c.mutation.Payload(); !ok {
 		return &ValidationError{Name: "payload", err: errors.New(`ent: missing required field "WebhookRetryAttempt.payload"`)}
 	}
-	if _, ok := wrac.mutation.WebhookURL(); !ok {
+	if _, ok := _c.mutation.WebhookURL(); !ok {
 		return &ValidationError{Name: "webhook_url", err: errors.New(`ent: missing required field "WebhookRetryAttempt.webhook_url"`)}
 	}
-	if _, ok := wrac.mutation.Status(); !ok {
+	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "WebhookRetryAttempt.status"`)}
 	}
-	if v, ok := wrac.mutation.Status(); ok {
+	if v, ok := _c.mutation.Status(); ok {
 		if err := webhookretryattempt.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "WebhookRetryAttempt.status": %w`, err)}
 		}
@@ -194,12 +194,12 @@ func (wrac *WebhookRetryAttemptCreate) check() error {
 	return nil
 }
 
-func (wrac *WebhookRetryAttemptCreate) sqlSave(ctx context.Context) (*WebhookRetryAttempt, error) {
-	if err := wrac.check(); err != nil {
+func (_c *WebhookRetryAttemptCreate) sqlSave(ctx context.Context) (*WebhookRetryAttempt, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := wrac.createSpec()
-	if err := sqlgraph.CreateNode(ctx, wrac.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -207,46 +207,46 @@ func (wrac *WebhookRetryAttemptCreate) sqlSave(ctx context.Context) (*WebhookRet
 	}
 	id := _spec.ID.Value.(int64)
 	_node.ID = int(id)
-	wrac.mutation.id = &_node.ID
-	wrac.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (wrac *WebhookRetryAttemptCreate) createSpec() (*WebhookRetryAttempt, *sqlgraph.CreateSpec) {
+func (_c *WebhookRetryAttemptCreate) createSpec() (*WebhookRetryAttempt, *sqlgraph.CreateSpec) {
 	var (
-		_node = &WebhookRetryAttempt{config: wrac.config}
+		_node = &WebhookRetryAttempt{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(webhookretryattempt.Table, sqlgraph.NewFieldSpec(webhookretryattempt.FieldID, field.TypeInt))
 	)
-	_spec.OnConflict = wrac.conflict
-	if value, ok := wrac.mutation.CreatedAt(); ok {
+	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(webhookretryattempt.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := wrac.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(webhookretryattempt.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := wrac.mutation.AttemptNumber(); ok {
+	if value, ok := _c.mutation.AttemptNumber(); ok {
 		_spec.SetField(webhookretryattempt.FieldAttemptNumber, field.TypeInt, value)
 		_node.AttemptNumber = value
 	}
-	if value, ok := wrac.mutation.NextRetryTime(); ok {
+	if value, ok := _c.mutation.NextRetryTime(); ok {
 		_spec.SetField(webhookretryattempt.FieldNextRetryTime, field.TypeTime, value)
 		_node.NextRetryTime = value
 	}
-	if value, ok := wrac.mutation.Payload(); ok {
+	if value, ok := _c.mutation.Payload(); ok {
 		_spec.SetField(webhookretryattempt.FieldPayload, field.TypeJSON, value)
 		_node.Payload = value
 	}
-	if value, ok := wrac.mutation.Signature(); ok {
+	if value, ok := _c.mutation.Signature(); ok {
 		_spec.SetField(webhookretryattempt.FieldSignature, field.TypeString, value)
 		_node.Signature = value
 	}
-	if value, ok := wrac.mutation.WebhookURL(); ok {
+	if value, ok := _c.mutation.WebhookURL(); ok {
 		_spec.SetField(webhookretryattempt.FieldWebhookURL, field.TypeString, value)
 		_node.WebhookURL = value
 	}
-	if value, ok := wrac.mutation.Status(); ok {
+	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(webhookretryattempt.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
@@ -269,10 +269,10 @@ func (wrac *WebhookRetryAttemptCreate) createSpec() (*WebhookRetryAttempt, *sqlg
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (wrac *WebhookRetryAttemptCreate) OnConflict(opts ...sql.ConflictOption) *WebhookRetryAttemptUpsertOne {
-	wrac.conflict = opts
+func (_c *WebhookRetryAttemptCreate) OnConflict(opts ...sql.ConflictOption) *WebhookRetryAttemptUpsertOne {
+	_c.conflict = opts
 	return &WebhookRetryAttemptUpsertOne{
-		create: wrac,
+		create: _c,
 	}
 }
 
@@ -282,10 +282,10 @@ func (wrac *WebhookRetryAttemptCreate) OnConflict(opts ...sql.ConflictOption) *W
 //	client.WebhookRetryAttempt.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (wrac *WebhookRetryAttemptCreate) OnConflictColumns(columns ...string) *WebhookRetryAttemptUpsertOne {
-	wrac.conflict = append(wrac.conflict, sql.ConflictColumns(columns...))
+func (_c *WebhookRetryAttemptCreate) OnConflictColumns(columns ...string) *WebhookRetryAttemptUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &WebhookRetryAttemptUpsertOne{
-		create: wrac,
+		create: _c,
 	}
 }
 
@@ -597,16 +597,16 @@ type WebhookRetryAttemptCreateBulk struct {
 }
 
 // Save creates the WebhookRetryAttempt entities in the database.
-func (wracb *WebhookRetryAttemptCreateBulk) Save(ctx context.Context) ([]*WebhookRetryAttempt, error) {
-	if wracb.err != nil {
-		return nil, wracb.err
+func (_c *WebhookRetryAttemptCreateBulk) Save(ctx context.Context) ([]*WebhookRetryAttempt, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(wracb.builders))
-	nodes := make([]*WebhookRetryAttempt, len(wracb.builders))
-	mutators := make([]Mutator, len(wracb.builders))
-	for i := range wracb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*WebhookRetryAttempt, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := wracb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*WebhookRetryAttemptMutation)
@@ -620,12 +620,12 @@ func (wracb *WebhookRetryAttemptCreateBulk) Save(ctx context.Context) ([]*Webhoo
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, wracb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = wracb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, wracb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -649,7 +649,7 @@ func (wracb *WebhookRetryAttemptCreateBulk) Save(ctx context.Context) ([]*Webhoo
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, wracb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -657,8 +657,8 @@ func (wracb *WebhookRetryAttemptCreateBulk) Save(ctx context.Context) ([]*Webhoo
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (wracb *WebhookRetryAttemptCreateBulk) SaveX(ctx context.Context) []*WebhookRetryAttempt {
-	v, err := wracb.Save(ctx)
+func (_c *WebhookRetryAttemptCreateBulk) SaveX(ctx context.Context) []*WebhookRetryAttempt {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -666,14 +666,14 @@ func (wracb *WebhookRetryAttemptCreateBulk) SaveX(ctx context.Context) []*Webhoo
 }
 
 // Exec executes the query.
-func (wracb *WebhookRetryAttemptCreateBulk) Exec(ctx context.Context) error {
-	_, err := wracb.Save(ctx)
+func (_c *WebhookRetryAttemptCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (wracb *WebhookRetryAttemptCreateBulk) ExecX(ctx context.Context) {
-	if err := wracb.Exec(ctx); err != nil {
+func (_c *WebhookRetryAttemptCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -693,10 +693,10 @@ func (wracb *WebhookRetryAttemptCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (wracb *WebhookRetryAttemptCreateBulk) OnConflict(opts ...sql.ConflictOption) *WebhookRetryAttemptUpsertBulk {
-	wracb.conflict = opts
+func (_c *WebhookRetryAttemptCreateBulk) OnConflict(opts ...sql.ConflictOption) *WebhookRetryAttemptUpsertBulk {
+	_c.conflict = opts
 	return &WebhookRetryAttemptUpsertBulk{
-		create: wracb,
+		create: _c,
 	}
 }
 
@@ -706,10 +706,10 @@ func (wracb *WebhookRetryAttemptCreateBulk) OnConflict(opts ...sql.ConflictOptio
 //	client.WebhookRetryAttempt.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (wracb *WebhookRetryAttemptCreateBulk) OnConflictColumns(columns ...string) *WebhookRetryAttemptUpsertBulk {
-	wracb.conflict = append(wracb.conflict, sql.ConflictColumns(columns...))
+func (_c *WebhookRetryAttemptCreateBulk) OnConflictColumns(columns ...string) *WebhookRetryAttemptUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &WebhookRetryAttemptUpsertBulk{
-		create: wracb,
+		create: _c,
 	}
 }
 

@@ -37,7 +37,7 @@ func NewIndexerTron() types.Indexer {
 	}
 }
 
-// IndexReceiveAddress indexes transfers to receive/linked addresses from user transaction history
+// IndexReceiveAddress indexes transfers to receive addresses from user transaction history
 func (s *IndexerTron) IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
@@ -126,7 +126,7 @@ func (s *IndexerTron) indexReceiveAddressByTransaction(ctx context.Context, toke
 				toAddress: transferEvent,
 			}
 
-			err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent, token)
+			err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toAddress}, addressToEvent)
 			if err != nil {
 				logger.Errorf("Error processing transfer for token %s: %v", token.Symbol, err)
 				continue

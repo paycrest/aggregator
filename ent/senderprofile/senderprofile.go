@@ -35,8 +35,6 @@ const (
 	EdgePaymentOrders = "payment_orders"
 	// EdgeOrderTokens holds the string denoting the order_tokens edge name in mutations.
 	EdgeOrderTokens = "order_tokens"
-	// EdgeLinkedAddress holds the string denoting the linked_address edge name in mutations.
-	EdgeLinkedAddress = "linked_address"
 	// Table holds the table name of the senderprofile in the database.
 	Table = "sender_profiles"
 	// UserTable is the table that holds the user relation/edge.
@@ -67,13 +65,6 @@ const (
 	OrderTokensInverseTable = "sender_order_tokens"
 	// OrderTokensColumn is the table column denoting the order_tokens relation/edge.
 	OrderTokensColumn = "sender_profile_order_tokens"
-	// LinkedAddressTable is the table that holds the linked_address relation/edge.
-	LinkedAddressTable = "linked_addresses"
-	// LinkedAddressInverseTable is the table name for the LinkedAddress entity.
-	// It exists in this package in order to avoid circular dependency with the "linkedaddress" package.
-	LinkedAddressInverseTable = "linked_addresses"
-	// LinkedAddressColumn is the table column denoting the linked_address relation/edge.
-	LinkedAddressColumn = "sender_profile_linked_address"
 )
 
 // Columns holds all SQL columns for senderprofile fields.
@@ -197,20 +188,6 @@ func ByOrderTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newOrderTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-
-// ByLinkedAddressCount orders the results by linked_address count.
-func ByLinkedAddressCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newLinkedAddressStep(), opts...)
-	}
-}
-
-// ByLinkedAddress orders the results by linked_address terms.
-func ByLinkedAddress(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newLinkedAddressStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
 func newUserStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -237,12 +214,5 @@ func newOrderTokensStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OrderTokensInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, OrderTokensTable, OrderTokensColumn),
-	)
-}
-func newLinkedAddressStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(LinkedAddressInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, LinkedAddressTable, LinkedAddressColumn),
 	)
 }

@@ -26,100 +26,100 @@ type VerificationTokenCreate struct {
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (vtc *VerificationTokenCreate) SetCreatedAt(t time.Time) *VerificationTokenCreate {
-	vtc.mutation.SetCreatedAt(t)
-	return vtc
+func (_c *VerificationTokenCreate) SetCreatedAt(v time.Time) *VerificationTokenCreate {
+	_c.mutation.SetCreatedAt(v)
+	return _c
 }
 
 // SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (vtc *VerificationTokenCreate) SetNillableCreatedAt(t *time.Time) *VerificationTokenCreate {
-	if t != nil {
-		vtc.SetCreatedAt(*t)
+func (_c *VerificationTokenCreate) SetNillableCreatedAt(v *time.Time) *VerificationTokenCreate {
+	if v != nil {
+		_c.SetCreatedAt(*v)
 	}
-	return vtc
+	return _c
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (vtc *VerificationTokenCreate) SetUpdatedAt(t time.Time) *VerificationTokenCreate {
-	vtc.mutation.SetUpdatedAt(t)
-	return vtc
+func (_c *VerificationTokenCreate) SetUpdatedAt(v time.Time) *VerificationTokenCreate {
+	_c.mutation.SetUpdatedAt(v)
+	return _c
 }
 
 // SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (vtc *VerificationTokenCreate) SetNillableUpdatedAt(t *time.Time) *VerificationTokenCreate {
-	if t != nil {
-		vtc.SetUpdatedAt(*t)
+func (_c *VerificationTokenCreate) SetNillableUpdatedAt(v *time.Time) *VerificationTokenCreate {
+	if v != nil {
+		_c.SetUpdatedAt(*v)
 	}
-	return vtc
+	return _c
 }
 
 // SetToken sets the "token" field.
-func (vtc *VerificationTokenCreate) SetToken(s string) *VerificationTokenCreate {
-	vtc.mutation.SetToken(s)
-	return vtc
+func (_c *VerificationTokenCreate) SetToken(v string) *VerificationTokenCreate {
+	_c.mutation.SetToken(v)
+	return _c
 }
 
 // SetScope sets the "scope" field.
-func (vtc *VerificationTokenCreate) SetScope(v verificationtoken.Scope) *VerificationTokenCreate {
-	vtc.mutation.SetScope(v)
-	return vtc
+func (_c *VerificationTokenCreate) SetScope(v verificationtoken.Scope) *VerificationTokenCreate {
+	_c.mutation.SetScope(v)
+	return _c
 }
 
 // SetExpiryAt sets the "expiry_at" field.
-func (vtc *VerificationTokenCreate) SetExpiryAt(t time.Time) *VerificationTokenCreate {
-	vtc.mutation.SetExpiryAt(t)
-	return vtc
+func (_c *VerificationTokenCreate) SetExpiryAt(v time.Time) *VerificationTokenCreate {
+	_c.mutation.SetExpiryAt(v)
+	return _c
 }
 
 // SetNillableExpiryAt sets the "expiry_at" field if the given value is not nil.
-func (vtc *VerificationTokenCreate) SetNillableExpiryAt(t *time.Time) *VerificationTokenCreate {
-	if t != nil {
-		vtc.SetExpiryAt(*t)
+func (_c *VerificationTokenCreate) SetNillableExpiryAt(v *time.Time) *VerificationTokenCreate {
+	if v != nil {
+		_c.SetExpiryAt(*v)
 	}
-	return vtc
+	return _c
 }
 
 // SetID sets the "id" field.
-func (vtc *VerificationTokenCreate) SetID(u uuid.UUID) *VerificationTokenCreate {
-	vtc.mutation.SetID(u)
-	return vtc
+func (_c *VerificationTokenCreate) SetID(v uuid.UUID) *VerificationTokenCreate {
+	_c.mutation.SetID(v)
+	return _c
 }
 
 // SetNillableID sets the "id" field if the given value is not nil.
-func (vtc *VerificationTokenCreate) SetNillableID(u *uuid.UUID) *VerificationTokenCreate {
-	if u != nil {
-		vtc.SetID(*u)
+func (_c *VerificationTokenCreate) SetNillableID(v *uuid.UUID) *VerificationTokenCreate {
+	if v != nil {
+		_c.SetID(*v)
 	}
-	return vtc
+	return _c
 }
 
 // SetOwnerID sets the "owner" edge to the User entity by ID.
-func (vtc *VerificationTokenCreate) SetOwnerID(id uuid.UUID) *VerificationTokenCreate {
-	vtc.mutation.SetOwnerID(id)
-	return vtc
+func (_c *VerificationTokenCreate) SetOwnerID(id uuid.UUID) *VerificationTokenCreate {
+	_c.mutation.SetOwnerID(id)
+	return _c
 }
 
 // SetOwner sets the "owner" edge to the User entity.
-func (vtc *VerificationTokenCreate) SetOwner(u *User) *VerificationTokenCreate {
-	return vtc.SetOwnerID(u.ID)
+func (_c *VerificationTokenCreate) SetOwner(v *User) *VerificationTokenCreate {
+	return _c.SetOwnerID(v.ID)
 }
 
 // Mutation returns the VerificationTokenMutation object of the builder.
-func (vtc *VerificationTokenCreate) Mutation() *VerificationTokenMutation {
-	return vtc.mutation
+func (_c *VerificationTokenCreate) Mutation() *VerificationTokenMutation {
+	return _c.mutation
 }
 
 // Save creates the VerificationToken in the database.
-func (vtc *VerificationTokenCreate) Save(ctx context.Context) (*VerificationToken, error) {
-	if err := vtc.defaults(); err != nil {
+func (_c *VerificationTokenCreate) Save(ctx context.Context) (*VerificationToken, error) {
+	if err := _c.defaults(); err != nil {
 		return nil, err
 	}
-	return withHooks(ctx, vtc.sqlSave, vtc.mutation, vtc.hooks)
+	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
-func (vtc *VerificationTokenCreate) SaveX(ctx context.Context) *VerificationToken {
-	v, err := vtc.Save(ctx)
+func (_c *VerificationTokenCreate) SaveX(ctx context.Context) *VerificationToken {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -127,82 +127,82 @@ func (vtc *VerificationTokenCreate) SaveX(ctx context.Context) *VerificationToke
 }
 
 // Exec executes the query.
-func (vtc *VerificationTokenCreate) Exec(ctx context.Context) error {
-	_, err := vtc.Save(ctx)
+func (_c *VerificationTokenCreate) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (vtc *VerificationTokenCreate) ExecX(ctx context.Context) {
-	if err := vtc.Exec(ctx); err != nil {
+func (_c *VerificationTokenCreate) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (vtc *VerificationTokenCreate) defaults() error {
-	if _, ok := vtc.mutation.CreatedAt(); !ok {
+func (_c *VerificationTokenCreate) defaults() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		if verificationtoken.DefaultCreatedAt == nil {
 			return fmt.Errorf("ent: uninitialized verificationtoken.DefaultCreatedAt (forgotten import ent/runtime?)")
 		}
 		v := verificationtoken.DefaultCreatedAt()
-		vtc.mutation.SetCreatedAt(v)
+		_c.mutation.SetCreatedAt(v)
 	}
-	if _, ok := vtc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		if verificationtoken.DefaultUpdatedAt == nil {
 			return fmt.Errorf("ent: uninitialized verificationtoken.DefaultUpdatedAt (forgotten import ent/runtime?)")
 		}
 		v := verificationtoken.DefaultUpdatedAt()
-		vtc.mutation.SetUpdatedAt(v)
+		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := vtc.mutation.ExpiryAt(); !ok {
+	if _, ok := _c.mutation.ExpiryAt(); !ok {
 		v := verificationtoken.DefaultExpiryAt
-		vtc.mutation.SetExpiryAt(v)
+		_c.mutation.SetExpiryAt(v)
 	}
-	if _, ok := vtc.mutation.ID(); !ok {
+	if _, ok := _c.mutation.ID(); !ok {
 		if verificationtoken.DefaultID == nil {
 			return fmt.Errorf("ent: uninitialized verificationtoken.DefaultID (forgotten import ent/runtime?)")
 		}
 		v := verificationtoken.DefaultID()
-		vtc.mutation.SetID(v)
+		_c.mutation.SetID(v)
 	}
 	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
-func (vtc *VerificationTokenCreate) check() error {
-	if _, ok := vtc.mutation.CreatedAt(); !ok {
+func (_c *VerificationTokenCreate) check() error {
+	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "VerificationToken.created_at"`)}
 	}
-	if _, ok := vtc.mutation.UpdatedAt(); !ok {
+	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "VerificationToken.updated_at"`)}
 	}
-	if _, ok := vtc.mutation.Token(); !ok {
+	if _, ok := _c.mutation.Token(); !ok {
 		return &ValidationError{Name: "token", err: errors.New(`ent: missing required field "VerificationToken.token"`)}
 	}
-	if _, ok := vtc.mutation.Scope(); !ok {
+	if _, ok := _c.mutation.Scope(); !ok {
 		return &ValidationError{Name: "scope", err: errors.New(`ent: missing required field "VerificationToken.scope"`)}
 	}
-	if v, ok := vtc.mutation.Scope(); ok {
+	if v, ok := _c.mutation.Scope(); ok {
 		if err := verificationtoken.ScopeValidator(v); err != nil {
 			return &ValidationError{Name: "scope", err: fmt.Errorf(`ent: validator failed for field "VerificationToken.scope": %w`, err)}
 		}
 	}
-	if _, ok := vtc.mutation.ExpiryAt(); !ok {
+	if _, ok := _c.mutation.ExpiryAt(); !ok {
 		return &ValidationError{Name: "expiry_at", err: errors.New(`ent: missing required field "VerificationToken.expiry_at"`)}
 	}
-	if len(vtc.mutation.OwnerIDs()) == 0 {
+	if len(_c.mutation.OwnerIDs()) == 0 {
 		return &ValidationError{Name: "owner", err: errors.New(`ent: missing required edge "VerificationToken.owner"`)}
 	}
 	return nil
 }
 
-func (vtc *VerificationTokenCreate) sqlSave(ctx context.Context) (*VerificationToken, error) {
-	if err := vtc.check(); err != nil {
+func (_c *VerificationTokenCreate) sqlSave(ctx context.Context) (*VerificationToken, error) {
+	if err := _c.check(); err != nil {
 		return nil, err
 	}
-	_node, _spec := vtc.createSpec()
-	if err := sqlgraph.CreateNode(ctx, vtc.driver, _spec); err != nil {
+	_node, _spec := _c.createSpec()
+	if err := sqlgraph.CreateNode(ctx, _c.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
 			err = &ConstraintError{msg: err.Error(), wrap: err}
 		}
@@ -215,42 +215,42 @@ func (vtc *VerificationTokenCreate) sqlSave(ctx context.Context) (*VerificationT
 			return nil, err
 		}
 	}
-	vtc.mutation.id = &_node.ID
-	vtc.mutation.done = true
+	_c.mutation.id = &_node.ID
+	_c.mutation.done = true
 	return _node, nil
 }
 
-func (vtc *VerificationTokenCreate) createSpec() (*VerificationToken, *sqlgraph.CreateSpec) {
+func (_c *VerificationTokenCreate) createSpec() (*VerificationToken, *sqlgraph.CreateSpec) {
 	var (
-		_node = &VerificationToken{config: vtc.config}
+		_node = &VerificationToken{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(verificationtoken.Table, sqlgraph.NewFieldSpec(verificationtoken.FieldID, field.TypeUUID))
 	)
-	_spec.OnConflict = vtc.conflict
-	if id, ok := vtc.mutation.ID(); ok {
+	_spec.OnConflict = _c.conflict
+	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := vtc.mutation.CreatedAt(); ok {
+	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(verificationtoken.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if value, ok := vtc.mutation.UpdatedAt(); ok {
+	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(verificationtoken.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := vtc.mutation.Token(); ok {
+	if value, ok := _c.mutation.Token(); ok {
 		_spec.SetField(verificationtoken.FieldToken, field.TypeString, value)
 		_node.Token = value
 	}
-	if value, ok := vtc.mutation.Scope(); ok {
+	if value, ok := _c.mutation.Scope(); ok {
 		_spec.SetField(verificationtoken.FieldScope, field.TypeEnum, value)
 		_node.Scope = value
 	}
-	if value, ok := vtc.mutation.ExpiryAt(); ok {
+	if value, ok := _c.mutation.ExpiryAt(); ok {
 		_spec.SetField(verificationtoken.FieldExpiryAt, field.TypeTime, value)
 		_node.ExpiryAt = value
 	}
-	if nodes := vtc.mutation.OwnerIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.OwnerIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
@@ -286,10 +286,10 @@ func (vtc *VerificationTokenCreate) createSpec() (*VerificationToken, *sqlgraph.
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (vtc *VerificationTokenCreate) OnConflict(opts ...sql.ConflictOption) *VerificationTokenUpsertOne {
-	vtc.conflict = opts
+func (_c *VerificationTokenCreate) OnConflict(opts ...sql.ConflictOption) *VerificationTokenUpsertOne {
+	_c.conflict = opts
 	return &VerificationTokenUpsertOne{
-		create: vtc,
+		create: _c,
 	}
 }
 
@@ -299,10 +299,10 @@ func (vtc *VerificationTokenCreate) OnConflict(opts ...sql.ConflictOption) *Veri
 //	client.VerificationToken.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (vtc *VerificationTokenCreate) OnConflictColumns(columns ...string) *VerificationTokenUpsertOne {
-	vtc.conflict = append(vtc.conflict, sql.ConflictColumns(columns...))
+func (_c *VerificationTokenCreate) OnConflictColumns(columns ...string) *VerificationTokenUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &VerificationTokenUpsertOne{
-		create: vtc,
+		create: _c,
 	}
 }
 
@@ -475,16 +475,16 @@ type VerificationTokenCreateBulk struct {
 }
 
 // Save creates the VerificationToken entities in the database.
-func (vtcb *VerificationTokenCreateBulk) Save(ctx context.Context) ([]*VerificationToken, error) {
-	if vtcb.err != nil {
-		return nil, vtcb.err
+func (_c *VerificationTokenCreateBulk) Save(ctx context.Context) ([]*VerificationToken, error) {
+	if _c.err != nil {
+		return nil, _c.err
 	}
-	specs := make([]*sqlgraph.CreateSpec, len(vtcb.builders))
-	nodes := make([]*VerificationToken, len(vtcb.builders))
-	mutators := make([]Mutator, len(vtcb.builders))
-	for i := range vtcb.builders {
+	specs := make([]*sqlgraph.CreateSpec, len(_c.builders))
+	nodes := make([]*VerificationToken, len(_c.builders))
+	mutators := make([]Mutator, len(_c.builders))
+	for i := range _c.builders {
 		func(i int, root context.Context) {
-			builder := vtcb.builders[i]
+			builder := _c.builders[i]
 			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*VerificationTokenMutation)
@@ -498,12 +498,12 @@ func (vtcb *VerificationTokenCreateBulk) Save(ctx context.Context) ([]*Verificat
 				var err error
 				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
-					_, err = mutators[i+1].Mutate(root, vtcb.builders[i+1].mutation)
+					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
-					spec.OnConflict = vtcb.conflict
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
-					if err = sqlgraph.BatchCreate(ctx, vtcb.driver, spec); err != nil {
+					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
 							err = &ConstraintError{msg: err.Error(), wrap: err}
 						}
@@ -523,7 +523,7 @@ func (vtcb *VerificationTokenCreateBulk) Save(ctx context.Context) ([]*Verificat
 		}(i, ctx)
 	}
 	if len(mutators) > 0 {
-		if _, err := mutators[0].Mutate(ctx, vtcb.builders[0].mutation); err != nil {
+		if _, err := mutators[0].Mutate(ctx, _c.builders[0].mutation); err != nil {
 			return nil, err
 		}
 	}
@@ -531,8 +531,8 @@ func (vtcb *VerificationTokenCreateBulk) Save(ctx context.Context) ([]*Verificat
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (vtcb *VerificationTokenCreateBulk) SaveX(ctx context.Context) []*VerificationToken {
-	v, err := vtcb.Save(ctx)
+func (_c *VerificationTokenCreateBulk) SaveX(ctx context.Context) []*VerificationToken {
+	v, err := _c.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -540,14 +540,14 @@ func (vtcb *VerificationTokenCreateBulk) SaveX(ctx context.Context) []*Verificat
 }
 
 // Exec executes the query.
-func (vtcb *VerificationTokenCreateBulk) Exec(ctx context.Context) error {
-	_, err := vtcb.Save(ctx)
+func (_c *VerificationTokenCreateBulk) Exec(ctx context.Context) error {
+	_, err := _c.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (vtcb *VerificationTokenCreateBulk) ExecX(ctx context.Context) {
-	if err := vtcb.Exec(ctx); err != nil {
+func (_c *VerificationTokenCreateBulk) ExecX(ctx context.Context) {
+	if err := _c.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
@@ -567,10 +567,10 @@ func (vtcb *VerificationTokenCreateBulk) ExecX(ctx context.Context) {
 //			SetCreatedAt(v+v).
 //		}).
 //		Exec(ctx)
-func (vtcb *VerificationTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *VerificationTokenUpsertBulk {
-	vtcb.conflict = opts
+func (_c *VerificationTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *VerificationTokenUpsertBulk {
+	_c.conflict = opts
 	return &VerificationTokenUpsertBulk{
-		create: vtcb,
+		create: _c,
 	}
 }
 
@@ -580,10 +580,10 @@ func (vtcb *VerificationTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) 
 //	client.VerificationToken.Create().
 //		OnConflict(sql.ConflictColumns(columns...)).
 //		Exec(ctx)
-func (vtcb *VerificationTokenCreateBulk) OnConflictColumns(columns ...string) *VerificationTokenUpsertBulk {
-	vtcb.conflict = append(vtcb.conflict, sql.ConflictColumns(columns...))
+func (_c *VerificationTokenCreateBulk) OnConflictColumns(columns ...string) *VerificationTokenUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
 	return &VerificationTokenUpsertBulk{
-		create: vtcb,
+		create: _c,
 	}
 }
 

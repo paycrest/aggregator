@@ -41,7 +41,7 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.GET("rates/:token/:amount/:fiat", ctrl.GetTokenRate)
 	v1.GET("pubkey", ctrl.GetAggregatorPublicKey)
 	v1.POST("verify-account", ctrl.VerifyAccount)
-	v1.GET("orders/:chain_id/:id", ctrl.GetLockPaymentOrderStatus)
+	v1.GET("orders/:chain_id/:id", ctrl.GetProviderOrderStatus)
 
 	// Reindex transaction endpoint
 	v1.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
@@ -64,12 +64,6 @@ func RegisterRoutes(route *gin.Engine) {
 
 	// Insight webhook route
 	v1.POST("insight/webhook", ctrl.InsightWebhook)
-
-	// Linked address routes
-	v1.POST("linked-addresses", middleware.PrivyMiddleware, ctrl.CreateLinkedAddress)
-	v1.GET("linked-addresses", ctrl.GetLinkedAddress)
-	v1.GET("linked-addresses/me", middleware.PrivyMiddleware, ctrl.GetLinkedAddress)
-	v1.GET("linked-addresses/:linked_address/transactions", middleware.PrivyMiddleware, ctrl.GetLinkedAddressTransactions)
 }
 
 func authRoutes(route *gin.Engine) {
@@ -138,7 +132,7 @@ func providerRoutes(route *gin.Engine) {
 	v1.Use(middleware.DynamicAuthMiddleware)
 	v1.Use(middleware.OnlyProviderMiddleware)
 
-	v1.GET("orders", providerCtrl.GetLockPaymentOrders)
+	v1.GET("orders", providerCtrl.GetPaymentOrders)
 	v1.POST("orders/:id/accept", providerCtrl.AcceptOrder)
 	v1.POST("orders/:id/decline", providerCtrl.DeclineOrder)
 	v1.POST("orders/:id/fulfill", providerCtrl.FulfillOrder)

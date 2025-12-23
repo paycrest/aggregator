@@ -74,7 +74,7 @@ func (*ProviderRating) scanValues(columns []string) ([]any, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the ProviderRating fields.
-func (pr *ProviderRating) assignValues(columns []string, values []any) error {
+func (_m *ProviderRating) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -85,34 +85,34 @@ func (pr *ProviderRating) assignValues(columns []string, values []any) error {
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			pr.ID = int(value.Int64)
+			_m.ID = int(value.Int64)
 		case providerrating.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
-				pr.CreatedAt = value.Time
+				_m.CreatedAt = value.Time
 			}
 		case providerrating.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
-				pr.UpdatedAt = value.Time
+				_m.UpdatedAt = value.Time
 			}
 		case providerrating.FieldTrustScore:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field trust_score", values[i])
 			} else if value != nil {
-				pr.TrustScore = *value
+				_m.TrustScore = *value
 			}
 		case providerrating.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_profile_provider_rating", values[i])
 			} else if value.Valid {
-				pr.provider_profile_provider_rating = new(string)
-				*pr.provider_profile_provider_rating = value.String
+				_m.provider_profile_provider_rating = new(string)
+				*_m.provider_profile_provider_rating = value.String
 			}
 		default:
-			pr.selectValues.Set(columns[i], values[i])
+			_m.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
@@ -120,46 +120,46 @@ func (pr *ProviderRating) assignValues(columns []string, values []any) error {
 
 // Value returns the ent.Value that was dynamically selected and assigned to the ProviderRating.
 // This includes values selected through modifiers, order, etc.
-func (pr *ProviderRating) Value(name string) (ent.Value, error) {
-	return pr.selectValues.Get(name)
+func (_m *ProviderRating) Value(name string) (ent.Value, error) {
+	return _m.selectValues.Get(name)
 }
 
 // QueryProviderProfile queries the "provider_profile" edge of the ProviderRating entity.
-func (pr *ProviderRating) QueryProviderProfile() *ProviderProfileQuery {
-	return NewProviderRatingClient(pr.config).QueryProviderProfile(pr)
+func (_m *ProviderRating) QueryProviderProfile() *ProviderProfileQuery {
+	return NewProviderRatingClient(_m.config).QueryProviderProfile(_m)
 }
 
 // Update returns a builder for updating this ProviderRating.
 // Note that you need to call ProviderRating.Unwrap() before calling this method if this ProviderRating
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (pr *ProviderRating) Update() *ProviderRatingUpdateOne {
-	return NewProviderRatingClient(pr.config).UpdateOne(pr)
+func (_m *ProviderRating) Update() *ProviderRatingUpdateOne {
+	return NewProviderRatingClient(_m.config).UpdateOne(_m)
 }
 
 // Unwrap unwraps the ProviderRating entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (pr *ProviderRating) Unwrap() *ProviderRating {
-	_tx, ok := pr.config.driver.(*txDriver)
+func (_m *ProviderRating) Unwrap() *ProviderRating {
+	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
 		panic("ent: ProviderRating is not a transactional entity")
 	}
-	pr.config.driver = _tx.drv
-	return pr
+	_m.config.driver = _tx.drv
+	return _m
 }
 
 // String implements the fmt.Stringer.
-func (pr *ProviderRating) String() string {
+func (_m *ProviderRating) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProviderRating(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", pr.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("created_at=")
-	builder.WriteString(pr.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
-	builder.WriteString(pr.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("trust_score=")
-	builder.WriteString(fmt.Sprintf("%v", pr.TrustScore))
+	builder.WriteString(fmt.Sprintf("%v", _m.TrustScore))
 	builder.WriteByte(')')
 	return builder.String()
 }

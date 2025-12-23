@@ -14,7 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -23,58 +23,58 @@ import (
 // ProvisionBucketQuery is the builder for querying ProvisionBucket entities.
 type ProvisionBucketQuery struct {
 	config
-	ctx                   *QueryContext
-	order                 []provisionbucket.OrderOption
-	inters                []Interceptor
-	predicates            []predicate.ProvisionBucket
-	withCurrency          *FiatCurrencyQuery
-	withLockPaymentOrders *LockPaymentOrderQuery
-	withProviderProfiles  *ProviderProfileQuery
-	withFKs               bool
+	ctx                  *QueryContext
+	order                []provisionbucket.OrderOption
+	inters               []Interceptor
+	predicates           []predicate.ProvisionBucket
+	withCurrency         *FiatCurrencyQuery
+	withPaymentOrders    *PaymentOrderQuery
+	withProviderProfiles *ProviderProfileQuery
+	withFKs              bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
 }
 
 // Where adds a new predicate for the ProvisionBucketQuery builder.
-func (pbq *ProvisionBucketQuery) Where(ps ...predicate.ProvisionBucket) *ProvisionBucketQuery {
-	pbq.predicates = append(pbq.predicates, ps...)
-	return pbq
+func (_q *ProvisionBucketQuery) Where(ps ...predicate.ProvisionBucket) *ProvisionBucketQuery {
+	_q.predicates = append(_q.predicates, ps...)
+	return _q
 }
 
 // Limit the number of records to be returned by this query.
-func (pbq *ProvisionBucketQuery) Limit(limit int) *ProvisionBucketQuery {
-	pbq.ctx.Limit = &limit
-	return pbq
+func (_q *ProvisionBucketQuery) Limit(limit int) *ProvisionBucketQuery {
+	_q.ctx.Limit = &limit
+	return _q
 }
 
 // Offset to start from.
-func (pbq *ProvisionBucketQuery) Offset(offset int) *ProvisionBucketQuery {
-	pbq.ctx.Offset = &offset
-	return pbq
+func (_q *ProvisionBucketQuery) Offset(offset int) *ProvisionBucketQuery {
+	_q.ctx.Offset = &offset
+	return _q
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
-func (pbq *ProvisionBucketQuery) Unique(unique bool) *ProvisionBucketQuery {
-	pbq.ctx.Unique = &unique
-	return pbq
+func (_q *ProvisionBucketQuery) Unique(unique bool) *ProvisionBucketQuery {
+	_q.ctx.Unique = &unique
+	return _q
 }
 
 // Order specifies how the records should be ordered.
-func (pbq *ProvisionBucketQuery) Order(o ...provisionbucket.OrderOption) *ProvisionBucketQuery {
-	pbq.order = append(pbq.order, o...)
-	return pbq
+func (_q *ProvisionBucketQuery) Order(o ...provisionbucket.OrderOption) *ProvisionBucketQuery {
+	_q.order = append(_q.order, o...)
+	return _q
 }
 
 // QueryCurrency chains the current query on the "currency" edge.
-func (pbq *ProvisionBucketQuery) QueryCurrency() *FiatCurrencyQuery {
-	query := (&FiatCurrencyClient{config: pbq.config}).Query()
+func (_q *ProvisionBucketQuery) QueryCurrency() *FiatCurrencyQuery {
+	query := (&FiatCurrencyClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := pbq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := pbq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -83,42 +83,42 @@ func (pbq *ProvisionBucketQuery) QueryCurrency() *FiatCurrencyQuery {
 			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, provisionbucket.CurrencyTable, provisionbucket.CurrencyColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(pbq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
-// QueryLockPaymentOrders chains the current query on the "lock_payment_orders" edge.
-func (pbq *ProvisionBucketQuery) QueryLockPaymentOrders() *LockPaymentOrderQuery {
-	query := (&LockPaymentOrderClient{config: pbq.config}).Query()
+// QueryPaymentOrders chains the current query on the "payment_orders" edge.
+func (_q *ProvisionBucketQuery) QueryPaymentOrders() *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := pbq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := pbq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(provisionbucket.Table, provisionbucket.FieldID, selector),
-			sqlgraph.To(lockpaymentorder.Table, lockpaymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, provisionbucket.LockPaymentOrdersTable, provisionbucket.LockPaymentOrdersColumn),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, provisionbucket.PaymentOrdersTable, provisionbucket.PaymentOrdersColumn),
 		)
-		fromU = sqlgraph.SetNeighbors(pbq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
 }
 
 // QueryProviderProfiles chains the current query on the "provider_profiles" edge.
-func (pbq *ProvisionBucketQuery) QueryProviderProfiles() *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: pbq.config}).Query()
+func (_q *ProvisionBucketQuery) QueryProviderProfiles() *ProviderProfileQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := pbq.prepareQuery(ctx); err != nil {
+		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
 		}
-		selector := pbq.sqlQuery(ctx)
+		selector := _q.sqlQuery(ctx)
 		if err := selector.Err(); err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func (pbq *ProvisionBucketQuery) QueryProviderProfiles() *ProviderProfileQuery {
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, provisionbucket.ProviderProfilesTable, provisionbucket.ProviderProfilesPrimaryKey...),
 		)
-		fromU = sqlgraph.SetNeighbors(pbq.driver.Dialect(), step)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
 	}
 	return query
@@ -135,8 +135,8 @@ func (pbq *ProvisionBucketQuery) QueryProviderProfiles() *ProviderProfileQuery {
 
 // First returns the first ProvisionBucket entity from the query.
 // Returns a *NotFoundError when no ProvisionBucket was found.
-func (pbq *ProvisionBucketQuery) First(ctx context.Context) (*ProvisionBucket, error) {
-	nodes, err := pbq.Limit(1).All(setContextOp(ctx, pbq.ctx, ent.OpQueryFirst))
+func (_q *ProvisionBucketQuery) First(ctx context.Context) (*ProvisionBucket, error) {
+	nodes, err := _q.Limit(1).All(setContextOp(ctx, _q.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +147,8 @@ func (pbq *ProvisionBucketQuery) First(ctx context.Context) (*ProvisionBucket, e
 }
 
 // FirstX is like First, but panics if an error occurs.
-func (pbq *ProvisionBucketQuery) FirstX(ctx context.Context) *ProvisionBucket {
-	node, err := pbq.First(ctx)
+func (_q *ProvisionBucketQuery) FirstX(ctx context.Context) *ProvisionBucket {
+	node, err := _q.First(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -157,9 +157,9 @@ func (pbq *ProvisionBucketQuery) FirstX(ctx context.Context) *ProvisionBucket {
 
 // FirstID returns the first ProvisionBucket ID from the query.
 // Returns a *NotFoundError when no ProvisionBucket ID was found.
-func (pbq *ProvisionBucketQuery) FirstID(ctx context.Context) (id int, err error) {
+func (_q *ProvisionBucketQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = pbq.Limit(1).IDs(setContextOp(ctx, pbq.ctx, ent.OpQueryFirstID)); err != nil {
+	if ids, err = _q.Limit(1).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -170,8 +170,8 @@ func (pbq *ProvisionBucketQuery) FirstID(ctx context.Context) (id int, err error
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (pbq *ProvisionBucketQuery) FirstIDX(ctx context.Context) int {
-	id, err := pbq.FirstID(ctx)
+func (_q *ProvisionBucketQuery) FirstIDX(ctx context.Context) int {
+	id, err := _q.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
 	}
@@ -181,8 +181,8 @@ func (pbq *ProvisionBucketQuery) FirstIDX(ctx context.Context) int {
 // Only returns a single ProvisionBucket entity found by the query, ensuring it only returns one.
 // Returns a *NotSingularError when more than one ProvisionBucket entity is found.
 // Returns a *NotFoundError when no ProvisionBucket entities are found.
-func (pbq *ProvisionBucketQuery) Only(ctx context.Context) (*ProvisionBucket, error) {
-	nodes, err := pbq.Limit(2).All(setContextOp(ctx, pbq.ctx, ent.OpQueryOnly))
+func (_q *ProvisionBucketQuery) Only(ctx context.Context) (*ProvisionBucket, error) {
+	nodes, err := _q.Limit(2).All(setContextOp(ctx, _q.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -197,8 +197,8 @@ func (pbq *ProvisionBucketQuery) Only(ctx context.Context) (*ProvisionBucket, er
 }
 
 // OnlyX is like Only, but panics if an error occurs.
-func (pbq *ProvisionBucketQuery) OnlyX(ctx context.Context) *ProvisionBucket {
-	node, err := pbq.Only(ctx)
+func (_q *ProvisionBucketQuery) OnlyX(ctx context.Context) *ProvisionBucket {
+	node, err := _q.Only(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -208,9 +208,9 @@ func (pbq *ProvisionBucketQuery) OnlyX(ctx context.Context) *ProvisionBucket {
 // OnlyID is like Only, but returns the only ProvisionBucket ID in the query.
 // Returns a *NotSingularError when more than one ProvisionBucket ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (pbq *ProvisionBucketQuery) OnlyID(ctx context.Context) (id int, err error) {
+func (_q *ProvisionBucketQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = pbq.Limit(2).IDs(setContextOp(ctx, pbq.ctx, ent.OpQueryOnlyID)); err != nil {
+	if ids, err = _q.Limit(2).IDs(setContextOp(ctx, _q.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -225,8 +225,8 @@ func (pbq *ProvisionBucketQuery) OnlyID(ctx context.Context) (id int, err error)
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (pbq *ProvisionBucketQuery) OnlyIDX(ctx context.Context) int {
-	id, err := pbq.OnlyID(ctx)
+func (_q *ProvisionBucketQuery) OnlyIDX(ctx context.Context) int {
+	id, err := _q.OnlyID(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -234,18 +234,18 @@ func (pbq *ProvisionBucketQuery) OnlyIDX(ctx context.Context) int {
 }
 
 // All executes the query and returns a list of ProvisionBuckets.
-func (pbq *ProvisionBucketQuery) All(ctx context.Context) ([]*ProvisionBucket, error) {
-	ctx = setContextOp(ctx, pbq.ctx, ent.OpQueryAll)
-	if err := pbq.prepareQuery(ctx); err != nil {
+func (_q *ProvisionBucketQuery) All(ctx context.Context) ([]*ProvisionBucket, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryAll)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
 	qr := querierAll[[]*ProvisionBucket, *ProvisionBucketQuery]()
-	return withInterceptors[[]*ProvisionBucket](ctx, pbq, qr, pbq.inters)
+	return withInterceptors[[]*ProvisionBucket](ctx, _q, qr, _q.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
-func (pbq *ProvisionBucketQuery) AllX(ctx context.Context) []*ProvisionBucket {
-	nodes, err := pbq.All(ctx)
+func (_q *ProvisionBucketQuery) AllX(ctx context.Context) []*ProvisionBucket {
+	nodes, err := _q.All(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -253,20 +253,20 @@ func (pbq *ProvisionBucketQuery) AllX(ctx context.Context) []*ProvisionBucket {
 }
 
 // IDs executes the query and returns a list of ProvisionBucket IDs.
-func (pbq *ProvisionBucketQuery) IDs(ctx context.Context) (ids []int, err error) {
-	if pbq.ctx.Unique == nil && pbq.path != nil {
-		pbq.Unique(true)
+func (_q *ProvisionBucketQuery) IDs(ctx context.Context) (ids []int, err error) {
+	if _q.ctx.Unique == nil && _q.path != nil {
+		_q.Unique(true)
 	}
-	ctx = setContextOp(ctx, pbq.ctx, ent.OpQueryIDs)
-	if err = pbq.Select(provisionbucket.FieldID).Scan(ctx, &ids); err != nil {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryIDs)
+	if err = _q.Select(provisionbucket.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (pbq *ProvisionBucketQuery) IDsX(ctx context.Context) []int {
-	ids, err := pbq.IDs(ctx)
+func (_q *ProvisionBucketQuery) IDsX(ctx context.Context) []int {
+	ids, err := _q.IDs(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -274,17 +274,17 @@ func (pbq *ProvisionBucketQuery) IDsX(ctx context.Context) []int {
 }
 
 // Count returns the count of the given query.
-func (pbq *ProvisionBucketQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, pbq.ctx, ent.OpQueryCount)
-	if err := pbq.prepareQuery(ctx); err != nil {
+func (_q *ProvisionBucketQuery) Count(ctx context.Context) (int, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryCount)
+	if err := _q.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return withInterceptors[int](ctx, pbq, querierCount[*ProvisionBucketQuery](), pbq.inters)
+	return withInterceptors[int](ctx, _q, querierCount[*ProvisionBucketQuery](), _q.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
-func (pbq *ProvisionBucketQuery) CountX(ctx context.Context) int {
-	count, err := pbq.Count(ctx)
+func (_q *ProvisionBucketQuery) CountX(ctx context.Context) int {
+	count, err := _q.Count(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -292,9 +292,9 @@ func (pbq *ProvisionBucketQuery) CountX(ctx context.Context) int {
 }
 
 // Exist returns true if the query has elements in the graph.
-func (pbq *ProvisionBucketQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, pbq.ctx, ent.OpQueryExist)
-	switch _, err := pbq.FirstID(ctx); {
+func (_q *ProvisionBucketQuery) Exist(ctx context.Context) (bool, error) {
+	ctx = setContextOp(ctx, _q.ctx, ent.OpQueryExist)
+	switch _, err := _q.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
@@ -305,8 +305,8 @@ func (pbq *ProvisionBucketQuery) Exist(ctx context.Context) (bool, error) {
 }
 
 // ExistX is like Exist, but panics if an error occurs.
-func (pbq *ProvisionBucketQuery) ExistX(ctx context.Context) bool {
-	exist, err := pbq.Exist(ctx)
+func (_q *ProvisionBucketQuery) ExistX(ctx context.Context) bool {
+	exist, err := _q.Exist(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -315,56 +315,56 @@ func (pbq *ProvisionBucketQuery) ExistX(ctx context.Context) bool {
 
 // Clone returns a duplicate of the ProvisionBucketQuery builder, including all associated steps. It can be
 // used to prepare common query builders and use them differently after the clone is made.
-func (pbq *ProvisionBucketQuery) Clone() *ProvisionBucketQuery {
-	if pbq == nil {
+func (_q *ProvisionBucketQuery) Clone() *ProvisionBucketQuery {
+	if _q == nil {
 		return nil
 	}
 	return &ProvisionBucketQuery{
-		config:                pbq.config,
-		ctx:                   pbq.ctx.Clone(),
-		order:                 append([]provisionbucket.OrderOption{}, pbq.order...),
-		inters:                append([]Interceptor{}, pbq.inters...),
-		predicates:            append([]predicate.ProvisionBucket{}, pbq.predicates...),
-		withCurrency:          pbq.withCurrency.Clone(),
-		withLockPaymentOrders: pbq.withLockPaymentOrders.Clone(),
-		withProviderProfiles:  pbq.withProviderProfiles.Clone(),
+		config:               _q.config,
+		ctx:                  _q.ctx.Clone(),
+		order:                append([]provisionbucket.OrderOption{}, _q.order...),
+		inters:               append([]Interceptor{}, _q.inters...),
+		predicates:           append([]predicate.ProvisionBucket{}, _q.predicates...),
+		withCurrency:         _q.withCurrency.Clone(),
+		withPaymentOrders:    _q.withPaymentOrders.Clone(),
+		withProviderProfiles: _q.withProviderProfiles.Clone(),
 		// clone intermediate query.
-		sql:  pbq.sql.Clone(),
-		path: pbq.path,
+		sql:  _q.sql.Clone(),
+		path: _q.path,
 	}
 }
 
 // WithCurrency tells the query-builder to eager-load the nodes that are connected to
 // the "currency" edge. The optional arguments are used to configure the query builder of the edge.
-func (pbq *ProvisionBucketQuery) WithCurrency(opts ...func(*FiatCurrencyQuery)) *ProvisionBucketQuery {
-	query := (&FiatCurrencyClient{config: pbq.config}).Query()
+func (_q *ProvisionBucketQuery) WithCurrency(opts ...func(*FiatCurrencyQuery)) *ProvisionBucketQuery {
+	query := (&FiatCurrencyClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	pbq.withCurrency = query
-	return pbq
+	_q.withCurrency = query
+	return _q
 }
 
-// WithLockPaymentOrders tells the query-builder to eager-load the nodes that are connected to
-// the "lock_payment_orders" edge. The optional arguments are used to configure the query builder of the edge.
-func (pbq *ProvisionBucketQuery) WithLockPaymentOrders(opts ...func(*LockPaymentOrderQuery)) *ProvisionBucketQuery {
-	query := (&LockPaymentOrderClient{config: pbq.config}).Query()
+// WithPaymentOrders tells the query-builder to eager-load the nodes that are connected to
+// the "payment_orders" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProvisionBucketQuery) WithPaymentOrders(opts ...func(*PaymentOrderQuery)) *ProvisionBucketQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	pbq.withLockPaymentOrders = query
-	return pbq
+	_q.withPaymentOrders = query
+	return _q
 }
 
 // WithProviderProfiles tells the query-builder to eager-load the nodes that are connected to
 // the "provider_profiles" edge. The optional arguments are used to configure the query builder of the edge.
-func (pbq *ProvisionBucketQuery) WithProviderProfiles(opts ...func(*ProviderProfileQuery)) *ProvisionBucketQuery {
-	query := (&ProviderProfileClient{config: pbq.config}).Query()
+func (_q *ProvisionBucketQuery) WithProviderProfiles(opts ...func(*ProviderProfileQuery)) *ProvisionBucketQuery {
+	query := (&ProviderProfileClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	pbq.withProviderProfiles = query
-	return pbq
+	_q.withProviderProfiles = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -381,10 +381,10 @@ func (pbq *ProvisionBucketQuery) WithProviderProfiles(opts ...func(*ProviderProf
 //		GroupBy(provisionbucket.FieldMinAmount).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-func (pbq *ProvisionBucketQuery) GroupBy(field string, fields ...string) *ProvisionBucketGroupBy {
-	pbq.ctx.Fields = append([]string{field}, fields...)
-	grbuild := &ProvisionBucketGroupBy{build: pbq}
-	grbuild.flds = &pbq.ctx.Fields
+func (_q *ProvisionBucketQuery) GroupBy(field string, fields ...string) *ProvisionBucketGroupBy {
+	_q.ctx.Fields = append([]string{field}, fields...)
+	grbuild := &ProvisionBucketGroupBy{build: _q}
+	grbuild.flds = &_q.ctx.Fields
 	grbuild.label = provisionbucket.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -402,57 +402,57 @@ func (pbq *ProvisionBucketQuery) GroupBy(field string, fields ...string) *Provis
 //	client.ProvisionBucket.Query().
 //		Select(provisionbucket.FieldMinAmount).
 //		Scan(ctx, &v)
-func (pbq *ProvisionBucketQuery) Select(fields ...string) *ProvisionBucketSelect {
-	pbq.ctx.Fields = append(pbq.ctx.Fields, fields...)
-	sbuild := &ProvisionBucketSelect{ProvisionBucketQuery: pbq}
+func (_q *ProvisionBucketQuery) Select(fields ...string) *ProvisionBucketSelect {
+	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
+	sbuild := &ProvisionBucketSelect{ProvisionBucketQuery: _q}
 	sbuild.label = provisionbucket.Label
-	sbuild.flds, sbuild.scan = &pbq.ctx.Fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &_q.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
 // Aggregate returns a ProvisionBucketSelect configured with the given aggregations.
-func (pbq *ProvisionBucketQuery) Aggregate(fns ...AggregateFunc) *ProvisionBucketSelect {
-	return pbq.Select().Aggregate(fns...)
+func (_q *ProvisionBucketQuery) Aggregate(fns ...AggregateFunc) *ProvisionBucketSelect {
+	return _q.Select().Aggregate(fns...)
 }
 
-func (pbq *ProvisionBucketQuery) prepareQuery(ctx context.Context) error {
-	for _, inter := range pbq.inters {
+func (_q *ProvisionBucketQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range _q.inters {
 		if inter == nil {
 			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
-			if err := trv.Traverse(ctx, pbq); err != nil {
+			if err := trv.Traverse(ctx, _q); err != nil {
 				return err
 			}
 		}
 	}
-	for _, f := range pbq.ctx.Fields {
+	for _, f := range _q.ctx.Fields {
 		if !provisionbucket.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
-	if pbq.path != nil {
-		prev, err := pbq.path(ctx)
+	if _q.path != nil {
+		prev, err := _q.path(ctx)
 		if err != nil {
 			return err
 		}
-		pbq.sql = prev
+		_q.sql = prev
 	}
 	return nil
 }
 
-func (pbq *ProvisionBucketQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProvisionBucket, error) {
+func (_q *ProvisionBucketQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ProvisionBucket, error) {
 	var (
 		nodes       = []*ProvisionBucket{}
-		withFKs     = pbq.withFKs
-		_spec       = pbq.querySpec()
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
 		loadedTypes = [3]bool{
-			pbq.withCurrency != nil,
-			pbq.withLockPaymentOrders != nil,
-			pbq.withProviderProfiles != nil,
+			_q.withCurrency != nil,
+			_q.withPaymentOrders != nil,
+			_q.withProviderProfiles != nil,
 		}
 	)
-	if pbq.withCurrency != nil {
+	if _q.withCurrency != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -462,7 +462,7 @@ func (pbq *ProvisionBucketQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 		return (*ProvisionBucket).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
-		node := &ProvisionBucket{config: pbq.config}
+		node := &ProvisionBucket{config: _q.config}
 		nodes = append(nodes, node)
 		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
@@ -470,29 +470,27 @@ func (pbq *ProvisionBucketQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	for i := range hooks {
 		hooks[i](ctx, _spec)
 	}
-	if err := sqlgraph.QueryNodes(ctx, pbq.driver, _spec); err != nil {
+	if err := sqlgraph.QueryNodes(ctx, _q.driver, _spec); err != nil {
 		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := pbq.withCurrency; query != nil {
-		if err := pbq.loadCurrency(ctx, query, nodes, nil,
+	if query := _q.withCurrency; query != nil {
+		if err := _q.loadCurrency(ctx, query, nodes, nil,
 			func(n *ProvisionBucket, e *FiatCurrency) { n.Edges.Currency = e }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pbq.withLockPaymentOrders; query != nil {
-		if err := pbq.loadLockPaymentOrders(ctx, query, nodes,
-			func(n *ProvisionBucket) { n.Edges.LockPaymentOrders = []*LockPaymentOrder{} },
-			func(n *ProvisionBucket, e *LockPaymentOrder) {
-				n.Edges.LockPaymentOrders = append(n.Edges.LockPaymentOrders, e)
-			}); err != nil {
+	if query := _q.withPaymentOrders; query != nil {
+		if err := _q.loadPaymentOrders(ctx, query, nodes,
+			func(n *ProvisionBucket) { n.Edges.PaymentOrders = []*PaymentOrder{} },
+			func(n *ProvisionBucket, e *PaymentOrder) { n.Edges.PaymentOrders = append(n.Edges.PaymentOrders, e) }); err != nil {
 			return nil, err
 		}
 	}
-	if query := pbq.withProviderProfiles; query != nil {
-		if err := pbq.loadProviderProfiles(ctx, query, nodes,
+	if query := _q.withProviderProfiles; query != nil {
+		if err := _q.loadProviderProfiles(ctx, query, nodes,
 			func(n *ProvisionBucket) { n.Edges.ProviderProfiles = []*ProviderProfile{} },
 			func(n *ProvisionBucket, e *ProviderProfile) {
 				n.Edges.ProviderProfiles = append(n.Edges.ProviderProfiles, e)
@@ -503,7 +501,7 @@ func (pbq *ProvisionBucketQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	return nodes, nil
 }
 
-func (pbq *ProvisionBucketQuery) loadCurrency(ctx context.Context, query *FiatCurrencyQuery, nodes []*ProvisionBucket, init func(*ProvisionBucket), assign func(*ProvisionBucket, *FiatCurrency)) error {
+func (_q *ProvisionBucketQuery) loadCurrency(ctx context.Context, query *FiatCurrencyQuery, nodes []*ProvisionBucket, init func(*ProvisionBucket), assign func(*ProvisionBucket, *FiatCurrency)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*ProvisionBucket)
 	for i := range nodes {
@@ -535,7 +533,7 @@ func (pbq *ProvisionBucketQuery) loadCurrency(ctx context.Context, query *FiatCu
 	}
 	return nil
 }
-func (pbq *ProvisionBucketQuery) loadLockPaymentOrders(ctx context.Context, query *LockPaymentOrderQuery, nodes []*ProvisionBucket, init func(*ProvisionBucket), assign func(*ProvisionBucket, *LockPaymentOrder)) error {
+func (_q *ProvisionBucketQuery) loadPaymentOrders(ctx context.Context, query *PaymentOrderQuery, nodes []*ProvisionBucket, init func(*ProvisionBucket), assign func(*ProvisionBucket, *PaymentOrder)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[int]*ProvisionBucket)
 	for i := range nodes {
@@ -546,27 +544,27 @@ func (pbq *ProvisionBucketQuery) loadLockPaymentOrders(ctx context.Context, quer
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.LockPaymentOrder(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(provisionbucket.LockPaymentOrdersColumn), fks...))
+	query.Where(predicate.PaymentOrder(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(provisionbucket.PaymentOrdersColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provision_bucket_lock_payment_orders
+		fk := n.provision_bucket_payment_orders
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provision_bucket_lock_payment_orders" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provision_bucket_payment_orders" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "provision_bucket_lock_payment_orders" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "provision_bucket_payment_orders" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
 	return nil
 }
-func (pbq *ProvisionBucketQuery) loadProviderProfiles(ctx context.Context, query *ProviderProfileQuery, nodes []*ProvisionBucket, init func(*ProvisionBucket), assign func(*ProvisionBucket, *ProviderProfile)) error {
+func (_q *ProvisionBucketQuery) loadProviderProfiles(ctx context.Context, query *ProviderProfileQuery, nodes []*ProvisionBucket, init func(*ProvisionBucket), assign func(*ProvisionBucket, *ProviderProfile)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[int]*ProvisionBucket)
 	nids := make(map[string]map[*ProvisionBucket]struct{})
@@ -628,24 +626,24 @@ func (pbq *ProvisionBucketQuery) loadProviderProfiles(ctx context.Context, query
 	return nil
 }
 
-func (pbq *ProvisionBucketQuery) sqlCount(ctx context.Context) (int, error) {
-	_spec := pbq.querySpec()
-	_spec.Node.Columns = pbq.ctx.Fields
-	if len(pbq.ctx.Fields) > 0 {
-		_spec.Unique = pbq.ctx.Unique != nil && *pbq.ctx.Unique
+func (_q *ProvisionBucketQuery) sqlCount(ctx context.Context) (int, error) {
+	_spec := _q.querySpec()
+	_spec.Node.Columns = _q.ctx.Fields
+	if len(_q.ctx.Fields) > 0 {
+		_spec.Unique = _q.ctx.Unique != nil && *_q.ctx.Unique
 	}
-	return sqlgraph.CountNodes(ctx, pbq.driver, _spec)
+	return sqlgraph.CountNodes(ctx, _q.driver, _spec)
 }
 
-func (pbq *ProvisionBucketQuery) querySpec() *sqlgraph.QuerySpec {
+func (_q *ProvisionBucketQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := sqlgraph.NewQuerySpec(provisionbucket.Table, provisionbucket.Columns, sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt))
-	_spec.From = pbq.sql
-	if unique := pbq.ctx.Unique; unique != nil {
+	_spec.From = _q.sql
+	if unique := _q.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
-	} else if pbq.path != nil {
+	} else if _q.path != nil {
 		_spec.Unique = true
 	}
-	if fields := pbq.ctx.Fields; len(fields) > 0 {
+	if fields := _q.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, provisionbucket.FieldID)
 		for i := range fields {
@@ -654,20 +652,20 @@ func (pbq *ProvisionBucketQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if ps := pbq.predicates; len(ps) > 0 {
+	if ps := _q.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if limit := pbq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := pbq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
-	if ps := pbq.order; len(ps) > 0 {
+	if ps := _q.order; len(ps) > 0 {
 		_spec.Order = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
@@ -677,33 +675,33 @@ func (pbq *ProvisionBucketQuery) querySpec() *sqlgraph.QuerySpec {
 	return _spec
 }
 
-func (pbq *ProvisionBucketQuery) sqlQuery(ctx context.Context) *sql.Selector {
-	builder := sql.Dialect(pbq.driver.Dialect())
+func (_q *ProvisionBucketQuery) sqlQuery(ctx context.Context) *sql.Selector {
+	builder := sql.Dialect(_q.driver.Dialect())
 	t1 := builder.Table(provisionbucket.Table)
-	columns := pbq.ctx.Fields
+	columns := _q.ctx.Fields
 	if len(columns) == 0 {
 		columns = provisionbucket.Columns
 	}
 	selector := builder.Select(t1.Columns(columns...)...).From(t1)
-	if pbq.sql != nil {
-		selector = pbq.sql
+	if _q.sql != nil {
+		selector = _q.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if pbq.ctx.Unique != nil && *pbq.ctx.Unique {
+	if _q.ctx.Unique != nil && *_q.ctx.Unique {
 		selector.Distinct()
 	}
-	for _, p := range pbq.predicates {
+	for _, p := range _q.predicates {
 		p(selector)
 	}
-	for _, p := range pbq.order {
+	for _, p := range _q.order {
 		p(selector)
 	}
-	if offset := pbq.ctx.Offset; offset != nil {
+	if offset := _q.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := pbq.ctx.Limit; limit != nil {
+	if limit := _q.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -716,41 +714,41 @@ type ProvisionBucketGroupBy struct {
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
-func (pbgb *ProvisionBucketGroupBy) Aggregate(fns ...AggregateFunc) *ProvisionBucketGroupBy {
-	pbgb.fns = append(pbgb.fns, fns...)
-	return pbgb
+func (_g *ProvisionBucketGroupBy) Aggregate(fns ...AggregateFunc) *ProvisionBucketGroupBy {
+	_g.fns = append(_g.fns, fns...)
+	return _g
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pbgb *ProvisionBucketGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pbgb.build.ctx, ent.OpQueryGroupBy)
-	if err := pbgb.build.prepareQuery(ctx); err != nil {
+func (_g *ProvisionBucketGroupBy) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _g.build.ctx, ent.OpQueryGroupBy)
+	if err := _g.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProvisionBucketQuery, *ProvisionBucketGroupBy](ctx, pbgb.build, pbgb, pbgb.build.inters, v)
+	return scanWithInterceptors[*ProvisionBucketQuery, *ProvisionBucketGroupBy](ctx, _g.build, _g, _g.build.inters, v)
 }
 
-func (pbgb *ProvisionBucketGroupBy) sqlScan(ctx context.Context, root *ProvisionBucketQuery, v any) error {
+func (_g *ProvisionBucketGroupBy) sqlScan(ctx context.Context, root *ProvisionBucketQuery, v any) error {
 	selector := root.sqlQuery(ctx).Select()
-	aggregation := make([]string, 0, len(pbgb.fns))
-	for _, fn := range pbgb.fns {
+	aggregation := make([]string, 0, len(_g.fns))
+	for _, fn := range _g.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
 	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(*pbgb.flds)+len(pbgb.fns))
-		for _, f := range *pbgb.flds {
+		columns := make([]string, 0, len(*_g.flds)+len(_g.fns))
+		for _, f := range *_g.flds {
 			columns = append(columns, selector.C(f))
 		}
 		columns = append(columns, aggregation...)
 		selector.Select(columns...)
 	}
-	selector.GroupBy(selector.Columns(*pbgb.flds...)...)
+	selector.GroupBy(selector.Columns(*_g.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pbgb.build.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _g.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -764,27 +762,27 @@ type ProvisionBucketSelect struct {
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
-func (pbs *ProvisionBucketSelect) Aggregate(fns ...AggregateFunc) *ProvisionBucketSelect {
-	pbs.fns = append(pbs.fns, fns...)
-	return pbs
+func (_s *ProvisionBucketSelect) Aggregate(fns ...AggregateFunc) *ProvisionBucketSelect {
+	_s.fns = append(_s.fns, fns...)
+	return _s
 }
 
 // Scan applies the selector query and scans the result into the given value.
-func (pbs *ProvisionBucketSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pbs.ctx, ent.OpQuerySelect)
-	if err := pbs.prepareQuery(ctx); err != nil {
+func (_s *ProvisionBucketSelect) Scan(ctx context.Context, v any) error {
+	ctx = setContextOp(ctx, _s.ctx, ent.OpQuerySelect)
+	if err := _s.prepareQuery(ctx); err != nil {
 		return err
 	}
-	return scanWithInterceptors[*ProvisionBucketQuery, *ProvisionBucketSelect](ctx, pbs.ProvisionBucketQuery, pbs, pbs.inters, v)
+	return scanWithInterceptors[*ProvisionBucketQuery, *ProvisionBucketSelect](ctx, _s.ProvisionBucketQuery, _s, _s.inters, v)
 }
 
-func (pbs *ProvisionBucketSelect) sqlScan(ctx context.Context, root *ProvisionBucketQuery, v any) error {
+func (_s *ProvisionBucketSelect) sqlScan(ctx context.Context, root *ProvisionBucketQuery, v any) error {
 	selector := root.sqlQuery(ctx)
-	aggregation := make([]string, 0, len(pbs.fns))
-	for _, fn := range pbs.fns {
+	aggregation := make([]string, 0, len(_s.fns))
+	for _, fn := range _s.fns {
 		aggregation = append(aggregation, fn(selector))
 	}
-	switch n := len(*pbs.selector.flds); {
+	switch n := len(*_s.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
 		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
@@ -792,7 +790,7 @@ func (pbs *ProvisionBucketSelect) sqlScan(ctx context.Context, root *ProvisionBu
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pbs.driver.Query(ctx, query, args, rows); err != nil {
+	if err := _s.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()

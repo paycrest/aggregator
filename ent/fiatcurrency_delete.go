@@ -20,56 +20,56 @@ type FiatCurrencyDelete struct {
 }
 
 // Where appends a list predicates to the FiatCurrencyDelete builder.
-func (fcd *FiatCurrencyDelete) Where(ps ...predicate.FiatCurrency) *FiatCurrencyDelete {
-	fcd.mutation.Where(ps...)
-	return fcd
+func (_d *FiatCurrencyDelete) Where(ps ...predicate.FiatCurrency) *FiatCurrencyDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (fcd *FiatCurrencyDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, fcd.sqlExec, fcd.mutation, fcd.hooks)
+func (_d *FiatCurrencyDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (fcd *FiatCurrencyDelete) ExecX(ctx context.Context) int {
-	n, err := fcd.Exec(ctx)
+func (_d *FiatCurrencyDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (fcd *FiatCurrencyDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *FiatCurrencyDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(fiatcurrency.Table, sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID))
-	if ps := fcd.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, fcd.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	fcd.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // FiatCurrencyDeleteOne is the builder for deleting a single FiatCurrency entity.
 type FiatCurrencyDeleteOne struct {
-	fcd *FiatCurrencyDelete
+	_d *FiatCurrencyDelete
 }
 
 // Where appends a list predicates to the FiatCurrencyDelete builder.
-func (fcdo *FiatCurrencyDeleteOne) Where(ps ...predicate.FiatCurrency) *FiatCurrencyDeleteOne {
-	fcdo.fcd.mutation.Where(ps...)
-	return fcdo
+func (_d *FiatCurrencyDeleteOne) Where(ps ...predicate.FiatCurrency) *FiatCurrencyDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (fcdo *FiatCurrencyDeleteOne) Exec(ctx context.Context) error {
-	n, err := fcdo.fcd.Exec(ctx)
+func (_d *FiatCurrencyDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (fcdo *FiatCurrencyDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (fcdo *FiatCurrencyDeleteOne) ExecX(ctx context.Context) {
-	if err := fcdo.Exec(ctx); err != nil {
+func (_d *FiatCurrencyDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

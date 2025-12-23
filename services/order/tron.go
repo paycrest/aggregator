@@ -27,10 +27,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/lockorderfulfillment"
-	"github.com/paycrest/aggregator/ent/lockpaymentorder"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
@@ -79,15 +78,13 @@ func (s *OrderTron) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 			tq.WithNetwork()
 		}).
 		WithSenderProfile().
-		WithRecipient().
-		WithReceiveAddress().
 		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - Tron.CreateOrder.fetchOrder: %w", orderIDPrefix, err)
 	}
 
 	// Create wallet
-	saltDecrypted, err := cryptoUtils.DecryptPlain(order.Edges.ReceiveAddress.Salt)
+	saltDecrypted, err := cryptoUtils.DecryptPlain(order.ReceiveAddressSalt)
 	if err != nil {
 		return fmt.Errorf("%s - Tron.CreateOrder.DecryptPlain: %w", orderIDPrefix, err)
 	}
@@ -181,7 +178,7 @@ func (s *OrderTron) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 
 	// Update payment order
 	_, err = order.Update().
-		SetBlockNumber(order.Edges.ReceiveAddress.LastIndexedBlock).
+		SetBlockNumber(0). // LastIndexedBlock no longer exists, set to 0
 		SetTxHash(txHash).
 		SetStatus(paymentorder.StatusPending).
 		Save(ctx)
@@ -189,17 +186,8 @@ func (s *OrderTron) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("%s - Tron.CreateOrder.updateTxHash: %w", orderIDPrefix, err)
 	}
 
-	paymentOrder, err := db.Client.PaymentOrder.
-		Query().
-		Where(paymentorder.IDEQ(orderID)).
-		WithSenderProfile().
-		Only(ctx)
-	if err != nil {
-		return fmt.Errorf("%s - Tron.CreateOrder.refetchOrder: %w", orderIDPrefix, err)
-	}
-
 	// Send webhook notifcation to sender
-	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
+	err = utils.SendPaymentOrderWebhook(ctx, order)
 	if err != nil {
 		return fmt.Errorf("%s - Tron.CreateOrder.webhook: %w", orderIDPrefix, err)
 	}
@@ -212,11 +200,11 @@ func (s *OrderTron) RefundOrder(ctx context.Context, network *ent.Network, order
 	orderIDPrefix := strings.Split(orderID, "-")[0]
 
 	// Fetch lock order from db
-	lockOrder, err := db.Client.LockPaymentOrder.
+	lockOrder, err := db.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.GatewayIDEQ(orderID),
-			lockpaymentorder.HasTokenWith(
+			paymentorder.GatewayIDEQ(orderID),
+			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
 				),
@@ -314,13 +302,13 @@ func (s *OrderTron) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]
 
 	// Fetch payment order from db
-	order, err := db.Client.LockPaymentOrder.
+	order, err := db.Client.PaymentOrder.
 		Query().
 		Where(
-			lockpaymentorder.IDEQ(orderID),
-			lockpaymentorder.StatusEQ(lockpaymentorder.StatusValidated),
-			lockpaymentorder.HasFulfillmentsWith(
-				lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess),
+			paymentorder.IDEQ(orderID),
+			paymentorder.StatusEQ(paymentorder.StatusValidated),
+			paymentorder.HasFulfillmentsWith(
+				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess),
 			),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
@@ -422,7 +410,7 @@ func (s *OrderTron) approveCallData(spender util.Address, amount *big.Int) ([]by
 // createOrderCallData creates the data for the createOrder method
 func (s *OrderTron) createOrderCallData(order *ent.PaymentOrder) ([]byte, error) {
 	// Encrypt recipient details
-	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order.Edges.Recipient)
+	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt recipient details: %w", err)
 	}
@@ -552,7 +540,7 @@ func (s *OrderTron) getOrderInfo(gatewayContractAddress util.Address, gatewayId 
 }
 
 // settleCallData creates the data for the settle method in the gateway contract
-func (s *OrderTron) settleCallData(ctx context.Context, order *ent.LockPaymentOrder) ([]byte, error) {
+func (s *OrderTron) settleCallData(ctx context.Context, order *ent.PaymentOrder) ([]byte, error) {
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse GatewayOrder ABI: %w", err)

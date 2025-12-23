@@ -214,21 +214,21 @@ func HasCurrencyWith(preds ...predicate.FiatCurrency) predicate.ProvisionBucket 
 	})
 }
 
-// HasLockPaymentOrders applies the HasEdge predicate on the "lock_payment_orders" edge.
-func HasLockPaymentOrders() predicate.ProvisionBucket {
+// HasPaymentOrders applies the HasEdge predicate on the "payment_orders" edge.
+func HasPaymentOrders() predicate.ProvisionBucket {
 	return predicate.ProvisionBucket(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, LockPaymentOrdersTable, LockPaymentOrdersColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, PaymentOrdersTable, PaymentOrdersColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasLockPaymentOrdersWith applies the HasEdge predicate on the "lock_payment_orders" edge with a given conditions (other predicates).
-func HasLockPaymentOrdersWith(preds ...predicate.LockPaymentOrder) predicate.ProvisionBucket {
+// HasPaymentOrdersWith applies the HasEdge predicate on the "payment_orders" edge with a given conditions (other predicates).
+func HasPaymentOrdersWith(preds ...predicate.PaymentOrder) predicate.ProvisionBucket {
 	return predicate.ProvisionBucket(func(s *sql.Selector) {
-		step := newLockPaymentOrdersStep()
+		step := newPaymentOrdersStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -8,10 +8,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/ethereum/go-ethereum/common"
@@ -251,11 +253,15 @@ func GenerateTronAccountFromIndex(accountIndex int) (wallet *tronWallet.TronWall
 }
 
 // EncryptOrderRecipient encrypts the recipient details using the aggregator's public key
-func EncryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error) {
+func EncryptOrderRecipient(order *ent.PaymentOrder) (string, error) {
 	// Generate a cryptographically secure random nonce
 	nonce := make([]byte, 12)
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("failed to generate nonce: %w", err)
+	}
+	var providerID string
+	if order.Edges.Provider != nil {
+		providerID = order.Edges.Provider.ID
 	}
 	message := struct {
 		Nonce             string
@@ -266,7 +272,7 @@ func EncryptOrderRecipient(recipient *ent.PaymentOrderRecipient) (string, error)
 		Memo              string
 		Metadata          map[string]interface{}
 	}{
-		base64.StdEncoding.EncodeToString(nonce), recipient.AccountIdentifier, recipient.AccountName, recipient.Institution, recipient.ProviderID, recipient.Memo, recipient.Metadata,
+		base64.StdEncoding.EncodeToString(nonce), order.AccountIdentifier, order.AccountName, order.Institution, providerID, order.Memo, order.Metadata,
 	}
 
 	// Encrypt with the public key of the aggregator
@@ -302,4 +308,29 @@ func GetOrderRecipientFromMessageHash(messageHash string) (*types.PaymentOrderRe
 		return nil, fmt.Errorf("%w", err)
 	}
 	return recipient, nil
+}
+
+func NormalizeStarknetAddress(address string) string {
+	// Remove 0x prefix if present
+	addr := strings.TrimPrefix(address, "0x")
+	
+	// Starknet addresses should be 64 hex characters (excluding 0x)
+	// Pad with leading zeros if shorter
+	if len(addr) < 64 {
+		addr = strings.Repeat("0", 64-len(addr)) + addr
+	}
+	
+	// Add 0x prefix back
+	return "0x" + addr
+}
+
+
+// generateSecureSeed generates a cryptographically secure random seed
+func GenerateSecureSeed() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }

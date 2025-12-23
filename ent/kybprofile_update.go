@@ -26,256 +26,256 @@ type KYBProfileUpdate struct {
 }
 
 // Where appends a list predicates to the KYBProfileUpdate builder.
-func (kpu *KYBProfileUpdate) Where(ps ...predicate.KYBProfile) *KYBProfileUpdate {
-	kpu.mutation.Where(ps...)
-	return kpu
+func (_u *KYBProfileUpdate) Where(ps ...predicate.KYBProfile) *KYBProfileUpdate {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (kpu *KYBProfileUpdate) SetUpdatedAt(t time.Time) *KYBProfileUpdate {
-	kpu.mutation.SetUpdatedAt(t)
-	return kpu
+func (_u *KYBProfileUpdate) SetUpdatedAt(v time.Time) *KYBProfileUpdate {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetMobileNumber sets the "mobile_number" field.
-func (kpu *KYBProfileUpdate) SetMobileNumber(s string) *KYBProfileUpdate {
-	kpu.mutation.SetMobileNumber(s)
-	return kpu
+func (_u *KYBProfileUpdate) SetMobileNumber(v string) *KYBProfileUpdate {
+	_u.mutation.SetMobileNumber(v)
+	return _u
 }
 
 // SetNillableMobileNumber sets the "mobile_number" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableMobileNumber(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetMobileNumber(*s)
+func (_u *KYBProfileUpdate) SetNillableMobileNumber(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetMobileNumber(*v)
 	}
-	return kpu
+	return _u
 }
 
 // SetCompanyName sets the "company_name" field.
-func (kpu *KYBProfileUpdate) SetCompanyName(s string) *KYBProfileUpdate {
-	kpu.mutation.SetCompanyName(s)
-	return kpu
+func (_u *KYBProfileUpdate) SetCompanyName(v string) *KYBProfileUpdate {
+	_u.mutation.SetCompanyName(v)
+	return _u
 }
 
 // SetNillableCompanyName sets the "company_name" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableCompanyName(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetCompanyName(*s)
+func (_u *KYBProfileUpdate) SetNillableCompanyName(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetCompanyName(*v)
 	}
-	return kpu
+	return _u
 }
 
 // SetRegisteredBusinessAddress sets the "registered_business_address" field.
-func (kpu *KYBProfileUpdate) SetRegisteredBusinessAddress(s string) *KYBProfileUpdate {
-	kpu.mutation.SetRegisteredBusinessAddress(s)
-	return kpu
+func (_u *KYBProfileUpdate) SetRegisteredBusinessAddress(v string) *KYBProfileUpdate {
+	_u.mutation.SetRegisteredBusinessAddress(v)
+	return _u
 }
 
 // SetNillableRegisteredBusinessAddress sets the "registered_business_address" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableRegisteredBusinessAddress(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetRegisteredBusinessAddress(*s)
+func (_u *KYBProfileUpdate) SetNillableRegisteredBusinessAddress(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetRegisteredBusinessAddress(*v)
 	}
-	return kpu
+	return _u
 }
 
 // SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
-func (kpu *KYBProfileUpdate) SetCertificateOfIncorporationURL(s string) *KYBProfileUpdate {
-	kpu.mutation.SetCertificateOfIncorporationURL(s)
-	return kpu
+func (_u *KYBProfileUpdate) SetCertificateOfIncorporationURL(v string) *KYBProfileUpdate {
+	_u.mutation.SetCertificateOfIncorporationURL(v)
+	return _u
 }
 
 // SetNillableCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableCertificateOfIncorporationURL(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetCertificateOfIncorporationURL(*s)
+func (_u *KYBProfileUpdate) SetNillableCertificateOfIncorporationURL(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetCertificateOfIncorporationURL(*v)
 	}
-	return kpu
+	return _u
 }
 
 // SetArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field.
-func (kpu *KYBProfileUpdate) SetArticlesOfIncorporationURL(s string) *KYBProfileUpdate {
-	kpu.mutation.SetArticlesOfIncorporationURL(s)
-	return kpu
+func (_u *KYBProfileUpdate) SetArticlesOfIncorporationURL(v string) *KYBProfileUpdate {
+	_u.mutation.SetArticlesOfIncorporationURL(v)
+	return _u
 }
 
 // SetNillableArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableArticlesOfIncorporationURL(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetArticlesOfIncorporationURL(*s)
+func (_u *KYBProfileUpdate) SetNillableArticlesOfIncorporationURL(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetArticlesOfIncorporationURL(*v)
 	}
-	return kpu
+	return _u
 }
 
 // SetBusinessLicenseURL sets the "business_license_url" field.
-func (kpu *KYBProfileUpdate) SetBusinessLicenseURL(s string) *KYBProfileUpdate {
-	kpu.mutation.SetBusinessLicenseURL(s)
-	return kpu
+func (_u *KYBProfileUpdate) SetBusinessLicenseURL(v string) *KYBProfileUpdate {
+	_u.mutation.SetBusinessLicenseURL(v)
+	return _u
 }
 
 // SetNillableBusinessLicenseURL sets the "business_license_url" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableBusinessLicenseURL(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetBusinessLicenseURL(*s)
+func (_u *KYBProfileUpdate) SetNillableBusinessLicenseURL(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetBusinessLicenseURL(*v)
 	}
-	return kpu
+	return _u
 }
 
 // ClearBusinessLicenseURL clears the value of the "business_license_url" field.
-func (kpu *KYBProfileUpdate) ClearBusinessLicenseURL() *KYBProfileUpdate {
-	kpu.mutation.ClearBusinessLicenseURL()
-	return kpu
+func (_u *KYBProfileUpdate) ClearBusinessLicenseURL() *KYBProfileUpdate {
+	_u.mutation.ClearBusinessLicenseURL()
+	return _u
 }
 
 // SetProofOfBusinessAddressURL sets the "proof_of_business_address_url" field.
-func (kpu *KYBProfileUpdate) SetProofOfBusinessAddressURL(s string) *KYBProfileUpdate {
-	kpu.mutation.SetProofOfBusinessAddressURL(s)
-	return kpu
+func (_u *KYBProfileUpdate) SetProofOfBusinessAddressURL(v string) *KYBProfileUpdate {
+	_u.mutation.SetProofOfBusinessAddressURL(v)
+	return _u
 }
 
 // SetNillableProofOfBusinessAddressURL sets the "proof_of_business_address_url" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableProofOfBusinessAddressURL(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetProofOfBusinessAddressURL(*s)
+func (_u *KYBProfileUpdate) SetNillableProofOfBusinessAddressURL(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetProofOfBusinessAddressURL(*v)
 	}
-	return kpu
+	return _u
 }
 
 // SetAmlPolicyURL sets the "aml_policy_url" field.
-func (kpu *KYBProfileUpdate) SetAmlPolicyURL(s string) *KYBProfileUpdate {
-	kpu.mutation.SetAmlPolicyURL(s)
-	return kpu
+func (_u *KYBProfileUpdate) SetAmlPolicyURL(v string) *KYBProfileUpdate {
+	_u.mutation.SetAmlPolicyURL(v)
+	return _u
 }
 
 // SetNillableAmlPolicyURL sets the "aml_policy_url" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableAmlPolicyURL(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetAmlPolicyURL(*s)
+func (_u *KYBProfileUpdate) SetNillableAmlPolicyURL(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetAmlPolicyURL(*v)
 	}
-	return kpu
+	return _u
 }
 
 // ClearAmlPolicyURL clears the value of the "aml_policy_url" field.
-func (kpu *KYBProfileUpdate) ClearAmlPolicyURL() *KYBProfileUpdate {
-	kpu.mutation.ClearAmlPolicyURL()
-	return kpu
+func (_u *KYBProfileUpdate) ClearAmlPolicyURL() *KYBProfileUpdate {
+	_u.mutation.ClearAmlPolicyURL()
+	return _u
 }
 
 // SetKycPolicyURL sets the "kyc_policy_url" field.
-func (kpu *KYBProfileUpdate) SetKycPolicyURL(s string) *KYBProfileUpdate {
-	kpu.mutation.SetKycPolicyURL(s)
-	return kpu
+func (_u *KYBProfileUpdate) SetKycPolicyURL(v string) *KYBProfileUpdate {
+	_u.mutation.SetKycPolicyURL(v)
+	return _u
 }
 
 // SetNillableKycPolicyURL sets the "kyc_policy_url" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableKycPolicyURL(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetKycPolicyURL(*s)
+func (_u *KYBProfileUpdate) SetNillableKycPolicyURL(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetKycPolicyURL(*v)
 	}
-	return kpu
+	return _u
 }
 
 // ClearKycPolicyURL clears the value of the "kyc_policy_url" field.
-func (kpu *KYBProfileUpdate) ClearKycPolicyURL() *KYBProfileUpdate {
-	kpu.mutation.ClearKycPolicyURL()
-	return kpu
+func (_u *KYBProfileUpdate) ClearKycPolicyURL() *KYBProfileUpdate {
+	_u.mutation.ClearKycPolicyURL()
+	return _u
 }
 
 // SetKybRejectionComment sets the "kyb_rejection_comment" field.
-func (kpu *KYBProfileUpdate) SetKybRejectionComment(s string) *KYBProfileUpdate {
-	kpu.mutation.SetKybRejectionComment(s)
-	return kpu
+func (_u *KYBProfileUpdate) SetKybRejectionComment(v string) *KYBProfileUpdate {
+	_u.mutation.SetKybRejectionComment(v)
+	return _u
 }
 
 // SetNillableKybRejectionComment sets the "kyb_rejection_comment" field if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableKybRejectionComment(s *string) *KYBProfileUpdate {
-	if s != nil {
-		kpu.SetKybRejectionComment(*s)
+func (_u *KYBProfileUpdate) SetNillableKybRejectionComment(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetKybRejectionComment(*v)
 	}
-	return kpu
+	return _u
 }
 
 // ClearKybRejectionComment clears the value of the "kyb_rejection_comment" field.
-func (kpu *KYBProfileUpdate) ClearKybRejectionComment() *KYBProfileUpdate {
-	kpu.mutation.ClearKybRejectionComment()
-	return kpu
+func (_u *KYBProfileUpdate) ClearKybRejectionComment() *KYBProfileUpdate {
+	_u.mutation.ClearKybRejectionComment()
+	return _u
 }
 
 // AddBeneficialOwnerIDs adds the "beneficial_owners" edge to the BeneficialOwner entity by IDs.
-func (kpu *KYBProfileUpdate) AddBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileUpdate {
-	kpu.mutation.AddBeneficialOwnerIDs(ids...)
-	return kpu
+func (_u *KYBProfileUpdate) AddBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileUpdate {
+	_u.mutation.AddBeneficialOwnerIDs(ids...)
+	return _u
 }
 
 // AddBeneficialOwners adds the "beneficial_owners" edges to the BeneficialOwner entity.
-func (kpu *KYBProfileUpdate) AddBeneficialOwners(b ...*BeneficialOwner) *KYBProfileUpdate {
-	ids := make([]uuid.UUID, len(b))
-	for i := range b {
-		ids[i] = b[i].ID
+func (_u *KYBProfileUpdate) AddBeneficialOwners(v ...*BeneficialOwner) *KYBProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return kpu.AddBeneficialOwnerIDs(ids...)
+	return _u.AddBeneficialOwnerIDs(ids...)
 }
 
 // SetUserID sets the "user" edge to the User entity by ID.
-func (kpu *KYBProfileUpdate) SetUserID(id uuid.UUID) *KYBProfileUpdate {
-	kpu.mutation.SetUserID(id)
-	return kpu
+func (_u *KYBProfileUpdate) SetUserID(id uuid.UUID) *KYBProfileUpdate {
+	_u.mutation.SetUserID(id)
+	return _u
 }
 
 // SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
-func (kpu *KYBProfileUpdate) SetNillableUserID(id *uuid.UUID) *KYBProfileUpdate {
+func (_u *KYBProfileUpdate) SetNillableUserID(id *uuid.UUID) *KYBProfileUpdate {
 	if id != nil {
-		kpu = kpu.SetUserID(*id)
+		_u = _u.SetUserID(*id)
 	}
-	return kpu
+	return _u
 }
 
 // SetUser sets the "user" edge to the User entity.
-func (kpu *KYBProfileUpdate) SetUser(u *User) *KYBProfileUpdate {
-	return kpu.SetUserID(u.ID)
+func (_u *KYBProfileUpdate) SetUser(v *User) *KYBProfileUpdate {
+	return _u.SetUserID(v.ID)
 }
 
 // Mutation returns the KYBProfileMutation object of the builder.
-func (kpu *KYBProfileUpdate) Mutation() *KYBProfileMutation {
-	return kpu.mutation
+func (_u *KYBProfileUpdate) Mutation() *KYBProfileMutation {
+	return _u.mutation
 }
 
 // ClearBeneficialOwners clears all "beneficial_owners" edges to the BeneficialOwner entity.
-func (kpu *KYBProfileUpdate) ClearBeneficialOwners() *KYBProfileUpdate {
-	kpu.mutation.ClearBeneficialOwners()
-	return kpu
+func (_u *KYBProfileUpdate) ClearBeneficialOwners() *KYBProfileUpdate {
+	_u.mutation.ClearBeneficialOwners()
+	return _u
 }
 
 // RemoveBeneficialOwnerIDs removes the "beneficial_owners" edge to BeneficialOwner entities by IDs.
-func (kpu *KYBProfileUpdate) RemoveBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileUpdate {
-	kpu.mutation.RemoveBeneficialOwnerIDs(ids...)
-	return kpu
+func (_u *KYBProfileUpdate) RemoveBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileUpdate {
+	_u.mutation.RemoveBeneficialOwnerIDs(ids...)
+	return _u
 }
 
 // RemoveBeneficialOwners removes "beneficial_owners" edges to BeneficialOwner entities.
-func (kpu *KYBProfileUpdate) RemoveBeneficialOwners(b ...*BeneficialOwner) *KYBProfileUpdate {
-	ids := make([]uuid.UUID, len(b))
-	for i := range b {
-		ids[i] = b[i].ID
+func (_u *KYBProfileUpdate) RemoveBeneficialOwners(v ...*BeneficialOwner) *KYBProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return kpu.RemoveBeneficialOwnerIDs(ids...)
+	return _u.RemoveBeneficialOwnerIDs(ids...)
 }
 
 // ClearUser clears the "user" edge to the User entity.
-func (kpu *KYBProfileUpdate) ClearUser() *KYBProfileUpdate {
-	kpu.mutation.ClearUser()
-	return kpu
+func (_u *KYBProfileUpdate) ClearUser() *KYBProfileUpdate {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
-func (kpu *KYBProfileUpdate) Save(ctx context.Context) (int, error) {
-	kpu.defaults()
-	return withHooks(ctx, kpu.sqlSave, kpu.mutation, kpu.hooks)
+func (_u *KYBProfileUpdate) Save(ctx context.Context) (int, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (kpu *KYBProfileUpdate) SaveX(ctx context.Context) int {
-	affected, err := kpu.Save(ctx)
+func (_u *KYBProfileUpdate) SaveX(ctx context.Context) int {
+	affected, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -283,81 +283,81 @@ func (kpu *KYBProfileUpdate) SaveX(ctx context.Context) int {
 }
 
 // Exec executes the query.
-func (kpu *KYBProfileUpdate) Exec(ctx context.Context) error {
-	_, err := kpu.Save(ctx)
+func (_u *KYBProfileUpdate) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (kpu *KYBProfileUpdate) ExecX(ctx context.Context) {
-	if err := kpu.Exec(ctx); err != nil {
+func (_u *KYBProfileUpdate) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (kpu *KYBProfileUpdate) defaults() {
-	if _, ok := kpu.mutation.UpdatedAt(); !ok {
+func (_u *KYBProfileUpdate) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := kybprofile.UpdateDefaultUpdatedAt()
-		kpu.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
-func (kpu *KYBProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
+func (_u *KYBProfileUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	_spec := sqlgraph.NewUpdateSpec(kybprofile.Table, kybprofile.Columns, sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID))
-	if ps := kpu.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := kpu.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(kybprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := kpu.mutation.MobileNumber(); ok {
+	if value, ok := _u.mutation.MobileNumber(); ok {
 		_spec.SetField(kybprofile.FieldMobileNumber, field.TypeString, value)
 	}
-	if value, ok := kpu.mutation.CompanyName(); ok {
+	if value, ok := _u.mutation.CompanyName(); ok {
 		_spec.SetField(kybprofile.FieldCompanyName, field.TypeString, value)
 	}
-	if value, ok := kpu.mutation.RegisteredBusinessAddress(); ok {
+	if value, ok := _u.mutation.RegisteredBusinessAddress(); ok {
 		_spec.SetField(kybprofile.FieldRegisteredBusinessAddress, field.TypeString, value)
 	}
-	if value, ok := kpu.mutation.CertificateOfIncorporationURL(); ok {
+	if value, ok := _u.mutation.CertificateOfIncorporationURL(); ok {
 		_spec.SetField(kybprofile.FieldCertificateOfIncorporationURL, field.TypeString, value)
 	}
-	if value, ok := kpu.mutation.ArticlesOfIncorporationURL(); ok {
+	if value, ok := _u.mutation.ArticlesOfIncorporationURL(); ok {
 		_spec.SetField(kybprofile.FieldArticlesOfIncorporationURL, field.TypeString, value)
 	}
-	if value, ok := kpu.mutation.BusinessLicenseURL(); ok {
+	if value, ok := _u.mutation.BusinessLicenseURL(); ok {
 		_spec.SetField(kybprofile.FieldBusinessLicenseURL, field.TypeString, value)
 	}
-	if kpu.mutation.BusinessLicenseURLCleared() {
+	if _u.mutation.BusinessLicenseURLCleared() {
 		_spec.ClearField(kybprofile.FieldBusinessLicenseURL, field.TypeString)
 	}
-	if value, ok := kpu.mutation.ProofOfBusinessAddressURL(); ok {
+	if value, ok := _u.mutation.ProofOfBusinessAddressURL(); ok {
 		_spec.SetField(kybprofile.FieldProofOfBusinessAddressURL, field.TypeString, value)
 	}
-	if value, ok := kpu.mutation.AmlPolicyURL(); ok {
+	if value, ok := _u.mutation.AmlPolicyURL(); ok {
 		_spec.SetField(kybprofile.FieldAmlPolicyURL, field.TypeString, value)
 	}
-	if kpu.mutation.AmlPolicyURLCleared() {
+	if _u.mutation.AmlPolicyURLCleared() {
 		_spec.ClearField(kybprofile.FieldAmlPolicyURL, field.TypeString)
 	}
-	if value, ok := kpu.mutation.KycPolicyURL(); ok {
+	if value, ok := _u.mutation.KycPolicyURL(); ok {
 		_spec.SetField(kybprofile.FieldKycPolicyURL, field.TypeString, value)
 	}
-	if kpu.mutation.KycPolicyURLCleared() {
+	if _u.mutation.KycPolicyURLCleared() {
 		_spec.ClearField(kybprofile.FieldKycPolicyURL, field.TypeString)
 	}
-	if value, ok := kpu.mutation.KybRejectionComment(); ok {
+	if value, ok := _u.mutation.KybRejectionComment(); ok {
 		_spec.SetField(kybprofile.FieldKybRejectionComment, field.TypeString, value)
 	}
-	if kpu.mutation.KybRejectionCommentCleared() {
+	if _u.mutation.KybRejectionCommentCleared() {
 		_spec.ClearField(kybprofile.FieldKybRejectionComment, field.TypeString)
 	}
-	if kpu.mutation.BeneficialOwnersCleared() {
+	if _u.mutation.BeneficialOwnersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -370,7 +370,7 @@ func (kpu *KYBProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := kpu.mutation.RemovedBeneficialOwnersIDs(); len(nodes) > 0 && !kpu.mutation.BeneficialOwnersCleared() {
+	if nodes := _u.mutation.RemovedBeneficialOwnersIDs(); len(nodes) > 0 && !_u.mutation.BeneficialOwnersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -386,7 +386,7 @@ func (kpu *KYBProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := kpu.mutation.BeneficialOwnersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.BeneficialOwnersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -402,7 +402,7 @@ func (kpu *KYBProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if kpu.mutation.UserCleared() {
+	if _u.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -415,7 +415,7 @@ func (kpu *KYBProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := kpu.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -431,7 +431,7 @@ func (kpu *KYBProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if n, err = sqlgraph.UpdateNodes(ctx, kpu.driver, _spec); err != nil {
+	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{kybprofile.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -439,8 +439,8 @@ func (kpu *KYBProfileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
-	kpu.mutation.done = true
-	return n, nil
+	_u.mutation.done = true
+	return _node, nil
 }
 
 // KYBProfileUpdateOne is the builder for updating a single KYBProfile entity.
@@ -452,263 +452,263 @@ type KYBProfileUpdateOne struct {
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (kpuo *KYBProfileUpdateOne) SetUpdatedAt(t time.Time) *KYBProfileUpdateOne {
-	kpuo.mutation.SetUpdatedAt(t)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetUpdatedAt(v time.Time) *KYBProfileUpdateOne {
+	_u.mutation.SetUpdatedAt(v)
+	return _u
 }
 
 // SetMobileNumber sets the "mobile_number" field.
-func (kpuo *KYBProfileUpdateOne) SetMobileNumber(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetMobileNumber(s)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetMobileNumber(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetMobileNumber(v)
+	return _u
 }
 
 // SetNillableMobileNumber sets the "mobile_number" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableMobileNumber(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetMobileNumber(*s)
+func (_u *KYBProfileUpdateOne) SetNillableMobileNumber(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetMobileNumber(*v)
 	}
-	return kpuo
+	return _u
 }
 
 // SetCompanyName sets the "company_name" field.
-func (kpuo *KYBProfileUpdateOne) SetCompanyName(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetCompanyName(s)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetCompanyName(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetCompanyName(v)
+	return _u
 }
 
 // SetNillableCompanyName sets the "company_name" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableCompanyName(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetCompanyName(*s)
+func (_u *KYBProfileUpdateOne) SetNillableCompanyName(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetCompanyName(*v)
 	}
-	return kpuo
+	return _u
 }
 
 // SetRegisteredBusinessAddress sets the "registered_business_address" field.
-func (kpuo *KYBProfileUpdateOne) SetRegisteredBusinessAddress(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetRegisteredBusinessAddress(s)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetRegisteredBusinessAddress(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetRegisteredBusinessAddress(v)
+	return _u
 }
 
 // SetNillableRegisteredBusinessAddress sets the "registered_business_address" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableRegisteredBusinessAddress(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetRegisteredBusinessAddress(*s)
+func (_u *KYBProfileUpdateOne) SetNillableRegisteredBusinessAddress(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetRegisteredBusinessAddress(*v)
 	}
-	return kpuo
+	return _u
 }
 
 // SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
-func (kpuo *KYBProfileUpdateOne) SetCertificateOfIncorporationURL(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetCertificateOfIncorporationURL(s)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetCertificateOfIncorporationURL(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetCertificateOfIncorporationURL(v)
+	return _u
 }
 
 // SetNillableCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableCertificateOfIncorporationURL(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetCertificateOfIncorporationURL(*s)
+func (_u *KYBProfileUpdateOne) SetNillableCertificateOfIncorporationURL(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetCertificateOfIncorporationURL(*v)
 	}
-	return kpuo
+	return _u
 }
 
 // SetArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field.
-func (kpuo *KYBProfileUpdateOne) SetArticlesOfIncorporationURL(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetArticlesOfIncorporationURL(s)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetArticlesOfIncorporationURL(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetArticlesOfIncorporationURL(v)
+	return _u
 }
 
 // SetNillableArticlesOfIncorporationURL sets the "articles_of_incorporation_url" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableArticlesOfIncorporationURL(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetArticlesOfIncorporationURL(*s)
+func (_u *KYBProfileUpdateOne) SetNillableArticlesOfIncorporationURL(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetArticlesOfIncorporationURL(*v)
 	}
-	return kpuo
+	return _u
 }
 
 // SetBusinessLicenseURL sets the "business_license_url" field.
-func (kpuo *KYBProfileUpdateOne) SetBusinessLicenseURL(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetBusinessLicenseURL(s)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetBusinessLicenseURL(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetBusinessLicenseURL(v)
+	return _u
 }
 
 // SetNillableBusinessLicenseURL sets the "business_license_url" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableBusinessLicenseURL(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetBusinessLicenseURL(*s)
+func (_u *KYBProfileUpdateOne) SetNillableBusinessLicenseURL(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetBusinessLicenseURL(*v)
 	}
-	return kpuo
+	return _u
 }
 
 // ClearBusinessLicenseURL clears the value of the "business_license_url" field.
-func (kpuo *KYBProfileUpdateOne) ClearBusinessLicenseURL() *KYBProfileUpdateOne {
-	kpuo.mutation.ClearBusinessLicenseURL()
-	return kpuo
+func (_u *KYBProfileUpdateOne) ClearBusinessLicenseURL() *KYBProfileUpdateOne {
+	_u.mutation.ClearBusinessLicenseURL()
+	return _u
 }
 
 // SetProofOfBusinessAddressURL sets the "proof_of_business_address_url" field.
-func (kpuo *KYBProfileUpdateOne) SetProofOfBusinessAddressURL(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetProofOfBusinessAddressURL(s)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetProofOfBusinessAddressURL(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetProofOfBusinessAddressURL(v)
+	return _u
 }
 
 // SetNillableProofOfBusinessAddressURL sets the "proof_of_business_address_url" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableProofOfBusinessAddressURL(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetProofOfBusinessAddressURL(*s)
+func (_u *KYBProfileUpdateOne) SetNillableProofOfBusinessAddressURL(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetProofOfBusinessAddressURL(*v)
 	}
-	return kpuo
+	return _u
 }
 
 // SetAmlPolicyURL sets the "aml_policy_url" field.
-func (kpuo *KYBProfileUpdateOne) SetAmlPolicyURL(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetAmlPolicyURL(s)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetAmlPolicyURL(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetAmlPolicyURL(v)
+	return _u
 }
 
 // SetNillableAmlPolicyURL sets the "aml_policy_url" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableAmlPolicyURL(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetAmlPolicyURL(*s)
+func (_u *KYBProfileUpdateOne) SetNillableAmlPolicyURL(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetAmlPolicyURL(*v)
 	}
-	return kpuo
+	return _u
 }
 
 // ClearAmlPolicyURL clears the value of the "aml_policy_url" field.
-func (kpuo *KYBProfileUpdateOne) ClearAmlPolicyURL() *KYBProfileUpdateOne {
-	kpuo.mutation.ClearAmlPolicyURL()
-	return kpuo
+func (_u *KYBProfileUpdateOne) ClearAmlPolicyURL() *KYBProfileUpdateOne {
+	_u.mutation.ClearAmlPolicyURL()
+	return _u
 }
 
 // SetKycPolicyURL sets the "kyc_policy_url" field.
-func (kpuo *KYBProfileUpdateOne) SetKycPolicyURL(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetKycPolicyURL(s)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetKycPolicyURL(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetKycPolicyURL(v)
+	return _u
 }
 
 // SetNillableKycPolicyURL sets the "kyc_policy_url" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableKycPolicyURL(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetKycPolicyURL(*s)
+func (_u *KYBProfileUpdateOne) SetNillableKycPolicyURL(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetKycPolicyURL(*v)
 	}
-	return kpuo
+	return _u
 }
 
 // ClearKycPolicyURL clears the value of the "kyc_policy_url" field.
-func (kpuo *KYBProfileUpdateOne) ClearKycPolicyURL() *KYBProfileUpdateOne {
-	kpuo.mutation.ClearKycPolicyURL()
-	return kpuo
+func (_u *KYBProfileUpdateOne) ClearKycPolicyURL() *KYBProfileUpdateOne {
+	_u.mutation.ClearKycPolicyURL()
+	return _u
 }
 
 // SetKybRejectionComment sets the "kyb_rejection_comment" field.
-func (kpuo *KYBProfileUpdateOne) SetKybRejectionComment(s string) *KYBProfileUpdateOne {
-	kpuo.mutation.SetKybRejectionComment(s)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetKybRejectionComment(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetKybRejectionComment(v)
+	return _u
 }
 
 // SetNillableKybRejectionComment sets the "kyb_rejection_comment" field if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableKybRejectionComment(s *string) *KYBProfileUpdateOne {
-	if s != nil {
-		kpuo.SetKybRejectionComment(*s)
+func (_u *KYBProfileUpdateOne) SetNillableKybRejectionComment(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetKybRejectionComment(*v)
 	}
-	return kpuo
+	return _u
 }
 
 // ClearKybRejectionComment clears the value of the "kyb_rejection_comment" field.
-func (kpuo *KYBProfileUpdateOne) ClearKybRejectionComment() *KYBProfileUpdateOne {
-	kpuo.mutation.ClearKybRejectionComment()
-	return kpuo
+func (_u *KYBProfileUpdateOne) ClearKybRejectionComment() *KYBProfileUpdateOne {
+	_u.mutation.ClearKybRejectionComment()
+	return _u
 }
 
 // AddBeneficialOwnerIDs adds the "beneficial_owners" edge to the BeneficialOwner entity by IDs.
-func (kpuo *KYBProfileUpdateOne) AddBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileUpdateOne {
-	kpuo.mutation.AddBeneficialOwnerIDs(ids...)
-	return kpuo
+func (_u *KYBProfileUpdateOne) AddBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileUpdateOne {
+	_u.mutation.AddBeneficialOwnerIDs(ids...)
+	return _u
 }
 
 // AddBeneficialOwners adds the "beneficial_owners" edges to the BeneficialOwner entity.
-func (kpuo *KYBProfileUpdateOne) AddBeneficialOwners(b ...*BeneficialOwner) *KYBProfileUpdateOne {
-	ids := make([]uuid.UUID, len(b))
-	for i := range b {
-		ids[i] = b[i].ID
+func (_u *KYBProfileUpdateOne) AddBeneficialOwners(v ...*BeneficialOwner) *KYBProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return kpuo.AddBeneficialOwnerIDs(ids...)
+	return _u.AddBeneficialOwnerIDs(ids...)
 }
 
 // SetUserID sets the "user" edge to the User entity by ID.
-func (kpuo *KYBProfileUpdateOne) SetUserID(id uuid.UUID) *KYBProfileUpdateOne {
-	kpuo.mutation.SetUserID(id)
-	return kpuo
+func (_u *KYBProfileUpdateOne) SetUserID(id uuid.UUID) *KYBProfileUpdateOne {
+	_u.mutation.SetUserID(id)
+	return _u
 }
 
 // SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
-func (kpuo *KYBProfileUpdateOne) SetNillableUserID(id *uuid.UUID) *KYBProfileUpdateOne {
+func (_u *KYBProfileUpdateOne) SetNillableUserID(id *uuid.UUID) *KYBProfileUpdateOne {
 	if id != nil {
-		kpuo = kpuo.SetUserID(*id)
+		_u = _u.SetUserID(*id)
 	}
-	return kpuo
+	return _u
 }
 
 // SetUser sets the "user" edge to the User entity.
-func (kpuo *KYBProfileUpdateOne) SetUser(u *User) *KYBProfileUpdateOne {
-	return kpuo.SetUserID(u.ID)
+func (_u *KYBProfileUpdateOne) SetUser(v *User) *KYBProfileUpdateOne {
+	return _u.SetUserID(v.ID)
 }
 
 // Mutation returns the KYBProfileMutation object of the builder.
-func (kpuo *KYBProfileUpdateOne) Mutation() *KYBProfileMutation {
-	return kpuo.mutation
+func (_u *KYBProfileUpdateOne) Mutation() *KYBProfileMutation {
+	return _u.mutation
 }
 
 // ClearBeneficialOwners clears all "beneficial_owners" edges to the BeneficialOwner entity.
-func (kpuo *KYBProfileUpdateOne) ClearBeneficialOwners() *KYBProfileUpdateOne {
-	kpuo.mutation.ClearBeneficialOwners()
-	return kpuo
+func (_u *KYBProfileUpdateOne) ClearBeneficialOwners() *KYBProfileUpdateOne {
+	_u.mutation.ClearBeneficialOwners()
+	return _u
 }
 
 // RemoveBeneficialOwnerIDs removes the "beneficial_owners" edge to BeneficialOwner entities by IDs.
-func (kpuo *KYBProfileUpdateOne) RemoveBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileUpdateOne {
-	kpuo.mutation.RemoveBeneficialOwnerIDs(ids...)
-	return kpuo
+func (_u *KYBProfileUpdateOne) RemoveBeneficialOwnerIDs(ids ...uuid.UUID) *KYBProfileUpdateOne {
+	_u.mutation.RemoveBeneficialOwnerIDs(ids...)
+	return _u
 }
 
 // RemoveBeneficialOwners removes "beneficial_owners" edges to BeneficialOwner entities.
-func (kpuo *KYBProfileUpdateOne) RemoveBeneficialOwners(b ...*BeneficialOwner) *KYBProfileUpdateOne {
-	ids := make([]uuid.UUID, len(b))
-	for i := range b {
-		ids[i] = b[i].ID
+func (_u *KYBProfileUpdateOne) RemoveBeneficialOwners(v ...*BeneficialOwner) *KYBProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return kpuo.RemoveBeneficialOwnerIDs(ids...)
+	return _u.RemoveBeneficialOwnerIDs(ids...)
 }
 
 // ClearUser clears the "user" edge to the User entity.
-func (kpuo *KYBProfileUpdateOne) ClearUser() *KYBProfileUpdateOne {
-	kpuo.mutation.ClearUser()
-	return kpuo
+func (_u *KYBProfileUpdateOne) ClearUser() *KYBProfileUpdateOne {
+	_u.mutation.ClearUser()
+	return _u
 }
 
 // Where appends a list predicates to the KYBProfileUpdate builder.
-func (kpuo *KYBProfileUpdateOne) Where(ps ...predicate.KYBProfile) *KYBProfileUpdateOne {
-	kpuo.mutation.Where(ps...)
-	return kpuo
+func (_u *KYBProfileUpdateOne) Where(ps ...predicate.KYBProfile) *KYBProfileUpdateOne {
+	_u.mutation.Where(ps...)
+	return _u
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
-func (kpuo *KYBProfileUpdateOne) Select(field string, fields ...string) *KYBProfileUpdateOne {
-	kpuo.fields = append([]string{field}, fields...)
-	return kpuo
+func (_u *KYBProfileUpdateOne) Select(field string, fields ...string) *KYBProfileUpdateOne {
+	_u.fields = append([]string{field}, fields...)
+	return _u
 }
 
 // Save executes the query and returns the updated KYBProfile entity.
-func (kpuo *KYBProfileUpdateOne) Save(ctx context.Context) (*KYBProfile, error) {
-	kpuo.defaults()
-	return withHooks(ctx, kpuo.sqlSave, kpuo.mutation, kpuo.hooks)
+func (_u *KYBProfileUpdateOne) Save(ctx context.Context) (*KYBProfile, error) {
+	_u.defaults()
+	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
-func (kpuo *KYBProfileUpdateOne) SaveX(ctx context.Context) *KYBProfile {
-	node, err := kpuo.Save(ctx)
+func (_u *KYBProfileUpdateOne) SaveX(ctx context.Context) *KYBProfile {
+	node, err := _u.Save(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -716,34 +716,34 @@ func (kpuo *KYBProfileUpdateOne) SaveX(ctx context.Context) *KYBProfile {
 }
 
 // Exec executes the query on the entity.
-func (kpuo *KYBProfileUpdateOne) Exec(ctx context.Context) error {
-	_, err := kpuo.Save(ctx)
+func (_u *KYBProfileUpdateOne) Exec(ctx context.Context) error {
+	_, err := _u.Save(ctx)
 	return err
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (kpuo *KYBProfileUpdateOne) ExecX(ctx context.Context) {
-	if err := kpuo.Exec(ctx); err != nil {
+func (_u *KYBProfileUpdateOne) ExecX(ctx context.Context) {
+	if err := _u.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
 
 // defaults sets the default values of the builder before save.
-func (kpuo *KYBProfileUpdateOne) defaults() {
-	if _, ok := kpuo.mutation.UpdatedAt(); !ok {
+func (_u *KYBProfileUpdateOne) defaults() {
+	if _, ok := _u.mutation.UpdatedAt(); !ok {
 		v := kybprofile.UpdateDefaultUpdatedAt()
-		kpuo.mutation.SetUpdatedAt(v)
+		_u.mutation.SetUpdatedAt(v)
 	}
 }
 
-func (kpuo *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile, err error) {
+func (_u *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile, err error) {
 	_spec := sqlgraph.NewUpdateSpec(kybprofile.Table, kybprofile.Columns, sqlgraph.NewFieldSpec(kybprofile.FieldID, field.TypeUUID))
-	id, ok := kpuo.mutation.ID()
+	id, ok := _u.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "KYBProfile.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
-	if fields := kpuo.fields; len(fields) > 0 {
+	if fields := _u.fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, kybprofile.FieldID)
 		for _, f := range fields {
@@ -755,59 +755,59 @@ func (kpuo *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile
 			}
 		}
 	}
-	if ps := kpuo.mutation.predicates; len(ps) > 0 {
+	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	if value, ok := kpuo.mutation.UpdatedAt(); ok {
+	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(kybprofile.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := kpuo.mutation.MobileNumber(); ok {
+	if value, ok := _u.mutation.MobileNumber(); ok {
 		_spec.SetField(kybprofile.FieldMobileNumber, field.TypeString, value)
 	}
-	if value, ok := kpuo.mutation.CompanyName(); ok {
+	if value, ok := _u.mutation.CompanyName(); ok {
 		_spec.SetField(kybprofile.FieldCompanyName, field.TypeString, value)
 	}
-	if value, ok := kpuo.mutation.RegisteredBusinessAddress(); ok {
+	if value, ok := _u.mutation.RegisteredBusinessAddress(); ok {
 		_spec.SetField(kybprofile.FieldRegisteredBusinessAddress, field.TypeString, value)
 	}
-	if value, ok := kpuo.mutation.CertificateOfIncorporationURL(); ok {
+	if value, ok := _u.mutation.CertificateOfIncorporationURL(); ok {
 		_spec.SetField(kybprofile.FieldCertificateOfIncorporationURL, field.TypeString, value)
 	}
-	if value, ok := kpuo.mutation.ArticlesOfIncorporationURL(); ok {
+	if value, ok := _u.mutation.ArticlesOfIncorporationURL(); ok {
 		_spec.SetField(kybprofile.FieldArticlesOfIncorporationURL, field.TypeString, value)
 	}
-	if value, ok := kpuo.mutation.BusinessLicenseURL(); ok {
+	if value, ok := _u.mutation.BusinessLicenseURL(); ok {
 		_spec.SetField(kybprofile.FieldBusinessLicenseURL, field.TypeString, value)
 	}
-	if kpuo.mutation.BusinessLicenseURLCleared() {
+	if _u.mutation.BusinessLicenseURLCleared() {
 		_spec.ClearField(kybprofile.FieldBusinessLicenseURL, field.TypeString)
 	}
-	if value, ok := kpuo.mutation.ProofOfBusinessAddressURL(); ok {
+	if value, ok := _u.mutation.ProofOfBusinessAddressURL(); ok {
 		_spec.SetField(kybprofile.FieldProofOfBusinessAddressURL, field.TypeString, value)
 	}
-	if value, ok := kpuo.mutation.AmlPolicyURL(); ok {
+	if value, ok := _u.mutation.AmlPolicyURL(); ok {
 		_spec.SetField(kybprofile.FieldAmlPolicyURL, field.TypeString, value)
 	}
-	if kpuo.mutation.AmlPolicyURLCleared() {
+	if _u.mutation.AmlPolicyURLCleared() {
 		_spec.ClearField(kybprofile.FieldAmlPolicyURL, field.TypeString)
 	}
-	if value, ok := kpuo.mutation.KycPolicyURL(); ok {
+	if value, ok := _u.mutation.KycPolicyURL(); ok {
 		_spec.SetField(kybprofile.FieldKycPolicyURL, field.TypeString, value)
 	}
-	if kpuo.mutation.KycPolicyURLCleared() {
+	if _u.mutation.KycPolicyURLCleared() {
 		_spec.ClearField(kybprofile.FieldKycPolicyURL, field.TypeString)
 	}
-	if value, ok := kpuo.mutation.KybRejectionComment(); ok {
+	if value, ok := _u.mutation.KybRejectionComment(); ok {
 		_spec.SetField(kybprofile.FieldKybRejectionComment, field.TypeString, value)
 	}
-	if kpuo.mutation.KybRejectionCommentCleared() {
+	if _u.mutation.KybRejectionCommentCleared() {
 		_spec.ClearField(kybprofile.FieldKybRejectionComment, field.TypeString)
 	}
-	if kpuo.mutation.BeneficialOwnersCleared() {
+	if _u.mutation.BeneficialOwnersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -820,7 +820,7 @@ func (kpuo *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := kpuo.mutation.RemovedBeneficialOwnersIDs(); len(nodes) > 0 && !kpuo.mutation.BeneficialOwnersCleared() {
+	if nodes := _u.mutation.RemovedBeneficialOwnersIDs(); len(nodes) > 0 && !_u.mutation.BeneficialOwnersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -836,7 +836,7 @@ func (kpuo *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := kpuo.mutation.BeneficialOwnersIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.BeneficialOwnersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
@@ -852,7 +852,7 @@ func (kpuo *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if kpuo.mutation.UserCleared() {
+	if _u.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -865,7 +865,7 @@ func (kpuo *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := kpuo.mutation.UserIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
 			Inverse: true,
@@ -881,10 +881,10 @@ func (kpuo *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	_node = &KYBProfile{config: kpuo.config}
+	_node = &KYBProfile{config: _u.config}
 	_spec.Assign = _node.assignValues
 	_spec.ScanValues = _node.scanValues
-	if err = sqlgraph.UpdateNode(ctx, kpuo.driver, _spec); err != nil {
+	if err = sqlgraph.UpdateNode(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{kybprofile.Label}
 		} else if sqlgraph.IsConstraintError(err) {
@@ -892,6 +892,6 @@ func (kpuo *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile
 		}
 		return nil, err
 	}
-	kpuo.mutation.done = true
+	_u.mutation.done = true
 	return _node, nil
 }

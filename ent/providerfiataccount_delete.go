@@ -20,56 +20,56 @@ type ProviderFiatAccountDelete struct {
 }
 
 // Where appends a list predicates to the ProviderFiatAccountDelete builder.
-func (pfad *ProviderFiatAccountDelete) Where(ps ...predicate.ProviderFiatAccount) *ProviderFiatAccountDelete {
-	pfad.mutation.Where(ps...)
-	return pfad
+func (_d *ProviderFiatAccountDelete) Where(ps ...predicate.ProviderFiatAccount) *ProviderFiatAccountDelete {
+	_d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query and returns how many vertices were deleted.
-func (pfad *ProviderFiatAccountDelete) Exec(ctx context.Context) (int, error) {
-	return withHooks(ctx, pfad.sqlExec, pfad.mutation, pfad.hooks)
+func (_d *ProviderFiatAccountDelete) Exec(ctx context.Context) (int, error) {
+	return withHooks(ctx, _d.sqlExec, _d.mutation, _d.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pfad *ProviderFiatAccountDelete) ExecX(ctx context.Context) int {
-	n, err := pfad.Exec(ctx)
+func (_d *ProviderFiatAccountDelete) ExecX(ctx context.Context) int {
+	n, err := _d.Exec(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-func (pfad *ProviderFiatAccountDelete) sqlExec(ctx context.Context) (int, error) {
+func (_d *ProviderFiatAccountDelete) sqlExec(ctx context.Context) (int, error) {
 	_spec := sqlgraph.NewDeleteSpec(providerfiataccount.Table, sqlgraph.NewFieldSpec(providerfiataccount.FieldID, field.TypeUUID))
-	if ps := pfad.mutation.predicates; len(ps) > 0 {
+	if ps := _d.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
 	}
-	affected, err := sqlgraph.DeleteNodes(ctx, pfad.driver, _spec)
+	affected, err := sqlgraph.DeleteNodes(ctx, _d.driver, _spec)
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
-	pfad.mutation.done = true
+	_d.mutation.done = true
 	return affected, err
 }
 
 // ProviderFiatAccountDeleteOne is the builder for deleting a single ProviderFiatAccount entity.
 type ProviderFiatAccountDeleteOne struct {
-	pfad *ProviderFiatAccountDelete
+	_d *ProviderFiatAccountDelete
 }
 
 // Where appends a list predicates to the ProviderFiatAccountDelete builder.
-func (pfado *ProviderFiatAccountDeleteOne) Where(ps ...predicate.ProviderFiatAccount) *ProviderFiatAccountDeleteOne {
-	pfado.pfad.mutation.Where(ps...)
-	return pfado
+func (_d *ProviderFiatAccountDeleteOne) Where(ps ...predicate.ProviderFiatAccount) *ProviderFiatAccountDeleteOne {
+	_d._d.mutation.Where(ps...)
+	return _d
 }
 
 // Exec executes the deletion query.
-func (pfado *ProviderFiatAccountDeleteOne) Exec(ctx context.Context) error {
-	n, err := pfado.pfad.Exec(ctx)
+func (_d *ProviderFiatAccountDeleteOne) Exec(ctx context.Context) error {
+	n, err := _d._d.Exec(ctx)
 	switch {
 	case err != nil:
 		return err
@@ -81,8 +81,8 @@ func (pfado *ProviderFiatAccountDeleteOne) Exec(ctx context.Context) error {
 }
 
 // ExecX is like Exec, but panics if an error occurs.
-func (pfado *ProviderFiatAccountDeleteOne) ExecX(ctx context.Context) {
-	if err := pfado.Exec(ctx); err != nil {
+func (_d *ProviderFiatAccountDeleteOne) ExecX(ctx context.Context) {
+	if err := _d.Exec(ctx); err != nil {
 		panic(err)
 	}
 }
