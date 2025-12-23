@@ -239,7 +239,7 @@ func RetryStaleUserOperations() error {
 		Query().
 		Where(
 			lockpaymentorder.GatewayIDNEQ(""),
-			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
+			lockpaymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
 			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusValidated),
 			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusSettled),
 			lockpaymentorder.StatusNEQ(lockpaymentorder.StatusRefunded),
@@ -261,7 +261,18 @@ func RetryStaleUserOperations() error {
 						),
 					),
 				),
-				// OTC orders with 15x refund timeout
+				// Regular orders with status Fulfilled and failed fulfillments
+				lockpaymentorder.And(
+					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeRegular),
+					lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
+					lockpaymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+					lockpaymentorder.HasFulfillmentsWith(
+						lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
+						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
+						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+					),
+				),
+				// OTC orders with OTC refund timeout
 				lockpaymentorder.And(
 					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeOtc),
 					lockpaymentorder.Or(
@@ -278,6 +289,18 @@ func RetryStaleUserOperations() error {
 						),
 					),
 				),
+				// OTC orders with status Fulfilled and failed fulfillments
+				lockpaymentorder.And(
+					lockpaymentorder.OrderTypeEQ(lockpaymentorder.OrderTypeOtc),
+					lockpaymentorder.StatusEQ(lockpaymentorder.StatusFulfilled),
+					lockpaymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
+					lockpaymentorder.HasFulfillmentsWith(
+						lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusFailed),
+						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusSuccess)),
+						lockorderfulfillment.Not(lockorderfulfillment.ValidationStatusEQ(lockorderfulfillment.ValidationStatusPending)),
+					),
+				),
+				// Private provider orders with status Fulfilled and failed fulfillments
 				lockpaymentorder.And(
 					lockpaymentorder.HasProviderWith(
 						providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePrivate),
@@ -338,39 +361,6 @@ func RetryStaleUserOperations() error {
 			}
 		}
 	}(ctx)
-
-	// // Retry refunded linked address deposits
-	// orders, err = storage.Client.PaymentOrder.
-	// 	Query().
-	// 	Where(
-	// 		paymentorder.StatusEQ(paymentorder.StatusRefunded),
-	// 		paymentorder.HasLinkedAddress(),
-	// 	).
-	// 	WithToken(func(tq *ent.TokenQuery) {
-	// 		tq.WithNetwork()
-	// 	}).
-	// 	All(ctx)
-	// if err != nil {
-	// 	return fmt.Errorf("RetryStaleUserOperations: %w", err)
-	// }
-
-	// wg.Add(1)
-	// go func(ctx context.Context) {
-	// 	defer wg.Done()
-	// 	for _, order := range orders {
-	// 		service := orderService.NewOrderEVM()
-	// 		err = service.CreateOrder(ctx, order.ID)
-	// 		if err != nil {
-	// 			logger.WithFields(logger.Fields{
-	// 				"Error":             fmt.Sprintf("%v", err),
-	// 				"OrderID":           order.ID.String(),
-	// 				"Amount":            order.Amount,
-	// 				"GatewayID":         order.GatewayID,
-	// 				"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
-	// 			}).Errorf("RetryStaleUserOperations.RetryLinkedAddress")
-	// 		}
-	// 	}
-	// }(ctx)
 
 	return nil
 }
