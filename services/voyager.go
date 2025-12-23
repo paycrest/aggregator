@@ -18,9 +18,7 @@ import (
 	"github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
 	u "github.com/paycrest/aggregator/utils"
-	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
-	"github.com/shopspring/decimal"
 )
 
 // VoyagerErrorType represents different types of errors for smart handling
@@ -706,8 +704,8 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 			}
 		}
 	} else {
-		// timestampFrom and timestampTo should be default to 7 days ago and now
-		timestampFrom := time.Now().Add(-7 * 24 * time.Hour).Unix()
+		// timestampFrom and timestampTo should be default to 3 days ago and now
+		timestampFrom := time.Now().Add(-3 * 24 * time.Hour).Unix()
 		params["timestampFrom"] = fmt.Sprintf("%d", timestampFrom)
 		params["timestampTo"] = fmt.Sprintf("%d", time.Now().Unix())
 	}
@@ -1040,215 +1038,6 @@ func getStarknetRPCClient() (*starknet.Client, error) {
 	return starknet.NewClient()
 }
 
-// TransformVoyagerTransferToRPCFormat converts Voyager transfer format to RPC event format
-func TransformVoyagerTransferToRPCFormat(transfer map[string]interface{}) map[string]interface{} {
-	// Voyager format: txHash, transferFrom, transferTo, blockNumber, transferValue, etc.
-	// RPC format: transaction_hash, block_number, decoded.non_indexed_params (from, to, value)
-	txHash, _ := transfer["txHash"].(string)
-	blockNumber, _ := transfer["blockNumber"].(float64)
-	transferFrom, _ := transfer["transferFrom"].(string)
-	transferTo, _ := transfer["transferTo"].(string)
-	transferValue, _ := transfer["transferValue"].(string)
-	tokenDecimals, _ := transfer["tokenDecimals"].(float64)
-
-	if tokenDecimals <= 0 {
-		logger.WithFields(logger.Fields{
-			"TxHash":        txHash,
-			"TokenDecimals": tokenDecimals,
-		}).Warnf("token decimals must be greater than zero to process transfer value")
-		return nil
-	}
-	if transferValue == "" {
-		logger.WithFields(logger.Fields{
-			"TxHash": txHash,
-		}).Warnf("transfer value is empty")
-		return nil
-	}
-	decimalValue, err := decimal.NewFromString(transferValue)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"TxHash":        txHash,
-			"TransferValue": transferValue,
-			"Error":         err.Error(),
-		}).Warnf("invalid transfer value format")
-		return nil
-	}
-	rawValueDecimals := u.ToSubunit(decimalValue, int8(tokenDecimals))
-
-	logger.WithFields(logger.Fields{
-		"TxHash":      txHash,
-		"BlockNumber": blockNumber,
-		"From":        cryptoUtils.NormalizeStarknetAddress(transferFrom),
-		"To":          cryptoUtils.NormalizeStarknetAddress(transferTo),
-		"Value":       rawValueDecimals.String(),
-	}).Infof("Transforming Voyager transfer to RPC format")
-
-	// Create RPC-formatted event
-	rpcEvent := map[string]interface{}{
-		"transaction_hash": txHash,
-		"block_number":     blockNumber,
-		"topics":           u.TransferStarknetSelector,
-		"decoded": map[string]interface{}{
-			"non_indexed_params": map[string]interface{}{
-				"from":  cryptoUtils.NormalizeStarknetAddress(transferFrom),
-				"to":    cryptoUtils.NormalizeStarknetAddress(transferTo),
-				"value": rawValueDecimals.String(),
-			},
-			"indexed_params": map[string]interface{}{},
-		},
-	}
-
-	return rpcEvent
-}
-
-// TransformVoyagerEventToRPCFormat converts Voyager event format to RPC event format
-func TransformVoyagerEventToRPCFormat(event map[string]interface{}) (map[string]interface{}, error) {
-	// Voyager format: transactionHash, blockNumber, name, dataDecoded, keyDecoded, fromAddress
-	// RPC format: transaction_hash, block_number, decoded.indexed_params, decoded.non_indexed_params
-
-	transactionHash, _ := event["transactionHash"].(string)
-	blockNumber, _ := event["blockNumber"].(float64)
-	name, _ := event["name"].(string)
-	dataDecoded, _ := event["dataDecoded"].([]interface{})
-	keyDecoded, _ := event["keyDecoded"].([]interface{})
-	fromAddress, _ := event["fromAddress"].(string)
-	keys, _ := event["keys"].([]interface{})
-
-	if len(keys) == 0 {
-		return nil, fmt.Errorf("event has no keys")
-	}
-
-	indexedParams := make(map[string]interface{})
-	nonIndexedParams := make(map[string]interface{})
-	// Key is expected to be a string
-	topics, ok := keys[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("failed to assert keys[0] as string")
-	}
-
-	switch topics {
-	case u.OrderCreatedStarknetSelector:
-		for _, keyItem := range keyDecoded {
-			if keyMap, ok := keyItem.(map[string]interface{}); ok {
-				keyName, _ := keyMap["name"].(string)
-				keyValue := keyMap["value"]
-				switch keyName {
-				case "sender", "token":
-					indexedParams[keyName] = keyValue
-				case "amount":
-					orderAmount, err := u.ParseStringAsDecimals(keyValue.(string))
-					if err != nil {
-						return nil, fmt.Errorf("failed to parse order amount: %v", err)
-					}
-					indexedParams[keyName] = orderAmount
-				default:
-					indexedParams[keyName] = keyValue
-				}
-			}
-		}
-
-		for _, dataItem := range dataDecoded {
-			if dataMap, ok := dataItem.(map[string]interface{}); ok {
-				dataName, _ := dataMap["name"].(string)
-				dataValue := dataMap["value"]
-				dataType, _ := dataMap["type"].(string)
-
-				switch dataName {
-				case "protocol_fee", "rate":
-					valueDecimals, err := u.ParseStringAsDecimals(dataValue.(string))
-					if err != nil {
-						return nil, fmt.Errorf("failed to parse %s: %v", dataName, err)
-					}
-					nonIndexedParams[dataName] = valueDecimals
-				case "order_id":
-					nonIndexedParams[dataName] = dataValue
-				case "message_hash":
-					// Handle ByteArray type specially
-					if dataType == "core::byte_array::ByteArray" {
-						if byteArrayMap, ok := dataValue.(map[string]interface{}); ok {
-							messageHash, err := u.ParseByteArrayFromJSON(byteArrayMap)
-							if err != nil {
-								nonIndexedParams[dataName] = dataValue
-							} else {
-								nonIndexedParams[dataName] = messageHash
-							}
-						} else {
-							nonIndexedParams[dataName] = dataValue
-						}
-					} else {
-						nonIndexedParams[dataName] = dataValue
-					}
-				}
-			}
-		}
-
-	case u.OrderSettledStarknetSelector:
-		for _, keyItem := range keyDecoded {
-			if keyMap, ok := keyItem.(map[string]interface{}); ok {
-				keyName, _ := keyMap["name"].(string)
-				keyValue, _ := keyMap["value"].(string)
-				indexedParams[keyName] = keyValue
-			}
-		}
-
-		for _, dataItem := range dataDecoded {
-			if dataMap, ok := dataItem.(map[string]interface{}); ok {
-				dataName, _ := dataMap["name"].(string)
-				dataValue := dataMap["value"]
-				switch dataName {
-				case "split_order_id":
-					nonIndexedParams[dataName] = dataValue
-				case "settle_percent", "rebate_percent":
-					percentValue, err := u.ParseStringAsDecimals(dataValue.(string))
-					if err != nil {
-						return nil, fmt.Errorf("failed to parse %s: %v", dataName, err)
-					}
-					nonIndexedParams[dataName] = percentValue
-				default:
-					nonIndexedParams[dataName] = dataValue
-				}
-			}
-		}
-
-	case u.OrderRefundedStarknetSelector:
-		for _, keyItem := range keyDecoded {
-			if keyMap, ok := keyItem.(map[string]interface{}); ok {
-				keyName, _ := keyMap["name"].(string)
-				keyValue, _ := keyMap["value"].(string)
-				indexedParams[keyName] = keyValue
-			}
-		}
-
-		for _, dataItem := range dataDecoded {
-			if dataMap, ok := dataItem.(map[string]interface{}); ok {
-				dataName, _ := dataMap["name"].(string)
-				dataValue, _ := dataMap["value"].(string)
-				feeValue, err := u.ParseStringAsDecimals(dataValue)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse %s: %v", dataName, err)
-				}
-				nonIndexedParams[dataName] = feeValue
-			}
-		}
-
-	}
-
-	// Create RPC-formatted event
-	rpcEvent := map[string]interface{}{
-		"transaction_hash": transactionHash,
-		"block_number":     blockNumber,
-		"name":             name,
-		"topics":           topics,
-		"address":          cryptoUtils.NormalizeStarknetAddress(fromAddress),
-		"decoded": map[string]interface{}{
-			"indexed_params":     indexedParams,
-			"non_indexed_params": nonIndexedParams,
-		},
-	}
-
-	return rpcEvent, nil
-}
-
 // GetAddressTokenTransfersImmediate fetches token transfers immediately without queuing
 func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, tokenAddress string, limit int, fromBlock int64, toBlock int64, fromAddress string, toAddress string) ([]map[string]interface{}, error) {
 	// Try Voyager API first - find a non-rate-limited worker
@@ -1272,16 +1061,6 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 		return s.getAddressTokenTransfersRPC(ctx, tokenAddress, limit, fromBlock, toBlock)
 	}
 
-	logger.WithFields(logger.Fields{
-		"TokenContract":    tokenAddress,
-		"ToAddress":        toAddress,
-		"FromBlock":        fromBlock,
-		"ToBlock":          toBlock,
-		"Limit":            limit,
-		"WorkerID":         worker.WorkerID,
-		"RateLimitedCount": rateLimitedCount,
-	}).Infof("Making immediate Voyager API call for token transfers")
-
 	request := VoyagerRequest{
 		ID:           fmt.Sprintf("transfers_%s_%d", toAddress, limit),
 		RequestType:  "transfers",
@@ -1302,6 +1081,10 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 			"TransferCount": len(transfers),
 			"WorkerID":      worker.WorkerID,
 		}).Infof("Voyager API call successful for token transfers")
+		// Mark Voyager data as needing transformation
+		for i := range transfers {
+			transfers[i]["needs_transformation"] = true
+		}
 		return transfers, nil
 	}
 
@@ -1316,7 +1099,14 @@ func (s *VoyagerService) GetAddressTokenTransfersImmediate(ctx context.Context, 
 		"FallbackToRPC": true,
 	}).Infof("Voyager failed, falling back to RPC for token transfers")
 
-	return s.getAddressTokenTransfersRPC(ctx, tokenAddress, limit, fromBlock, toBlock)
+	rpcTransfers, rpcErr := s.getAddressTokenTransfersRPC(ctx, tokenAddress, limit, fromBlock, toBlock)
+	if rpcErr == nil {
+		// Mark RPC data as NOT needing transformation
+		for i := range rpcTransfers {
+			rpcTransfers[i]["needs_transformation"] = false
+		}
+	}
+	return rpcTransfers, rpcErr
 }
 
 // getAddressTokenTransfersRPC fetches token transfers using RPC as fallback
@@ -1494,6 +1284,10 @@ func (s *VoyagerService) GetContractEventsImmediate(ctx context.Context, contrac
 
 	events, err := worker.makeVoyagerEventsAPICall(request)
 	if err == nil {
+		// Mark Voyager data as needing transformation
+		for i := range events {
+			events[i]["needs_transformation"] = true
+		}
 		return events, nil
 	}
 
@@ -1503,7 +1297,14 @@ func (s *VoyagerService) GetContractEventsImmediate(ctx context.Context, contrac
 		"FallbackToRPC": true,
 	}).Warnf("Voyager failed, falling back to RPC for contract events")
 
-	return s.getContractEventsRPC(ctx, contractAddress, limit, fromBlock, toBlock)
+	rpcEvents, rpcErr := s.getContractEventsRPC(ctx, contractAddress, limit, fromBlock, toBlock)
+	if rpcErr == nil {
+		// Mark RPC data as NOT needing transformation
+		for i := range rpcEvents {
+			rpcEvents[i]["needs_transformation"] = false
+		}
+	}
+	return rpcEvents, rpcErr
 }
 
 // getContractEventsRPC fetches contract events using RPC as fallback
@@ -1655,6 +1456,10 @@ func (s *VoyagerService) GetEventsByTransactionHashImmediate(ctx context.Context
 
 	events, err := worker.makeVoyagerEventsByTxAPICall(request)
 	if err == nil {
+		// Mark Voyager data as needing transformation
+		for i := range events {
+			events[i]["needs_transformation"] = true
+		}
 		return events, nil
 	}
 
@@ -1664,7 +1469,14 @@ func (s *VoyagerService) GetEventsByTransactionHashImmediate(ctx context.Context
 		"FallbackToRPC": true,
 	}).Warnf("Voyager failed, falling back to RPC for events by transaction hash")
 
-	return s.GetEventsByTransactionHashRPC(ctx, txHash)
+	rpcEvents, rpcErr := s.GetEventsByTransactionHashRPC(ctx, txHash)
+	if rpcErr == nil {
+		// Mark RPC data as NOT needing transformation
+		for i := range rpcEvents {
+			rpcEvents[i]["needs_transformation"] = false
+		}
+	}
+	return rpcEvents, rpcErr
 }
 
 // GetEventsByTransactionHashRPC fetches events by transaction hash using RPC as fallback
