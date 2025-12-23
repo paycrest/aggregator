@@ -851,14 +851,6 @@ func (s *IndexerStarknet) transformVoyagerTransferToRPCFormat(transfer map[strin
 	}
 	rawValueDecimals := u.ToSubunit(decimalValue, int8(tokenDecimals))
 
-	logger.WithFields(logger.Fields{
-		"TxHash":      txHash,
-		"BlockNumber": blockNumber,
-		"From":        cryptoUtils.NormalizeStarknetAddress(transferFrom),
-		"To":          cryptoUtils.NormalizeStarknetAddress(transferTo),
-		"Value":       rawValueDecimals.String(),
-	}).Infof("Transforming Voyager transfer to RPC format")
-
 	// Create RPC-formatted event
 	rpcEvent := map[string]interface{}{
 		"transaction_hash": txHash,
@@ -1037,7 +1029,17 @@ func (s *IndexerStarknet) transformRPCEventToTransferFormat(event map[string]int
 
 	transactionHash, _ := event["transactionHash"].(string)
 	blockNumber, _ := event["blockNumber"].(float64)
-	topics, _ := event["selector"].(string)
+
+	// Extract selector from keys[0]
+	keys, _ := event["keys"].([]interface{})
+	if len(keys) == 0 {
+		return nil
+	}
+
+	topics, ok := keys[0].(string)
+	if !ok || topics == "" {
+		return nil
+	}
 
 	// Check if this is a Transfer event
 	if topics != u.TransferStarknetSelector {
@@ -1049,11 +1051,6 @@ func (s *IndexerStarknet) transformRPCEventToTransferFormat(event map[string]int
 	}
 
 	dataDecoded, _ := event["dataDecoded"].([]interface{})
-	keys, _ := event["keys"].([]interface{})
-
-	if len(keys) == 0 {
-		return nil
-	}
 
 	nonIndexedParams := make(map[string]interface{})
 
@@ -1103,7 +1100,7 @@ func (s *IndexerStarknet) transformRPCEventToTransferFormat(event map[string]int
 			"non_indexed_params": map[string]interface{}{
 				"from":  cryptoUtils.NormalizeStarknetAddress(from),
 				"to":    cryptoUtils.NormalizeStarknetAddress(to),
-				"value": value,
+				"value": value.String(),
 			},
 			"indexed_params": map[string]interface{}{},
 		},
