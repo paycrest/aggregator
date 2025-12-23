@@ -56,7 +56,7 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 	// Determine chunk size based on whether block range is provided
 	var ChunkSize int
 	if fromBlock == 0 && toBlock == 0 {
-		// No block range - get last 5 transactions
+		// No block range - get last 10 transactions
 		ChunkSize = 10
 	} else {
 		// Block range provided - get up to 100 transactions in range
