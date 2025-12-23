@@ -419,6 +419,11 @@ func (c *Client) BuildApprovalAndCreateOrderCall(
 	orderAmountLow, orderAmountHigh := splitU256FromFelt(orderAmount)
 	senderFeeLow, senderFeeHigh := splitU256FromFelt(senderFee)
 
+	logger.WithFields(logger.Fields{
+		"order amount low": orderAmountLow.String(),
+		"order amount high": orderAmountHigh.String(),
+	}).Infof("Building create order call data")
+
 	buildReq := &paymaster.BuildTransactionRequest{
 		Transaction: paymaster.UserTransaction{
 			Type:       paymaster.UserTxnDeployAndInvoke, // "UserTxnInvoke" UserTxnDeployAndInvoke

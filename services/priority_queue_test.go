@@ -564,37 +564,26 @@ func TestPriorityQueueTest(t *testing.T) {
 		assert.Equal(t, 1, len(data))
 		assert.Contains(t, data[0], testCtxForPQ.publicProviderProfile.ID)
 
-		// Clean up: Delete the bucket and Redis queue created in this test to avoid conflicts with TestProcessBucketQueues
+		// Clean up: Delete the bucket created in this test to avoid conflicts with TestProcessBucketQueues
 		// (both buckets would use the same Redis key)
-		_, err = db.RedisClient.Del(ctx, redisKey).Result()
-		assert.NoError(t, err)
 		_, err = db.Client.ProvisionBucket.Delete().Where(provisionbucket.IDEQ(bucket.ID)).Exec(ctx)
 		assert.NoError(t, err)
 	})
 
 	t.Run("TestProcessBucketQueues", func(t *testing.T) {
-		ctx := context.Background()
 		err = service.ProcessBucketQueues()
 		assert.NoError(t, err)
 
 		// Wait for goroutines to complete (ProcessBucketQueues launches goroutines)
-		// Use a longer wait time and check with retries to handle timing issues
-		maxRetries := 10
+		time.Sleep(200 * time.Millisecond)
+
 		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
 
-		var data []string
-		for i := 0; i < maxRetries; i++ {
-			time.Sleep(100 * time.Millisecond)
-			data, err = db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
-			assert.NoError(t, err)
-			if len(data) > 0 {
-				break
-			}
-		}
-
+		data, err := db.RedisClient.LRange(context.Background(), redisKey, 0, -1).Result()
+		assert.NoError(t, err)
 		// ProcessBucketQueues rebuilds queues from GetProvisionBuckets which filters providers
 		// The provider should meet all criteria (active, KYB approved, public, has balance)
-		assert.Equal(t, 1, len(data), "Expected 1 provider in queue, but got %d. Redis key: %s", len(data), redisKey)
+		assert.Equal(t, 1, len(data))
 	})
 
 	t.Run("TestAssignPaymentOrder", func(t *testing.T) {
