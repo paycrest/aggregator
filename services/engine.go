@@ -493,7 +493,7 @@ func (s *EngineService) CreateGatewayWebhook() error {
 	// Fetch networks for the current environment
 	networks, err := storage.Client.Network.
 		Query().
-		Where(networkent.ChainIDNotIn(56, 1135)).
+		Where(networkent.ChainIDNotIn(56, 1135, 23448594291968334)).
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch networks: %w", err)
