@@ -249,7 +249,7 @@ func RetryStaleUserOperations() error {
 		Query().
 		Where(
 			paymentorder.GatewayIDNEQ(""),
-			paymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
+			paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
 			paymentorder.StatusNEQ(paymentorder.StatusValidated),
 			paymentorder.StatusNEQ(paymentorder.StatusSettled),
 			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
@@ -271,7 +271,18 @@ func RetryStaleUserOperations() error {
 						),
 					),
 				),
-				// OTC orders with 15x refund timeout
+				// Regular orders with status Fulfilled and failed fulfillments
+				paymentorder.And(
+					paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular),
+					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+					paymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+					paymentorder.HasFulfillmentsWith(
+						paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
+						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
+					),
+				),
+				// OTC orders with OTC refund timeout
 				paymentorder.And(
 					paymentorder.OrderTypeEQ(paymentorder.OrderTypeOtc),
 					paymentorder.Or(
@@ -288,6 +299,18 @@ func RetryStaleUserOperations() error {
 						),
 					),
 				),
+				// OTC orders with status Fulfilled and failed fulfillments
+				paymentorder.And(
+					paymentorder.OrderTypeEQ(paymentorder.OrderTypeOtc),
+					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+					paymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
+					paymentorder.HasFulfillmentsWith(
+						paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
+						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
+					),
+				),
+				// Private provider orders with status Fulfilled and failed fulfillments
 				paymentorder.And(
 					paymentorder.HasProviderWith(
 						providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePrivate),
