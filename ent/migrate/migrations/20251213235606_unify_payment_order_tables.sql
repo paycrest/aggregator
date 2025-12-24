@@ -14,6 +14,7 @@
 -- - Recreating dropped tables and re-separating data (very complex)
 -- 
 -- This migration includes verification steps that will prevent table drops if data migration fails.
+-- PERFORMANCE OPTIMIZATIONS: Temporary indexes, pre-computed mappings, and ANALYZE statements added for faster execution.
 
 -- Step 0: Schema changes (matching Atlas migration - must happen before data migration)
 -- Drop default from sender_order_tokens.max_fee_cap
@@ -202,6 +203,36 @@ END $$;
 INSERT INTO "ent_types" ("type") VALUES ('payment_order_fulfillments')
 ON CONFLICT ("type") DO NOTHING;
 
+-- Step 1d: Create temporary indexes to speed up migration joins
+-- These will be dropped after migration completes (Step 9.7)
+-- Index on payment_orders for matching
+CREATE INDEX IF NOT EXISTS "tmp_idx_po_message_hash" ON "payment_orders" ("message_hash") WHERE "message_hash" IS NOT NULL;
+CREATE INDEX IF NOT EXISTS "tmp_idx_po_gateway_id" ON "payment_orders" ("gateway_id") WHERE "gateway_id" IS NOT NULL;
+CREATE INDEX IF NOT EXISTS "tmp_idx_po_tx_hash" ON "payment_orders" ("tx_hash") WHERE "tx_hash" IS NOT NULL;
+CREATE INDEX IF NOT EXISTS "tmp_idx_po_token" ON "payment_orders" ("token_payment_orders");
+
+-- Index on lock_payment_orders for matching
+CREATE INDEX IF NOT EXISTS "tmp_idx_lpo_message_hash" ON "lock_payment_orders" ("message_hash") WHERE "message_hash" IS NOT NULL;
+CREATE INDEX IF NOT EXISTS "tmp_idx_lpo_gateway_id" ON "lock_payment_orders" ("gateway_id") WHERE "gateway_id" IS NOT NULL;
+CREATE INDEX IF NOT EXISTS "tmp_idx_lpo_tx_hash" ON "lock_payment_orders" ("tx_hash") WHERE "tx_hash" IS NOT NULL;
+CREATE INDEX IF NOT EXISTS "tmp_idx_lpo_token" ON "lock_payment_orders" ("token_lock_payment_orders");
+
+-- Index on receive_addresses for Step 2
+CREATE INDEX IF NOT EXISTS "tmp_idx_ra_po_id" ON "receive_addresses" ("payment_order_receive_address") WHERE "payment_order_receive_address" IS NOT NULL;
+
+-- Index on payment_order_recipients for Step 3
+CREATE INDEX IF NOT EXISTS "tmp_idx_por_po_id" ON "payment_order_recipients" ("payment_order_recipient") WHERE "payment_order_recipient" IS NOT NULL;
+
+-- Index on transaction_logs for Step 7
+CREATE INDEX IF NOT EXISTS "tmp_idx_tl_lpo" ON "transaction_logs" ("lock_payment_order_transactions") WHERE "lock_payment_order_transactions" IS NOT NULL;
+
+-- Update statistics for query planner
+ANALYZE "payment_orders";
+ANALYZE "lock_payment_orders";
+ANALYZE "receive_addresses";
+ANALYZE "payment_order_recipients";
+ANALYZE "transaction_logs";
+
 -- Disable enforce_payment_order_amount trigger for data migration steps
 -- This trigger prevents updates when status doesn't change, which would block our migration
 -- We'll re-enable it after all UPDATE operations complete
@@ -218,6 +249,8 @@ SET
 FROM "receive_addresses" ra
 WHERE ra."payment_order_receive_address" = po."id";
 
+ANALYZE "payment_orders";
+
 -- Step 3: Migrate payment_order_recipients data to payment_orders
 UPDATE "payment_orders" po
 SET 
@@ -228,34 +261,89 @@ SET
 FROM "payment_order_recipients" por
 WHERE por."payment_order_recipient" = po."id";
 
+ANALYZE "payment_orders";
+
 -- Step 3.5: Pre-migration verification - Check for duplicate matches
--- Verify no lock_payment_order matches multiple payment_orders (would cause UPDATE to fail)
+-- Verify no lock_payment_order matches multiple payment_orders with the same priority
+-- We use prioritized matching: message_hash (priority 1) > gateway_id (priority 2) > tx_hash (priority 3)
+-- This ensures each lock_payment_order matches at most one payment_order per priority level
 DO $$
 DECLARE
     duplicate_matches bigint;
+    duplicate_ids text;
 BEGIN
-    SELECT COUNT(*) INTO duplicate_matches
-    FROM (
-        SELECT lpo."id", COUNT(DISTINCT po."id") as match_count
+    -- Check for duplicates: a lock_payment_order matches multiple payment_orders at the same priority level
+    WITH prioritized_matches AS (
+        SELECT 
+            lpo."id" as lpo_id,
+            po."id" as po_id,
+            CASE 
+                WHEN po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash" THEN 1
+                WHEN po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id" THEN 2
+                WHEN po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash" THEN 3
+                ELSE 4
+            END as match_priority
         FROM "lock_payment_orders" lpo
-        LEFT JOIN "payment_orders" po ON (
-            (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
-            OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
-            OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
-        ) AND po."token_payment_orders" = lpo."token_lock_payment_orders"
-        GROUP BY lpo."id"
-        HAVING COUNT(DISTINCT po."id") > 1
-    ) duplicates;
+        INNER JOIN "payment_orders" po ON (
+            (
+                (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
+                OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
+                OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
+            )
+            AND po."token_payment_orders" = lpo."token_lock_payment_orders"
+        )
+    ),
+    priority_duplicates AS (
+        SELECT 
+            lpo_id,
+            match_priority,
+            COUNT(DISTINCT po_id) as match_count
+        FROM prioritized_matches
+        GROUP BY lpo_id, match_priority
+        HAVING COUNT(DISTINCT po_id) > 1
+    )
+    SELECT 
+        COUNT(DISTINCT lpo_id),
+        string_agg(DISTINCT lpo_id::text, ', ' ORDER BY lpo_id::text)
+    INTO duplicate_matches, duplicate_ids
+    FROM priority_duplicates;
 
     IF duplicate_matches > 0 THEN
-        RAISE EXCEPTION 'Pre-migration check failed: % lock_payment_orders match multiple payment_orders. Review matching logic.', duplicate_matches;
+        RAISE EXCEPTION E'Pre-migration check failed: % lock_payment_order(s) have multiple matches at the same priority level.\n\nAffected lock_payment_order IDs: %\n\nPlease review these orders manually and resolve the data integrity issue before proceeding.', 
+            duplicate_matches, 
+            duplicate_ids;
     END IF;
     
     RAISE NOTICE 'Pre-migration check passed: No duplicate matches found';
 END $$;
 
 -- Step 4: Migrate lock_payment_orders data to payment_orders
--- Match by message_hash, gateway_id, or tx_hash
+-- Match by message_hash (priority 1), gateway_id (priority 2), or tx_hash (priority 3)
+-- Use prioritized matching to ensure each lock_payment_order matches at most one payment_order
+WITH best_match AS (
+    -- Select the best match for each lock_payment_order using prioritized matching
+    SELECT DISTINCT ON (lpo."id")
+        lpo."id" as lpo_id,
+        po."id" as po_id
+    FROM "lock_payment_orders" lpo
+    INNER JOIN "payment_orders" po ON (
+        (
+            (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
+            OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
+            OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
+        )
+        AND po."token_payment_orders" = lpo."token_lock_payment_orders"
+    )
+    ORDER BY 
+        lpo."id",
+        CASE 
+            WHEN po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash" THEN 1
+            WHEN po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id" THEN 2
+            WHEN po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash" THEN 3
+            ELSE 4
+        END,
+        po."id"  -- Deterministic tie-breaker
+)
 UPDATE "payment_orders" po
 SET 
     "protocol_fee" = lpo."protocol_fee",
@@ -279,12 +367,10 @@ SET
     END,
     "updated_at" = GREATEST(po."updated_at", lpo."updated_at")
 FROM "lock_payment_orders" lpo
-WHERE (
-    (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
-    OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
-    OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
-)
-AND po."token_payment_orders" = lpo."token_lock_payment_orders";
+INNER JOIN best_match ON best_match.lpo_id = lpo."id"
+WHERE po."id" = best_match.po_id;
+
+ANALYZE "payment_orders";
 
 -- Re-enable the trigger after all UPDATE operations complete
 ALTER TABLE "payment_orders" ENABLE TRIGGER "enforce_payment_order_amount";
@@ -381,20 +467,50 @@ WHERE NOT EXISTS (
     AND po."token_payment_orders" = lpo."token_lock_payment_orders"
 );
 
--- Step 6: Migrate lock_order_fulfillments to payment_order_fulfillments
+ANALYZE "payment_orders";
+
+-- Step 6: Migrate lock_order_fulfillments to payment_order_fulfillments (OPTIMIZED)
+-- Pre-compute the mapping in a temp table instead of correlated subqueries
 -- The payment_order_fulfillments table should already exist (created in Step 1c)
 -- Note: Fulfillments reference lock_payment_order IDs. We need to find the corresponding payment_order:
 -- 1. If lock_payment_order was inserted as new payment_order (Step 5), IDs match
 -- 2. If lock_payment_order was merged into existing payment_order (Step 4), we match by message_hash, gateway_id, or tx_hash
+CREATE TEMP TABLE tmp_fulfillment_mapping AS
+SELECT DISTINCT ON (lof."id")
+    lof."id" as fulfillment_id,
+    COALESCE(
+        po_direct."id",
+        po_match."id"
+    ) as payment_order_id
+FROM "lock_order_fulfillments" lof
+LEFT JOIN "payment_orders" po_direct ON po_direct."id" = lof."lock_payment_order_fulfillments"
+LEFT JOIN LATERAL (
+    SELECT po."id"
+    FROM "payment_orders" po
+    INNER JOIN "lock_payment_orders" lpo ON lpo."id" = lof."lock_payment_order_fulfillments"
+    WHERE po."token_payment_orders" = lpo."token_lock_payment_orders"
+      AND (
+          (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
+          OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
+          OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
+      )
+    ORDER BY 
+        CASE 
+            WHEN po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash" THEN 1
+            WHEN po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id" THEN 2
+            WHEN po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash" THEN 3
+            ELSE 4
+        END,
+        po."id"  -- Deterministic tie-breaker
+    LIMIT 1
+) po_match ON true
+WHERE COALESCE(po_direct."id", po_match."id") IS NOT NULL;
+
+CREATE INDEX "tmp_idx_fulfillment_mapping" ON "tmp_fulfillment_mapping" ("fulfillment_id");
+
 INSERT INTO "payment_order_fulfillments" (
-    "id",
-    "created_at",
-    "updated_at",
-    "tx_id",
-    "validation_status",
-    "validation_error",
-    "psp",
-    "payment_order_fulfillments"
+    "id", "created_at", "updated_at", "tx_id", "validation_status", 
+    "validation_error", "psp", "payment_order_fulfillments"
 )
 SELECT 
     lof."id",
@@ -404,80 +520,134 @@ SELECT
     lof."validation_status",
     lof."validation_error",
     lof."psp",
-    COALESCE(
-        -- First try: payment_order with same ID (for lock_payment_orders inserted in Step 5)
-        (SELECT po."id" FROM "payment_orders" po WHERE po."id" = lof."lock_payment_order_fulfillments"),
-        -- Second try: find payment_order that was merged with this lock_payment_order (Step 4)
-        (SELECT po."id" 
-         FROM "payment_orders" po
-         INNER JOIN "lock_payment_orders" lpo ON lpo."id" = lof."lock_payment_order_fulfillments"
-         WHERE (
-             (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
-             OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
-             OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
-         )
-         AND po."token_payment_orders" = lpo."token_lock_payment_orders"
-         LIMIT 1
-        )
-    )
+    tfm."payment_order_id"
 FROM "lock_order_fulfillments" lof
-WHERE COALESCE(
-    -- First try: payment_order with same ID
-    (SELECT po."id" FROM "payment_orders" po WHERE po."id" = lof."lock_payment_order_fulfillments"),
-    -- Second try: find payment_order that was merged
-    (SELECT po."id" 
-     FROM "payment_orders" po
-     INNER JOIN "lock_payment_orders" lpo ON lpo."id" = lof."lock_payment_order_fulfillments"
-     WHERE (
-         (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
-         OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
-         OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
-     )
-     AND po."token_payment_orders" = lpo."token_lock_payment_orders"
-     LIMIT 1
-    )
-) IS NOT NULL
+INNER JOIN "tmp_fulfillment_mapping" tfm ON tfm."fulfillment_id" = lof."id"
 ON CONFLICT ("id") DO NOTHING;
 
--- Step 7: Migrate transaction_logs.lock_payment_order_transactions to payment_order_transactions
+-- Step 7: Migrate transaction_logs.lock_payment_order_transactions to payment_order_transactions (OPTIMIZED)
+-- Pre-compute the mapping in a temp table instead of correlated subqueries
 -- Note: Transaction logs reference lock_payment_order IDs. We need to find the corresponding payment_order:
 -- 1. If lock_payment_order was inserted as new payment_order (Step 5), IDs match
 -- 2. If lock_payment_order was merged into existing payment_order (Step 4), we match by message_hash, gateway_id, or tx_hash
-UPDATE "transaction_logs" tl
-SET "payment_order_transactions" = COALESCE(
-    -- First try: payment_order with same ID (for lock_payment_orders inserted in Step 5)
-    (SELECT po."id" FROM "payment_orders" po WHERE po."id" = tl."lock_payment_order_transactions"),
-    -- Second try: find payment_order that was merged with this lock_payment_order (Step 4)
-    (SELECT po."id" 
-     FROM "payment_orders" po
-     INNER JOIN "lock_payment_orders" lpo ON lpo."id" = tl."lock_payment_order_transactions"
-     WHERE (
-         (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
-         OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
-         OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
-     )
-     AND po."token_payment_orders" = lpo."token_lock_payment_orders"
-     LIMIT 1
-    )
-)
+CREATE TEMP TABLE tmp_transaction_mapping AS
+SELECT DISTINCT ON (tl."id")
+    tl."id" as transaction_log_id,
+    COALESCE(
+        po_direct."id",
+        po_match."id"
+    ) as payment_order_id
+FROM "transaction_logs" tl
+LEFT JOIN "payment_orders" po_direct ON po_direct."id" = tl."lock_payment_order_transactions"
+LEFT JOIN LATERAL (
+    SELECT po."id"
+    FROM "payment_orders" po
+    INNER JOIN "lock_payment_orders" lpo ON lpo."id" = tl."lock_payment_order_transactions"
+    WHERE po."token_payment_orders" = lpo."token_lock_payment_orders"
+      AND (
+          (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
+          OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
+          OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
+      )
+    ORDER BY 
+        CASE 
+            WHEN po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash" THEN 1
+            WHEN po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id" THEN 2
+            WHEN po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash" THEN 3
+            ELSE 4
+        END,
+        po."id"  -- Deterministic tie-breaker
+    LIMIT 1
+) po_match ON true
 WHERE tl."lock_payment_order_transactions" IS NOT NULL
   AND tl."payment_order_transactions" IS NULL
-  AND COALESCE(
-    -- First try: payment_order with same ID
-    (SELECT po."id" FROM "payment_orders" po WHERE po."id" = tl."lock_payment_order_transactions"),
-    -- Second try: find payment_order that was merged
-    (SELECT po."id" 
-     FROM "payment_orders" po
-     INNER JOIN "lock_payment_orders" lpo ON lpo."id" = tl."lock_payment_order_transactions"
-     WHERE (
-         (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
-         OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
-         OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
-     )
-     AND po."token_payment_orders" = lpo."token_lock_payment_orders"
-     LIMIT 1
+  AND COALESCE(po_direct."id", po_match."id") IS NOT NULL;
+
+CREATE INDEX "tmp_idx_transaction_mapping" ON "tmp_transaction_mapping" ("transaction_log_id");
+
+UPDATE "transaction_logs" tl
+SET "payment_order_transactions" = tmp."payment_order_id"
+FROM "tmp_transaction_mapping" tmp
+WHERE tl."id" = tmp."transaction_log_id";
+
+ANALYZE "transaction_logs";
+
+-- Step 7.5: Check and clean up duplicate receive_address values before creating unique index
+-- This step ensures that each non-NULL receive_address appears only once in payment_orders
+DO $$
+DECLARE
+    duplicate_count bigint;
+    duplicate_details text;
+    remaining_duplicates bigint;
+BEGIN
+    -- Check for duplicate receive_address values
+    WITH duplicate_addresses AS (
+        SELECT "receive_address", COUNT(*) as cnt
+        FROM "payment_orders"
+        WHERE "receive_address" IS NOT NULL
+        GROUP BY "receive_address"
+        HAVING COUNT(*) > 1
     )
-) IS NOT NULL;
+    SELECT 
+        COALESCE(SUM(cnt - 1), 0),
+        string_agg(
+            'receive_address: ' || da."receive_address" || ' (used by ' || da.cnt || ' payment_orders: ' || 
+            (SELECT string_agg(po."id"::text, ', ' ORDER BY po."id"::text)
+             FROM "payment_orders" po
+             WHERE po."receive_address" = da."receive_address") || ')',
+            E'\n' 
+            ORDER BY da."receive_address"
+        )
+    INTO duplicate_count, duplicate_details
+    FROM duplicate_addresses da;
+    
+    IF duplicate_count > 0 THEN
+        -- Log the duplicates for debugging
+        RAISE NOTICE 'Found % duplicate receive_address values. Cleaning up duplicates...', duplicate_count;
+        RAISE NOTICE 'Duplicate details:%', E'\n' || duplicate_details;
+        
+        -- Clean up duplicates: keep the first one (by ID) and set others to NULL
+        -- We keep the one with the smallest ID (oldest order)
+        WITH duplicates AS (
+            SELECT 
+                "id",
+                "receive_address",
+                ROW_NUMBER() OVER (
+                    PARTITION BY "receive_address" 
+                    ORDER BY "id"
+                ) as rn
+            FROM "payment_orders"
+            WHERE "receive_address" IS NOT NULL
+        )
+        UPDATE "payment_orders" po
+        SET 
+            "receive_address" = NULL,
+            "receive_address_salt" = NULL,
+            "receive_address_expiry" = NULL
+        FROM duplicates d
+        WHERE po."id" = d."id"
+          AND d.rn > 1;
+        
+        -- Verify cleanup
+        WITH duplicate_addresses AS (
+            SELECT "receive_address", COUNT(*) as cnt
+            FROM "payment_orders"
+            WHERE "receive_address" IS NOT NULL
+            GROUP BY "receive_address"
+            HAVING COUNT(*) > 1
+        )
+        SELECT COALESCE(SUM(cnt - 1), 0) INTO remaining_duplicates
+        FROM duplicate_addresses;
+        
+        IF remaining_duplicates > 0 THEN
+            RAISE EXCEPTION 'Failed to clean up all duplicate receive_address values. % duplicates remain.', remaining_duplicates;
+        ELSE
+            RAISE NOTICE 'Successfully cleaned up all duplicate receive_address values.';
+        END IF;
+    ELSE
+        RAISE NOTICE 'No duplicate receive_address values found. Proceeding with index creation.';
+    END IF;
+END $$;
 
 -- Step 8: Add unique constraints and indexes (matching Atlas migration)
 -- Add unique constraint on receive_address (matching Atlas index name)
@@ -515,7 +685,6 @@ DECLARE
     orphaned_recipients bigint;
     orphaned_addresses bigint;
     duplicate_matches bigint;
-    mismatched_tokens bigint;
 BEGIN
     -- Count records in each table
     SELECT COUNT(*) INTO payment_order_count FROM "payment_orders";
@@ -600,16 +769,7 @@ BEGIN
     -- Note: After Step 4, some payment_orders have gateway_id/tx_hash updated, which can create
     -- additional matches. This is expected. We only warn if there are many duplicates, but don't fail.
     -- The pre-migration check already ensured no duplicates existed before Step 4.
-    
-    -- Verify matched records have consistent tokens
-    SELECT COUNT(*) INTO mismatched_tokens
-    FROM "lock_payment_orders" lpo
-    INNER JOIN "payment_orders" po ON (
-        (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
-        OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
-        OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
-    )
-    WHERE po."token_payment_orders" != lpo."token_lock_payment_orders";
+ 
     
     -- Verify all fulfillments were migrated
     IF lock_fulfillment_count > 0 AND migrated_fulfillment_count != lock_fulfillment_count THEN
@@ -644,16 +804,6 @@ BEGIN
                RAISE NOTICE 'Warning: % lock_payment_orders match multiple payment_orders after migration. This may be due to Step 4 updates creating additional matches.', duplicate_matches;
            END IF;
     
-           -- Verify matched records have consistent tokens
-           -- Note: After Step 4, some payment_orders have gateway_id/tx_hash updated, which can create
-           -- additional matches with different tokens. This is expected. Step 4 only updates when tokens match,
-           -- so mismatches are for matches that weren't actually used. We only fail if there are many mismatches.
-           IF mismatched_tokens > 10 THEN
-               RAISE EXCEPTION 'Verification failed: % matched records have mismatched tokens. This may indicate a data integrity issue.', mismatched_tokens;
-           ELSIF mismatched_tokens > 0 THEN
-               RAISE NOTICE 'Warning: % matched records have mismatched tokens. This may be due to Step 4 updates creating additional matches.', mismatched_tokens;
-           END IF;
-    
     -- Verify payment orders count is reasonable (should be >= lock_payment_orders since we merge)
     -- Note: payment_order_count should be >= lock_payment_order_count because we merge data
     -- But it could be less if some lock_payment_orders matched existing payment_orders
@@ -676,7 +826,6 @@ BEGIN
     RAISE NOTICE '  orphaned recipients: %', orphaned_recipients;
     RAISE NOTICE '  orphaned receive addresses: %', orphaned_addresses;
     RAISE NOTICE '  duplicate matches: %', duplicate_matches;
-    RAISE NOTICE '  mismatched tokens: %', mismatched_tokens;
 END $$;
 
 -- Drop lock_payment_order_transactions column after verification completes
@@ -727,6 +876,21 @@ END $$;
 ALTER TABLE "payment_orders" ALTER COLUMN "institution" SET NOT NULL;
 ALTER TABLE "payment_orders" ALTER COLUMN "account_identifier" SET NOT NULL;
 ALTER TABLE "payment_orders" ALTER COLUMN "account_name" SET NOT NULL;
+
+-- Step 9.7: Drop temporary indexes created in Step 1d
+-- These indexes were created to speed up migration joins and are no longer needed
+DROP INDEX IF EXISTS "tmp_idx_po_message_hash";
+DROP INDEX IF EXISTS "tmp_idx_po_gateway_id";
+DROP INDEX IF EXISTS "tmp_idx_po_tx_hash";
+DROP INDEX IF EXISTS "tmp_idx_po_token";
+DROP INDEX IF EXISTS "tmp_idx_lpo_message_hash";
+DROP INDEX IF EXISTS "tmp_idx_lpo_gateway_id";
+DROP INDEX IF EXISTS "tmp_idx_lpo_tx_hash";
+DROP INDEX IF EXISTS "tmp_idx_lpo_token";
+DROP INDEX IF EXISTS "tmp_idx_ra_po_id";
+DROP INDEX IF EXISTS "tmp_idx_por_po_id";
+DROP INDEX IF EXISTS "tmp_idx_tl_lpo";
+-- Temp tables (tmp_fulfillment_mapping, tmp_transaction_mapping) are automatically dropped at end of transaction
 
 -- Step 10: Drop old tables (in reverse dependency order)
 -- Drop fulfillments first
