@@ -1308,6 +1308,12 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 					return
 				}
 				err = orderService.NewOrderStarknet(client).RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
+				logger.WithFields(logger.Fields{
+					"OrderID": order.ID.String(),
+					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
+					"Status":            order.Status.String(),
+					"GatewayID":         order.GatewayID,
+				}).Errorf("CancelOrder.RefundOrder.NewStarknetClient")
 			} else {
 				err = orderService.NewOrderEVM().RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
 			}

@@ -166,7 +166,6 @@ func (s *OrderStarknet) RefundOrder(ctx context.Context, network *ent.Network, o
 			paymentorder.StatusNEQ(paymentorder.StatusProcessing),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
-					networkent.IdentifierEQ(network.Identifier),
 					networkent.IdentifierContainsFold("starknet"),
 				),
 			),

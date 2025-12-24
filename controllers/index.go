@@ -1695,11 +1695,6 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 	// Verify webhook signature
 	verification, err := ctrl.verifyWebhookSignature(string(rawBody), signature, webhookID)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":     err,
-			"Signature": signature,
-			"WebhookID": webhookID,
-		}).Errorf("Error: InsightWebhook: Failed to verify signature")
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid signature"})
 		return
 	}

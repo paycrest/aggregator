@@ -137,23 +137,42 @@ func ProcessPaymentOrderFromBlockchain(
 			return fmt.Errorf("%s - failed to update payment order with on-chain details: %w", paymentOrderFields.GatewayID, err)
 		}
 
-		// Ensure transaction log exists
-		transactionLog, err := ensureTransactionLog(ctx, tx, network, paymentOrderFields)
+		// Ensure transaction log exists and is linked to this payment order
+		transactionLog, err := ensureTransactionLog(ctx, tx, network, paymentOrderFields, &existingOrderWithMessageHash.ID)
 		if err != nil {
 			_ = tx.Rollback()
 			return err
 		}
 
-		// Link transaction log to payment order if it was newly created
+		// Link transaction log to payment order if it's not already linked
 		if transactionLog != nil {
-			_, err = tx.PaymentOrder.
-				Update().
-				Where(paymentorder.IDEQ(existingOrderWithMessageHash.ID)).
-				AddTransactions(transactionLog).
-				Save(ctx)
+			// Check if transaction log is already linked to this payment order
+			// by querying if the payment order already has this transaction log
+			hasTransactionLog, err := tx.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.IDEQ(existingOrderWithMessageHash.ID),
+					paymentorder.HasTransactionsWith(
+						transactionlog.IDEQ(transactionLog.ID),
+					),
+				).
+				Exist(ctx)
 			if err != nil {
 				_ = tx.Rollback()
-				return fmt.Errorf("%s - failed to link transaction log: %w", paymentOrderFields.GatewayID, err)
+				return fmt.Errorf("%s - failed to check transaction log link: %w", paymentOrderFields.GatewayID, err)
+			}
+
+			// Only link if not already linked
+			if !hasTransactionLog {
+				_, err = tx.PaymentOrder.
+					Update().
+					Where(paymentorder.IDEQ(existingOrderWithMessageHash.ID)).
+					AddTransactions(transactionLog).
+					Save(ctx)
+				if err != nil {
+					_ = tx.Rollback()
+					return fmt.Errorf("%s - failed to link transaction log: %w", paymentOrderFields.GatewayID, err)
+				}
 			}
 		}
 
@@ -171,8 +190,8 @@ func ProcessPaymentOrderFromBlockchain(
 		return fmt.Errorf("%s failed to initiate db transaction %w", paymentOrderFields.GatewayID, err)
 	}
 
-	// Ensure transaction log exists
-	transactionLog, err := ensureTransactionLog(ctx, tx, network, paymentOrderFields)
+	// Ensure transaction log exists (no payment order ID for new orders)
+	transactionLog, err := ensureTransactionLog(ctx, tx, network, paymentOrderFields, nil)
 	if err != nil {
 		return err
 	}
@@ -598,6 +617,12 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			return fmt.Errorf("%s - failed to fetch network: %w", paymentOrderFields.GatewayID, err)
 		}
 
+		logger.WithFields(logger.Fields{
+			"OrderID": order.ID.String(),
+			"NetworkIdentifier": network.Identifier,
+			"Status":            order.Status.String(),
+			"GatewayID":         order.GatewayID,
+		}).Errorf("HandleCancellation.RefundOrder 1")
 		err = refundOrder(ctx, network, paymentOrderFields.GatewayID)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -627,6 +652,12 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			return fmt.Errorf("%s - failed to fetch network: %w", createdPaymentOrder.GatewayID, err)
 		}
 
+		logger.WithFields(logger.Fields{
+			"OrderID": createdPaymentOrder.ID.String(),
+			"NetworkIdentifier": network.Identifier,
+			"Status":            createdPaymentOrder.Status.String(),
+			"GatewayID":         createdPaymentOrder.GatewayID,
+		}).Errorf("HandleCancellation.RefundOrder 2")
 		err = refundOrder(ctx, network, createdPaymentOrder.GatewayID)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -763,12 +794,14 @@ func deleteTransferWebhook(ctx context.Context, txHash string) error {
 }
 
 // ensureTransactionLog ensures a transaction log exists for the order, creating it if needed.
+// If paymentOrderID is provided, it checks if an existing log is already linked to that payment order.
 // Returns the transaction log and any error.
 func ensureTransactionLog(
 	ctx context.Context,
 	tx *ent.Tx,
 	network *ent.Network,
 	paymentOrderFields *types.PaymentOrderFields,
+	paymentOrderID *uuid.UUID,
 ) (*ent.TransactionLog, error) {
 	// Check if transaction log already exists
 	existingLog, err := tx.TransactionLog.
@@ -782,7 +815,73 @@ func ensureTransactionLog(
 	if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("%s - failed to fetch transaction log: %w", paymentOrderFields.GatewayID, err)
 	}
+
 	if existingLog != nil {
+		// If we have a payment order ID, check if the existing log is already linked to it
+		if paymentOrderID != nil {
+			// Check if this transaction log is already linked to the specified payment order
+			isLinked, err := tx.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.IDEQ(*paymentOrderID),
+					paymentorder.HasTransactionsWith(
+						transactionlog.IDEQ(existingLog.ID),
+					),
+				).
+				Exist(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("%s - failed to check transaction log link: %w", paymentOrderFields.GatewayID, err)
+			}
+
+			if isLinked {
+				// Already linked to the correct payment order, return it
+				return existingLog, nil
+			}
+
+			// Check if it's linked to a different payment order by querying PaymentOrder
+			// that has this transaction log but is not the one we're working with
+			linkedToDifferentOrder, err := tx.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.IDNEQ(*paymentOrderID),
+					paymentorder.HasTransactionsWith(
+						transactionlog.IDEQ(existingLog.ID),
+					),
+				).
+				Exist(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("%s - failed to check transaction log payment order: %w", paymentOrderFields.GatewayID, err)
+			}
+
+			if linkedToDifferentOrder {
+				// Transaction log is already linked to a different payment order
+				// Create a new transaction log for this payment order
+				transactionLog, err := tx.TransactionLog.
+					Create().
+					SetStatus(transactionlog.StatusOrderCreated).
+					SetTxHash(paymentOrderFields.TxHash).
+					SetNetwork(network.Identifier).
+					SetGatewayID(paymentOrderFields.GatewayID).
+					SetMetadata(
+						map[string]interface{}{
+							"Token":           paymentOrderFields.Token,
+							"GatewayID":       paymentOrderFields.GatewayID,
+							"Amount":          paymentOrderFields.Amount,
+							"Rate":            paymentOrderFields.Rate,
+							"Memo":            paymentOrderFields.Memo,
+							"Metadata":        paymentOrderFields.Metadata,
+							"ProviderID":      paymentOrderFields.ProviderID,
+							"ProvisionBucket": paymentOrderFields.ProvisionBucket,
+						}).
+					Save(ctx)
+				if err != nil {
+					return nil, fmt.Errorf("%s - failed to create transaction log: %w", paymentOrderFields.GatewayID, err)
+				}
+				return transactionLog, nil
+			}
+		}
+
+		// Existing log is not linked to any payment order, or no payment order ID provided
 		return existingLog, nil
 	}
 
@@ -889,11 +988,11 @@ func validateAndPreparePaymentOrderData(
 		if ent.IsNotFound(err) {
 			// Cannot call createBasicPaymentOrderAndCancel without token - refund directly
 			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", err),
-				"OrderID":  event.OrderId,
-				"Network":  network.Identifier,
-				"TxHash":   event.TxHash,
-				"Token":    event.Token,
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": event.OrderId,
+				"Network": network.Identifier,
+				"TxHash":  event.TxHash,
+				"Token":   event.Token,
 			}).Errorf("token lookup failed and refund failed")
 			refundErr := refundOrder(ctx, network, event.OrderId)
 			if refundErr != nil {

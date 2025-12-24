@@ -349,6 +349,12 @@ func RetryStaleUserOperations() error {
 					continue
 				}
 				service = orderService.NewOrderStarknet(client)
+				logger.WithFields(logger.Fields{
+					"OrderID": order.ID.String(),
+					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
+					"Status":            order.Status.String(),
+					"GatewayID":         order.GatewayID,
+				}).Errorf("RetryStaleUserOperations.RefundOrder.NewStarknetClient")
 			} else {
 				service = orderService.NewOrderEVM()
 			}
