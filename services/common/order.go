@@ -111,6 +111,7 @@ func ProcessPaymentOrderFromBlockchain(
 			Update().
 			Where(paymentorder.IDEQ(existingOrderWithMessageHash.ID)).
 			SetGatewayID(paymentOrderFields.GatewayID).
+			SetOrderPercent(decimal.NewFromInt(100)).
 			SetTxHash(paymentOrderFields.TxHash).
 			SetBlockNumber(paymentOrderFields.BlockNumber).
 			SetStatus(paymentorder.StatusPending)
@@ -417,7 +418,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		SetBlockNumber(event.BlockNumber).
 		SetTxHash(event.TxHash).
 		SetStatus(paymentorder.StatusSettled).
-		AddPercentSettled(event.SettlePercent)
+		AddPercentSettled(event.SettlePercent.Div(decimal.NewFromInt(1000)))
 
 	if transactionLog != nil {
 		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
