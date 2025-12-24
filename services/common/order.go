@@ -840,7 +840,7 @@ func processPaymentOrderPostCreation(
 	}
 
 	// Check AML compliance
-	if serverConf.Environment == "production" && !strings.HasPrefix(network.Identifier, "tron") {
+	if serverConf.Environment == "production" && !strings.HasPrefix(network.Identifier, "tron") && !strings.HasPrefix(network.Identifier, "starknet") {
 		ok, err := CheckAMLCompliance(network.RPCEndpoint, event.TxHash)
 		if err != nil {
 			logger.WithFields(logger.Fields{

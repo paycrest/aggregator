@@ -22,7 +22,6 @@ import (
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
-	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 )
 
@@ -118,16 +117,6 @@ func (s *OrderStarknet) CreateOrder(ctx context.Context, orderID uuid.UUID) erro
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.parseRefundAddress: %w", orderIDPrefix, err)
 	}
-	// This will be remove before release.
-	logger.WithFields(logger.Fields{
-		"AccountsWallet": starknetDeterministicAccount.NewAccount.Address,
-		"saltDecrypted":  saltDecrypted,
-		"SaltUsed":       order.ReceiveAddressSalt,
-		"SeedUsed":       seed,
-		"Order Account":  order.ReceiveAddress,
-		"Amount":         orderAmountFelt.String(),
-		"Rate":           rateFelt.String(),
-	}).Errorf("Starknet Order Account Generated")
 
 	buildReq, buildResp, err := s.client.BuildApprovalAndCreateOrderCall(
 		ctx,
@@ -171,9 +160,14 @@ func (s *OrderStarknet) RefundOrder(ctx context.Context, network *ent.Network, o
 		Query().
 		Where(
 			paymentorder.GatewayIDEQ(orderID),
+			paymentorder.StatusNEQ(paymentorder.StatusValidated),
+			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
+			paymentorder.StatusNEQ(paymentorder.StatusSettled),
+			paymentorder.StatusNEQ(paymentorder.StatusProcessing),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
+					networkent.IdentifierContainsFold("starknet"),
 				),
 			),
 		).

@@ -23,6 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/services"
 	orderService "github.com/paycrest/aggregator/services/order"
+	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
@@ -1037,6 +1038,16 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			var err error
 			if strings.HasPrefix(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier, "tron") {
 				err = orderService.NewOrderTron().SettleOrder(ctx, orderID)
+			} else if strings.HasPrefix(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier, "starknet") {
+				client, err := starknetService.NewClient()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": orderID.String(),
+					}).Errorf("FulfillOrder.SettleOrder.NewStarknetClient")
+					return
+				}
+				err = orderService.NewOrderStarknet(client).SettleOrder(ctx, orderID)
 			} else {
 				err = orderService.NewOrderEVM().SettleOrder(ctx, orderID)
 			}
@@ -1287,6 +1298,16 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 			var err error
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				err = orderService.NewOrderTron().RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
+			} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
+				client, err := starknetService.NewClient()
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("CancelOrder.RefundOrder.NewStarknetClient")
+					return
+				}
+				err = orderService.NewOrderStarknet(client).RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
 			} else {
 				err = orderService.NewOrderEVM().RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
 			}

@@ -144,6 +144,8 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		Query().
 		Where(
 			paymentorder.GatewayIDEQ(orderID),
+			paymentorder.StatusNEQ(paymentorder.StatusValidated),
+			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
