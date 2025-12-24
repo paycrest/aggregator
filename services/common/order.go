@@ -425,9 +425,15 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	}
 
 	// Update payment order status
-	splitOrderId, err := uuid.Parse(string(ethcommon.FromHex(event.SplitOrderId)))
-	if err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.splitOrderId: %v", err)
+	var splitOrderId uuid.UUID
+
+	if strings.HasPrefix(network.Identifier, "starknet") {
+		splitOrderId, err = uuid.Parse(event.SplitOrderId)
+	} else {
+		splitOrderId, err = uuid.Parse(string(ethcommon.FromHex(event.SplitOrderId)))
+		if err != nil {
+			return fmt.Errorf("UpdateOrderStatusSettled.splitOrderId: %v", err)
+		}
 	}
 
 	paymentOrderUpdate := tx.PaymentOrder.
