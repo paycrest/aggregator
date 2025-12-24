@@ -261,7 +261,16 @@ func RetryStaleUserOperations() error {
 						paymentorder.StatusEQ(paymentorder.StatusPending),
 						paymentorder.StatusEQ(paymentorder.StatusCancelled),
 					),
-					paymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+					paymentorder.Or(
+						paymentorder.And(
+							paymentorder.IndexerCreatedAtNotNil(),
+							paymentorder.IndexerCreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+						),
+						paymentorder.And(
+							paymentorder.IndexerCreatedAtIsNil(),
+							paymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+						),
+					),
 					paymentorder.Or(
 						paymentorder.Not(paymentorder.HasFulfillments()),
 						paymentorder.HasFulfillmentsWith(
@@ -275,7 +284,16 @@ func RetryStaleUserOperations() error {
 				paymentorder.And(
 					paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular),
 					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
-					paymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+					paymentorder.Or(
+						paymentorder.And(
+							paymentorder.IndexerCreatedAtNotNil(),
+							paymentorder.IndexerCreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+						),
+						paymentorder.And(
+							paymentorder.IndexerCreatedAtIsNil(),
+							paymentorder.CreatedAtLTE(time.Now().Add(-regularRefundTimeout)),
+						),
+					),
 					paymentorder.HasFulfillmentsWith(
 						paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
 						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
@@ -289,7 +307,16 @@ func RetryStaleUserOperations() error {
 						paymentorder.StatusEQ(paymentorder.StatusPending),
 						paymentorder.StatusEQ(paymentorder.StatusCancelled),
 					),
-					paymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
+					paymentorder.Or(
+						paymentorder.And(
+							paymentorder.IndexerCreatedAtNotNil(),
+							paymentorder.IndexerCreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
+						),
+						paymentorder.And(
+							paymentorder.IndexerCreatedAtIsNil(),
+							paymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
+						),
+					),
 					paymentorder.Or(
 						paymentorder.Not(paymentorder.HasFulfillments()),
 						paymentorder.HasFulfillmentsWith(
@@ -303,7 +330,16 @@ func RetryStaleUserOperations() error {
 				paymentorder.And(
 					paymentorder.OrderTypeEQ(paymentorder.OrderTypeOtc),
 					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
-					paymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
+					paymentorder.Or(
+						paymentorder.And(
+							paymentorder.IndexerCreatedAtNotNil(),
+							paymentorder.IndexerCreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
+						),
+						paymentorder.And(
+							paymentorder.IndexerCreatedAtIsNil(),
+							paymentorder.CreatedAtLTE(time.Now().Add(-otcRefundTimeout)),
+						),
+					),
 					paymentorder.HasFulfillmentsWith(
 						paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
 						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
@@ -350,7 +386,7 @@ func RetryStaleUserOperations() error {
 				}
 				service = orderService.NewOrderStarknet(client)
 				logger.WithFields(logger.Fields{
-					"OrderID": order.ID.String(),
+					"OrderID":           order.ID.String(),
 					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
 					"Status":            order.Status.String(),
 					"GatewayID":         order.GatewayID,

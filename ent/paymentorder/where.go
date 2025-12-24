@@ -172,6 +172,11 @@ func FeeAddress(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldFeeAddress, v))
 }
 
+// IndexerCreatedAt applies equality check predicate on the "indexer_created_at" field. It's identical to IndexerCreatedAtEQ.
+func IndexerCreatedAt(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldIndexerCreatedAt, v))
+}
+
 // Institution applies equality check predicate on the "institution" field. It's identical to InstitutionEQ.
 func Institution(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldInstitution, v))
@@ -1390,6 +1395,56 @@ func FeeAddressEqualFold(v string) predicate.PaymentOrder {
 // FeeAddressContainsFold applies the ContainsFold predicate on the "fee_address" field.
 func FeeAddressContainsFold(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldContainsFold(FieldFeeAddress, v))
+}
+
+// IndexerCreatedAtEQ applies the EQ predicate on the "indexer_created_at" field.
+func IndexerCreatedAtEQ(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldIndexerCreatedAt, v))
+}
+
+// IndexerCreatedAtNEQ applies the NEQ predicate on the "indexer_created_at" field.
+func IndexerCreatedAtNEQ(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldIndexerCreatedAt, v))
+}
+
+// IndexerCreatedAtIn applies the In predicate on the "indexer_created_at" field.
+func IndexerCreatedAtIn(vs ...time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldIndexerCreatedAt, vs...))
+}
+
+// IndexerCreatedAtNotIn applies the NotIn predicate on the "indexer_created_at" field.
+func IndexerCreatedAtNotIn(vs ...time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldIndexerCreatedAt, vs...))
+}
+
+// IndexerCreatedAtGT applies the GT predicate on the "indexer_created_at" field.
+func IndexerCreatedAtGT(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldIndexerCreatedAt, v))
+}
+
+// IndexerCreatedAtGTE applies the GTE predicate on the "indexer_created_at" field.
+func IndexerCreatedAtGTE(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldIndexerCreatedAt, v))
+}
+
+// IndexerCreatedAtLT applies the LT predicate on the "indexer_created_at" field.
+func IndexerCreatedAtLT(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldIndexerCreatedAt, v))
+}
+
+// IndexerCreatedAtLTE applies the LTE predicate on the "indexer_created_at" field.
+func IndexerCreatedAtLTE(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldIndexerCreatedAt, v))
+}
+
+// IndexerCreatedAtIsNil applies the IsNil predicate on the "indexer_created_at" field.
+func IndexerCreatedAtIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldIndexerCreatedAt))
+}
+
+// IndexerCreatedAtNotNil applies the NotNil predicate on the "indexer_created_at" field.
+func IndexerCreatedAtNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldIndexerCreatedAt))
 }
 
 // InstitutionEQ applies the EQ predicate on the "institution" field.

@@ -671,6 +671,8 @@ END $$;
 
 -- Step 9.5: Verification - Check data integrity before dropping tables
 -- This step will raise an error if verification fails, preventing table drops
+-- Note: All queries to old tables are wrapped in existence checks to prevent errors
+-- when atlas migrate diff runs against a database where these tables don't exist
 DO $$
 DECLARE
     payment_order_count bigint;
@@ -685,131 +687,209 @@ DECLARE
     orphaned_recipients bigint;
     orphaned_addresses bigint;
     duplicate_matches bigint;
+    lock_payment_orders_exists boolean;
+    lock_order_fulfillments_exists boolean;
+    payment_order_recipients_exists boolean;
+    receive_addresses_exists boolean;
 BEGIN
-    -- Count records in each table
-    SELECT COUNT(*) INTO payment_order_count FROM "payment_orders";
-    SELECT COUNT(*) INTO lock_payment_order_count FROM "lock_payment_orders";
-    SELECT COUNT(*) INTO fulfillment_count FROM "payment_order_fulfillments";
-    SELECT COUNT(*) INTO lock_fulfillment_count FROM "lock_order_fulfillments";
-    SELECT COUNT(*) INTO recipient_count FROM "payment_order_recipients";
-    SELECT COUNT(*) INTO receive_address_count FROM "receive_addresses";
+    -- Initialize counts to 0
+    lock_payment_order_count := 0;
+    lock_fulfillment_count := 0;
+    recipient_count := 0;
+    receive_address_count := 0;
+    migrated_fulfillment_count := 0;
+    orphaned_recipients := 0;
+    orphaned_addresses := 0;
+    duplicate_matches := 0;
     
-    -- Count migrated fulfillments
-    SELECT COUNT(*) INTO migrated_fulfillment_count
-    FROM "payment_order_fulfillments" pof
-    WHERE EXISTS (
-        SELECT 1 FROM "lock_order_fulfillments" lof
-        WHERE lof."id" = pof."id"
-    );
+    -- Check which tables exist
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'lock_payment_orders'
+    ) INTO lock_payment_orders_exists;
+    
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'lock_order_fulfillments'
+    ) INTO lock_order_fulfillments_exists;
+    
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'payment_order_recipients'
+    ) INTO payment_order_recipients_exists;
+    
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'receive_addresses'
+    ) INTO receive_addresses_exists;
+    
+    -- Count records in each table (only if tables exist)
+    -- Check if payment_orders and payment_order_fulfillments exist before querying
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'payment_orders'
+    ) THEN
+        SELECT COUNT(*) INTO payment_order_count FROM "payment_orders";
+    ELSE
+        payment_order_count := 0;
+    END IF;
+    
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'payment_order_fulfillments'
+    ) THEN
+        SELECT COUNT(*) INTO fulfillment_count FROM "payment_order_fulfillments";
+    ELSE
+        fulfillment_count := 0;
+    END IF;
+    
+    IF lock_payment_orders_exists THEN
+        SELECT COUNT(*) INTO lock_payment_order_count FROM "lock_payment_orders";
+    END IF;
+    
+    IF lock_order_fulfillments_exists THEN
+        SELECT COUNT(*) INTO lock_fulfillment_count FROM "lock_order_fulfillments";
+    END IF;
+    
+    IF payment_order_recipients_exists THEN
+        SELECT COUNT(*) INTO recipient_count FROM "payment_order_recipients";
+    END IF;
+    
+    IF receive_addresses_exists THEN
+        SELECT COUNT(*) INTO receive_address_count FROM "receive_addresses";
+    END IF;
+    
+    -- Count migrated fulfillments (only if both tables exist)
+    IF lock_order_fulfillments_exists AND EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'payment_order_fulfillments'
+    ) THEN
+        SELECT COUNT(*) INTO migrated_fulfillment_count
+        FROM "payment_order_fulfillments" pof
+        WHERE EXISTS (
+            SELECT 1 FROM "lock_order_fulfillments" lof
+            WHERE lof."id" = pof."id"
+        );
+    END IF;
     
     -- Count transaction logs that should have been migrated
-    SELECT COUNT(*) INTO expected_transaction_count
-    FROM "transaction_logs"
-    WHERE "lock_payment_order_transactions" IS NOT NULL;
+    -- Check if column exists first
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'transaction_logs' 
+        AND column_name = 'lock_payment_order_transactions'
+    ) THEN
+        SELECT COUNT(*) INTO expected_transaction_count
+        FROM "transaction_logs"
+        WHERE "lock_payment_order_transactions" IS NOT NULL;
+        
+        SELECT COUNT(*) INTO migrated_transaction_count
+        FROM "transaction_logs"
+        WHERE "payment_order_transactions" IS NOT NULL
+          AND "lock_payment_order_transactions" IS NOT NULL;
+    ELSE
+        expected_transaction_count := 0;
+        migrated_transaction_count := 0;
+    END IF;
     
-    -- Count migrated transaction logs
-    SELECT COUNT(*) INTO migrated_transaction_count
-    FROM "transaction_logs"
-    WHERE "payment_order_transactions" IS NOT NULL
-      AND "lock_payment_order_transactions" IS NOT NULL;
+    -- Check for orphaned recipients (only if both tables exist)
+    IF payment_order_recipients_exists AND EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'payment_orders'
+    ) THEN
+        SELECT COUNT(*) INTO orphaned_recipients
+        FROM "payment_order_recipients" por
+        WHERE NOT EXISTS (
+            SELECT 1 FROM "payment_orders" po 
+            WHERE po."id" = por."payment_order_recipient" 
+            AND po."institution" IS NOT NULL
+        );
+    END IF;
     
-    -- Check for orphaned recipients (recipients that weren't migrated)
-    SELECT COUNT(*) INTO orphaned_recipients
-    FROM "payment_order_recipients" por
-    WHERE NOT EXISTS (
-        SELECT 1 FROM "payment_orders" po 
-        WHERE po."id" = por."payment_order_recipient" 
-        AND po."institution" IS NOT NULL
-    );
+    -- Check for orphaned receive addresses (only if both tables exist)
+    IF receive_addresses_exists AND EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'payment_orders'
+    ) THEN
+        SELECT COUNT(*) INTO orphaned_addresses
+        FROM "receive_addresses" ra
+        WHERE ra."payment_order_receive_address" IS NOT NULL
+          AND ra."address" IS NOT NULL
+          AND EXISTS (
+              SELECT 1 FROM "payment_orders" po 
+              WHERE ra."payment_order_receive_address" = po."id"
+              AND po."receive_address" IS NULL
+          );
+    END IF;
     
-           -- Check for orphaned receive addresses (addresses that weren't migrated)
-           -- An address is considered orphaned only if:
-           -- 1. It has a non-null address (has data to migrate)
-           -- 2. It references an existing payment_order
-           -- 3. The payment_order's receive_address is NULL (migration should have populated it)
-           -- Note: We don't fail if payment_order doesn't exist - that's a data integrity issue, not a migration failure
-           -- Note: We don't fail if receive_address is NULL - that's an orphaned address with no data
-           SELECT COUNT(*) INTO orphaned_addresses
-           FROM "receive_addresses" ra
-           WHERE ra."payment_order_receive_address" IS NOT NULL
-             AND ra."address" IS NOT NULL
-             AND EXISTS (
-                 SELECT 1 FROM "payment_orders" po 
-                 WHERE ra."payment_order_receive_address" = po."id"
-                 AND po."receive_address" IS NULL
-             );
+    -- Verify no duplicate matches (only if both tables exist)
+    IF lock_payment_orders_exists AND EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'payment_orders'
+    ) THEN
+        SELECT COUNT(*) INTO duplicate_matches
+        FROM (
+            SELECT lpo."id", COUNT(DISTINCT po."id") as match_count
+            FROM "lock_payment_orders" lpo
+            INNER JOIN "payment_orders" po ON (
+                (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
+                OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
+                OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
+            ) AND po."token_payment_orders" = lpo."token_lock_payment_orders"
+            WHERE po."id" != lpo."id"  -- Exclude Step 5 inserts (where IDs match)
+            GROUP BY lpo."id"
+            HAVING COUNT(DISTINCT po."id") > 1
+        ) duplicates;
+    END IF;
     
-    -- Verify no duplicate matches (post-migration check)
-    -- Note: After Step 4, payment_orders may have been updated with gateway_id/tx_hash from lock_payment_orders,
-    -- which could create additional matches. This is expected behavior. However, we want to ensure that
-    -- a lock_payment_order doesn't match multiple payment_orders that both existed BEFORE Step 4 (pre-existing).
-    -- If a lock_payment_order matches:
-    --   1. A payment_order with the same ID (inserted in Step 5) - OK
-    --   2. A payment_order with different ID (merged in Step 4) - OK
-    --   3. Multiple payment_orders with different IDs (both pre-existing) - PROBLEM
-    -- We simplify by checking if any lock_payment_order matches multiple payment_orders with different IDs,
-    -- excluding the case where one has the same ID (Step 5 insert).
-    -- However, after Step 4 updates, it's possible for a lock_payment_order to match multiple payment_orders
-    -- if they share the same gateway_id/tx_hash. This is acceptable as long as the lock_payment_order
-    -- was successfully merged/inserted. We'll make this check informational rather than failing.
-    SELECT COUNT(*) INTO duplicate_matches
-    FROM (
-        SELECT lpo."id", COUNT(DISTINCT po."id") as match_count
-        FROM "lock_payment_orders" lpo
-        INNER JOIN "payment_orders" po ON (
-            (po."message_hash" IS NOT NULL AND po."message_hash" = lpo."message_hash")
-            OR (po."gateway_id" IS NOT NULL AND po."gateway_id" = lpo."gateway_id")
-            OR (po."tx_hash" IS NOT NULL AND po."tx_hash" = lpo."tx_hash")
-        ) AND po."token_payment_orders" = lpo."token_lock_payment_orders"
-        WHERE po."id" != lpo."id"  -- Exclude Step 5 inserts (where IDs match)
-        GROUP BY lpo."id"
-        HAVING COUNT(DISTINCT po."id") > 1
-    ) duplicates;
-    
-    -- Note: After Step 4, some payment_orders have gateway_id/tx_hash updated, which can create
-    -- additional matches. This is expected. We only warn if there are many duplicates, but don't fail.
-    -- The pre-migration check already ensured no duplicates existed before Step 4.
- 
-    
-    -- Verify all fulfillments were migrated
-    IF lock_fulfillment_count > 0 AND migrated_fulfillment_count != lock_fulfillment_count THEN
+    -- Verify all fulfillments were migrated (only if lock_order_fulfillments exists)
+    IF lock_order_fulfillments_exists AND lock_fulfillment_count > 0 AND migrated_fulfillment_count != lock_fulfillment_count THEN
         RAISE EXCEPTION 'Verification failed: Not all fulfillments migrated. Expected %, migrated %', 
             lock_fulfillment_count, migrated_fulfillment_count;
     END IF;
     
-    -- Verify all transaction logs were migrated
-    IF expected_transaction_count > 0 AND migrated_transaction_count != expected_transaction_count THEN
+    -- Verify all transaction logs were migrated (only if column exists)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'transaction_logs' 
+        AND column_name = 'lock_payment_order_transactions'
+    ) AND expected_transaction_count > 0 AND migrated_transaction_count != expected_transaction_count THEN
         RAISE EXCEPTION 'Verification failed: Not all transaction logs migrated. Expected %, migrated %', 
             expected_transaction_count, migrated_transaction_count;
     END IF;
     
-    -- Verify no orphaned recipients
-    IF orphaned_recipients > 0 THEN
+    -- Verify no orphaned recipients (only if payment_order_recipients exists)
+    IF payment_order_recipients_exists AND orphaned_recipients > 0 THEN
         RAISE EXCEPTION 'Verification failed: % recipient records not migrated to payment_orders', orphaned_recipients;
     END IF;
     
-    -- Verify no orphaned receive addresses
-    IF orphaned_addresses > 0 THEN
+    -- Verify no orphaned receive addresses (only if receive_addresses exists)
+    IF receive_addresses_exists AND orphaned_addresses > 0 THEN
         RAISE EXCEPTION 'Verification failed: % receive addresses not migrated to payment_orders', orphaned_addresses;
     END IF;
     
-           -- Verify no duplicate matches
-           -- Note: After Step 4, payment_orders may have gateway_id/tx_hash updated, which can create
-           -- additional matches. This is expected. The pre-migration check already ensured no duplicates
-           -- existed before Step 4. If duplicates exist after, it's likely due to Step 4 updates creating
-           -- new matches, which is acceptable. We log a warning but don't fail unless there are many.
-           IF duplicate_matches > 10 THEN
-               RAISE EXCEPTION 'Verification failed: % lock_payment_orders match multiple payment_orders after migration. This may indicate a data integrity issue.', duplicate_matches;
-           ELSIF duplicate_matches > 0 THEN
-               RAISE NOTICE 'Warning: % lock_payment_orders match multiple payment_orders after migration. This may be due to Step 4 updates creating additional matches.', duplicate_matches;
-           END IF;
+    -- Verify no duplicate matches (only if lock_payment_orders exists)
+    IF lock_payment_orders_exists THEN
+        IF duplicate_matches > 10 THEN
+            RAISE EXCEPTION 'Verification failed: % lock_payment_orders match multiple payment_orders after migration. This may indicate a data integrity issue.', duplicate_matches;
+        ELSIF duplicate_matches > 0 THEN
+            RAISE NOTICE 'Warning: % lock_payment_orders match multiple payment_orders after migration. This may be due to Step 4 updates creating additional matches.', duplicate_matches;
+        END IF;
+    END IF;
     
-    -- Verify payment orders count is reasonable (should be >= lock_payment_orders since we merge)
-    -- Note: payment_order_count should be >= lock_payment_order_count because we merge data
-    -- But it could be less if some lock_payment_orders matched existing payment_orders
-    -- So we just check that payment_orders exist
-    IF payment_order_count = 0 THEN
-        RAISE EXCEPTION 'Verification failed: No payment orders found after migration';
+    -- Verify payment orders count is reasonable
+    -- Only check if we're actually in a migration scenario with data to migrate
+    -- If old tables exist but are empty, or if payment_orders doesn't exist, skip this check
+    -- This prevents false positives during atlas migrate diff when tables might exist but be empty
+    IF (lock_payment_order_count > 0 OR lock_fulfillment_count > 0 OR recipient_count > 0 OR receive_address_count > 0)
+       AND EXISTS (
+           SELECT 1 FROM information_schema.tables 
+           WHERE table_schema = 'public' AND table_name = 'payment_orders'
+       )
+       AND payment_order_count = 0 THEN
+        RAISE EXCEPTION 'Verification failed: No payment orders found after migration, but old tables had data to migrate';
     END IF;
     
     -- Log verification results (these will appear in migration logs)

@@ -116,6 +116,11 @@ func ProcessPaymentOrderFromBlockchain(
 			SetBlockNumber(paymentOrderFields.BlockNumber).
 			SetStatus(paymentorder.StatusPending)
 
+		// Set indexer_created_at if it's not already set (first time indexing this order)
+		if existingOrderWithMessageHash.IndexerCreatedAt.IsZero() {
+			updateBuilder = updateBuilder.SetIndexerCreatedAt(time.Now())
+		}
+
 		// Update protocol fee if needed
 		if paymentOrderFields.ProtocolFee.GreaterThan(decimal.Zero) {
 			updateBuilder = updateBuilder.SetProtocolFee(paymentOrderFields.ProtocolFee)
@@ -217,7 +222,8 @@ func ProcessPaymentOrderFromBlockchain(
 		SetMetadata(paymentOrderFields.Metadata).
 		SetProvisionBucket(paymentOrderFields.ProvisionBucket).
 		SetOrderType(paymentorder.OrderType(paymentOrderFields.OrderType)).
-		SetStatus(paymentorder.StatusPending)
+		SetStatus(paymentorder.StatusPending).
+		SetIndexerCreatedAt(time.Now())
 
 	// Set provider if ProviderID exists
 	if paymentOrderFields.ProviderID != "" {
@@ -617,12 +623,6 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			return fmt.Errorf("%s - failed to fetch network: %w", paymentOrderFields.GatewayID, err)
 		}
 
-		logger.WithFields(logger.Fields{
-			"OrderID": order.ID.String(),
-			"NetworkIdentifier": network.Identifier,
-			"Status":            order.Status.String(),
-			"GatewayID":         order.GatewayID,
-		}).Errorf("HandleCancellation.RefundOrder 1")
 		err = refundOrder(ctx, network, paymentOrderFields.GatewayID)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -652,12 +652,6 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			return fmt.Errorf("%s - failed to fetch network: %w", createdPaymentOrder.GatewayID, err)
 		}
 
-		logger.WithFields(logger.Fields{
-			"OrderID": createdPaymentOrder.ID.String(),
-			"NetworkIdentifier": network.Identifier,
-			"Status":            createdPaymentOrder.Status.String(),
-			"GatewayID":         createdPaymentOrder.GatewayID,
-		}).Errorf("HandleCancellation.RefundOrder 2")
 		err = refundOrder(ctx, network, createdPaymentOrder.GatewayID)
 		if err != nil {
 			logger.WithFields(logger.Fields{

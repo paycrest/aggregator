@@ -82,6 +82,8 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.String("fee_address").
 			MaxLen(70).
 			Optional(),
+		field.Time("indexer_created_at").
+			Optional(),
 		// Recipient info
 		field.String("institution").
 			MaxLen(255),

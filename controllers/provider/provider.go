@@ -587,7 +587,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found", nil)
 		} else {
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
+				"Error":   fmt.Sprintf("%v", err),
 				"OrderID": orderID.String(),
 			}).Errorf("error fetching order: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order", nil)
@@ -1295,9 +1295,9 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	// and the order has not been refunded, then trigger refund
 	if order.CancellationCount >= orderConf.RefundCancellationCount && order.Status == paymentorder.StatusCancelled {
 		go func() {
-			var err error
+			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
-				err = orderService.NewOrderTron().RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
+				service = orderService.NewOrderTron()
 			} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
 				client, err := starknetService.NewClient()
 				if err != nil {
@@ -1307,22 +1307,22 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 					}).Errorf("CancelOrder.RefundOrder.NewStarknetClient")
 					return
 				}
-				err = orderService.NewOrderStarknet(client).RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
+				service = orderService.NewOrderStarknet(client)
 				logger.WithFields(logger.Fields{
-					"OrderID": order.ID.String(),
+					"OrderID":           order.ID.String(),
 					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
 					"Status":            order.Status.String(),
 					"GatewayID":         order.GatewayID,
 				}).Errorf("CancelOrder.RefundOrder.NewStarknetClient")
 			} else {
-				err = orderService.NewOrderEVM().RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
+				service = orderService.NewOrderEVM()
 			}
+			err := service.RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error":    fmt.Sprintf("%v", err),
-					"Reason":   "CancelOrder.RefundOrder",
-					"Order ID": orderID.String(),
-					"Network":  order.Edges.Token.Edges.Network.Identifier,
+					"Error":   fmt.Sprintf("%v", err),
+					"OrderID": orderID.String(),
+					"Network": order.Edges.Token.Edges.Network.Identifier,
 				}).Errorf("Failed to refund order: %v", err)
 			}
 		}()

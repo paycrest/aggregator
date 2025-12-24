@@ -322,6 +322,20 @@ func (_c *PaymentOrderCreate) SetNillableFeeAddress(v *string) *PaymentOrderCrea
 	return _c
 }
 
+// SetIndexerCreatedAt sets the "indexer_created_at" field.
+func (_c *PaymentOrderCreate) SetIndexerCreatedAt(v time.Time) *PaymentOrderCreate {
+	_c.mutation.SetIndexerCreatedAt(v)
+	return _c
+}
+
+// SetNillableIndexerCreatedAt sets the "indexer_created_at" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableIndexerCreatedAt(v *time.Time) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetIndexerCreatedAt(*v)
+	}
+	return _c
+}
+
 // SetInstitution sets the "institution" field.
 func (_c *PaymentOrderCreate) SetInstitution(v string) *PaymentOrderCreate {
 	_c.mutation.SetInstitution(v)
@@ -928,6 +942,10 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_spec.SetField(paymentorder.FieldFeeAddress, field.TypeString, value)
 		_node.FeeAddress = value
 	}
+	if value, ok := _c.mutation.IndexerCreatedAt(); ok {
+		_spec.SetField(paymentorder.FieldIndexerCreatedAt, field.TypeTime, value)
+		_node.IndexerCreatedAt = value
+	}
 	if value, ok := _c.mutation.Institution(); ok {
 		_spec.SetField(paymentorder.FieldInstitution, field.TypeString, value)
 		_node.Institution = value
@@ -1527,6 +1545,24 @@ func (u *PaymentOrderUpsert) UpdateFeeAddress() *PaymentOrderUpsert {
 // ClearFeeAddress clears the value of the "fee_address" field.
 func (u *PaymentOrderUpsert) ClearFeeAddress() *PaymentOrderUpsert {
 	u.SetNull(paymentorder.FieldFeeAddress)
+	return u
+}
+
+// SetIndexerCreatedAt sets the "indexer_created_at" field.
+func (u *PaymentOrderUpsert) SetIndexerCreatedAt(v time.Time) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldIndexerCreatedAt, v)
+	return u
+}
+
+// UpdateIndexerCreatedAt sets the "indexer_created_at" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateIndexerCreatedAt() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldIndexerCreatedAt)
+	return u
+}
+
+// ClearIndexerCreatedAt clears the value of the "indexer_created_at" field.
+func (u *PaymentOrderUpsert) ClearIndexerCreatedAt() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldIndexerCreatedAt)
 	return u
 }
 
@@ -2207,6 +2243,27 @@ func (u *PaymentOrderUpsertOne) UpdateFeeAddress() *PaymentOrderUpsertOne {
 func (u *PaymentOrderUpsertOne) ClearFeeAddress() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearFeeAddress()
+	})
+}
+
+// SetIndexerCreatedAt sets the "indexer_created_at" field.
+func (u *PaymentOrderUpsertOne) SetIndexerCreatedAt(v time.Time) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetIndexerCreatedAt(v)
+	})
+}
+
+// UpdateIndexerCreatedAt sets the "indexer_created_at" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateIndexerCreatedAt() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateIndexerCreatedAt()
+	})
+}
+
+// ClearIndexerCreatedAt clears the value of the "indexer_created_at" field.
+func (u *PaymentOrderUpsertOne) ClearIndexerCreatedAt() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearIndexerCreatedAt()
 	})
 }
 
@@ -3083,6 +3140,27 @@ func (u *PaymentOrderUpsertBulk) UpdateFeeAddress() *PaymentOrderUpsertBulk {
 func (u *PaymentOrderUpsertBulk) ClearFeeAddress() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearFeeAddress()
+	})
+}
+
+// SetIndexerCreatedAt sets the "indexer_created_at" field.
+func (u *PaymentOrderUpsertBulk) SetIndexerCreatedAt(v time.Time) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetIndexerCreatedAt(v)
+	})
+}
+
+// UpdateIndexerCreatedAt sets the "indexer_created_at" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateIndexerCreatedAt() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateIndexerCreatedAt()
+	})
+}
+
+// ClearIndexerCreatedAt clears the value of the "indexer_created_at" field.
+func (u *PaymentOrderUpsertBulk) ClearIndexerCreatedAt() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearIndexerCreatedAt()
 	})
 }
 

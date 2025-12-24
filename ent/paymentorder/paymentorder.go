@@ -63,6 +63,8 @@ const (
 	FieldReceiveAddressExpiry = "receive_address_expiry"
 	// FieldFeeAddress holds the string denoting the fee_address field in the database.
 	FieldFeeAddress = "fee_address"
+	// FieldIndexerCreatedAt holds the string denoting the indexer_created_at field in the database.
+	FieldIndexerCreatedAt = "indexer_created_at"
 	// FieldInstitution holds the string denoting the institution field in the database.
 	FieldInstitution = "institution"
 	// FieldAccountIdentifier holds the string denoting the account_identifier field in the database.
@@ -178,6 +180,7 @@ var Columns = []string{
 	FieldReceiveAddressSalt,
 	FieldReceiveAddressExpiry,
 	FieldFeeAddress,
+	FieldIndexerCreatedAt,
 	FieldInstitution,
 	FieldAccountIdentifier,
 	FieldAccountName,
@@ -448,6 +451,11 @@ func ByReceiveAddressExpiry(opts ...sql.OrderTermOption) OrderOption {
 // ByFeeAddress orders the results by the fee_address field.
 func ByFeeAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFeeAddress, opts...).ToFunc()
+}
+
+// ByIndexerCreatedAt orders the results by the indexer_created_at field.
+func ByIndexerCreatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIndexerCreatedAt, opts...).ToFunc()
 }
 
 // ByInstitution orders the results by the institution field.

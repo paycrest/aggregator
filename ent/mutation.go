@@ -6304,6 +6304,7 @@ type PaymentOrderMutation struct {
 	receive_address_salt       *[]byte
 	receive_address_expiry     *time.Time
 	fee_address                *string
+	indexer_created_at         *time.Time
 	institution                *string
 	account_identifier         *string
 	account_name               *string
@@ -7628,6 +7629,55 @@ func (m *PaymentOrderMutation) ResetFeeAddress() {
 	delete(m.clearedFields, paymentorder.FieldFeeAddress)
 }
 
+// SetIndexerCreatedAt sets the "indexer_created_at" field.
+func (m *PaymentOrderMutation) SetIndexerCreatedAt(t time.Time) {
+	m.indexer_created_at = &t
+}
+
+// IndexerCreatedAt returns the value of the "indexer_created_at" field in the mutation.
+func (m *PaymentOrderMutation) IndexerCreatedAt() (r time.Time, exists bool) {
+	v := m.indexer_created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIndexerCreatedAt returns the old "indexer_created_at" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldIndexerCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIndexerCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIndexerCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIndexerCreatedAt: %w", err)
+	}
+	return oldValue.IndexerCreatedAt, nil
+}
+
+// ClearIndexerCreatedAt clears the value of the "indexer_created_at" field.
+func (m *PaymentOrderMutation) ClearIndexerCreatedAt() {
+	m.indexer_created_at = nil
+	m.clearedFields[paymentorder.FieldIndexerCreatedAt] = struct{}{}
+}
+
+// IndexerCreatedAtCleared returns if the "indexer_created_at" field was cleared in this mutation.
+func (m *PaymentOrderMutation) IndexerCreatedAtCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldIndexerCreatedAt]
+	return ok
+}
+
+// ResetIndexerCreatedAt resets all changes to the "indexer_created_at" field.
+func (m *PaymentOrderMutation) ResetIndexerCreatedAt() {
+	m.indexer_created_at = nil
+	delete(m.clearedFields, paymentorder.FieldIndexerCreatedAt)
+}
+
 // SetInstitution sets the "institution" field.
 func (m *PaymentOrderMutation) SetInstitution(s string) {
 	m.institution = &s
@@ -8476,7 +8526,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 34)
+	fields := make([]string, 0, 35)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -8545,6 +8595,9 @@ func (m *PaymentOrderMutation) Fields() []string {
 	}
 	if m.fee_address != nil {
 		fields = append(fields, paymentorder.FieldFeeAddress)
+	}
+	if m.indexer_created_at != nil {
+		fields = append(fields, paymentorder.FieldIndexerCreatedAt)
 	}
 	if m.institution != nil {
 		fields = append(fields, paymentorder.FieldInstitution)
@@ -8633,6 +8686,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.ReceiveAddressExpiry()
 	case paymentorder.FieldFeeAddress:
 		return m.FeeAddress()
+	case paymentorder.FieldIndexerCreatedAt:
+		return m.IndexerCreatedAt()
 	case paymentorder.FieldInstitution:
 		return m.Institution()
 	case paymentorder.FieldAccountIdentifier:
@@ -8710,6 +8765,8 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldReceiveAddressExpiry(ctx)
 	case paymentorder.FieldFeeAddress:
 		return m.OldFeeAddress(ctx)
+	case paymentorder.FieldIndexerCreatedAt:
+		return m.OldIndexerCreatedAt(ctx)
 	case paymentorder.FieldInstitution:
 		return m.OldInstitution(ctx)
 	case paymentorder.FieldAccountIdentifier:
@@ -8901,6 +8958,13 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetFeeAddress(v)
+		return nil
+	case paymentorder.FieldIndexerCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIndexerCreatedAt(v)
 		return nil
 	case paymentorder.FieldInstitution:
 		v, ok := value.(string)
@@ -9195,6 +9259,9 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	if m.FieldCleared(paymentorder.FieldFeeAddress) {
 		fields = append(fields, paymentorder.FieldFeeAddress)
 	}
+	if m.FieldCleared(paymentorder.FieldIndexerCreatedAt) {
+		fields = append(fields, paymentorder.FieldIndexerCreatedAt)
+	}
 	if m.FieldCleared(paymentorder.FieldMemo) {
 		fields = append(fields, paymentorder.FieldMemo)
 	}
@@ -9253,6 +9320,9 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 		return nil
 	case paymentorder.FieldFeeAddress:
 		m.ClearFeeAddress()
+		return nil
+	case paymentorder.FieldIndexerCreatedAt:
+		m.ClearIndexerCreatedAt()
 		return nil
 	case paymentorder.FieldMemo:
 		m.ClearMemo()
@@ -9348,6 +9418,9 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldFeeAddress:
 		m.ResetFeeAddress()
+		return nil
+	case paymentorder.FieldIndexerCreatedAt:
+		m.ResetIndexerCreatedAt()
 		return nil
 	case paymentorder.FieldInstitution:
 		m.ResetInstitution()

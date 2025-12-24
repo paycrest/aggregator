@@ -71,6 +71,8 @@ type PaymentOrder struct {
 	ReceiveAddressExpiry time.Time `json:"receive_address_expiry,omitempty"`
 	// FeeAddress holds the value of the "fee_address" field.
 	FeeAddress string `json:"fee_address,omitempty"`
+	// IndexerCreatedAt holds the value of the "indexer_created_at" field.
+	IndexerCreatedAt time.Time `json:"indexer_created_at,omitempty"`
 	// Institution holds the value of the "institution" field.
 	Institution string `json:"institution,omitempty"`
 	// AccountIdentifier holds the value of the "account_identifier" field.
@@ -211,7 +213,7 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case paymentorder.FieldTxHash, paymentorder.FieldMessageHash, paymentorder.FieldGatewayID, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddress, paymentorder.FieldFeeAddress, paymentorder.FieldInstitution, paymentorder.FieldAccountIdentifier, paymentorder.FieldAccountName, paymentorder.FieldMemo, paymentorder.FieldSender, paymentorder.FieldReference, paymentorder.FieldStatus, paymentorder.FieldOrderType:
 			values[i] = new(sql.NullString)
-		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt, paymentorder.FieldReceiveAddressExpiry:
+		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt, paymentorder.FieldReceiveAddressExpiry, paymentorder.FieldIndexerCreatedAt:
 			values[i] = new(sql.NullTime)
 		case paymentorder.FieldID:
 			values[i] = new(uuid.UUID)
@@ -383,6 +385,12 @@ func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field fee_address", values[i])
 			} else if value.Valid {
 				_m.FeeAddress = value.String
+			}
+		case paymentorder.FieldIndexerCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field indexer_created_at", values[i])
+			} else if value.Valid {
+				_m.IndexerCreatedAt = value.Time
 			}
 		case paymentorder.FieldInstitution:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -628,6 +636,9 @@ func (_m *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("fee_address=")
 	builder.WriteString(_m.FeeAddress)
+	builder.WriteString(", ")
+	builder.WriteString("indexer_created_at=")
+	builder.WriteString(_m.IndexerCreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("institution=")
 	builder.WriteString(_m.Institution)

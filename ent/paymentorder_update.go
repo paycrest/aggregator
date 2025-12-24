@@ -468,6 +468,26 @@ func (_u *PaymentOrderUpdate) ClearFeeAddress() *PaymentOrderUpdate {
 	return _u
 }
 
+// SetIndexerCreatedAt sets the "indexer_created_at" field.
+func (_u *PaymentOrderUpdate) SetIndexerCreatedAt(v time.Time) *PaymentOrderUpdate {
+	_u.mutation.SetIndexerCreatedAt(v)
+	return _u
+}
+
+// SetNillableIndexerCreatedAt sets the "indexer_created_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableIndexerCreatedAt(v *time.Time) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetIndexerCreatedAt(*v)
+	}
+	return _u
+}
+
+// ClearIndexerCreatedAt clears the value of the "indexer_created_at" field.
+func (_u *PaymentOrderUpdate) ClearIndexerCreatedAt() *PaymentOrderUpdate {
+	_u.mutation.ClearIndexerCreatedAt()
+	return _u
+}
+
 // SetInstitution sets the "institution" field.
 func (_u *PaymentOrderUpdate) SetInstitution(v string) *PaymentOrderUpdate {
 	_u.mutation.SetInstitution(v)
@@ -1103,6 +1123,12 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.FeeAddressCleared() {
 		_spec.ClearField(paymentorder.FieldFeeAddress, field.TypeString)
+	}
+	if value, ok := _u.mutation.IndexerCreatedAt(); ok {
+		_spec.SetField(paymentorder.FieldIndexerCreatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.IndexerCreatedAtCleared() {
+		_spec.ClearField(paymentorder.FieldIndexerCreatedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(paymentorder.FieldInstitution, field.TypeString, value)
@@ -1848,6 +1874,26 @@ func (_u *PaymentOrderUpdateOne) ClearFeeAddress() *PaymentOrderUpdateOne {
 	return _u
 }
 
+// SetIndexerCreatedAt sets the "indexer_created_at" field.
+func (_u *PaymentOrderUpdateOne) SetIndexerCreatedAt(v time.Time) *PaymentOrderUpdateOne {
+	_u.mutation.SetIndexerCreatedAt(v)
+	return _u
+}
+
+// SetNillableIndexerCreatedAt sets the "indexer_created_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableIndexerCreatedAt(v *time.Time) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetIndexerCreatedAt(*v)
+	}
+	return _u
+}
+
+// ClearIndexerCreatedAt clears the value of the "indexer_created_at" field.
+func (_u *PaymentOrderUpdateOne) ClearIndexerCreatedAt() *PaymentOrderUpdateOne {
+	_u.mutation.ClearIndexerCreatedAt()
+	return _u
+}
+
 // SetInstitution sets the "institution" field.
 func (_u *PaymentOrderUpdateOne) SetInstitution(v string) *PaymentOrderUpdateOne {
 	_u.mutation.SetInstitution(v)
@@ -2513,6 +2559,12 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	}
 	if _u.mutation.FeeAddressCleared() {
 		_spec.ClearField(paymentorder.FieldFeeAddress, field.TypeString)
+	}
+	if value, ok := _u.mutation.IndexerCreatedAt(); ok {
+		_spec.SetField(paymentorder.FieldIndexerCreatedAt, field.TypeTime, value)
+	}
+	if _u.mutation.IndexerCreatedAtCleared() {
+		_spec.ClearField(paymentorder.FieldIndexerCreatedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Institution(); ok {
 		_spec.SetField(paymentorder.FieldInstitution, field.TypeString, value)
