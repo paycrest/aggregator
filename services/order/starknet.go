@@ -2,7 +2,6 @@ package order
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"strings"
 
