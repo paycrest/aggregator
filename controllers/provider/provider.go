@@ -575,7 +575,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
 	}
 
@@ -621,7 +621,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		if !ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		} else {
 			transactionLog, err = tx.TransactionLog.
@@ -633,15 +633,21 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 					}).
 				Save(ctx)
 			if err != nil {
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 				return
 			}
 		}
 	}
 
-	// Update lock order status to processing
+	// Update order status atomically - only update if still pending
+	// This prevents race conditions where multiple providers try to accept the same order
+	// The WHERE clause ensures only one update succeeds
 	orderBuilder := tx.PaymentOrder.
-		UpdateOneID(orderID).
+		Update().
+		Where(
+			paymentorder.IDEQ(orderID),
+			paymentorder.StatusEQ(paymentorder.StatusPending),
+		).
 		SetStatus(paymentorder.StatusProcessing).
 		SetProviderID(provider.ID)
 
@@ -649,20 +655,44 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		orderBuilder = orderBuilder.AddTransactions(transactionLog)
 	}
 
-	order, err := orderBuilder.Save(ctx)
+	updatedCount, err := orderBuilder.Save(ctx)
 	if err != nil {
 		logger.Errorf("%s - error.AcceptOrder: %v", orderID, err)
-		if ent.IsNotFound(err) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found", nil)
-		} else {
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+		_ = tx.Rollback()
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+
+	// If no rows were updated, the order was already accepted by another process
+	if updatedCount == 0 {
+		_ = tx.Rollback()
+		// Re-fetch to get current status for error message
+		currentOrder, _ := storage.Client.PaymentOrder.Get(ctx, orderID)
+		statusMsg := "already accepted"
+		if currentOrder != nil {
+			statusMsg = fmt.Sprintf("already %s", currentOrder.Status)
 		}
+		logger.WithFields(logger.Fields{
+			"OrderID":    orderID.String(),
+			"Status":     statusMsg,
+			"ProviderID": provider.ID,
+		}).Warnf("Rejecting accept request - order was already accepted by another process")
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Order cannot be accepted: order is %s", statusMsg), nil)
+		return
+	}
+
+	// Fetch the updated order for response
+	order, err := tx.PaymentOrder.Get(ctx, orderID)
+	if err != nil {
+		logger.Errorf("%s - error.AcceptOrder.Get: %v", orderID, err)
+		_ = tx.Rollback()
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch updated order", nil)
 		return
 	}
 
 	// Commit transaction
 	if err := tx.Commit(); err != nil {
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
 	}
 
@@ -787,7 +817,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			),
 		)
 
-	// Query or create lock order fulfillment
+	// Query or create order fulfillment
 	fulfillment, err := storage.Client.PaymentOrderFulfillment.
 		Query().
 		Where(paymentorderfulfillment.TxIDEQ(payload.TxID)).
@@ -803,6 +833,33 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
+			// Check if order already has a fulfillment (pending or success) before creating a new one
+			// This prevents double disbursal from multiple fulfillment attempts
+			// A pending fulfillment means disbursal was already initiated, so we must prevent another one
+			existingFulfillment, _ := storage.Client.PaymentOrderFulfillment.
+				Query().
+				Where(
+					paymentorderfulfillment.HasOrderWith(paymentorder.IDEQ(orderID)),
+					paymentorderfulfillment.ValidationStatusIn(
+						paymentorderfulfillment.ValidationStatusPending,
+						paymentorderfulfillment.ValidationStatusSuccess,
+					),
+				).
+				Only(ctx)
+
+			if existingFulfillment != nil {
+				logger.WithFields(logger.Fields{
+					"OrderID":        orderID.String(),
+					"TxID":           payload.TxID,
+					"ExistingTxID":   existingFulfillment.TxID,
+					"ExistingStatus": existingFulfillment.ValidationStatus,
+				}).Warnf("Order %s already has a fulfillment (Status: %s, TxID: %s), rejecting duplicate fulfillment (TxID: %s)",
+					orderID, existingFulfillment.ValidationStatus, existingFulfillment.TxID, payload.TxID)
+				u.APIResponse(ctx, http.StatusBadRequest, "error",
+					fmt.Sprintf("Order already has a fulfillment (Status: %s, TxID: %s)", existingFulfillment.ValidationStatus, existingFulfillment.TxID), nil)
+				return
+			}
+
 			_, err = storage.Client.PaymentOrderFulfillment.
 				Create().
 				SetOrderID(orderID).
@@ -813,8 +870,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				logger.WithFields(logger.Fields{
 					"Error":  fmt.Sprintf("%v", err),
 					"Trx Id": payload.TxID,
-				}).Errorf("Failed to create lock order fulfillment: %v", err)
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+				}).Errorf("Failed to create order fulfillment: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 				return
 			}
 
@@ -834,8 +891,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 					"Error":   fmt.Sprintf("%v", err),
 					"Trx Id":  payload.TxID,
 					"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
-				}).Errorf("Failed to fetch lock order fulfillment: %v", err)
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+				}).Errorf("Failed to fetch order fulfillment: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 				return
 			}
 		} else {
@@ -843,8 +900,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Error":   fmt.Sprintf("%v", err),
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
-			}).Errorf("Failed to fetch lock order fulfillment when order is found: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			}).Errorf("Failed to fetch order fulfillment when order is found: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		}
 	}
@@ -891,7 +948,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to start transaction: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		}
 
@@ -905,8 +962,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Error":   fmt.Sprintf("%v", err),
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
-			}).Errorf("Failed to update lock order fulfillment: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			}).Errorf("Failed to update order fulfillment: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			_ = tx.Rollback()
 			return
 		}
@@ -926,7 +983,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to create transaction log: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			_ = tx.Rollback()
 			return
 		}
@@ -951,7 +1008,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			}
 		}
 
-		// Update lock order status within transaction
+		// Update order status within transaction
 		_, err = tx.PaymentOrder.
 			Update().
 			Where(paymentorder.IDEQ(orderID)).
@@ -963,8 +1020,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Error":   fmt.Sprintf("%v", err),
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
-			}).Errorf("Failed to update lock order status: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			}).Errorf("Failed to update order status: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			_ = tx.Rollback()
 			return
 		}
@@ -1004,7 +1061,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Currency":   currency,
 				"Amount":     amount.String(),
 			}).Errorf("failed to release reserved balance for fulfilled order")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			_ = tx.Rollback()
 			return
 		}
@@ -1016,7 +1073,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to commit transaction: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		}
 
@@ -1070,8 +1127,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Error":   fmt.Sprintf("%v", err),
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
-			}).Errorf("Failed to update lock order fulfillment: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			}).Errorf("Failed to update order fulfillment: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		}
 
@@ -1083,8 +1140,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Error":   fmt.Sprintf("%v", err),
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
-			}).Errorf("Failed to update lock order status: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			}).Errorf("Failed to update order status: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		}
 
@@ -1120,7 +1177,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
 			}).Errorf("Failed to create transaction log: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		}
 
@@ -1133,8 +1190,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				"Error":   fmt.Sprintf("%v", err),
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
-			}).Errorf("Failed to update lock order status: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update lock order status", nil)
+			}).Errorf("Failed to update order status: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		}
 	}
@@ -1256,7 +1313,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		}
 	}
 
-	// Update lock order status to cancelled
+	// Update order status to cancelled
 	_, err = orderUpdate.
 		SetStatus(paymentorder.StatusCancelled).
 		SetCancellationCount(cancellationCount).
@@ -1266,7 +1323,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 			"Error":    fmt.Sprintf("%v", err),
 			"Reason":   payload.Reason,
 			"Order ID": orderID.String(),
-		}).Errorf("Failed to update lock order status: %v", err)
+		}).Errorf("Failed to update order status: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to cancel order", nil)
 		return
 	}
