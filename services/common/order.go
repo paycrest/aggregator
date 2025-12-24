@@ -888,6 +888,13 @@ func validateAndPreparePaymentOrderData(
 	if err != nil {
 		if ent.IsNotFound(err) {
 			// Cannot call createBasicPaymentOrderAndCancel without token - refund directly
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", err),
+				"OrderID":  event.OrderId,
+				"Network":  network.Identifier,
+				"TxHash":   event.TxHash,
+				"Token":    event.Token,
+			}).Errorf("token lookup failed and refund failed")
 			refundErr := refundOrder(ctx, network, event.OrderId)
 			if refundErr != nil {
 				return nil, nil, nil, nil, nil, fmt.Errorf("token lookup failed and refund failed: %w", refundErr)

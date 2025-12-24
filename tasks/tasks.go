@@ -345,7 +345,7 @@ func RetryStaleUserOperations() error {
 					logger.WithFields(logger.Fields{
 						"Error":   fmt.Sprintf("%v", err),
 						"OrderID": order.ID.String(),
-					}).Errorf("RetryStaleUserOperations.CreateOrder.NewStarknetClient")
+					}).Errorf("RetryStaleUserOperations.RefundOrder.NewStarknetClient")
 					continue
 				}
 				service = orderService.NewOrderStarknet(client)
