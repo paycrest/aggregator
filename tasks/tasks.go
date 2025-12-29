@@ -600,12 +600,37 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 			}).Errorf("failed to set TTL for order exclude list")
 		}
 
-		_, err = storage.Client.PaymentOrder.
-			UpdateOneID(order.ID).
+		// Defensive check: Verify order is still in a state that allows reassignment
+		// AND that the provider hasn't changed (race condition protection)
+		// Use atomic update to ensure order is still cancellable/processable by the SAME provider
+		updatedCount, err := storage.Client.PaymentOrder.
+			Update().
+			Where(
+				paymentorder.IDEQ(order.ID),
+				paymentorder.Or(
+					paymentorder.StatusEQ(paymentorder.StatusProcessing),
+					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+					paymentorder.StatusEQ(paymentorder.StatusPending),
+					paymentorder.StatusEQ(paymentorder.StatusCancelled), // Include cancelled state
+				),
+				// CRITICAL: Only update if provider hasn't changed (prevents clearing wrong provider)
+				// If another provider accepted the order, this check will fail and we skip reassignment
+				paymentorder.HasProviderWith(providerprofile.IDEQ(order.Edges.Provider.ID)),
+			).
 			ClearProvider().
 			SetStatus(paymentorder.StatusPending).
 			Save(ctx)
 		if err != nil {
+			return
+		}
+		if updatedCount == 0 {
+			// Order status changed OR provider changed - no longer eligible for reassignment
+			// This prevents clearing a different provider's assignment
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"Status":     order.Status,
+				"ProviderID": order.Edges.Provider.ID,
+			}).Warnf("reassignCancelledOrder: Order status or provider changed, skipping reassignment")
 			return
 		}
 
@@ -616,6 +641,16 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 			if err != nil {
 				return
 			}
+		}
+
+		// Defensive check: Verify order request doesn't already exist before reassigning
+		orderRequestKey := fmt.Sprintf("order_request_%s", order.ID)
+		exists, existsErr := storage.RedisClient.Exists(ctx, orderRequestKey).Result()
+		if existsErr == nil && exists > 0 {
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+			}).Warnf("reassignCancelledOrder: Order request already exists, skipping duplicate reassignment")
+			return
 		}
 
 		// Reassign the order to a provider
@@ -1175,6 +1210,27 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 				"OrderID": orderUUID.String(),
 				"UUID":    orderUUID,
 			}).Errorf("ReassignStaleOrderRequest: Failed to get order from database")
+			continue
+		}
+
+		// Defensive check: Only reassign if order is in a valid state
+		// Skip if order is already processing, fulfilled, validated, settled, or refunded
+		if order.Status != paymentorder.StatusPending && order.Status != paymentorder.StatusInitiated {
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+				"Status":  order.Status,
+			}).Infof("ReassignStaleOrderRequest: Order is not in pending/initiated state, skipping reassignment")
+			continue
+		}
+
+		// Defensive check: Verify order request doesn't already exist (race condition protection)
+		orderKey := fmt.Sprintf("order_request_%s", order.ID)
+		exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
+		if err == nil && exists > 0 {
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+				"Status":  order.Status,
+			}).Infof("ReassignStaleOrderRequest: Order request already exists, skipping duplicate reassignment")
 			continue
 		}
 

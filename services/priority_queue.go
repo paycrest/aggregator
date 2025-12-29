@@ -388,6 +388,38 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 		return fmt.Errorf("provision bucket for order %s (type: %s) is missing currency", order.ID.String(), order.OrderType)
 	}
 
+	// Defensive check: Verify order is in a valid state for assignment
+	// This prevents duplicate assignments from concurrent sources
+	currentOrder, err := storage.Client.PaymentOrder.Get(ctx, order.ID)
+	if err == nil {
+		// Order exists - check if it's in a state that allows assignment
+		if currentOrder.Status != paymentorder.StatusPending && currentOrder.Status != paymentorder.StatusInitiated {
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+				"Status":  currentOrder.Status,
+			}).Warnf("AssignPaymentOrder: Order is not in pending/initiated state, skipping assignment")
+			return nil // Not an error, just skip
+		}
+
+		// Check if order request already exists in Redis (idempotency check)
+		orderKey := fmt.Sprintf("order_request_%s", order.ID)
+		exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
+		if err == nil && exists > 0 {
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+				"Status":  currentOrder.Status,
+			}).Warnf("AssignPaymentOrder: Order request already exists, skipping duplicate assignment")
+			return nil // Not an error, already assigned
+		}
+	} else if !ent.IsNotFound(err) {
+		// Error fetching order (other than not found)
+		logger.WithFields(logger.Fields{
+			"Error":   fmt.Sprintf("%v", err),
+			"OrderID": order.ID.String(),
+		}).Errorf("AssignPaymentOrder: Failed to check order status")
+		// Continue anyway - might be a new order
+	}
+
 	excludeList, err := storage.RedisClient.LRange(ctx, fmt.Sprintf("order_exclude_list_%s", order.ID), 0, -1).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -526,6 +558,38 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 
 	// Create Redis key with TTL for OTC order reassignment (similar to regular orders)
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
+
+	// Check if order request already exists to prevent duplicate processing
+	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"OrderKey":   orderKey,
+		}).Errorf("Failed to check if OTC order request exists in Redis")
+		return err
+	}
+	if exists > 0 {
+		// Order request already exists - skip duplicate creation
+		logger.WithFields(logger.Fields{
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"OrderKey":   orderKey,
+		}).Warnf("OTC order request already exists in Redis - skipping duplicate creation")
+		// Commit transaction and return success
+		err = tx.Commit()
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+			}).Errorf("Failed to commit transaction for existing OTC order request")
+			return fmt.Errorf("failed to commit transaction: %w", err)
+		}
+		return nil
+	}
+
 	orderRequestData := map[string]interface{}{
 		"type": "otc",
 	}
@@ -643,6 +707,51 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 
 	// Assign the order to the provider and save it to Redis
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
+
+	// Check if order request already exists to prevent duplicate notifications
+	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"OrderKey":   orderKey,
+		}).Errorf("Failed to check if order request exists in Redis")
+		return err
+	}
+	if exists > 0 {
+		// Order request already exists - this prevents double processing
+		// Verify it's for the same provider to avoid provider mismatch issues
+		existingProviderID, err := storage.RedisClient.HGet(ctx, orderKey, "providerId").Result()
+		if err == nil && existingProviderID == order.ProviderID {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+				"OrderKey":   orderKey,
+			}).Warnf("Order request already exists in Redis - skipping duplicate notification")
+			// Order request already sent, commit transaction and return success
+			err = tx.Commit()
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+				}).Errorf("Failed to commit transaction for existing order request")
+				return fmt.Errorf("failed to commit transaction: %w", err)
+			}
+			return nil
+		} else if err == nil && existingProviderID != order.ProviderID {
+			// Different provider - this shouldn't happen but log it
+			logger.WithFields(logger.Fields{
+				"OrderID":            order.ID.String(),
+				"ProviderID":         order.ProviderID,
+				"ExistingProviderID": existingProviderID,
+				"OrderKey":           orderKey,
+			}).Errorf("Order request exists for different provider - potential race condition")
+			_ = tx.Rollback()
+			return fmt.Errorf("order request exists for different provider")
+		}
+	}
 
 	// TODO: Now we need to add currency
 	orderRequestData := map[string]interface{}{
