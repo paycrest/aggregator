@@ -275,25 +275,47 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			}).
 		Save(ctx)
 	if err != nil {
+		_ = tx.Rollback()
 		return fmt.Errorf("UpdateOrderStatusRefunded.update: %v", err)
 	}
 
-	// If no rows were updated, create a new log
+	// If no rows were updated, check if log already exists (race condition protection)
 	if updatedLogRows == 0 {
-		transactionLog, err = tx.TransactionLog.
-			Create().
-			SetStatus(transactionlog.StatusOrderRefunded).
-			SetTxHash(event.TxHash).
-			SetGatewayID(event.OrderId).
-			SetNetwork(network.Identifier).
-			SetMetadata(
-				map[string]interface{}{
-					"GatewayID":       event.OrderId,
-					"TransactionData": event,
-				}).
-			Save(ctx)
+		// Check if transaction log already exists to prevent duplicates
+		existingLog, err := tx.TransactionLog.
+			Query().
+			Where(
+				transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
+				transactionlog.GatewayIDEQ(event.OrderId),
+				transactionlog.NetworkEQ(network.Identifier),
+			).
+			Only(ctx)
 		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusRefunded.create: %v", err)
+			if ent.IsNotFound(err) {
+				// Log doesn't exist, create new one
+				transactionLog, err = tx.TransactionLog.
+					Create().
+					SetStatus(transactionlog.StatusOrderRefunded).
+					SetTxHash(event.TxHash).
+					SetGatewayID(event.OrderId).
+					SetNetwork(network.Identifier).
+					SetMetadata(
+						map[string]interface{}{
+							"GatewayID":       event.OrderId,
+							"TransactionData": event,
+						}).
+					Save(ctx)
+				if err != nil {
+					_ = tx.Rollback()
+					return fmt.Errorf("UpdateOrderStatusRefunded.create: %v", err)
+				}
+			} else {
+				_ = tx.Rollback()
+				return fmt.Errorf("UpdateOrderStatusRefunded.query: %v", err)
+			}
+		} else {
+			// Log already exists (created by another concurrent transaction)
+			transactionLog = existingLog
 		}
 	}
 
