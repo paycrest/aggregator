@@ -299,6 +299,12 @@ func RetryStaleUserOperations() error {
 						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
 						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
 					),
+					// CRITICAL: Don't refund if validation error contains "Failed to get transaction status after"
+					// This means we couldn't verify the status, but funds may have been disbursed
+					paymentorder.Not(paymentorder.HasFulfillmentsWith(
+						paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+						paymentorderfulfillment.ValidationErrorContains("Failed to get transaction status after"),
+					)),
 				),
 				// OTC orders with OTC refund timeout
 				paymentorder.And(
@@ -345,6 +351,12 @@ func RetryStaleUserOperations() error {
 						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
 						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
 					),
+					// CRITICAL: Don't refund if validation error contains "Failed to get transaction status after"
+					// This means we couldn't verify the status, but funds may have been disbursed
+					paymentorder.Not(paymentorder.HasFulfillmentsWith(
+						paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+						paymentorderfulfillment.ValidationErrorContains("Failed to get transaction status after"),
+					)),
 				),
 				// Private provider orders with status Fulfilled and failed fulfillments
 				paymentorder.And(
@@ -357,6 +369,12 @@ func RetryStaleUserOperations() error {
 						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess)),
 						paymentorderfulfillment.Not(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending)),
 					),
+					// CRITICAL: Don't refund if validation error contains "Failed to get transaction status after"
+					// This means we couldn't verify the status, but funds may have been disbursed
+					paymentorder.Not(paymentorder.HasFulfillmentsWith(
+						paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+						paymentorderfulfillment.ValidationErrorContains("Failed to get transaction status after"),
+					)),
 				),
 			),
 		).
@@ -689,6 +707,26 @@ func SyncPaymentOrderFulfillments() {
 	// defer cancel()
 	ctx := context.Background()
 
+	// Use distributed lock to prevent concurrent execution
+	// Lock TTL: 90 seconds (2x cron interval + buffer for processing time)
+	// This ensures the lock doesn't expire even if processing takes longer than one cron cycle
+	lockKey := "sync_payment_order_fulfillments_lock"
+	lockAcquired, err := storage.RedisClient.SetNX(ctx, lockKey, "1", 90*time.Second).Result()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("SyncPaymentOrderFulfillments: Failed to acquire lock")
+		return
+	}
+	if !lockAcquired {
+		// Another instance is already running; skip.
+		return
+	}
+	defer func() {
+		// Release lock when done
+		_ = storage.RedisClient.Del(ctx, lockKey).Err()
+	}()
+
 	// Query unvalidated lock orders (regular orders only - exclude OTC)
 	paymentOrders, err := storage.Client.PaymentOrder.
 		Query().
@@ -744,6 +782,34 @@ func SyncPaymentOrderFulfillments() {
 	}
 
 	for _, order := range paymentOrders {
+		// Defensive check: Re-fetch order to ensure it still exists and is in a valid state
+		// This handles cases where another concurrent process might have deleted or finalized it.
+		currentOrder, err := storage.Client.PaymentOrder.Query().
+			Where(paymentorder.IDEQ(order.ID)).
+			WithToken(func(tq *ent.TokenQuery) {
+				tq.WithNetwork()
+			}).
+			WithProvider(func(pq *ent.ProviderProfileQuery) {
+				pq.WithAPIKey()
+			}).
+			WithFulfillments().
+			WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
+				pb.WithCurrency()
+			}).
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				continue
+			}
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": order.ID.String(),
+			}).Errorf("SyncPaymentOrderFulfillments: Failed to fetch order, skipping processing")
+			continue
+		}
+		// Use currentOrder for further processing
+		order = currentOrder
+
 		if order.Edges.Provider == nil {
 			continue
 		}
@@ -842,26 +908,16 @@ func SyncPaymentOrderFulfillments() {
 
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				if order.Status == paymentorder.StatusProcessing && order.UpdatedAt.Add(orderConf.OrderFulfillmentValidity*2).Before(time.Now()) {
-					logger.WithFields(logger.Fields{
-						"Error":           fmt.Sprintf("%v", err),
-						"ProviderID":      order.Edges.Provider.ID,
-						"PayloadOrderId":  payload["orderId"],
-						"PayloadCurrency": payload["currency"],
-					}).Errorf("Failed to parse JSON response after getting trx status from provider")
-					// delete lock order to trigger re-indexing
-					err := storage.Client.PaymentOrder.
-						DeleteOneID(order.ID).
-						Exec(ctx)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.Edges.Provider.ID,
-						}).Errorf("Failed to delete order after failing to parse JSON response when getting trx status from provider")
-					}
-					continue
-				}
+				// Instead of deleting the order, log the error and skip processing
+				// The order will be retried in the next sync cycle or can be manually investigated
+				logger.WithFields(logger.Fields{
+					"Error":           fmt.Sprintf("%v", err),
+					"ProviderID":      order.Edges.Provider.ID,
+					"PayloadOrderId":  payload["orderId"],
+					"PayloadCurrency": payload["currency"],
+					"OrderID":         order.ID.String(),
+					"OrderStatus":     order.Status.String(),
+				}).Errorf("SyncPaymentOrderFulfillments: Failed to parse JSON response after getting trx status from provider, skipping order")
 				continue
 			}
 

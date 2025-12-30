@@ -1891,7 +1891,7 @@ func TestProvider(t *testing.T) {
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Failed to update lock order status", response.Message)
+				assert.Equal(t, "Failed to update order status", response.Message)
 			})
 		})
 
