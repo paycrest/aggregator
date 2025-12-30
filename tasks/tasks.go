@@ -708,8 +708,10 @@ func SyncPaymentOrderFulfillments() {
 	ctx := context.Background()
 
 	// Use distributed lock to prevent concurrent execution
+	// Lock TTL: 90 seconds (2x cron interval + buffer for processing time)
+	// This ensures the lock doesn't expire even if processing takes longer than one cron cycle
 	lockKey := "sync_payment_order_fulfillments_lock"
-	lockAcquired, err := storage.RedisClient.SetNX(ctx, lockKey, "1", 60*time.Second).Result()
+	lockAcquired, err := storage.RedisClient.SetNX(ctx, lockKey, "1", 90*time.Second).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
