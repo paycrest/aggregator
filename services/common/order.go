@@ -87,10 +87,34 @@ func ProcessPaymentOrderFromBlockchain(
 		if err != nil && !ent.IsNotFound(err) {
 			return fmt.Errorf("ProcessPaymentOrderFromBlockchain.db: %v", err)
 		}
+
+		// If order exists, update it with gatewayID FIRST before validation
+		// This ensures the order exists in DB with gatewayID before any refund processing
+		if existingOrderWithMessageHash != nil {
+			_, err = db.Client.PaymentOrder.
+				Update().
+				Where(paymentorder.IDEQ(existingOrderWithMessageHash.ID)).
+				SetGatewayID(event.OrderId).
+				SetTxHash(event.TxHash).
+				SetBlockNumber(int64(event.BlockNumber)).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("%s - failed to update gatewayID: %w", event.OrderId, err)
+			}
+
+			// Reload the order to get updated version
+			existingOrderWithMessageHash, err = db.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(existingOrderWithMessageHash.ID)).
+				Only(ctx)
+			if err != nil {
+				return fmt.Errorf("%s - failed to reload order: %w", event.OrderId, err)
+			}
+		}
 	}
 
-	// Validate and prepare payment order data
-	paymentOrderFields, _, _, _, _, err := validateAndPreparePaymentOrderData(ctx, network, event, refundOrder)
+	// Validate and prepare payment order data (pass existing order so it can be used if cancellation is needed)
+	paymentOrderFields, _, _, _, _, err := validateAndPreparePaymentOrderData(ctx, network, event, refundOrder, existingOrderWithMessageHash)
 	if err != nil {
 		return err
 	}
@@ -989,11 +1013,13 @@ func processPaymentOrderPostCreation(
 
 // validateAndPreparePaymentOrderData validates the blockchain event data and prepares payment order fields.
 // Returns the prepared fields, token, institution, currency, provision bucket, and any error.
+// existingOrder is an optional existing payment order that should be used for cancellation instead of creating a new one.
 func validateAndPreparePaymentOrderData(
 	ctx context.Context,
 	network *ent.Network,
 	event *types.OrderCreatedEvent,
 	refundOrder func(context.Context, *ent.Network, string) error,
+	existingOrder *ent.PaymentOrder,
 ) (*types.PaymentOrderFields, *ent.Token, *ent.Institution, *ent.FiatCurrency, *ent.ProvisionBucket, error) {
 	// Get token from db
 	token, err := db.Client.Token.
@@ -1027,13 +1053,13 @@ func validateAndPreparePaymentOrderData(
 	// Get order recipient from message hash
 	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
 	if err != nil {
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, "Message hash decryption failed", refundOrder)
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, "Message hash decryption failed", refundOrder, existingOrder)
 	}
 
 	// Get institution
 	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
 	if err != nil {
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Institution lookup failed", refundOrder)
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Institution lookup failed", refundOrder, existingOrder)
 	}
 
 	// Get currency
@@ -1045,7 +1071,7 @@ func validateAndPreparePaymentOrderData(
 		).
 		Only(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Currency lookup failed", refundOrder)
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Currency lookup failed", refundOrder, existingOrder)
 	}
 
 	// Adjust amounts for token decimals
@@ -1061,7 +1087,7 @@ func validateAndPreparePaymentOrderData(
 			"Currency": currency,
 		}).Errorf("failed to fetch provision bucket when creating payment order")
 
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Provision bucket lookup failed", refundOrder)
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Provision bucket lookup failed", refundOrder, existingOrder)
 	}
 
 	// Create payment order fields
@@ -1088,7 +1114,7 @@ func validateAndPreparePaymentOrderData(
 	}
 
 	if isLessThanMin {
-		err := HandleCancellation(ctx, nil, paymentOrderFields, "Amount is less than the minimum bucket", refundOrder)
+		err := HandleCancellation(ctx, existingOrder, nil, "Amount is less than the minimum bucket", refundOrder)
 		if err != nil {
 			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
 		}
@@ -1196,7 +1222,8 @@ func validateAndPreparePaymentOrderData(
 	return paymentOrderFields, token, institution, currency, provisionBucket, nil
 }
 
-// createBasicPaymentOrderAndCancel creates a basic payment order and cancels it with the given reason
+// createBasicPaymentOrderAndCancel creates a basic payment order and cancels it with the given reason.
+// If existingOrder is provided and has the matching gatewayID, it will update that order instead of creating a new one.
 func createBasicPaymentOrderAndCancel(
 	ctx context.Context,
 	event *types.OrderCreatedEvent,
@@ -1205,12 +1232,44 @@ func createBasicPaymentOrderAndCancel(
 	recipient *types.PaymentOrderRecipient,
 	cancellationReason string,
 	refundOrder func(context.Context, *ent.Network, string) error,
+	existingOrder *ent.PaymentOrder,
 ) error {
+	// Check if order already exists with gatewayID (should exist if we updated it before validation)
+	var orderToCancel *ent.PaymentOrder
+	if existingOrder != nil && existingOrder.GatewayID == event.OrderId {
+		orderToCancel = existingOrder
+	} else {
+		// Try to find existing order by gatewayID as fallback
+		foundOrder, err := db.Client.PaymentOrder.
+			Query().
+			Where(
+				paymentorder.GatewayIDEQ(event.OrderId),
+				paymentorder.HasTokenWith(
+					tokenent.HasNetworkWith(
+						networkent.IdentifierEQ(network.Identifier),
+					),
+				),
+			).
+			Only(ctx)
+		if err == nil && foundOrder != nil {
+			orderToCancel = foundOrder
+		}
+	}
+
+	// If order exists, update it (pass nil for paymentOrderFields so HandleCancellation updates instead of creates)
+	if orderToCancel != nil {
+		err := HandleCancellation(ctx, orderToCancel, nil, cancellationReason, refundOrder)
+		if err != nil {
+			return fmt.Errorf("failed to handle cancellation due to %s: %w", cancellationReason, err)
+		}
+		return nil
+	}
+
+	// Order doesn't exist, create a basic payment order for cancellation
 	// Apply token decimal adjustment to amount and protocol fee
 	adjustedAmount := event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 	adjustedProtocolFee := event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 
-	// Create a basic payment order for cancellation
 	paymentOrder := types.PaymentOrderFields{
 		Token:       token,
 		Network:     network,
@@ -1244,6 +1303,7 @@ func createBasicPaymentOrderAndCancel(
 		paymentOrder.Metadata = recipient.Metadata
 	}
 
+	// Create new order (pass nil for createdPaymentOrder)
 	err := HandleCancellation(ctx, nil, &paymentOrder, cancellationReason, refundOrder)
 	if err != nil {
 		return fmt.Errorf("failed to handle cancellation due to %s: %w", cancellationReason, err)
