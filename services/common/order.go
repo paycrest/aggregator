@@ -1251,7 +1251,10 @@ func createBasicPaymentOrderAndCancel(
 				),
 			).
 			Only(ctx)
-		if err == nil && foundOrder != nil {
+		if err != nil && !ent.IsNotFound(err) {
+			return fmt.Errorf("failed to query existing order by gatewayID: %w", err)
+		}
+		if foundOrder != nil {
 			orderToCancel = foundOrder
 		}
 	}
