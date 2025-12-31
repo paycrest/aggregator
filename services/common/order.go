@@ -97,6 +97,7 @@ func ProcessPaymentOrderFromBlockchain(
 				SetGatewayID(event.OrderId).
 				SetTxHash(event.TxHash).
 				SetBlockNumber(int64(event.BlockNumber)).
+				SetStatus(paymentorder.StatusPending).
 				Save(ctx)
 			if err != nil {
 				return fmt.Errorf("%s - failed to update gatewayID: %w", event.OrderId, err)
