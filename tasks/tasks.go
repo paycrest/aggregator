@@ -65,6 +65,31 @@ var (
 	indexingCleanupInterval = 3 * time.Minute
 )
 
+// acquireDistributedLock acquires a distributed lock using Redis SetNX
+// Returns:
+//   - cleanup: function to release the lock (call with defer)
+//   - acquired: true if lock was acquired, false if another instance has the lock
+//   - err: error if lock acquisition failed
+func acquireDistributedLock(ctx context.Context, lockKey string, ttl time.Duration, functionName string) (cleanup func(), acquired bool, err error) {
+	lockAcquired, err := storage.RedisClient.SetNX(ctx, lockKey, "1", ttl).Result()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("%s: Failed to acquire lock", functionName)
+		return nil, false, err
+	}
+	if !lockAcquired {
+		// Another instance is already running; skip.
+		return nil, false, nil
+	}
+
+	// Return cleanup function to release the lock
+	cleanup = func() {
+		_ = storage.RedisClient.Del(ctx, lockKey).Err()
+	}
+	return cleanup, true, nil
+}
+
 // cleanupIndexingMaps removes stale entries from indexing coordination maps
 func cleanupIndexingMaps() {
 	now := time.Now()
@@ -432,6 +457,19 @@ func RetryStaleUserOperations() error {
 func TaskIndexBlockchainEvents() error {
 	ctx := context.Background()
 
+	// Use distributed lock to prevent concurrent execution
+	// Lock TTL: 10 seconds (2.5x cron interval + buffer for processing time)
+	// This ensures the lock doesn't expire even if processing takes longer than one cron cycle
+	cleanup, acquired, err := acquireDistributedLock(ctx, "task_index_blockchain_events_lock", 10*time.Second, "TaskIndexBlockchainEvents")
+	if err != nil {
+		return err
+	}
+	if !acquired {
+		// Another instance is already running; skip.
+		return nil
+	}
+	defer cleanup()
+
 	// Fetch networks
 	isTestnet := false
 	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
@@ -710,22 +748,15 @@ func SyncPaymentOrderFulfillments() {
 	// Use distributed lock to prevent concurrent execution
 	// Lock TTL: 90 seconds (2x cron interval + buffer for processing time)
 	// This ensures the lock doesn't expire even if processing takes longer than one cron cycle
-	lockKey := "sync_payment_order_fulfillments_lock"
-	lockAcquired, err := storage.RedisClient.SetNX(ctx, lockKey, "1", 90*time.Second).Result()
+	cleanup, acquired, err := acquireDistributedLock(ctx, "sync_payment_order_fulfillments_lock", 90*time.Second, "SyncPaymentOrderFulfillments")
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-		}).Errorf("SyncPaymentOrderFulfillments: Failed to acquire lock")
 		return
 	}
-	if !lockAcquired {
+	if !acquired {
 		// Another instance is already running; skip.
 		return
 	}
-	defer func() {
-		// Release lock when done
-		_ = storage.RedisClient.Del(ctx, lockKey).Err()
-	}()
+	defer cleanup()
 
 	// Query unvalidated lock orders (regular orders only - exclude OTC)
 	paymentOrders, err := storage.Client.PaymentOrder.
@@ -1789,80 +1820,6 @@ func ResolvePaymentOrderMishaps() error {
 	return nil
 }
 
-// IndexGatewayEvents indexes all gateway events for missed OrderCreated, OrderRefunded, and OrderSettled events
-func IndexGatewayEvents() error {
-	ctx := context.Background()
-
-	// Fetch networks
-	isTestnet := false
-	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
-		isTestnet = true
-	}
-
-	networks, err := storage.Client.Network.
-		Query().
-		Where(networkent.IsTestnetEQ(isTestnet)).
-		All(ctx)
-	if err != nil {
-		return fmt.Errorf("IndexGatewayEvents.fetchNetworks: %w", err)
-	}
-
-	// Process each network in parallel (EVM and Starknet)
-	for _, network := range networks {
-		// Skip Tron networks
-		if strings.HasPrefix(network.Identifier, "tron") {
-			continue
-		}
-
-		if strings.HasPrefix(network.Identifier, "starknet") {
-			go func(network *ent.Network) {
-				ctx := context.Background()
-				indexerInstance, indexerErr := indexer.NewIndexerStarknet()
-				if indexerErr != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", indexerErr),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("IndexGatewayEvents.createStarknetIndexer")
-					return
-				}
-				_, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", err),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("IndexGatewayEvents.indexStarknetGateway")
-					return
-				}
-			}(network)
-			continue
-		} else {
-			go func(network *ent.Network) {
-				ctx := context.Background()
-
-				// Index gateway events by fetching last 20 transactions of the gateway contract
-				indexerInstance, indexerErr := indexer.NewIndexerEVM()
-				if indexerErr != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", indexerErr),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("IndexGatewayEvents.createEVMIndexer")
-					return
-				}
-				_, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":             fmt.Sprintf("%v", err),
-						"NetworkIdentifier": network.Identifier,
-					}).Errorf("IndexGatewayEvents.indexEVMGateway")
-					return
-				}
-			}(network)
-		}
-	}
-
-	return nil
-}
-
 // resolveMissedEvents resolves cases where transfers to receive addresses were missed
 func resolveMissedEvents(ctx context.Context, network *ent.Network) {
 	// Find payment orders with missed transfers
@@ -2409,12 +2366,6 @@ func StartCronJobs() {
 	_, err = scheduler.Every(14).Seconds().Do(ResolvePaymentOrderMishaps)
 	if err != nil {
 		logger.Errorf("StartCronJobs for ResolvePaymentOrderMishaps: %v", err)
-	}
-
-	// Index gateway events every 6 minutes
-	_, err = scheduler.Every(6).Minutes().Do(IndexGatewayEvents)
-	if err != nil {
-		logger.Errorf("StartCronJobs for IndexGatewayEvents: %v", err)
 	}
 
 	// Process stuck validated orders every 12 minutes
