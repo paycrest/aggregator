@@ -893,6 +893,20 @@ func (svc *BalanceManagementService) ValidateAndFixBalances(ctx context.Context,
 			return fmt.Errorf("failed to validate or fix balances: validation error: %w, fix error: %w", validationErr, fixErr)
 		}
 
+		// Reload the entity to get the updated values from the database
+		providerCurrency, err = tx.ProviderCurrencies.
+			Query().
+			WithProvider().
+			WithCurrency().
+			Where(
+				providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
+				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+			).
+			Only(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to reload provider balance after fix: %w", err)
+		}
+
 		// Validate again after fixing within the same transaction
 		validationErr = svc.validateBalanceConsistencyInternal(providerCurrency)
 		if validationErr != nil {
