@@ -441,6 +441,79 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 			Only(ctx)
 
 		if err == nil {
+			// Validate min/max order amount before assignment (skip for private providers)
+			if provider.VisibilityMode != providerprofile.VisibilityModePrivate {
+				if order.Token != nil && order.ProvisionBucket != nil && order.ProvisionBucket.Edges.Currency != nil {
+					// Get the provider's order token configuration to validate min/max amounts
+					providerOrderTokenQuery := storage.Client.ProviderOrderToken.
+						Query().
+						Where(
+							providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+							providerordertoken.HasTokenWith(token.IDEQ(order.Token.ID)),
+							providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(order.ProvisionBucket.Edges.Currency.Code)),
+						)
+
+					// Filter by network if available
+					if order.Network != nil {
+						providerOrderTokenQuery = providerOrderTokenQuery.Where(
+							providerordertoken.NetworkEQ(order.Network.Identifier),
+						)
+					}
+
+					providerOrderToken, err := providerOrderTokenQuery.First(ctx)
+					if err == nil && providerOrderToken != nil {
+						// Check minimum amount first
+						if order.Amount.LessThan(providerOrderToken.MinOrderAmount) {
+							logger.WithFields(logger.Fields{
+								"OrderID":        order.ID.String(),
+								"ProviderID":     order.ProviderID,
+								"Amount":         order.Amount.String(),
+								"MinOrderAmount": providerOrderToken.MinOrderAmount.String(),
+							}).Errorf("Order amount below provider minimum, skipping assignment")
+							return fmt.Errorf("order amount %s is below provider minimum %s", order.Amount, providerOrderToken.MinOrderAmount)
+						}
+
+						// Validate max amount - check OTC limits if exceeds regular max
+						if order.Amount.GreaterThan(providerOrderToken.MaxOrderAmount) {
+							// Amount exceeds regular max - check if it falls within OTC limits
+							if providerOrderToken.MinOrderAmountOtc.IsZero() || providerOrderToken.MaxOrderAmountOtc.IsZero() {
+								logger.WithFields(logger.Fields{
+									"OrderID":        order.ID.String(),
+									"ProviderID":     order.ProviderID,
+									"Amount":         order.Amount.String(),
+									"MaxOrderAmount": providerOrderToken.MaxOrderAmount.String(),
+								}).Errorf("Order amount exceeds provider maximum and OTC limits not configured, skipping assignment")
+								return fmt.Errorf("order amount %s exceeds provider maximum %s and OTC limits not configured", order.Amount, providerOrderToken.MaxOrderAmount)
+							}
+							if order.Amount.LessThan(providerOrderToken.MinOrderAmountOtc) || order.Amount.GreaterThan(providerOrderToken.MaxOrderAmountOtc) {
+								logger.WithFields(logger.Fields{
+									"OrderID":           order.ID.String(),
+									"ProviderID":        order.ProviderID,
+									"Amount":            order.Amount.String(),
+									"MinOrderAmountOtc": providerOrderToken.MinOrderAmountOtc.String(),
+									"MaxOrderAmountOtc": providerOrderToken.MaxOrderAmountOtc.String(),
+								}).Errorf("Order amount outside provider OTC limits, skipping assignment")
+								return fmt.Errorf("order amount %s is outside provider OTC limits [%s, %s]", order.Amount, providerOrderToken.MinOrderAmountOtc, providerOrderToken.MaxOrderAmountOtc)
+							}
+							// Amount is within OTC limits - set order type to OTC
+							order.OrderType = "otc"
+						} else {
+							// Amount is within regular limits - set order type to regular
+							order.OrderType = "regular"
+						}
+					} else if !ent.IsNotFound(err) {
+						// Error other than not found - log and skip
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", err),
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.ProviderID,
+						}).Errorf("Failed to get provider order token configuration, skipping assignment")
+						return fmt.Errorf("failed to get provider order token configuration: %w", err)
+					}
+					// If not found, continue - provider might not have this token/currency configured
+				}
+			}
+
 			// TODO: check for provider's minimum and maximum rate for negotiation
 			// Update the rate with the current rate if order was last updated more than 10 mins ago
 			if !order.UpdatedAt.IsZero() && order.UpdatedAt.Before(time.Now().Add(-10*time.Minute)) {
