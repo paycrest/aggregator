@@ -291,6 +291,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
 			transactionlog.GatewayIDEQ(event.OrderId),
 			transactionlog.NetworkEQ(network.Identifier),
+			transactionlog.TxHashEQ(event.TxHash),
 		).
 		SetTxHash(event.TxHash).
 		SetMetadata(
@@ -313,6 +314,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 				transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
 				transactionlog.GatewayIDEQ(event.OrderId),
 				transactionlog.NetworkEQ(network.Identifier),
+				transactionlog.TxHashEQ(event.TxHash),
 			).
 			Only(ctx)
 		if err != nil {

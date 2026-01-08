@@ -256,7 +256,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	if profile == nil {
 		return nil
 	}
-	
+
 	// If webhook URL is empty, return
 	if profile.WebhookURL == "" {
 		return nil
@@ -805,7 +805,7 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return RateValidationResult{}, fmt.Errorf("provider not found")
+			return RateValidationResult{}, fmt.Errorf("provider not found: %s", providerID)
 		}
 		return RateValidationResult{}, fmt.Errorf("internal server error")
 	}
@@ -1407,7 +1407,6 @@ func DetermineOrderType(orderToken *ent.ProviderOrderToken, tokenAmount decimal.
 	return paymentorder.OrderTypeOtc
 }
 
-
 // ParseByteArray converts Cairo ByteArray format to string
 // ByteArray format: [num_full_chunks, ...full_chunks, pending_word, pending_word_len]
 func ParseByteArray(data []*felt.Felt) string {
@@ -1546,7 +1545,6 @@ func ParseStringAsDecimals(strVal string) (decimal.Decimal, error) {
 
 	return result, nil
 }
-
 
 // parseHexString converts hex string to decimal
 func parseHexString(hexStr string) (decimal.Decimal, error) {
