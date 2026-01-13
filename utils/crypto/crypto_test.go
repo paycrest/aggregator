@@ -44,6 +44,11 @@ func TestCreateEOA(t *testing.T) {
 }
 
 func TestGetOrderRecipientFromMessageHash(t *testing.T) {
+	// Skip test if RSA keys are not configured
+	if cryptoConf.AggregatorPublicKey == "" || cryptoConf.AggregatorPrivateKey == "" {
+		t.Skip("Skipping test: AGGREGATOR_PUBLIC_KEY and AGGREGATOR_PRIVATE_KEY must be set in test environment")
+	}
+
 	t.Run("basic encryption and decryption", func(t *testing.T) {
 		// Create a mock payment order
 		order := &ent.PaymentOrder{
