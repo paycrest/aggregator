@@ -756,7 +756,6 @@ type BeneficialOwnerInput struct {
 
 // PartnerOnboardingPayload combines registration and KYB data for partner onboarding
 type PartnerOnboardingPayload struct {
-	CompanyName string   `json:"companyName" binding:"required"`
 	Email       string   `json:"email" binding:"required,email"`
 	Scopes      []string `json:"scopes" binding:"required,dive,oneof=sender"`
 	ReferralID  string   `json:"referral_id" binding:"required"`
