@@ -82,9 +82,6 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Get referral_id from query parameter
-	referralID := ctx.Query("referral_id")
-
 	// Save the user
 	scope := strings.Join(payload.Scopes, " ")
 	userCreate := tx.User.
@@ -95,14 +92,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		SetPassword(payload.Password).
 		SetScope(scope)
 
-	// Set referral_id if provided
-	if referralID != "" {
-		userCreate = userCreate.SetReferralID(referralID)
-	}
-
-	// Auto-verify email if referral_id is present OR in non-production environment
-	shouldAutoVerify := referralID != "" || (serverConf.Environment != "production" && serverConf.Environment != "staging")
-	if shouldAutoVerify {
+		// Checking the environment to set the user as verified and give early access
+	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
 		userCreate = userCreate.SetIsEmailVerified(true)
 	}
 

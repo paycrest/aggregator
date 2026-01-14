@@ -754,6 +754,17 @@ type BeneficialOwnerInput struct {
 	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
 }
 
+// PartnerOnboardingPayload combines registration and KYB data for partner onboarding
+type PartnerOnboardingPayload struct {
+	CompanyName string   `json:"companyName" binding:"required"`
+	Email       string   `json:"email" binding:"required,email"`
+	Scopes      []string `json:"scopes" binding:"required,dive,oneof=sender"`
+	ReferralID  string   `json:"referral_id" binding:"required"`
+
+	// KYB fields (embedded KYBSubmissionInput)
+	KYBSubmissionInput
+}
+
 // KYBDocumentsResponse represents the response structure for KYB documents retrieval
 type KYBDocumentsResponse struct {
 	MobileNumber                  string                 `json:"mobileNumber"`

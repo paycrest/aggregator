@@ -1575,50 +1575,6 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		return
 	}
 
-	// ✅ Send Partner Onboarding Success Email if user has referral_id
-	if userRecord.ReferralID != "" {
-		// Fetch API key for the user (provider or sender profile)
-		var apiKeyResponse *types.APIKeyResponse
-
-		// Check if user has provider profile
-		providerProfile, err := storage.Client.ProviderProfile.
-			Query().
-			Where(providerprofile.HasUserWith(user.IDEQ(userRecord.ID))).
-			Only(ctx)
-		if err == nil && providerProfile != nil {
-			apiKeyResponse, err = ctrl.apiKeyService.GetAPIKey(ctx, nil, providerProfile)
-		} else {
-			// Check if user has sender profile
-			senderProfile, err := storage.Client.SenderProfile.
-				Query().
-				Where(senderprofile.HasUserWith(user.IDEQ(userRecord.ID))).
-				Only(ctx)
-			if err == nil && senderProfile != nil {
-				apiKeyResponse, err = ctrl.apiKeyService.GetAPIKey(ctx, senderProfile, nil)
-			}
-		}
-
-		if apiKeyResponse != nil {
-			// Generate a random password for the email
-			generatedPassword, err := u.GenerateRandomPassword(12)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":  fmt.Sprintf("%v", err),
-					"UserID": userRecord.ID,
-				}).Errorf("Failed to generate random password")
-				generatedPassword = "" // Continue with empty password if generation fails
-			}
-
-			// Send email to user's email (the company email)
-			if _, err := ctrl.emailService.SendPartnerOnboardingSuccessEmail(ctx, userRecord.Email, userRecord.FirstName, apiKeyResponse.Secret, generatedPassword); err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":  fmt.Sprintf("%v", err),
-					"UserID": userRecord.ID,
-				}).Errorf("Failed to send partner onboarding success email")
-			}
-		}
-	}
-
 	// Determine response message based on whether it's an update or new submission
 	var message string
 	if existingSubmission != nil {
@@ -1628,6 +1584,255 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", message, gin.H{
+		"submission_id": kybSubmission.ID,
+	})
+}
+
+// HandleOnboardingPartner handles partner onboarding by creating user, sender profile, API key, and KYB submission
+func (ctrl *Controller) HandleOnboardingPartner(ctx *gin.Context) {
+	var payload types.PartnerOnboardingPayload
+
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Error: Failed to bind partner onboarding input")
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid input", u.GetErrorData(err))
+		return
+	}
+
+	// Validate that user has agreed to Paycrest terms
+	if !payload.IAcceptTerms {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Kindly accept the terms and conditions to proceed", nil)
+		return
+	}
+
+	// Validate scopes - must be sender only
+	if len(payload.Scopes) != 1 || payload.Scopes[0] != "sender" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Only sender scope is allowed for partner onboarding", nil)
+		return
+	}
+
+	// --- Begin Transaction for User Creation ---
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Error: Failed to start transaction")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("Failed to rollback transaction during panic: %v", err)
+			}
+			panic(p)
+		}
+	}()
+
+	// Check if user with email already exists
+	userTmp, _ := tx.User.
+		Query().
+		Where(user.EmailEQ(strings.ToLower(payload.Email))).
+		Only(ctx)
+
+	if userTmp != nil {
+		_ = tx.Rollback()
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "User with email already exists", nil)
+		return
+	}
+
+	// Auto-generate password
+	generatedPassword, err := u.GenerateRandomPassword(12)
+	if err != nil {
+		_ = tx.Rollback()
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Error: Failed to generate random password")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	// Parse company name into first name and last name
+	companyNameParts := strings.Fields(payload.CompanyName)
+	var firstName, lastName string
+	if len(companyNameParts) > 1 {
+		firstName = companyNameParts[0]
+		lastName = strings.Join(companyNameParts[1:], " ")
+	} else {
+		firstName = payload.CompanyName
+		lastName = ""
+	}
+
+	// Create user with referral_id and auto-verify email
+	scope := strings.Join(payload.Scopes, " ")
+	userCreate := tx.User.
+		Create().
+		SetFirstName(firstName).
+		SetEmail(strings.ToLower(payload.Email)).
+		SetPassword(generatedPassword).
+		SetScope(scope).
+		SetReferralID(payload.ReferralID).
+		SetIsEmailVerified(true)
+
+	if lastName != "" {
+		userCreate = userCreate.SetLastName(lastName)
+	}
+
+	userRecord, err := userCreate.Save(ctx)
+
+	if err != nil {
+		_ = tx.Rollback()
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+		}).Errorf("Error: Failed to create user")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create user", nil)
+		return
+	}
+
+	// Create sender profile
+	senderProfile, err := tx.SenderProfile.
+		Create().
+		SetUser(userRecord).
+		Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userRecord.ID,
+		}).Errorf("Failed to create sender profile")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create sender profile", nil)
+		return
+	}
+
+	// Generate API key for sender
+	_, _, err = ctrl.apiKeyService.GenerateAPIKey(ctx, tx, senderProfile, nil)
+	if err != nil {
+		_ = tx.Rollback()
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"UserID":   userRecord.ID,
+			"SenderID": senderProfile.ID,
+		}).Errorf("Failed to create API key for sender")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create API key", nil)
+		return
+	}
+
+	// Create KYB submission
+	kybBuilder := tx.KYBProfile.
+		Create().
+		SetMobileNumber(payload.MobileNumber).
+		SetCompanyName(payload.CompanyName).
+		SetRegisteredBusinessAddress(payload.RegisteredBusinessAddress).
+		SetCertificateOfIncorporationURL(payload.CertificateOfIncorporationUrl).
+		SetArticlesOfIncorporationURL(payload.ArticlesOfIncorporationUrl).
+		SetProofOfBusinessAddressURL(payload.ProofOfBusinessAddressUrl).
+		SetUserID(userRecord.ID)
+
+	if payload.BusinessLicenseUrl != nil {
+		kybBuilder = kybBuilder.SetBusinessLicenseURL(*payload.BusinessLicenseUrl)
+	}
+	if payload.AmlPolicyUrl != nil {
+		kybBuilder = kybBuilder.SetAmlPolicyURL(*payload.AmlPolicyUrl)
+	}
+	if payload.KycPolicyUrl != nil {
+		kybBuilder = kybBuilder.SetKycPolicyURL(*payload.KycPolicyUrl)
+	}
+
+	kybSubmission, err := kybBuilder.Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userRecord.ID,
+		}).Errorf("Error: Failed to save KYB submission")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to save KYB submission", nil)
+		return
+	}
+
+	// Create beneficial owners
+	for _, owner := range payload.BeneficialOwners {
+		_, err := tx.BeneficialOwner.
+			Create().
+			SetFullName(owner.FullName).
+			SetResidentialAddress(owner.ResidentialAddress).
+			SetProofOfResidentialAddressURL(owner.ProofOfResidentialAddressUrl).
+			SetGovernmentIssuedIDURL(owner.GovernmentIssuedIdUrl).
+			SetDateOfBirth(owner.DateOfBirth).
+			SetOwnershipPercentage(owner.OwnershipPercentage).
+			SetGovernmentIssuedIDType(beneficialowner.GovernmentIssuedIDType(owner.GovernmentIssuedIdType)).
+			SetKybProfileID(kybSubmission.ID).
+			Save(ctx)
+		if err != nil {
+			_ = tx.Rollback()
+			logger.WithFields(logger.Fields{
+				"Error":  fmt.Sprintf("%v", err),
+				"UserID": userRecord.ID,
+			}).Errorf("Error: Failed to save beneficial owner")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to save beneficial owner", nil)
+			return
+		}
+	}
+
+	// Update user's KYB verification status to pending
+	_, err = tx.User.
+		Update().
+		Where(user.IDEQ(userRecord.ID)).
+		SetKybVerificationStatus(user.KybVerificationStatusPending).
+		Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userRecord.ID,
+		}).Errorf("Error: Failed to update user KYB verification status")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update user KYB verification status", nil)
+		return
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":  fmt.Sprintf("%v", err),
+			"UserID": userRecord.ID,
+		}).Errorf("Error: Failed to commit transaction")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to process request", nil)
+		return
+	}
+
+	// ✅ Send Slack notification (outside transaction)
+	err = ctrl.slackService.SendSubmissionNotification(userRecord.FirstName, userRecord.Email, kybSubmission.ID.String())
+	if err != nil {
+		logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", kybSubmission.ID, err)
+		// Don't return error, just log it
+	}
+
+	// ✅ Send Partner Onboarding Success Email
+	senderProfile, err := storage.Client.SenderProfile.
+		Query().
+		Where(senderprofile.HasUserWith(user.IDEQ(userRecord.ID))).
+		Only(ctx)
+	if err == nil && senderProfile != nil {
+		apiKeyResponse, err := ctrl.apiKeyService.GetAPIKey(ctx, senderProfile, nil)
+		if err == nil && apiKeyResponse != nil {
+			// Send email with the generated password and API key
+			if _, err := ctrl.emailService.SendPartnerOnboardingSuccessEmail(ctx, userRecord.Email, payload.CompanyName, apiKeyResponse.Secret, generatedPassword); err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":  fmt.Sprintf("%v", err),
+					"UserID": userRecord.ID,
+				}).Errorf("Failed to send partner onboarding success email")
+			}
+		} else {
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", err),
+				"UserID":   userRecord.ID,
+				"SenderID": senderProfile.ID,
+			}).Errorf("Failed to fetch API key for partner onboarding email")
+		}
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", "Partner onboarding completed successfully", gin.H{
+		"user_id":       userRecord.ID,
 		"submission_id": kybSubmission.ID,
 	})
 }
@@ -2168,7 +2373,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 
 	// Get the second path param, which can be a tx_hash or an address
 	pathParam := ctx.Param("tx_hash_or_address")
-	
+
 	// Validate that pathParam is a valid tx_hash or address
 	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash or address", nil)
@@ -2233,7 +2438,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 			).
 			Only(ctx)
 	}
-	
+
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found or not supported for current environment", nil)
