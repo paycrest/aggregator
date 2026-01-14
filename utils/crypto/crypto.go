@@ -27,9 +27,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var authConf = config.AuthConfig()
-var cryptoConf = config.CryptoConfig()
-var serverConf = config.ServerConfig()
+var (
+	authConf   = config.AuthConfig()
+	cryptoConf = config.CryptoConfig()
+	serverConf = config.ServerConfig()
+)
 
 // CheckPasswordHash is a function to compare provided password with the hashed password
 func CheckPasswordHash(password, hash string) bool {
@@ -64,7 +66,6 @@ func EncryptPlain(plaintext []byte) ([]byte, error) {
 
 // DecryptPlain decrypts ciphertext using AES encryption algorithm with Galois Counter Mode
 func DecryptPlain(ciphertext []byte) ([]byte, error) {
-
 	block, err := aes.NewCipher([]byte(authConf.Secret))
 	if err != nil {
 		return nil, err
@@ -90,7 +91,6 @@ func DecryptPlain(ciphertext []byte) ([]byte, error) {
 
 // EncryptJSON encrypts JSON serializable data using AES encryption algorithm with Galois Counter Mode
 func EncryptJSON(data interface{}) ([]byte, error) {
-
 	// Encode data to JSON
 	plaintext, err := json.Marshal(data)
 	if err != nil {
@@ -108,7 +108,6 @@ func EncryptJSON(data interface{}) ([]byte, error) {
 
 // DecryptJSON decrypts JSON serializable data using AES encryption algorithm with Galois Counter Mode
 func DecryptJSON(ciphertext []byte) (interface{}, error) {
-
 	// Decrypt as normal
 	plaintext, err := DecryptPlain(ciphertext)
 	if err != nil {
@@ -122,7 +121,6 @@ func DecryptJSON(ciphertext []byte) (interface{}, error) {
 	}
 
 	return data, nil
-
 }
 
 // PublicKeyEncryptPlain encrypts plaintext using RSA 2048 encryption algorithm
@@ -156,7 +154,6 @@ func PublicKeyEncryptPlain(plaintext []byte, publicKeyPEM string) ([]byte, error
 
 // PublicKeyEncryptJSON encrypts JSON serializable data using RSA 2048 encryption algorithm
 func PublicKeyEncryptJSON(data interface{}, publicKeyPEM string) ([]byte, error) {
-
 	// Encode data to JSON
 	plaintext, err := json.Marshal(data)
 	if err != nil {
@@ -190,7 +187,6 @@ func PublicKeyDecryptPlain(ciphertext []byte, privateKeyPEM string) ([]byte, err
 
 // PublicKeyDecryptJSON decrypts JSON serializable data using RSA 2048 encryption algorithm
 func PublicKeyDecryptJSON(ciphertext []byte, privateKeyPEM string) (interface{}, error) {
-
 	// Decrypt as normal
 	plaintext, err := PublicKeyDecryptPlain(ciphertext, privateKeyPEM)
 	if err != nil {
@@ -391,15 +387,46 @@ func EncryptOrderRecipient(order *ent.PaymentOrder) (string, error) {
 	return base64.StdEncoding.EncodeToString(messageCipher), nil
 }
 
+// isHybridEncrypted checks if data is in hybrid format
+func isHybridEncrypted(data []byte) bool {
+	if len(data) < 4 {
+		return false
+	}
+	
+	keyLen := binary.BigEndian.Uint32(data[0:4])
+	
+	if keyLen != 256 {
+		return false
+	}
+	
+	if len(data) < int(4+keyLen+28) {
+		return false
+	}
+	
+	return true
+}
+
+// decryptOrderRecipientWithFallback attempts to decrypt using hybrid format first, then falls back to legacy RSA format
+func decryptOrderRecipientWithFallback(encrypted []byte, privateKeyPEM string) (interface{}, error) {
+	// Detect format
+	if isHybridEncrypted(encrypted) {
+		return decryptHybridJSON(encrypted, privateKeyPEM)
+	}
+	
+	// Fallback to old RSA decryption
+	return PublicKeyDecryptJSON(encrypted, privateKeyPEM)
+}
+
 // GetOrderRecipientFromMessageHash decrypts the message hash and returns the order recipient
+// Supports both hybrid encryption (new format) and legacy pure RSA encryption (old format) for backward compatibility
 func GetOrderRecipientFromMessageHash(messageHash string) (*types.PaymentOrderRecipient, error) {
 	messageCipher, err := base64.StdEncoding.DecodeString(messageHash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode message hash: %w", err)
 	}
 
-	// Decrypt with the private key of the aggregator
-	message, err := decryptHybridJSON(messageCipher, config.CryptoConfig().AggregatorPrivateKey)
+	// Decrypt with fallback support for both formats
+	message, err := decryptOrderRecipientWithFallback(messageCipher, config.CryptoConfig().AggregatorPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt message hash: %w", err)
 	}
@@ -420,17 +447,16 @@ func GetOrderRecipientFromMessageHash(messageHash string) (*types.PaymentOrderRe
 func NormalizeStarknetAddress(address string) string {
 	// Remove 0x prefix if present
 	addr := strings.TrimPrefix(address, "0x")
-	
+
 	// Starknet addresses should be 64 hex characters (excluding 0x)
 	// Pad with leading zeros if shorter
 	if len(addr) < 64 {
 		addr = strings.Repeat("0", 64-len(addr)) + addr
 	}
-	
+
 	// Add 0x prefix back
 	return "0x" + addr
 }
-
 
 // generateSecureSeed generates a cryptographically secure random seed
 func GenerateSecureSeed() (string, error) {

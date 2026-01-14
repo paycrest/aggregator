@@ -44,11 +44,6 @@ func TestCreateEOA(t *testing.T) {
 }
 
 func TestGetOrderRecipientFromMessageHash(t *testing.T) {
-	// Skip test if RSA keys are not configured
-	if cryptoConf.AggregatorPublicKey == "" || cryptoConf.AggregatorPrivateKey == "" {
-		t.Skip("Skipping test: AGGREGATOR_PUBLIC_KEY and AGGREGATOR_PRIVATE_KEY must be set in test environment")
-	}
-
 	t.Run("basic encryption and decryption", func(t *testing.T) {
 		// Create a mock payment order
 		order := &ent.PaymentOrder{
@@ -317,5 +312,104 @@ func TestGetOrderRecipientFromMessageHash(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEmpty(t, recipient2.Nonce)
 		assert.NotEqual(t, recipient1.Nonce, recipient2.Nonce, "nonces should be different")
+	})
+}
+
+func TestGetOrderRecipientFromMessageHash_BackwardCompatibility(t *testing.T) {
+	// Skip if keys are not configured (backward compatibility tests require real keys)
+	publicKey := cryptoConf.AggregatorPublicKey
+	privateKey := cryptoConf.AggregatorPrivateKey
+	if publicKey == "" || privateKey == "" {
+		t.Skip("Skipping backward compatibility test: AGGREGATOR_PUBLIC_KEY or AGGREGATOR_PRIVATE_KEY not set")
+	}
+
+	t.Run("legacy pure RSA format decryption", func(t *testing.T) {
+		// Create a recipient message in the old format (without nonce, matching old integrations)
+		recipientData := map[string]interface{}{
+			"AccountIdentifier": "1234567890",
+			"AccountName":       "John Doe",
+			"Institution":       "Test Bank",
+			"ProviderID":        "",
+			"Memo":              "Test payment",
+			"Metadata": map[string]interface{}{
+				"reference": "TEST123",
+			},
+		}
+
+		// Encrypt using legacy pure RSA format (simulating old integration)
+		legacyEncrypted, err := PublicKeyEncryptJSON(recipientData, publicKey)
+		assert.NoError(t, err, "legacy encryption should succeed")
+
+		// Encode to base64 (as old integrations would do)
+		legacyMessageHash := base64.StdEncoding.EncodeToString(legacyEncrypted)
+
+		// Decrypt using the new function (should fall back to legacy format)
+		recipient, err := GetOrderRecipientFromMessageHash(legacyMessageHash)
+		assert.NoError(t, err, "should decrypt legacy format with backward compatibility")
+		assert.NotNil(t, recipient)
+		assert.Equal(t, "1234567890", recipient.AccountIdentifier)
+		assert.Equal(t, "John Doe", recipient.AccountName)
+		assert.Equal(t, "Test Bank", recipient.Institution)
+		assert.Equal(t, "Test payment", recipient.Memo)
+
+		t.Logf("✓ Successfully decrypted legacy pure RSA format")
+	})
+
+	t.Run("hybrid format still works", func(t *testing.T) {
+		// Verify that new hybrid format still works
+		order := &ent.PaymentOrder{
+			AccountIdentifier: "9876543210",
+			AccountName:       "Jane Smith",
+			Institution:       "Another Bank",
+			Memo:              "Hybrid test",
+		}
+
+		// Encrypt using new hybrid format
+		messageHash, err := EncryptOrderRecipient(order)
+		assert.NoError(t, err, "hybrid encryption should succeed")
+
+		// Decrypt using the function (should use hybrid format)
+		recipient, err := GetOrderRecipientFromMessageHash(messageHash)
+		assert.NoError(t, err, "should decrypt hybrid format")
+		assert.NotNil(t, recipient)
+		assert.Equal(t, order.AccountIdentifier, recipient.AccountIdentifier)
+		assert.Equal(t, order.AccountName, recipient.AccountName)
+
+		t.Logf("✓ Successfully decrypted new hybrid format")
+	})
+
+	t.Run("both formats work independently", func(t *testing.T) {
+		// Test that we can decrypt both old and new formats in the same session
+		legacyData := map[string]interface{}{
+			"AccountIdentifier": "LEGACY123",
+			"AccountName":       "Legacy User",
+			"Institution":       "Legacy Bank",
+			"ProviderID":        "",
+			"Memo":              "Legacy format",
+		}
+
+		// Create legacy encrypted message
+		legacyEncrypted, _ := PublicKeyEncryptJSON(legacyData, publicKey)
+		legacyHash := base64.StdEncoding.EncodeToString(legacyEncrypted)
+
+		// Create new hybrid encrypted message
+		newOrder := &ent.PaymentOrder{
+			AccountIdentifier: "HYBRID456",
+			AccountName:       "Hybrid User",
+			Institution:       "Hybrid Bank",
+			Memo:              "Hybrid format",
+		}
+		hybridHash, _ := EncryptOrderRecipient(newOrder)
+
+		// Both should decrypt successfully
+		legacyRecipient, err := GetOrderRecipientFromMessageHash(legacyHash)
+		assert.NoError(t, err)
+		assert.Equal(t, "LEGACY123", legacyRecipient.AccountIdentifier)
+
+		hybridRecipient, err := GetOrderRecipientFromMessageHash(hybridHash)
+		assert.NoError(t, err)
+		assert.Equal(t, "HYBRID456", hybridRecipient.AccountIdentifier)
+
+		t.Logf("✓ Both legacy and hybrid formats work independently")
 	})
 }
