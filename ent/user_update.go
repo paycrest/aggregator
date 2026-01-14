@@ -151,6 +151,26 @@ func (_u *UserUpdate) SetNillableKybVerificationStatus(v *user.KybVerificationSt
 	return _u
 }
 
+// SetReferralID sets the "referral_id" field.
+func (_u *UserUpdate) SetReferralID(v string) *UserUpdate {
+	_u.mutation.SetReferralID(v)
+	return _u
+}
+
+// SetNillableReferralID sets the "referral_id" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableReferralID(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetReferralID(*v)
+	}
+	return _u
+}
+
+// ClearReferralID clears the value of the "referral_id" field.
+func (_u *UserUpdate) ClearReferralID() *UserUpdate {
+	_u.mutation.ClearReferralID()
+	return _u
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
 func (_u *UserUpdate) SetSenderProfileID(id uuid.UUID) *UserUpdate {
 	_u.mutation.SetSenderProfileID(id)
@@ -326,6 +346,11 @@ func (_u *UserUpdate) check() error {
 			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "User.kyb_verification_status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ReferralID(); ok {
+		if err := user.ReferralIDValidator(v); err != nil {
+			return &ValidationError{Name: "referral_id", err: fmt.Errorf(`ent: validator failed for field "User.referral_id": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -367,6 +392,12 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.KybVerificationStatus(); ok {
 		_spec.SetField(user.FieldKybVerificationStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.ReferralID(); ok {
+		_spec.SetField(user.FieldReferralID, field.TypeString, value)
+	}
+	if _u.mutation.ReferralIDCleared() {
+		_spec.ClearField(user.FieldReferralID, field.TypeString)
 	}
 	if _u.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -638,6 +669,26 @@ func (_u *UserUpdateOne) SetNillableKybVerificationStatus(v *user.KybVerificatio
 	return _u
 }
 
+// SetReferralID sets the "referral_id" field.
+func (_u *UserUpdateOne) SetReferralID(v string) *UserUpdateOne {
+	_u.mutation.SetReferralID(v)
+	return _u
+}
+
+// SetNillableReferralID sets the "referral_id" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableReferralID(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetReferralID(*v)
+	}
+	return _u
+}
+
+// ClearReferralID clears the value of the "referral_id" field.
+func (_u *UserUpdateOne) ClearReferralID() *UserUpdateOne {
+	_u.mutation.ClearReferralID()
+	return _u
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by ID.
 func (_u *UserUpdateOne) SetSenderProfileID(id uuid.UUID) *UserUpdateOne {
 	_u.mutation.SetSenderProfileID(id)
@@ -826,6 +877,11 @@ func (_u *UserUpdateOne) check() error {
 			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "User.kyb_verification_status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.ReferralID(); ok {
+		if err := user.ReferralIDValidator(v); err != nil {
+			return &ValidationError{Name: "referral_id", err: fmt.Errorf(`ent: validator failed for field "User.referral_id": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -884,6 +940,12 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.KybVerificationStatus(); ok {
 		_spec.SetField(user.FieldKybVerificationStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.ReferralID(); ok {
+		_spec.SetField(user.FieldReferralID, field.TypeString, value)
+	}
+	if _u.mutation.ReferralIDCleared() {
+		_spec.ClearField(user.FieldReferralID, field.TypeString)
 	}
 	if _u.mutation.SenderProfileCleared() {
 		edge := &sqlgraph.EdgeSpec{

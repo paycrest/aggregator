@@ -28,6 +28,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
@@ -63,6 +64,7 @@ type Controller struct {
 	kycService            types.KYCProvider
 	slackService          *svc.SlackService
 	emailService          email.EmailServiceInterface
+	apiKeyService         *svc.APIKeyService
 	cache                 map[string]bool
 	processedActions      map[string]bool
 	actionMutex           sync.RWMutex
@@ -78,6 +80,7 @@ func NewController() *Controller {
 		kycService:            smile.NewSmileIDService(),
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
 		emailService:          email.NewEmailServiceWithProviders(),
+		apiKeyService:         svc.NewAPIKeyService(),
 		cache:                 make(map[string]bool),
 		processedActions:      make(map[string]bool),
 	}
@@ -1570,6 +1573,50 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", kybSubmission.ID, err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Error sending Slack notification", nil)
 		return
+	}
+
+	// ✅ Send Partner Onboarding Success Email if user has referral_id
+	if userRecord.ReferralID != "" {
+		// Fetch API key for the user (provider or sender profile)
+		var apiKeyResponse *types.APIKeyResponse
+
+		// Check if user has provider profile
+		providerProfile, err := storage.Client.ProviderProfile.
+			Query().
+			Where(providerprofile.HasUserWith(user.IDEQ(userRecord.ID))).
+			Only(ctx)
+		if err == nil && providerProfile != nil {
+			apiKeyResponse, err = ctrl.apiKeyService.GetAPIKey(ctx, nil, providerProfile)
+		} else {
+			// Check if user has sender profile
+			senderProfile, err := storage.Client.SenderProfile.
+				Query().
+				Where(senderprofile.HasUserWith(user.IDEQ(userRecord.ID))).
+				Only(ctx)
+			if err == nil && senderProfile != nil {
+				apiKeyResponse, err = ctrl.apiKeyService.GetAPIKey(ctx, senderProfile, nil)
+			}
+		}
+
+		if apiKeyResponse != nil {
+			// Generate a random password for the email
+			generatedPassword, err := u.GenerateRandomPassword(12)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":  fmt.Sprintf("%v", err),
+					"UserID": userRecord.ID,
+				}).Errorf("Failed to generate random password")
+				generatedPassword = "" // Continue with empty password if generation fails
+			}
+
+			// Send email to user's email (the company email)
+			if _, err := ctrl.emailService.SendPartnerOnboardingSuccessEmail(ctx, userRecord.Email, userRecord.FirstName, apiKeyResponse.Secret, generatedPassword); err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":  fmt.Sprintf("%v", err),
+					"UserID": userRecord.ID,
+				}).Errorf("Failed to send partner onboarding success email")
+			}
+		}
 	}
 
 	// Determine response message based on whether it's an update or new submission

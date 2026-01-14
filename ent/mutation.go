@@ -19814,6 +19814,7 @@ type UserMutation struct {
 	is_email_verified         *bool
 	has_early_access          *bool
 	kyb_verification_status   *user.KybVerificationStatus
+	referral_id               *string
 	clearedFields             map[string]struct{}
 	sender_profile            *uuid.UUID
 	clearedsender_profile     bool
@@ -20293,6 +20294,55 @@ func (m *UserMutation) ResetKybVerificationStatus() {
 	m.kyb_verification_status = nil
 }
 
+// SetReferralID sets the "referral_id" field.
+func (m *UserMutation) SetReferralID(s string) {
+	m.referral_id = &s
+}
+
+// ReferralID returns the value of the "referral_id" field in the mutation.
+func (m *UserMutation) ReferralID() (r string, exists bool) {
+	v := m.referral_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReferralID returns the old "referral_id" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldReferralID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReferralID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReferralID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReferralID: %w", err)
+	}
+	return oldValue.ReferralID, nil
+}
+
+// ClearReferralID clears the value of the "referral_id" field.
+func (m *UserMutation) ClearReferralID() {
+	m.referral_id = nil
+	m.clearedFields[user.FieldReferralID] = struct{}{}
+}
+
+// ReferralIDCleared returns if the "referral_id" field was cleared in this mutation.
+func (m *UserMutation) ReferralIDCleared() bool {
+	_, ok := m.clearedFields[user.FieldReferralID]
+	return ok
+}
+
+// ResetReferralID resets all changes to the "referral_id" field.
+func (m *UserMutation) ResetReferralID() {
+	m.referral_id = nil
+	delete(m.clearedFields, user.FieldReferralID)
+}
+
 // SetSenderProfileID sets the "sender_profile" edge to the SenderProfile entity by id.
 func (m *UserMutation) SetSenderProfileID(id uuid.UUID) {
 	m.sender_profile = &id
@@ -20498,7 +20548,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -20529,6 +20579,9 @@ func (m *UserMutation) Fields() []string {
 	if m.kyb_verification_status != nil {
 		fields = append(fields, user.FieldKybVerificationStatus)
 	}
+	if m.referral_id != nil {
+		fields = append(fields, user.FieldReferralID)
+	}
 	return fields
 }
 
@@ -20557,6 +20610,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.HasEarlyAccess()
 	case user.FieldKybVerificationStatus:
 		return m.KybVerificationStatus()
+	case user.FieldReferralID:
+		return m.ReferralID()
 	}
 	return nil, false
 }
@@ -20586,6 +20641,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldHasEarlyAccess(ctx)
 	case user.FieldKybVerificationStatus:
 		return m.OldKybVerificationStatus(ctx)
+	case user.FieldReferralID:
+		return m.OldReferralID(ctx)
 	}
 	return nil, fmt.Errorf("unknown User field %s", name)
 }
@@ -20665,6 +20722,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetKybVerificationStatus(v)
 		return nil
+	case user.FieldReferralID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReferralID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown User field %s", name)
 }
@@ -20694,7 +20758,11 @@ func (m *UserMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *UserMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(user.FieldReferralID) {
+		fields = append(fields, user.FieldReferralID)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -20707,6 +20775,11 @@ func (m *UserMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *UserMutation) ClearField(name string) error {
+	switch name {
+	case user.FieldReferralID:
+		m.ClearReferralID()
+		return nil
+	}
 	return fmt.Errorf("unknown User nullable field %s", name)
 }
 
@@ -20743,6 +20816,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldKybVerificationStatus:
 		m.ResetKybVerificationStatus()
+		return nil
+	case user.FieldReferralID:
+		m.ResetReferralID()
 		return nil
 	}
 	return fmt.Errorf("unknown User field %s", name)

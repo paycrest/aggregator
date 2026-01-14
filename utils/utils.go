@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -256,7 +257,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	if profile == nil {
 		return nil
 	}
-	
+
 	// If webhook URL is empty, return
 	if profile.WebhookURL == "" {
 		return nil
@@ -1407,7 +1408,6 @@ func DetermineOrderType(orderToken *ent.ProviderOrderToken, tokenAmount decimal.
 	return paymentorder.OrderTypeOtc
 }
 
-
 // ParseByteArray converts Cairo ByteArray format to string
 // ByteArray format: [num_full_chunks, ...full_chunks, pending_word, pending_word_len]
 func ParseByteArray(data []*felt.Felt) string {
@@ -1547,7 +1547,6 @@ func ParseStringAsDecimals(strVal string) (decimal.Decimal, error) {
 	return result, nil
 }
 
-
 // parseHexString converts hex string to decimal
 func parseHexString(hexStr string) (decimal.Decimal, error) {
 	// Remove 0x prefix and convert to lowercase
@@ -1565,4 +1564,18 @@ func parseHexString(hexStr string) (decimal.Decimal, error) {
 	}
 
 	return decimal.NewFromBigInt(bigInt, 0), nil
+}
+
+// GenerateRandomPassword generates a cryptographically secure random password
+func GenerateRandomPassword(length int) (string, error) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{}|;:,.<>?"
+	password := make([]byte, length)
+	for i := range password {
+		b := make([]byte, 1)
+		if _, err := rand.Read(b); err != nil {
+			return "", err
+		}
+		password[i] = charset[int(b[0])%len(charset)]
+	}
+	return string(password), nil
 }

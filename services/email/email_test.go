@@ -299,6 +299,53 @@ func TestSendKYBRejectionEmail(t *testing.T) {
 	assert.Equal(t, reason, lastPayload.DynamicData["reason_for_decline"])
 }
 
+func TestSendPartnerOnboardingSuccessEmail(t *testing.T) {
+	primary := &mockProvider{name: "brevo", responseToReturn: types.SendEmailResponse{Id: "partner-onboarding-123"}}
+	service := &EmailService{
+		primaryProvider:  primary,
+		fallbackProvider: &mockProvider{name: "sendgrid"},
+		notificationConf: &config.NotificationConfiguration{EmailFromAddress: "onboarding@paycrest.io"},
+	}
+
+	apiKey := "test-api-key-12345"
+	password := "TempPass123!"
+	resp, err := service.SendPartnerOnboardingSuccessEmail(context.Background(), "partner@company.com", "John", apiKey, password)
+	assert.NoError(t, err)
+	assert.Equal(t, "partner-onboarding-123", resp.Id)
+	assert.Equal(t, "57", primary.GetLastTemplateID()) // Brevo partner onboarding success template ID
+	lastPayload := primary.GetLastPayload()
+	assert.Equal(t, "onboarding@paycrest.io", lastPayload.FromAddress)
+	assert.Equal(t, "partner@company.com", lastPayload.ToAddress)
+	assert.Equal(t, "John", lastPayload.DynamicData["first_name"])
+	assert.Equal(t, apiKey, lastPayload.DynamicData["api_key"])
+	assert.Equal(t, "partner@company.com", lastPayload.DynamicData["email"])
+	assert.Equal(t, password, lastPayload.DynamicData["password"])
+}
+
+func TestSendPartnerOnboardingSuccessEmail_WithFallback(t *testing.T) {
+	primary := &mockProvider{name: "sendgrid", sendTemplateErr: errors.New("primary failed")}
+	fallback := &mockProvider{name: "brevo", responseToReturn: types.SendEmailResponse{Id: "fallback-partner-onboarding"}}
+	service := &EmailService{
+		primaryProvider:  primary,
+		fallbackProvider: fallback,
+		notificationConf: &config.NotificationConfiguration{EmailFromAddress: "onboarding@paycrest.io"},
+	}
+
+	apiKey := "fallback-api-key"
+	password := "FallbackPass456!"
+	resp, err := service.SendPartnerOnboardingSuccessEmail(context.Background(), "fallback@company.com", "Jane", apiKey, password)
+	assert.NoError(t, err)
+	assert.Equal(t, "fallback-partner-onboarding", resp.Id)
+	assert.Equal(t, int64(1), primary.GetTemplateCallCount())
+	assert.Equal(t, int64(1), fallback.GetTemplateCallCount())
+	lastPayload := fallback.GetLastPayload()
+	assert.Equal(t, "onboarding@paycrest.io", lastPayload.FromAddress)
+	assert.Equal(t, "fallback@company.com", lastPayload.ToAddress)
+	assert.Equal(t, "Jane", lastPayload.DynamicData["first_name"])
+	assert.Equal(t, apiKey, lastPayload.DynamicData["api_key"])
+	assert.Equal(t, password, lastPayload.DynamicData["password"])
+}
+
 func TestGetTemplateID_SendgridTemplates(t *testing.T) {
 	tests := []struct {
 		emailType string
@@ -309,6 +356,7 @@ func TestGetTemplateID_SendgridTemplates(t *testing.T) {
 		{"welcome", "d-b425f024e6554c5ba2b4d03ab0a8b25d"},
 		{"kyb_approval", "d-5ebb862274214ba79eae226c09300aa7"},
 		{"kyb_rejection", "d-6917f9c32105467b8dd806a5a3dd32dc"},
+		{"partner_onboarding_success", "d-XXXXX"},
 	}
 
 	for _, tt := range tests {
@@ -329,6 +377,7 @@ func TestGetTemplateID_BrevoTemplates(t *testing.T) {
 		{"welcome", "4"},
 		{"kyb_approval", "7"},
 		{"kyb_rejection", "8"},
+		{"partner_onboarding_success", "57"},
 	}
 
 	for _, tt := range tests {
@@ -349,6 +398,7 @@ func TestGetTemplateID_MailgunTemplates(t *testing.T) {
 		{"welcome", "mailgun-welcome-template-id"},
 		{"kyb_approval", "mailgun-kyb-approval-template-id"},
 		{"kyb_rejection", "mailgun-kyb-rejection-template-id"},
+		{"partner_onboarding_success", "mailgun-partner-onboarding-success-template-id"},
 	}
 
 	for _, tt := range tests {
@@ -457,6 +507,13 @@ func TestEmailService_SpecializedEmailMethods_WithFallback(t *testing.T) {
 			"webhook_failure_with_fallback",
 			func(s *EmailService) error {
 				_, err := s.SendWebhookFailureEmail(context.Background(), "user@test.com", "User")
+				return err
+			},
+		},
+		{
+			"partner_onboarding_success_with_fallback",
+			func(s *EmailService) error {
+				_, err := s.SendPartnerOnboardingSuccessEmail(context.Background(), "user@test.com", "User", "api-key", "password")
 				return err
 			},
 		},
