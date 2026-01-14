@@ -1280,12 +1280,55 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
 			}
 
-			// Send approval email
-			resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
-			if err != nil {
-				logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+			// Check if this is a partner onboarding user (has referral_id)
+			if kyb.Edges.User.ReferralID != "" {
+				// This is a partner onboarding user - send partner onboarding email with new password
+				// Generate a new password for the user
+				newPassword, err := u.GenerateRandomPassword(12)
+				if err != nil {
+					logger.Errorf("Failed to generate password for partner onboarding user %s: %v", email, err)
+				} else {
+					// Update user's password
+					_, err = storage.Client.User.
+						UpdateOneID(kyb.Edges.User.ID).
+						SetPassword(newPassword).
+						Save(ctx)
+					if err != nil {
+						logger.Errorf("Failed to update password for partner onboarding user %s: %v", email, err)
+					} else {
+						// Get sender profile and API key
+						senderProfile, err := storage.Client.SenderProfile.
+							Query().
+							Where(senderprofile.HasUserWith(user.IDEQ(kyb.Edges.User.ID))).
+							Only(ctx)
+						if err == nil && senderProfile != nil {
+							apiKeyResponse, err := ctrl.apiKeyService.GetAPIKey(ctx, senderProfile, nil)
+							if err == nil && apiKeyResponse != nil {
+								// Get company name from KYB profile
+								companyName := kyb.CompanyName
+								// Send partner onboarding email
+								resp, err := ctrl.emailService.SendPartnerOnboardingSuccessEmail(ctx, email, companyName, apiKeyResponse.Secret, newPassword)
+								if err != nil {
+									logger.Errorf("Failed to send partner onboarding email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+								} else {
+									logger.Infof("Partner onboarding email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+								}
+							} else {
+								logger.Errorf("Failed to fetch API key for partner onboarding email to %s: %v", email, err)
+							}
+						} else {
+							logger.Errorf("Failed to fetch sender profile for partner onboarding email to %s: %v", email, err)
+						}
+					}
+				}
 			} else {
-				logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+				// Regular user - send standard KYB approval email
+				resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
+				if err != nil {
+					logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+				} else {
+					logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+				}
 			}
 
 			// Send Slack feedback notification
@@ -1590,6 +1633,25 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 
 // HandleOnboardingPartner handles partner onboarding by creating user, sender profile, API key, and KYB submission
 func (ctrl *Controller) HandleOnboardingPartner(ctx *gin.Context) {
+	// Validate Authorization header has Bearer token
+	authHeader := ctx.GetHeader("Authorization")
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Missing authorization header", nil)
+		return
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	authConf := config.AuthConfig()
+	expectedToken := authConf.PartnerOnboardingSecretKey
+	if expectedToken == "" {
+		logger.Errorf("Partner onboarding API key not configured")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Server configuration error", nil)
+		return
+	}
+	if token != expectedToken {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid authorization token", nil)
+		return
+	}
+
 	var payload types.PartnerOnboardingPayload
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -1669,15 +1731,12 @@ func (ctrl *Controller) HandleOnboardingPartner(ctx *gin.Context) {
 	userCreate := tx.User.
 		Create().
 		SetFirstName(firstName).
+		SetLastName(lastName).
 		SetEmail(strings.ToLower(payload.Email)).
 		SetPassword(generatedPassword).
 		SetScope(scope).
 		SetReferralID(payload.ReferralID).
 		SetIsEmailVerified(true)
-
-	if lastName != "" {
-		userCreate = userCreate.SetLastName(lastName)
-	}
 
 	userRecord, err := userCreate.Save(ctx)
 
@@ -1805,30 +1864,6 @@ func (ctrl *Controller) HandleOnboardingPartner(ctx *gin.Context) {
 	if err != nil {
 		logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", kybSubmission.ID, err)
 		// Don't return error, just log it
-	}
-
-	// ✅ Send Partner Onboarding Success Email
-	senderProfile, err = storage.Client.SenderProfile.
-		Query().
-		Where(senderprofile.HasUserWith(user.IDEQ(userRecord.ID))).
-		Only(ctx)
-	if err == nil && senderProfile != nil {
-		apiKeyResponse, err := ctrl.apiKeyService.GetAPIKey(ctx, senderProfile, nil)
-		if err == nil && apiKeyResponse != nil {
-			// Send email with the generated password and API key
-			if _, err := ctrl.emailService.SendPartnerOnboardingSuccessEmail(ctx, userRecord.Email, payload.CompanyName, apiKeyResponse.Secret, generatedPassword); err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":  fmt.Sprintf("%v", err),
-					"UserID": userRecord.ID,
-				}).Errorf("Failed to send partner onboarding success email")
-			}
-		} else {
-			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", err),
-				"UserID":   userRecord.ID,
-				"SenderID": senderProfile.ID,
-			}).Errorf("Failed to fetch API key for partner onboarding email")
-		}
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "Partner onboarding completed successfully", gin.H{

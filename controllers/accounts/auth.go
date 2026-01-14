@@ -92,7 +92,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		SetPassword(payload.Password).
 		SetScope(scope)
 
-		// Checking the environment to set the user as verified and give early access
+	// Checking the environment to set the user as verified and give early access
 	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
 		userCreate = userCreate.SetIsEmailVerified(true)
 	}

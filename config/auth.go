@@ -24,6 +24,9 @@ type AuthConfiguration struct {
 	TurnstileSiteKey   string
 	TurnstileSecretKey string
 	TurnstileEnabled   bool
+
+	// Partner onboarding config
+	PartnerOnboardingSecretKey string
 }
 
 var (
@@ -57,16 +60,17 @@ func AuthConfig() *AuthConfiguration {
 	// Build and cache the config (thread-safe)
 	authConfigOnce.Do(func() {
 		authConfig = &AuthConfiguration{
-			Secret:                viper.GetString("SECRET"),
-			SlackSigningSecret:    viper.GetString("SLACK_SIGNING_SECRET"),
-			SlackBotToken:         viper.GetString("SLACK_BOT_TOKEN"),
-			JwtAccessLifespan:     time.Duration(viper.GetInt("JWT_ACCESS_LIFESPAN")) * time.Minute,
-			JwtRefreshLifespan:    time.Duration(viper.GetInt("JWT_REFRESH_LIFESPAN")) * time.Minute,
-			HmacTimestampAge:      time.Duration(viper.GetInt("HMAC_TIMESTAMP_AGE")) * time.Minute,
-			PasswordResetLifespan: time.Duration(viper.GetInt("PASSWORD_RESET_LIFESPAN")) * time.Minute,
-			TurnstileSiteKey:      viper.GetString("TURNSTILE_SITE_KEY"),
-			TurnstileSecretKey:    viper.GetString("TURNSTILE_SECRET_KEY"),
-			TurnstileEnabled:      viper.GetBool("TURNSTILE_ENABLED"),
+			Secret:                  viper.GetString("SECRET"),
+			SlackSigningSecret:      viper.GetString("SLACK_SIGNING_SECRET"),
+			SlackBotToken:           viper.GetString("SLACK_BOT_TOKEN"),
+			JwtAccessLifespan:       time.Duration(viper.GetInt("JWT_ACCESS_LIFESPAN")) * time.Minute,
+			JwtRefreshLifespan:      time.Duration(viper.GetInt("JWT_REFRESH_LIFESPAN")) * time.Minute,
+			HmacTimestampAge:        time.Duration(viper.GetInt("HMAC_TIMESTAMP_AGE")) * time.Minute,
+			PasswordResetLifespan:   time.Duration(viper.GetInt("PASSWORD_RESET_LIFESPAN")) * time.Minute,
+			TurnstileSiteKey:        viper.GetString("TURNSTILE_SITE_KEY"),
+			TurnstileSecretKey:      viper.GetString("TURNSTILE_SECRET_KEY"),
+			TurnstileEnabled:        viper.GetBool("TURNSTILE_ENABLED"),
+			PartnerOnboardingSecretKey: viper.GetString("PARTNER_ONBOARDING_SECRET_KEY"),
 		}
 	})
 	return authConfig
