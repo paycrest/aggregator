@@ -1808,7 +1808,7 @@ func (ctrl *Controller) HandleOnboardingPartner(ctx *gin.Context) {
 	}
 
 	// ✅ Send Partner Onboarding Success Email
-	senderProfile, err := storage.Client.SenderProfile.
+	senderProfile, err = storage.Client.SenderProfile.
 		Query().
 		Where(senderprofile.HasUserWith(user.IDEQ(userRecord.ID))).
 		Only(ctx)
