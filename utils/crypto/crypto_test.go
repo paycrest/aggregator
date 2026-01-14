@@ -47,7 +47,7 @@ func TestGetOrderRecipientFromMessageHash(t *testing.T) {
 	publicKey := cryptoConf.AggregatorPublicKey
 	privateKey := cryptoConf.AggregatorPrivateKey
 	if publicKey == "" || privateKey == "" {
-		t.Skip("Skipping backward compatibility test: AGGREGATOR_PUBLIC_KEY or AGGREGATOR_PRIVATE_KEY not set")
+		t.Skip("Skipping backward encryption test: AGGREGATOR_PUBLIC_KEY or AGGREGATOR_PRIVATE_KEY not set")
 	}
 	t.Run("basic encryption and decryption", func(t *testing.T) {
 		// Create a mock payment order
