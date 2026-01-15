@@ -356,7 +356,7 @@ func TestGetTemplateID_SendgridTemplates(t *testing.T) {
 		{"welcome", "d-b425f024e6554c5ba2b4d03ab0a8b25d"},
 		{"kyb_approval", "d-5ebb862274214ba79eae226c09300aa7"},
 		{"kyb_rejection", "d-6917f9c32105467b8dd806a5a3dd32dc"},
-		{"partner_onboarding_success", "d-XXXXX"},
+		{"partner_onboarding_success", "d-da75eee4966544ad92dcd060421d4a13"},
 	}
 
 	for _, tt := range tests {
