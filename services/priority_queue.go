@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
+	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 )
 
@@ -591,7 +593,8 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 	}
 
 	orderRequestData := map[string]interface{}{
-		"type": "otc",
+		"type":       "otc",
+		"providerId": order.ProviderID,
 	}
 	err = storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err()
 	if err != nil {
@@ -668,6 +671,53 @@ func (s *PriorityQueueService) addProviderToExcludeList(ctx context.Context, ord
 	}
 }
 
+// IncrementProviderAttemptCount increments the attempt count for a provider on an order
+// orderType should be "otc" for OTC orders or "regular" for regular orders to use appropriate refund timeout
+func (s *PriorityQueueService) IncrementProviderAttemptCount(ctx context.Context, orderID string, providerID string, orderType string) error {
+	attemptKey := fmt.Sprintf("order_provider_attempts_%s", orderID)
+	count, err := storage.RedisClient.HIncrBy(ctx, attemptKey, providerID, 1).Result()
+	if err != nil {
+		return fmt.Errorf("failed to increment provider attempt count: %w", err)
+	}
+
+	// Set TTL on the hash using refund timeout (long enough to track attempts until refund)
+	var ttl time.Duration
+	if orderType == "otc" {
+		ttl = orderConf.OrderRefundTimeoutOtc
+	} else {
+		ttl = orderConf.OrderRefundTimeout
+	}
+	_ = storage.RedisClient.Expire(ctx, attemptKey, ttl).Err()
+
+	logger.WithFields(logger.Fields{
+		"OrderID":    orderID,
+		"ProviderID": providerID,
+		"Count":      count,
+		"OrderType":  orderType,
+	}).Infof("Incremented provider attempt count")
+
+	return nil
+}
+
+// getProviderAttemptCount returns the attempt count for a provider on an order
+func (s *PriorityQueueService) getProviderAttemptCount(ctx context.Context, orderID string, providerID string) (int64, error) {
+	attemptKey := fmt.Sprintf("order_provider_attempts_%s", orderID)
+	count, err := storage.RedisClient.HGet(ctx, attemptKey, providerID).Result()
+	if err == redis.Nil {
+		return 0, nil // Provider hasn't been attempted yet
+	}
+	if err != nil {
+		return 0, fmt.Errorf("failed to get provider attempt count: %w", err)
+	}
+
+	attemptCount, err := strconv.ParseInt(count, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse attempt count: %w", err)
+	}
+
+	return attemptCount, nil
+}
+
 // sendOrderRequest sends an order request to a provider
 func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.PaymentOrderFields) error {
 	// Reserve balance for this order
@@ -703,6 +753,31 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"Amount":     amount.String(),
 		}).Errorf("Failed to reserve balance for order")
 		return err
+	}
+
+	// Set provider in database so we can track attempts when order_request expires
+	if order.ProviderID != "" {
+		provider, err := tx.ProviderProfile.
+			Query().
+			Where(
+				providerprofile.IDEQ(order.ProviderID),
+			).
+			Only(ctx)
+		if err == nil && provider != nil {
+			_, err = tx.PaymentOrder.
+				Update().
+				Where(paymentorder.IDEQ(order.ID)).
+				SetProvider(provider).
+				Save(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+				}).Warnf("Failed to set provider in database during order request")
+				// Continue anyway - not critical
+			}
+		}
 	}
 
 	// Assign the order to the provider and save it to Redis
@@ -985,6 +1060,26 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 
 			// For OTC orders, skip balance check and assign order to provider
 			if order.OrderType == "otc" {
+				// Check if provider has been attempted 3+ times before assigning
+				attemptCount, err := s.getProviderAttemptCount(ctx, order.ID.String(), order.ProviderID)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+					}).Warnf("Failed to get provider attempt count, allowing assignment")
+					// Continue if we can't get count - allow assignment
+				} else if attemptCount >= 3 {
+					// Provider has been attempted 3+ times, add to exclude list and skip
+					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidityOtc*2)
+					logger.WithFields(logger.Fields{
+						"OrderID":      order.ID.String(),
+						"ProviderID":   order.ProviderID,
+						"AttemptCount": attemptCount,
+					}).Infof("Skipping provider - exceeded 3 attempts")
+					continue
+				}
+
 				if err := s.assignOtcOrder(ctx, order); err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":      fmt.Sprintf("%v", err),
@@ -992,8 +1087,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 						"ProviderID": order.ProviderID,
 					}).Errorf("failed to assign OTC order to provider when matching rate")
 
-					// Add provider to exclude list before continuing to next provider
-					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidityOtc*2)
+					// Don't immediately exclude - wait for order_request to expire and track attempts
 					continue
 				}
 				break
@@ -1011,6 +1105,26 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 					continue
 				}
 
+				// Check if provider has been attempted 3+ times before assigning
+				attemptCount, err := s.getProviderAttemptCount(ctx, order.ID.String(), order.ProviderID)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+					}).Warnf("Failed to get provider attempt count, allowing assignment")
+					// Continue if we can't get count - allow assignment
+				} else if attemptCount >= 3 {
+					// Provider has been attempted 3+ times, add to exclude list and skip
+					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidity*2)
+					logger.WithFields(logger.Fields{
+						"OrderID":      order.ID.String(),
+						"ProviderID":   order.ProviderID,
+						"AttemptCount": attemptCount,
+					}).Infof("Skipping provider - exceeded 3 attempts")
+					continue
+				}
+
 				// Assign the order to the provider and save it to Redis
 				err = s.sendOrderRequest(ctx, order)
 				if err != nil {
@@ -1022,9 +1136,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 						"orderIDPrefix": orderIDPrefix,
 					}).Errorf("failed to send order request to specific provider when matching rate")
 
-					// Add provider to exclude list before reassigning
-					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidity*2)
-
+					// Don't immediately exclude - wait for order_request to expire and track attempts
 					// Note: Balance cleanup is now handled in sendOrderRequest via defer
 					// Reassign the payment order to another provider
 					return s.AssignPaymentOrder(ctx, order)

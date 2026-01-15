@@ -1291,9 +1291,26 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 		}
 
 		// Extract provider ID from relation if available
+		priorityQueueService := services.NewPriorityQueueService()
 		providerID := ""
 		if order.Edges.Provider != nil {
 			providerID = order.Edges.Provider.ID
+
+			// Determine order type for correct refund timeout
+			orderType := "regular"
+			if order.OrderType == paymentorder.OrderTypeOtc {
+				orderType = "otc"
+			}
+
+			err = priorityQueueService.IncrementProviderAttemptCount(ctx, order.ID.String(), providerID, orderType)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": providerID,
+				}).Warnf("Failed to increment provider attempt count")
+				// Continue anyway - not critical
+			}
 		}
 
 		// Build order fields for reassignment
@@ -1322,7 +1339,7 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 		}
 
 		// Assign the order to a provider
-		err = services.NewPriorityQueueService().AssignPaymentOrder(ctx, orderFields)
+		err = priorityQueueService.AssignPaymentOrder(ctx, orderFields)
 		if err != nil {
 			// logger.Errorf("ReassignStaleOrderRequest.AssignPaymentOrder: %v", err)
 			logger.WithFields(logger.Fields{
