@@ -239,7 +239,7 @@ func getTemplateID(emailType, provider string) string {
 			"kyb_approval":               "d-5ebb862274214ba79eae226c09300aa7",
 			"kyb_rejection":              "d-6917f9c32105467b8dd806a5a3dd32dc",
 			"webhook_failure":            "d-da75eee4966544ad92dcd060421d4e12",
-			"partner_onboarding_success": "d-XXXXX",
+			"partner_onboarding_success": "d-da75eee4966544ad92dcd060421d4a13",
 		},
 		"brevo": {
 			"verification":               "5",
