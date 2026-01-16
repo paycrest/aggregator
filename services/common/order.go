@@ -1059,7 +1059,7 @@ func validateAndPreparePaymentOrderData(
 	// Get order recipient from message hash
 	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
 	if err != nil {
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, "Message hash decryption failed", refundOrder, existingOrder)
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, fmt.Sprintf("Message hash decryption failed %v", err), refundOrder, existingOrder)
 	}
 
 	// Get institution
