@@ -89,6 +89,18 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
+	// Validate minimum amount for Ethereum network (stablecoins = $1 per token, so min 50 tokens)
+	if strings.EqualFold(payload.Network, "ethereum") {
+		minEthereumAmount := decimal.NewFromInt(50)
+		if payload.Amount.LessThan(minEthereumAmount) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Amount",
+				Message: fmt.Sprintf("Minimum amount for Ethereum is %s", minEthereumAmount.String()),
+			})
+			return
+		}
+	}
+
 	// Get sender profile from the context
 	senderCtx, ok := ctx.Get("sender")
 	if !ok {
