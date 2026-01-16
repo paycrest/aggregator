@@ -477,7 +477,10 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	var splitOrderId uuid.UUID
 
 	if strings.HasPrefix(network.Identifier, "starknet") {
-		splitOrderId, err = uuid.Parse(event.SplitOrderId)
+		splitOrderId, err = uuid.Parse(strings.ReplaceAll(event.SplitOrderId, "0x", ""))
+		if err != nil {
+			return fmt.Errorf("UpdateOrderStatusSettled.splitOrderId: %v", err)
+		}
 	} else {
 		splitOrderId, err = uuid.Parse(string(ethcommon.FromHex(event.SplitOrderId)))
 		if err != nil {
