@@ -432,69 +432,83 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 
 	// Sends order directly to the specified provider in order.
 	// Incase of failure, do nothing. The order will eventually refund
-	// Only skip if provider has exceeded max retry attempts
-	if order.ProviderID != "" && s.countProviderInExcludeList(excludeList, order.ProviderID) < orderConf.ProviderMaxRetryAttempts {
-		provider, err := storage.Client.ProviderProfile.
-			Query().
-			Where(
-				providerprofile.IDEQ(order.ProviderID),
-			).
-			Only(ctx)
+	// For OTC orders: skip if provider appears in exclude list at all
+	// For regular orders: only skip if provider has exceeded max retry attempts
+	if order.ProviderID != "" {
+		excludeCount := s.countProviderInExcludeList(excludeList, order.ProviderID)
+		shouldSkip := false
+		if order.OrderType == "otc" {
+			// OTC orders skip immediately if provider is in exclude list
+			shouldSkip = excludeCount > 0
+		} else {
+			// Regular orders allow up to max retry attempts
+			shouldSkip = excludeCount >= orderConf.ProviderMaxRetryAttempts
+		}
+		if shouldSkip {
+			// Provider should be skipped, continue to queue matching
+		} else {
+			provider, err := storage.Client.ProviderProfile.
+				Query().
+				Where(
+					providerprofile.IDEQ(order.ProviderID),
+				).
+				Only(ctx)
 
-		if err == nil {
-			// TODO: check for provider's minimum and maximum rate for negotiation
-			// Update the rate with the current rate if order was last updated more than 10 mins ago
-			if !order.UpdatedAt.IsZero() && order.UpdatedAt.Before(time.Now().Add(-10*time.Minute)) {
-				order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", err),
-						"OrderID":    order.ID.String(),
-						"ProviderID": order.ProviderID,
-					}).Errorf("failed to get rate for provider")
+			if err == nil {
+				// TODO: check for provider's minimum and maximum rate for negotiation
+				// Update the rate with the current rate if order was last updated more than 10 mins ago
+				if !order.UpdatedAt.IsZero() && order.UpdatedAt.Before(time.Now().Add(-10*time.Minute)) {
+					order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", err),
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.ProviderID,
+						}).Errorf("failed to get rate for provider")
+					}
+					_, err = storage.Client.PaymentOrder.
+						Update().
+						Where(paymentorder.MessageHashEQ(order.MessageHash)).
+						SetRate(order.Rate).
+						Save(ctx)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", err),
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.ProviderID,
+						}).Errorf("failed to update rate for provider")
+					}
 				}
-				_, err = storage.Client.PaymentOrder.
-					Update().
-					Where(paymentorder.MessageHashEQ(order.MessageHash)).
-					SetRate(order.Rate).
-					Save(ctx)
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", err),
-						"OrderID":    order.ID.String(),
-						"ProviderID": order.ProviderID,
-					}).Errorf("failed to update rate for provider")
-				}
-			}
 
-			// Handle OTC orders differently - no balance reservation, no provision node request
-			if order.OrderType == "otc" {
-				if err := s.assignOtcOrder(ctx, order); err != nil {
-					return err
-				}
-				return nil
-			} else {
-				// Regular orders: send order request (balance reservation + provision node)
-				err = s.sendOrderRequest(ctx, order)
-				if err == nil {
+				// Handle OTC orders differently - no balance reservation, no provision node request
+				if order.OrderType == "otc" {
+					if err := s.assignOtcOrder(ctx, order); err != nil {
+						return err
+					}
 					return nil
+				} else {
+					// Regular orders: send order request (balance reservation + provision node)
+					err = s.sendOrderRequest(ctx, order)
+					if err == nil {
+						return nil
+					}
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+					}).Errorf("failed to send order request to specific provider")
 				}
+			} else {
 				logger.WithFields(logger.Fields{
 					"Error":      fmt.Sprintf("%v", err),
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.ProviderID,
-				}).Errorf("failed to send order request to specific provider")
+				}).Errorf("failed to get provider")
 			}
-		} else {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"OrderID":    order.ID.String(),
-				"ProviderID": order.ProviderID,
-			}).Errorf("failed to get provider")
-		}
 
-		if provider != nil && provider.VisibilityMode == providerprofile.VisibilityModePrivate {
-			return nil
+			if provider != nil && provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+				return nil
+			}
 		}
 	}
 
@@ -907,8 +921,17 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 
 		order.ProviderID = parts[0]
 
-		// Skip entry if provider has exceeded max retry attempts
-		if s.countProviderInExcludeList(excludeList, order.ProviderID) >= orderConf.ProviderMaxRetryAttempts {
+		// Skip entry based on order type and exclude list count
+		excludeCount := s.countProviderInExcludeList(excludeList, order.ProviderID)
+		shouldSkip := false
+		if order.OrderType == "otc" {
+			// OTC orders skip immediately if provider is in exclude list
+			shouldSkip = excludeCount > 0
+		} else {
+			// Regular orders allow up to max retry attempts
+			shouldSkip = excludeCount >= orderConf.ProviderMaxRetryAttempts
+		}
+		if shouldSkip {
 			continue
 		}
 
@@ -1035,7 +1058,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 					}).Errorf("failed to send order request to specific provider when matching rate")
 
 					// Add provider to exclude list before reassigning
-					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidity*2)
+					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidity*4)
 
 					// Note: Balance cleanup is now handled in sendOrderRequest via defer
 					// Reassign the payment order to another provider
