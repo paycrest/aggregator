@@ -18,6 +18,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
@@ -29,13 +30,13 @@ import (
 	userEnt "github.com/paycrest/aggregator/ent/user"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/paycrest/aggregator/utils/test"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
 	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -117,8 +118,8 @@ func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey strin
 
 		order.ProviderID = parts[0]
 
-		// Skip entry if provider is excluded
-		if utils.ContainsString(excludeList, order.ProviderID) {
+		// Skip entry if provider has exceeded max retry attempts
+		if s.countProviderInExcludeList(excludeList, order.ProviderID) >= config.OrderConfig().ProviderMaxRetryAttempts {
 			continue
 		}
 
@@ -757,78 +758,183 @@ func TestPriorityQueueTest(t *testing.T) {
 		})
 	})
 
-	// TODO: move these tests to tasks_test.go
-	// t.Run("TestNoErrorFunctions", func(t *testing.T) {
+	t.Run("TestCountProviderInExcludeList", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			excludeList []string
+			providerID  string
+			expected    int
+		}{
+			{
+				name:        "Provider not in exclude list",
+				excludeList: []string{"provider1", "provider2"},
+				providerID:  "provider3",
+				expected:    0,
+			},
+			{
+				name:        "Provider appears once",
+				excludeList: []string{"provider1", "provider2", "provider1"},
+				providerID:  "provider1",
+				expected:    2,
+			},
+			{
+				name:        "Provider appears multiple times",
+				excludeList: []string{"provider1", "provider2", "provider1", "provider1", "provider3"},
+				providerID:  "provider1",
+				expected:    3,
+			},
+			{
+				name:        "Empty exclude list",
+				excludeList: []string{},
+				providerID:  "provider1",
+				expected:    0,
+			},
+			{
+				name:        "Provider appears at max retry attempts",
+				excludeList: []string{"provider1", "provider1", "provider1"},
+				providerID:  "provider1",
+				expected:    3,
+			},
+		}
 
-	// 	t.Run("TestReassignUnfulfilledLockOrders", func(t *testing.T) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result := service.countProviderInExcludeList(tt.excludeList, tt.providerID)
+				assert.Equal(t, tt.expected, result, "Count should match expected value")
+			})
+		}
+	})
 
-	// 		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
-	// 			"provider_id": testCtxForPQ.privateProviderProfile.ID,
-	// 			"min_amount":  testCtxForPQ.minAmount,
-	// 			"max_amount":  testCtxForPQ.maxAmount,
-	// 			"currency_id": testCtxForPQ.currency.ID,
-	// 		})
-	// 		assert.NoError(t, err)
-	// 		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
-	// 			"provider": testCtxForPQ.publicProviderProfile,
-	// 			"token_id":  testCtxForPQ.token.ID,
-	// 			"status":   lockpaymentorder.StatusProcessing.String(),
-	// 		})
-	// 		assert.NoError(t, err)
+	t.Run("TestProviderMaxRetryAttemptsConfigValidation", func(t *testing.T) {
+		// Save original value
+		originalValue := viper.GetInt("PROVIDER_MAX_RETRY_ATTEMPTS")
 
-	// 		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
-	// 		assert.NoError(t, err)
+		// Test cases: invalid values should be corrected to 3
+		testCases := []struct {
+			name     string
+			setValue int
+			expected int
+		}{
+			{
+				name:     "Zero value should be corrected to 3",
+				setValue: 0,
+				expected: 3,
+			},
+			{
+				name:     "Negative value should be corrected to 3",
+				setValue: -1,
+				expected: 3,
+			},
+			{
+				name:     "Large negative value should be corrected to 3",
+				setValue: -100,
+				expected: 3,
+			},
+			{
+				name:     "Valid positive value should be preserved",
+				setValue: 5,
+				expected: 5,
+			},
+			{
+				name:     "Value of 1 should be preserved",
+				setValue: 1,
+				expected: 1,
+			},
+		}
 
-	// 		service.ReassignUnfulfilledLockOrders()
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				// Set the test value
+				viper.Set("PROVIDER_MAX_RETRY_ATTEMPTS", tc.setValue)
 
-	// 		order, err := db.Client.LockPaymentOrder.
-	// 			Query().
-	// 			Where(lockpaymentorder.IDEQ(_order.ID)).Only(context.Background())
-	// 		assert.NoError(t, err)
+				// Get config (this triggers validation)
+				orderConfig := config.OrderConfig()
 
-	// 		//validate the ReassignUnfulfilledLockOrders updated the UnfulfilledLockOrder
-	// 		assert.True(t, _order.UpdatedAt.Before(order.UpdatedAt))
-	// 	})
+				// Verify the value
+				assert.Equal(t, tc.expected, orderConfig.ProviderMaxRetryAttempts,
+					"ProviderMaxRetryAttempts should be corrected to expected value")
+			})
+		}
 
-	// 	t.Run("TestReassignStaleOrderRequest", func(t *testing.T) {
-	// 		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
-	// 			"provider_id": testCtxForPQ.privateProviderProfile.ID,
-	// 			"min_amount":  testCtxForPQ.minAmount,
-	// 			"max_amount":  testCtxForPQ.maxAmount,
-	// 			"currency_id": testCtxForPQ.currency.ID,
-	// 		})
-	// 		assert.NoError(t, err)
-	// 		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
-	// 			"provider":  testCtxForPQ.privateProviderProfile,
-	// 			"token_id":   testCtxForPQ.token.ID,
-	// 			"status":    lockpaymentorder.StatusProcessing.String(),
-	// 			"updatedAt": time.Now().Add(-5 * time.Minute),
-	// 		})
-	// 		assert.NoError(t, err)
+		// Restore original value
+		viper.Set("PROVIDER_MAX_RETRY_ATTEMPTS", originalValue)
+	})
 
-	// 		orderKey := fmt.Sprintf("order_exclude_list_%s", _order.ID)
-	// 		_, err = db.RedisClient.RPush(context.Background(), orderKey, testCtxForPQ.privateProviderProfile.ID).Result()
-	// 		assert.NoError(t, err)
+	t.Run("TestProviderRetryLogic", func(t *testing.T) {
+		ctx := context.Background()
 
-	// 		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
-	// 		assert.NoError(t, err)
+		// Set max retry attempts to 3 for testing
+		originalValue := viper.GetInt("PROVIDER_MAX_RETRY_ATTEMPTS")
+		viper.Set("PROVIDER_MAX_RETRY_ATTEMPTS", 3)
+		defer viper.Set("PROVIDER_MAX_RETRY_ATTEMPTS", originalValue)
 
-	// 		service.ReassignUnfulfilledLockOrders()
+		t.Run("Provider can retry up to max attempts", func(t *testing.T) {
+			orderID := testCtxForPQ.publicProviderProfile.ID
+			excludeListKey := fmt.Sprintf("order_exclude_list_%s", "test-order-id")
 
-	// 		// Create Channel
-	// 		orderRequestChan := make(chan *redis.Message, 1)
-	// 		orderRequestChan <- &redis.Message{Payload: _order.ID.String() + "_" + "TEST"}
-	// 		service.ReassignStaleOrderRequest(context.Background(), orderRequestChan)
+			// Test that provider is not excluded with 0 failures
+			excludeList, _ := db.RedisClient.LRange(ctx, excludeListKey, 0, -1).Result()
+			count := service.countProviderInExcludeList(excludeList, orderID)
+			assert.Equal(t, 0, count, "Provider should have 0 failures initially")
 
-	// 		order, err := db.Client.LockPaymentOrder.
-	// 			Query().
-	// 			Where(lockpaymentorder.IDEQ(_order.ID)).Only(context.Background())
-	// 		assert.NoError(t, err)
-	// 		// validate the StaleOrderRequest updated the StaleOrderRequest
-	// 		assert.True(t, _order.UpdatedAt.Before(order.UpdatedAt))
+			// Add provider to exclude list once (first failure)
+			_, err := db.RedisClient.RPush(ctx, excludeListKey, orderID).Result()
+			assert.NoError(t, err)
 
-	// 		// Close channel
-	// 		close(orderRequestChan)
-	// 	})
-	// })
+			excludeList, _ = db.RedisClient.LRange(ctx, excludeListKey, 0, -1).Result()
+			count = service.countProviderInExcludeList(excludeList, orderID)
+			assert.Equal(t, 1, count, "Provider should have 1 failure")
+			assert.True(t, count < 3, "Provider should still be eligible (count < max)")
+
+			// Add provider to exclude list again (second failure)
+			_, err = db.RedisClient.RPush(ctx, excludeListKey, orderID).Result()
+			assert.NoError(t, err)
+
+			excludeList, _ = db.RedisClient.LRange(ctx, excludeListKey, 0, -1).Result()
+			count = service.countProviderInExcludeList(excludeList, orderID)
+			assert.Equal(t, 2, count, "Provider should have 2 failures")
+			assert.True(t, count < 3, "Provider should still be eligible (count < max)")
+
+			// Add provider to exclude list third time (third failure)
+			_, err = db.RedisClient.RPush(ctx, excludeListKey, orderID).Result()
+			assert.NoError(t, err)
+
+			excludeList, _ = db.RedisClient.LRange(ctx, excludeListKey, 0, -1).Result()
+			count = service.countProviderInExcludeList(excludeList, orderID)
+			assert.Equal(t, 3, count, "Provider should have 3 failures")
+			assert.True(t, count >= 3, "Provider should now be excluded (count >= max)")
+
+			// Add provider to exclude list fourth time (fourth failure)
+			_, err = db.RedisClient.RPush(ctx, excludeListKey, orderID).Result()
+			assert.NoError(t, err)
+
+			excludeList, _ = db.RedisClient.LRange(ctx, excludeListKey, 0, -1).Result()
+			count = service.countProviderInExcludeList(excludeList, orderID)
+			assert.Equal(t, 4, count, "Provider should have 4 failures")
+			assert.True(t, count >= 3, "Provider should still be excluded (count >= max)")
+		})
+
+		t.Run("Multiple providers in exclude list are counted independently", func(t *testing.T) {
+			provider1ID := testCtxForPQ.publicProviderProfile.ID
+			provider2ID := "provider-2-id"
+			excludeListKey := fmt.Sprintf("order_exclude_list_%s", "test-order-id-2")
+
+			// Add provider1 twice and provider2 once
+			_, err := db.RedisClient.RPush(ctx, excludeListKey, provider1ID).Result()
+			assert.NoError(t, err)
+			_, err = db.RedisClient.RPush(ctx, excludeListKey, provider1ID).Result()
+			assert.NoError(t, err)
+			_, err = db.RedisClient.RPush(ctx, excludeListKey, provider2ID).Result()
+			assert.NoError(t, err)
+
+			excludeList, _ := db.RedisClient.LRange(ctx, excludeListKey, 0, -1).Result()
+
+			// Verify counts are independent
+			count1 := service.countProviderInExcludeList(excludeList, provider1ID)
+			count2 := service.countProviderInExcludeList(excludeList, provider2ID)
+
+			assert.Equal(t, 2, count1, "Provider1 should have 2 failures")
+			assert.Equal(t, 1, count2, "Provider2 should have 1 failure")
+		})
+	})
 }
