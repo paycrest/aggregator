@@ -307,8 +307,9 @@ func TestSendPartnerOnboardingSuccessEmail(t *testing.T) {
 		notificationConf: &config.NotificationConfiguration{EmailFromAddress: "onboarding@paycrest.io"},
 	}
 
-	apiKey := "test-api-key-12345"
-	password := "TempPass123!"
+	// gitleaks:allow - test data only
+	apiKey := "test-dummy-api-key-not-real"
+	password := "TestPassword123!"
 	resp, err := service.SendPartnerOnboardingSuccessEmail(context.Background(), "partner@company.com", "John", apiKey, password)
 	assert.NoError(t, err)
 	assert.Equal(t, "partner-onboarding-123", resp.Id)
@@ -331,8 +332,9 @@ func TestSendPartnerOnboardingSuccessEmail_WithFallback(t *testing.T) {
 		notificationConf: &config.NotificationConfiguration{EmailFromAddress: "onboarding@paycrest.io"},
 	}
 
-	apiKey := "fallback-api-key"
-	password := "FallbackPass456!"
+	// gitleaks:allow - test data only
+	apiKey := "test-dummy-fallback-key-not-real"
+	password := "TestPassword456!"
 	resp, err := service.SendPartnerOnboardingSuccessEmail(context.Background(), "fallback@company.com", "Jane", apiKey, password)
 	assert.NoError(t, err)
 	assert.Equal(t, "fallback-partner-onboarding", resp.Id)
