@@ -241,23 +241,17 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
 	prevRedisKey := redisKey + "_prev"
+	tempRedisKey := redisKey + "_temp"
 
-	// Delete the previous queue
-	err := s.deleteQueue(ctx, prevRedisKey)
-	if err != nil && err != context.Canceled {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-			"Key":   prevRedisKey,
-		}).Errorf("failed to delete previous provider queue")
-	}
-
-	// Copy the current queue to the previous queue
+	// Copy the current queue to the previous queue (backup before rebuilding)
 	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 	if err != nil && err != context.Canceled {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
 			"Key":   redisKey,
 		}).Errorf("failed to fetch provider rates")
+		// If we can't read current queue, abort to prevent data loss
+		return
 	}
 
 	// Convert []string to []interface{}
@@ -266,7 +260,16 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		prevValues[i] = v
 	}
 
-	// Update the previous queue
+	// Delete the previous queue before backing up
+	err = s.deleteQueue(ctx, prevRedisKey)
+	if err != nil && err != context.Canceled {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+			"Key":   prevRedisKey,
+		}).Errorf("failed to delete previous provider queue")
+	}
+
+	// Update the previous queue with current queue data (backup)
 	if len(prevValues) > 0 {
 		err = storage.RedisClient.RPush(ctx, prevRedisKey, prevValues...).Err()
 		if err != nil && err != context.Canceled {
@@ -275,20 +278,24 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 				"Key":    prevRedisKey,
 				"Values": prevValues,
 			}).Errorf("failed to store previous provider rates")
+			// If backup fails, abort to prevent data loss
+			return
 		}
 	}
 
-	// Delete the current queue
-	err = s.deleteQueue(ctx, redisKey)
+	// Delete the temporary queue if it exists (from a previous failed build)
+	err = s.deleteQueue(ctx, tempRedisKey)
 	if err != nil && err != context.Canceled {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
-			"Key":   redisKey,
-		}).Errorf("failed to delete existing circular queue")
+			"Key":   tempRedisKey,
+		}).Errorf("failed to delete temporary provider queue")
 	}
 
 	// TODO: add also the checks for all the currencies that a provider has
 
+	// Build new queue in temporary key first
+	newQueueEntries := 0
 	for _, provider := range providers {
 		exists, err := provider.QueryProviderCurrencies().
 			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID))).
@@ -316,12 +323,16 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			continue
 		}
 
-		tokenSymbols := []string{}
+		// Use map to deduplicate by symbol:network combination
+		// This allows same token symbol on different networks (e.g., USDT on Ethereum vs Tron)
+		tokenKeys := make(map[string]bool)
 		for _, orderToken := range orderTokens {
-			if utils.ContainsString(tokenSymbols, orderToken.Edges.Token.Symbol) {
+			// Create a unique key combining symbol and network
+			tokenKey := fmt.Sprintf("%s:%s", orderToken.Edges.Token.Symbol, orderToken.Network)
+			if tokenKeys[tokenKey] {
 				continue
 			}
-			tokenSymbols = append(tokenSymbols, orderToken.Edges.Token.Symbol)
+			tokenKeys[tokenKey] = true
 
 			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if err != nil {
@@ -343,7 +354,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			// Check provider's rate against the market rate to ensure it's not too far off
 			percentDeviation := utils.AbsPercentageDeviation(bucket.Edges.Currency.MarketRate, rate)
 
-			isLocalStablecoin := strings.Contains(orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code) && !strings.Contains(orderToken.Edges.Token.Symbol, "USD")
+			isLocalStablecoin := strings.Contains(orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if serverConf.Environment == "production" && percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) && !isLocalStablecoin {
 				// Skip this provider if the rate is too far off
 				// TODO: add a logic to notify the provider(s) to update his rate since it's stale. could be a cron job
@@ -353,16 +364,76 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			// Serialize the provider ID, token, rate, min and max order amount into a single string
 			data := fmt.Sprintf("%s:%s:%s:%s:%s", provider.ID, orderToken.Edges.Token.Symbol, rate, orderToken.MinOrderAmount, orderToken.MaxOrderAmount)
 
-			// Enqueue the serialized data into the circular queue
-			err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
-			if err != nil && err != context.Canceled {
+			// Enqueue the serialized data into the temporary circular queue
+			err = storage.RedisClient.RPush(ctx, tempRedisKey, data).Err()
+			if err == nil {
+				newQueueEntries++
+			} else if err != context.Canceled {
 				logger.WithFields(logger.Fields{
 					"Error": fmt.Sprintf("%v", err),
-					"Key":   redisKey,
+					"Key":   tempRedisKey,
 					"Data":  data,
 				}).Errorf("failed to enqueue provider data to circular queue")
 			}
 		}
+	}
+
+	// Only swap queues if new queue has entries, otherwise keep the old queue
+	if newQueueEntries > 0 {
+		// Delete the current queue
+		err = s.deleteQueue(ctx, redisKey)
+		if err != nil && err != context.Canceled {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Key":   redisKey,
+			}).Errorf("failed to delete existing circular queue")
+			// Clean up temp queue if deletion failed
+			_ = s.deleteQueue(ctx, tempRedisKey)
+			return
+		}
+
+		// Rename temp queue to current queue (atomic operation)
+		// Since Redis doesn't have RENAME for lists, we copy and delete
+		tempData, err := storage.RedisClient.LRange(ctx, tempRedisKey, 0, -1).Result()
+		if err != nil && err != context.Canceled {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Key":   tempRedisKey,
+			}).Errorf("failed to read temporary queue for swap")
+			// Clean up temp queue
+			_ = s.deleteQueue(ctx, tempRedisKey)
+			return
+		}
+
+		// Copy temp queue to current queue
+		if len(tempData) > 0 {
+			tempValues := make([]interface{}, len(tempData))
+			for i, v := range tempData {
+				tempValues[i] = v
+			}
+			err = storage.RedisClient.RPush(ctx, redisKey, tempValues...).Err()
+			if err != nil && err != context.Canceled {
+				logger.WithFields(logger.Fields{
+					"Error": fmt.Sprintf("%v", err),
+					"Key":   redisKey,
+				}).Errorf("failed to copy temporary queue to current queue")
+				// Clean up temp queue
+				_ = s.deleteQueue(ctx, tempRedisKey)
+				return
+			}
+		}
+
+		// Delete temporary queue after successful swap
+		err = s.deleteQueue(ctx, tempRedisKey)
+		if err != nil && err != context.Canceled {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Key":   tempRedisKey,
+			}).Warnf("failed to delete temporary queue after swap (non-critical)")
+		}
+	} else {
+		// New queue is empty, keep the old queue and clean up temp
+		_ = s.deleteQueue(ctx, tempRedisKey)
 	}
 }
 
