@@ -1060,7 +1060,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 
 			// For OTC orders, skip balance check and assign order to provider
 			if order.OrderType == "otc" {
-				// Check if provider has been attempted 3+ times before assigning
+				// Check if provider has been attempted max times before assigning
 				attemptCount, err := s.getProviderAttemptCount(ctx, order.ID.String(), order.ProviderID)
 				if err != nil {
 					logger.WithFields(logger.Fields{
@@ -1069,14 +1069,15 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 						"ProviderID": order.ProviderID,
 					}).Warnf("Failed to get provider attempt count, allowing assignment")
 					// Continue if we can't get count - allow assignment
-				} else if attemptCount >= 3 {
-					// Provider has been attempted 3+ times, add to exclude list and skip
+				} else if attemptCount >= int64(orderConf.MaxProviderAttempts) {
+					// Provider has been attempted max times, add to exclude list and skip
 					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidityOtc*2)
 					logger.WithFields(logger.Fields{
 						"OrderID":      order.ID.String(),
 						"ProviderID":   order.ProviderID,
 						"AttemptCount": attemptCount,
-					}).Infof("Skipping provider - exceeded 3 attempts")
+						"MaxAttempts":  orderConf.MaxProviderAttempts,
+					}).Infof("Skipping provider - exceeded max attempts")
 					continue
 				}
 
@@ -1105,7 +1106,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 					continue
 				}
 
-				// Check if provider has been attempted 3+ times before assigning
+				// Check if provider has been attempted max times before assigning
 				attemptCount, err := s.getProviderAttemptCount(ctx, order.ID.String(), order.ProviderID)
 				if err != nil {
 					logger.WithFields(logger.Fields{
@@ -1114,14 +1115,15 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 						"ProviderID": order.ProviderID,
 					}).Warnf("Failed to get provider attempt count, allowing assignment")
 					// Continue if we can't get count - allow assignment
-				} else if attemptCount >= 3 {
-					// Provider has been attempted 3+ times, add to exclude list and skip
+				} else if attemptCount >= int64(orderConf.MaxProviderAttempts) {
+					// Provider has been attempted max times, add to exclude list and skip
 					s.addProviderToExcludeList(ctx, order.ID.String(), order.ProviderID, orderConf.OrderRequestValidity*2)
 					logger.WithFields(logger.Fields{
 						"OrderID":      order.ID.String(),
 						"ProviderID":   order.ProviderID,
 						"AttemptCount": attemptCount,
-					}).Infof("Skipping provider - exceeded 3 attempts")
+						"MaxAttempts":  orderConf.MaxProviderAttempts,
+					}).Infof("Skipping provider - exceeded max attempts")
 					continue
 				}
 
