@@ -630,6 +630,10 @@ func init() {
 	userDescHasEarlyAccess := userFields[7].Descriptor()
 	// user.DefaultHasEarlyAccess holds the default value on creation for the has_early_access field.
 	user.DefaultHasEarlyAccess = userDescHasEarlyAccess.Default.(bool)
+	// userDescReferralID is the schema descriptor for referral_id field.
+	userDescReferralID := userFields[9].Descriptor()
+	// user.ReferralIDValidator is a validator for the "referral_id" field. It is called by the builders before save.
+	user.ReferralIDValidator = userDescReferralID.Validators[0].(func(string) error)
 	// userDescID is the schema descriptor for id field.
 	userDescID := userFields[0].Descriptor()
 	// user.DefaultID holds the default value on creation for the id field.

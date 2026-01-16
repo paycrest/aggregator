@@ -41,6 +41,8 @@ type User struct {
 	HasEarlyAccess bool `json:"has_early_access,omitempty"`
 	// KybVerificationStatus holds the value of the "kyb_verification_status" field.
 	KybVerificationStatus user.KybVerificationStatus `json:"kyb_verification_status,omitempty"`
+	// ReferralID holds the value of the "referral_id" field.
+	ReferralID string `json:"referral_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`
@@ -111,7 +113,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case user.FieldIsEmailVerified, user.FieldHasEarlyAccess:
 			values[i] = new(sql.NullBool)
-		case user.FieldFirstName, user.FieldLastName, user.FieldEmail, user.FieldPassword, user.FieldScope, user.FieldKybVerificationStatus:
+		case user.FieldFirstName, user.FieldLastName, user.FieldEmail, user.FieldPassword, user.FieldScope, user.FieldKybVerificationStatus, user.FieldReferralID:
 			values[i] = new(sql.NullString)
 		case user.FieldCreatedAt, user.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -198,6 +200,12 @@ func (_m *User) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.KybVerificationStatus = user.KybVerificationStatus(value.String)
 			}
+		case user.FieldReferralID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field referral_id", values[i])
+			} else if value.Valid {
+				_m.ReferralID = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -282,6 +290,9 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("kyb_verification_status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.KybVerificationStatus))
+	builder.WriteString(", ")
+	builder.WriteString("referral_id=")
+	builder.WriteString(_m.ReferralID)
 	builder.WriteByte(')')
 	return builder.String()
 }

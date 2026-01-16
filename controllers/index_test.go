@@ -13,6 +13,7 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/routers/middleware"
+	svc "github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
@@ -748,6 +749,225 @@ func TestIndex(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "error", response.Status)
 			assert.Equal(t, "Invalid input", response.Message)
+		})
+
+		t.Run("KYB submission with referral_id and sender profile - sends partner onboarding email", func(t *testing.T) {
+			// Create test user with referral_id
+			referralID := "partner-123"
+			partnerUser, err := test.CreateTestUser(map[string]interface{}{
+				"firstName": "Partner",
+				"lastName":  "User",
+				"email":     "partneruser@example.com",
+				"scope":     "sender",
+			})
+			assert.NoError(t, err)
+
+			// Update user to set referral_id
+			_, err = db.Client.User.
+				UpdateOneID(partnerUser.ID).
+				SetReferralID(referralID).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			// Create sender profile and API key
+			test.CreateTestFiatCurrency(nil)
+			test.CreateERC20Token(map[string]interface{}{})
+			senderProfile, err := test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": partnerUser.ID,
+			})
+			assert.NoError(t, err)
+
+			apiKeyService := svc.NewAPIKeyService()
+			_, _, err = apiKeyService.GenerateAPIKey(context.Background(), nil, senderProfile, nil)
+			assert.NoError(t, err)
+
+			// Generate JWT token for the test user
+			partnerToken, err := tokenUtils.GenerateAccessJWT(partnerUser.ID.String(), "sender")
+			assert.NoError(t, err)
+
+			validKYBSubmission := types.KYBSubmissionInput{
+				MobileNumber:                  "+1234567890",
+				CompanyName:                   "Partner Company Ltd",
+				RegisteredBusinessAddress:     "123 Partner St, Test City, TC 12345",
+				CertificateOfIncorporationUrl: "https://example.com/partner-cert.pdf",
+				ArticlesOfIncorporationUrl:    "https://example.com/partner-articles.pdf",
+				ProofOfBusinessAddressUrl:     "https://example.com/partner-business-address.pdf",
+				ProofOfResidentialAddressUrl:  "https://example.com/partner-residential-address.pdf",
+				IAcceptTerms:                  true,
+				BeneficialOwners: []types.BeneficialOwnerInput{
+					{
+						FullName:                     "Partner Owner",
+						ResidentialAddress:           "456 Partner Ave, Test City, TC 12345",
+						ProofOfResidentialAddressUrl: "https://example.com/partner-owner-residential.pdf",
+						GovernmentIssuedIdUrl:        "https://example.com/partner-owner-id.pdf",
+						DateOfBirth:                  "1985-01-01",
+						OwnershipPercentage:          100.0,
+						GovernmentIssuedIdType:       "passport",
+					},
+				},
+			}
+
+			headers := map[string]string{
+				"Authorization": "Bearer " + partnerToken,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", validKYBSubmission, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "KYB submission submitted successfully", response.Message)
+
+			// Verify user has referral_id
+			updatedUser, err := db.Client.User.
+				Query().
+				Where(user.IDEQ(partnerUser.ID)).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.NotEmpty(t, updatedUser.ReferralID)
+			assert.Equal(t, referralID, updatedUser.ReferralID)
+		})
+
+		t.Run("KYB submission with referral_id and provider profile - sends partner onboarding email", func(t *testing.T) {
+			// Create test user with referral_id
+			referralID := "partner-456"
+			providerUser, err := test.CreateTestUser(map[string]interface{}{
+				"firstName": "Provider",
+				"lastName":  "Partner",
+				"email":     "providerpartner@example.com",
+				"scope":     "provider",
+			})
+			assert.NoError(t, err)
+
+			// Update user to set referral_id
+			_, err = db.Client.User.
+				UpdateOneID(providerUser.ID).
+				SetReferralID(referralID).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			// Create provider profile and API key
+			currency, err := test.CreateTestFiatCurrency(nil)
+			assert.NoError(t, err)
+			providerProfile, err := test.CreateTestProviderProfile(map[string]interface{}{
+				"user_id":     providerUser.ID,
+				"currency_id": currency.ID,
+			})
+			assert.NoError(t, err)
+
+			apiKeyService := svc.NewAPIKeyService()
+			_, _, err = apiKeyService.GenerateAPIKey(context.Background(), nil, nil, providerProfile)
+			assert.NoError(t, err)
+
+			// Generate JWT token for the test user
+			providerToken, err := tokenUtils.GenerateAccessJWT(providerUser.ID.String(), "provider")
+			assert.NoError(t, err)
+
+			validKYBSubmission := types.KYBSubmissionInput{
+				MobileNumber:                  "+9876543210",
+				CompanyName:                   "Provider Partner Company Ltd",
+				RegisteredBusinessAddress:     "789 Provider St, Test City, TC 12345",
+				CertificateOfIncorporationUrl: "https://example.com/provider-cert.pdf",
+				ArticlesOfIncorporationUrl:    "https://example.com/provider-articles.pdf",
+				ProofOfBusinessAddressUrl:     "https://example.com/provider-business-address.pdf",
+				ProofOfResidentialAddressUrl:  "https://example.com/provider-residential-address.pdf",
+				IAcceptTerms:                  true,
+				BeneficialOwners: []types.BeneficialOwnerInput{
+					{
+						FullName:                     "Provider Owner",
+						ResidentialAddress:           "321 Provider Ave, Test City, TC 12345",
+						ProofOfResidentialAddressUrl: "https://example.com/provider-owner-residential.pdf",
+						GovernmentIssuedIdUrl:        "https://example.com/provider-owner-id.pdf",
+						DateOfBirth:                  "1980-05-15",
+						OwnershipPercentage:          100.0,
+						GovernmentIssuedIdType:       "national_id",
+					},
+				},
+			}
+
+			headers := map[string]string{
+				"Authorization": "Bearer " + providerToken,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", validKYBSubmission, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+
+			// Verify user has referral_id
+			updatedUser, err := db.Client.User.
+				Query().
+				Where(user.IDEQ(providerUser.ID)).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.NotEmpty(t, updatedUser.ReferralID)
+			assert.Equal(t, referralID, updatedUser.ReferralID)
+		})
+
+		t.Run("KYB submission without referral_id - does not send partner onboarding email", func(t *testing.T) {
+			// Create test user without referral_id
+			regularUser, err := test.CreateTestUser(map[string]interface{}{
+				"firstName": "Regular",
+				"lastName":  "User",
+				"email":     "regularuser@example.com",
+				"scope":     "sender",
+			})
+			assert.NoError(t, err)
+
+			// Generate JWT token for the test user
+			regularToken, err := tokenUtils.GenerateAccessJWT(regularUser.ID.String(), "sender")
+			assert.NoError(t, err)
+
+			validKYBSubmission := types.KYBSubmissionInput{
+				MobileNumber:                  "+1111111111",
+				CompanyName:                   "Regular Company Ltd",
+				RegisteredBusinessAddress:     "123 Regular St, Test City, TC 12345",
+				CertificateOfIncorporationUrl: "https://example.com/regular-cert.pdf",
+				ArticlesOfIncorporationUrl:    "https://example.com/regular-articles.pdf",
+				ProofOfBusinessAddressUrl:     "https://example.com/regular-business-address.pdf",
+				ProofOfResidentialAddressUrl:  "https://example.com/regular-residential-address.pdf",
+				IAcceptTerms:                  true,
+				BeneficialOwners: []types.BeneficialOwnerInput{
+					{
+						FullName:                     "Regular Owner",
+						ResidentialAddress:           "456 Regular Ave, Test City, TC 12345",
+						ProofOfResidentialAddressUrl: "https://example.com/regular-owner-residential.pdf",
+						GovernmentIssuedIdUrl:        "https://example.com/regular-owner-id.pdf",
+						DateOfBirth:                  "1990-01-01",
+						OwnershipPercentage:          100.0,
+						GovernmentIssuedIdType:       "passport",
+					},
+				},
+			}
+
+			headers := map[string]string{
+				"Authorization": "Bearer " + regularToken,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v1/kyb-submission", validKYBSubmission, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+
+			// Verify user does NOT have referral_id (should be empty)
+			updatedUser, err := db.Client.User.
+				Query().
+				Where(user.IDEQ(regularUser.ID)).
+				Only(context.Background())
+			assert.NoError(t, err)
+			// referral_id should be empty (not set) for regular users
+			assert.Empty(t, updatedUser.ReferralID)
 		})
 	})
 

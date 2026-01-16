@@ -37,6 +37,8 @@ const (
 	FieldHasEarlyAccess = "has_early_access"
 	// FieldKybVerificationStatus holds the string denoting the kyb_verification_status field in the database.
 	FieldKybVerificationStatus = "kyb_verification_status"
+	// FieldReferralID holds the string denoting the referral_id field in the database.
+	FieldReferralID = "referral_id"
 	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
 	EdgeSenderProfile = "sender_profile"
 	// EdgeProviderProfile holds the string denoting the provider_profile edge name in mutations.
@@ -90,6 +92,7 @@ var Columns = []string{
 	FieldIsEmailVerified,
 	FieldHasEarlyAccess,
 	FieldKybVerificationStatus,
+	FieldReferralID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -123,6 +126,8 @@ var (
 	DefaultIsEmailVerified bool
 	// DefaultHasEarlyAccess holds the default value on creation for the "has_early_access" field.
 	DefaultHasEarlyAccess bool
+	// ReferralIDValidator is a validator for the "referral_id" field. It is called by the builders before save.
+	ReferralIDValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -211,6 +216,11 @@ func ByHasEarlyAccess(opts ...sql.OrderTermOption) OrderOption {
 // ByKybVerificationStatus orders the results by the kyb_verification_status field.
 func ByKybVerificationStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldKybVerificationStatus, opts...).ToFunc()
+}
+
+// ByReferralID orders the results by the referral_id field.
+func ByReferralID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReferralID, opts...).ToFunc()
 }
 
 // BySenderProfileField orders the results by sender_profile field.
