@@ -772,7 +772,7 @@ func TestPriorityQueueTest(t *testing.T) {
 				expected:    0,
 			},
 			{
-				name:        "Provider appears once",
+				name:        "Provider appears twice",
 				excludeList: []string{"provider1", "provider2", "provider1"},
 				providerID:  "provider1",
 				expected:    2,
