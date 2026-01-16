@@ -99,7 +99,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 				Message: fmt.Sprintf("Minimum amount for Ethereum is %s", minEthereumAmount.String()),
 			})
 			return
-		} else if payload.Amount.LessThan(minEthereumCNGNAmount) && payload.Token == "CNGN" {
+		} else if payload.Amount.LessThan(minEthereumCNGNAmount) && strings.EqualFold(payload.Token, "CNGN") {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 				Field:   "Amount",
 				Message: fmt.Sprintf("Minimum amount for Ethereum CNGN is %s", minEthereumCNGNAmount.String()),
