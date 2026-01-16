@@ -22,6 +22,7 @@ type OrderConfiguration struct {
 	EntryPointContractAddress        common.Address
 	BucketQueueRebuildInterval       int
 	RefundCancellationCount          int
+	ProviderMaxRetryAttempts         int
 	PercentDeviationFromExternalRate decimal.Decimal
 	PercentDeviationFromMarketRate   decimal.Decimal
 	IndexingDuration                 time.Duration
@@ -38,10 +39,18 @@ func OrderConfig() *OrderConfiguration {
 	viper.SetDefault("ORDER_REFUND_TIMEOUT_OTC", 5400)
 	viper.SetDefault("BUCKET_QUEUE_REBUILD_INTERVAL", 1)
 	viper.SetDefault("REFUND_CANCELLATION_COUNT", 3)
+	viper.SetDefault("PROVIDER_MAX_RETRY_ATTEMPTS", 3)
 	viper.SetDefault("NETWORK_FEE", 0.05)
 	viper.SetDefault("PERCENT_DEVIATION_FROM_EXTERNAL_RATE", 0.01)
 	viper.SetDefault("PERCENT_DEVIATION_FROM_MARKET_RATE", 0.1)
 	viper.SetDefault("INDEXING_DURATION", 10)
+
+	// Validate ProviderMaxRetryAttempts to ensure it's at least 1
+	// If invalid (0 or negative), use the default value of 3
+	providerMaxRetryAttempts := viper.GetInt("PROVIDER_MAX_RETRY_ATTEMPTS")
+	if providerMaxRetryAttempts < 1 {
+		providerMaxRetryAttempts = 3
+	}
 
 	return &OrderConfiguration{
 		OrderFulfillmentValidity:         time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY")) * time.Second,
@@ -55,6 +64,7 @@ func OrderConfig() *OrderConfiguration {
 		EntryPointContractAddress:        common.HexToAddress(viper.GetString("ENTRY_POINT_CONTRACT_ADDRESS")),
 		BucketQueueRebuildInterval:       viper.GetInt("BUCKET_QUEUE_REBUILD_INTERVAL"),
 		RefundCancellationCount:          viper.GetInt("REFUND_CANCELLATION_COUNT"),
+		ProviderMaxRetryAttempts:         providerMaxRetryAttempts,
 		PercentDeviationFromExternalRate: decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_EXTERNAL_RATE")),
 		PercentDeviationFromMarketRate:   decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_MARKET_RATE")),
 		IndexingDuration:                 time.Duration(viper.GetInt("INDEXING_DURATION")) * time.Second,

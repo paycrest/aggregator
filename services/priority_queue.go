@@ -432,7 +432,8 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 
 	// Sends order directly to the specified provider in order.
 	// Incase of failure, do nothing. The order will eventually refund
-	if order.ProviderID != "" && !utils.ContainsString(excludeList, order.ProviderID) {
+	// Only skip if provider has exceeded max retry attempts
+	if order.ProviderID != "" && s.countProviderInExcludeList(excludeList, order.ProviderID) < orderConf.ProviderMaxRetryAttempts {
 		provider, err := storage.Client.ProviderProfile.
 			Query().
 			Where(
@@ -644,6 +645,17 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 	return nil
 }
 
+// countProviderInExcludeList counts how many times a provider appears in the exclude list
+func (s *PriorityQueueService) countProviderInExcludeList(excludeList []string, providerID string) int {
+	count := 0
+	for _, id := range excludeList {
+		if id == providerID {
+			count++
+		}
+	}
+	return count
+}
+
 // addProviderToExcludeList adds a provider to the order exclude list with TTL
 // This is a best-effort operation - errors are logged but don't fail the operation
 func (s *PriorityQueueService) addProviderToExcludeList(ctx context.Context, orderID string, providerID string, ttl time.Duration) {
@@ -658,7 +670,7 @@ func (s *PriorityQueueService) addProviderToExcludeList(ctx context.Context, ord
 		return
 	}
 
-	// Set TTL for the exclude list (2x order request validity since orders can be reassigned)
+	// Set TTL for the exclude list
 	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(ttl)).Err()
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -895,8 +907,8 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 
 		order.ProviderID = parts[0]
 
-		// Skip entry if provider is excluded
-		if utils.ContainsString(excludeList, order.ProviderID) {
+		// Skip entry if provider has exceeded max retry attempts
+		if s.countProviderInExcludeList(excludeList, order.ProviderID) >= orderConf.ProviderMaxRetryAttempts {
 			continue
 		}
 
