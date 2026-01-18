@@ -3,7 +3,6 @@
 package ent
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -27,8 +26,6 @@ type TransactionLog struct {
 	Network string `json:"network,omitempty"`
 	// TxHash holds the value of the "tx_hash" field.
 	TxHash string `json:"tx_hash,omitempty"`
-	// Metadata holds the value of the "metadata" field.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt                  time.Time `json:"created_at,omitempty"`
 	payment_order_transactions *uuid.UUID
@@ -40,8 +37,6 @@ func (*TransactionLog) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case transactionlog.FieldMetadata:
-			values[i] = new([]byte)
 		case transactionlog.FieldGatewayID, transactionlog.FieldStatus, transactionlog.FieldNetwork, transactionlog.FieldTxHash:
 			values[i] = new(sql.NullString)
 		case transactionlog.FieldCreatedAt:
@@ -94,14 +89,6 @@ func (_m *TransactionLog) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field tx_hash", values[i])
 			} else if value.Valid {
 				_m.TxHash = value.String
-			}
-		case transactionlog.FieldMetadata:
-			if value, ok := values[i].(*[]byte); !ok {
-				return fmt.Errorf("unexpected type %T for field metadata", values[i])
-			} else if value != nil && len(*value) > 0 {
-				if err := json.Unmarshal(*value, &_m.Metadata); err != nil {
-					return fmt.Errorf("unmarshal field metadata: %w", err)
-				}
 			}
 		case transactionlog.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -163,9 +150,6 @@ func (_m *TransactionLog) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("tx_hash=")
 	builder.WriteString(_m.TxHash)
-	builder.WriteString(", ")
-	builder.WriteString("metadata=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))

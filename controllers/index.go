@@ -410,7 +410,7 @@ func (ctrl *Controller) GetProviderOrderStatus(ctx *gin.Context) {
 
 	status := orders[0].Status
 	if status == paymentorder.StatusCancelled {
-		status = paymentorder.StatusProcessing
+		status = paymentorder.StatusFulfilling
 	}
 
 	response := &types.ProviderOrderStatusResponse{
@@ -2121,7 +2121,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 
 	// Get the second path param, which can be a tx_hash or an address
 	pathParam := ctx.Param("tx_hash_or_address")
-	
+
 	// Validate that pathParam is a valid tx_hash or address
 	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash or address", nil)
@@ -2186,7 +2186,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 			).
 			Only(ctx)
 	}
-	
+
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found or not supported for current environment", nil)

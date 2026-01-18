@@ -454,12 +454,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	transactionLog, err := tx.TransactionLog.
 		Create().
 		SetStatus(transactionlog.StatusOrderInitiated).
-		SetMetadata(
-			map[string]interface{}{
-				"ReceiveAddress": receiveAddress,
-				"SenderID":       sender.ID.String(),
-			},
-		).SetNetwork(token.Edges.Network.Identifier).
+		SetNetwork(token.Edges.Network.Identifier).
 		Save(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
@@ -1406,10 +1401,6 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 	transactionLog, err := tx.TransactionLog.Create().
 		SetStatus(transactionlog.StatusOrderValidated).
 		SetNetwork(paymentOrder.Edges.Token.Edges.Network.Identifier).
-		SetMetadata(map[string]interface{}{
-			"TransactionID": fulfillment.TxID,
-			"PSP":           fulfillment.Psp,
-		}).
 		Save(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{

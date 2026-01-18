@@ -87,12 +87,6 @@ func (_u *TransactionLogUpdate) ClearTxHash() *TransactionLogUpdate {
 	return _u
 }
 
-// SetMetadata sets the "metadata" field.
-func (_u *TransactionLogUpdate) SetMetadata(v map[string]interface{}) *TransactionLogUpdate {
-	_u.mutation.SetMetadata(v)
-	return _u
-}
-
 // Mutation returns the TransactionLogMutation object of the builder.
 func (_u *TransactionLogUpdate) Mutation() *TransactionLogMutation {
 	return _u.mutation
@@ -151,9 +145,6 @@ func (_u *TransactionLogUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(transactionlog.FieldTxHash, field.TypeString)
-	}
-	if value, ok := _u.mutation.Metadata(); ok {
-		_spec.SetField(transactionlog.FieldMetadata, field.TypeJSON, value)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -232,12 +223,6 @@ func (_u *TransactionLogUpdateOne) SetNillableTxHash(v *string) *TransactionLogU
 // ClearTxHash clears the value of the "tx_hash" field.
 func (_u *TransactionLogUpdateOne) ClearTxHash() *TransactionLogUpdateOne {
 	_u.mutation.ClearTxHash()
-	return _u
-}
-
-// SetMetadata sets the "metadata" field.
-func (_u *TransactionLogUpdateOne) SetMetadata(v map[string]interface{}) *TransactionLogUpdateOne {
-	_u.mutation.SetMetadata(v)
 	return _u
 }
 
@@ -329,9 +314,6 @@ func (_u *TransactionLogUpdateOne) sqlSave(ctx context.Context) (_node *Transact
 	}
 	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(transactionlog.FieldTxHash, field.TypeString)
-	}
-	if value, ok := _u.mutation.Metadata(); ok {
-		_spec.SetField(transactionlog.FieldMetadata, field.TypeJSON, value)
 	}
 	_node = &TransactionLog{config: _u.config}
 	_spec.Assign = _node.assignValues

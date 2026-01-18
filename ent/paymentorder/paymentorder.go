@@ -285,14 +285,17 @@ const DefaultStatus = StatusInitiated
 // Status values.
 const (
 	StatusInitiated  Status = "initiated"
+	StatusDeposited  Status = "deposited"
 	StatusPending    Status = "pending"
-	StatusProcessing Status = "processing"
-	StatusCancelled  Status = "cancelled"
+	StatusFulfilling Status = "fulfilling"
 	StatusFulfilled  Status = "fulfilled"
 	StatusValidated  Status = "validated"
-	StatusExpired    Status = "expired"
+	StatusSettling   Status = "settling"
 	StatusSettled    Status = "settled"
+	StatusCancelled  Status = "cancelled"
+	StatusRefunding  Status = "refunding"
 	StatusRefunded   Status = "refunded"
+	StatusExpired    Status = "expired"
 )
 
 func (s Status) String() string {
@@ -302,7 +305,7 @@ func (s Status) String() string {
 // StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
 func StatusValidator(s Status) error {
 	switch s {
-	case StatusInitiated, StatusPending, StatusProcessing, StatusCancelled, StatusFulfilled, StatusValidated, StatusExpired, StatusSettled, StatusRefunded:
+	case StatusInitiated, StatusDeposited, StatusPending, StatusFulfilling, StatusFulfilled, StatusValidated, StatusSettling, StatusSettled, StatusCancelled, StatusRefunding, StatusRefunded, StatusExpired:
 		return nil
 	default:
 		return fmt.Errorf("paymentorder: invalid enum value for status field: %q", s)
