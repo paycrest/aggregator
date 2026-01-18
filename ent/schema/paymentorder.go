@@ -111,7 +111,7 @@ func (PaymentOrder) Fields() []ent.Field {
 			Optional(),
 		// Status & type
 		field.Enum("status").
-			Values("initiated", "pending", "processing", "cancelled", "fulfilled", "validated", "expired", "settled", "refunded").
+			Values("initiated", "deposited", "pending", "fulfilling", "fulfilled", "validated", "settling", "settled", "cancelled", "refunding", "refunded", "expired").
 			Default("initiated"),
 		field.Enum("order_type").
 			Values("otc", "regular").

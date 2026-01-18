@@ -26,7 +26,6 @@ func (TransactionLog) Fields() []ent.Field {
 			Immutable(),
 		field.String("network").Optional(),
 		field.String("tx_hash").Optional(),
-		field.JSON("metadata", map[string]interface{}{}),
 		field.Time("created_at").Default(time.Now).Immutable(),
 	}
 }

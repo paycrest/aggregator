@@ -80,12 +80,6 @@ func (_c *TransactionLogCreate) SetNillableTxHash(v *string) *TransactionLogCrea
 	return _c
 }
 
-// SetMetadata sets the "metadata" field.
-func (_c *TransactionLogCreate) SetMetadata(v map[string]interface{}) *TransactionLogCreate {
-	_c.mutation.SetMetadata(v)
-	return _c
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (_c *TransactionLogCreate) SetCreatedAt(v time.Time) *TransactionLogCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -173,9 +167,6 @@ func (_c *TransactionLogCreate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "TransactionLog.status": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.Metadata(); !ok {
-		return &ValidationError{Name: "metadata", err: errors.New(`ent: missing required field "TransactionLog.metadata"`)}
-	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "TransactionLog.created_at"`)}
 	}
@@ -230,10 +221,6 @@ func (_c *TransactionLogCreate) createSpec() (*TransactionLog, *sqlgraph.CreateS
 	if value, ok := _c.mutation.TxHash(); ok {
 		_spec.SetField(transactionlog.FieldTxHash, field.TypeString, value)
 		_node.TxHash = value
-	}
-	if value, ok := _c.mutation.Metadata(); ok {
-		_spec.SetField(transactionlog.FieldMetadata, field.TypeJSON, value)
-		_node.Metadata = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(transactionlog.FieldCreatedAt, field.TypeTime, value)
@@ -342,18 +329,6 @@ func (u *TransactionLogUpsert) UpdateTxHash() *TransactionLogUpsert {
 // ClearTxHash clears the value of the "tx_hash" field.
 func (u *TransactionLogUpsert) ClearTxHash() *TransactionLogUpsert {
 	u.SetNull(transactionlog.FieldTxHash)
-	return u
-}
-
-// SetMetadata sets the "metadata" field.
-func (u *TransactionLogUpsert) SetMetadata(v map[string]interface{}) *TransactionLogUpsert {
-	u.Set(transactionlog.FieldMetadata, v)
-	return u
-}
-
-// UpdateMetadata sets the "metadata" field to the value that was provided on create.
-func (u *TransactionLogUpsert) UpdateMetadata() *TransactionLogUpsert {
-	u.SetExcluded(transactionlog.FieldMetadata)
 	return u
 }
 
@@ -471,20 +446,6 @@ func (u *TransactionLogUpsertOne) UpdateTxHash() *TransactionLogUpsertOne {
 func (u *TransactionLogUpsertOne) ClearTxHash() *TransactionLogUpsertOne {
 	return u.Update(func(s *TransactionLogUpsert) {
 		s.ClearTxHash()
-	})
-}
-
-// SetMetadata sets the "metadata" field.
-func (u *TransactionLogUpsertOne) SetMetadata(v map[string]interface{}) *TransactionLogUpsertOne {
-	return u.Update(func(s *TransactionLogUpsert) {
-		s.SetMetadata(v)
-	})
-}
-
-// UpdateMetadata sets the "metadata" field to the value that was provided on create.
-func (u *TransactionLogUpsertOne) UpdateMetadata() *TransactionLogUpsertOne {
-	return u.Update(func(s *TransactionLogUpsert) {
-		s.UpdateMetadata()
 	})
 }
 
@@ -769,20 +730,6 @@ func (u *TransactionLogUpsertBulk) UpdateTxHash() *TransactionLogUpsertBulk {
 func (u *TransactionLogUpsertBulk) ClearTxHash() *TransactionLogUpsertBulk {
 	return u.Update(func(s *TransactionLogUpsert) {
 		s.ClearTxHash()
-	})
-}
-
-// SetMetadata sets the "metadata" field.
-func (u *TransactionLogUpsertBulk) SetMetadata(v map[string]interface{}) *TransactionLogUpsertBulk {
-	return u.Update(func(s *TransactionLogUpsert) {
-		s.SetMetadata(v)
-	})
-}
-
-// UpdateMetadata sets the "metadata" field to the value that was provided on create.
-func (u *TransactionLogUpsertBulk) UpdateMetadata() *TransactionLogUpsertBulk {
-	return u.Update(func(s *TransactionLogUpsert) {
-		s.UpdateMetadata()
 	})
 }
 
