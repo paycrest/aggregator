@@ -336,7 +336,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		}
 	}
 
-	// Update payment order status - validate order is in refunding status
+	// Update payment order status - allow refunding, pending, or cancelled orders
 	paymentOrderUpdate := tx.PaymentOrder.
 		Update().
 		Where(
