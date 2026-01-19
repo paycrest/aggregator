@@ -1031,10 +1031,32 @@ func validateAndPreparePaymentOrderData(
 	if recipient.Metadata != nil {
 		senderAPIKey := cryptoUtils.GetAPIKeyFromMetadata(recipient.Metadata)
 		if senderAPIKey != uuid.Nil {
-			senderProfile, _ := utils.GetSenderProfileFromAPIKey(ctx, senderAPIKey)
-			if senderProfile.Edges.User != nil {
-				// @todo we can enforce KYB status checks here in the future if needed
-				// kybStatus := senderProfile.Edges.User.KybVerificationStatus
+			senderProfile, err := utils.GetSenderProfileFromAPIKey(ctx, senderAPIKey)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"error":   err,
+					"api_key": senderAPIKey.String(),
+					"order_id": event.OrderId,
+				}).Warnf("Failed to retrieve sender profile from API key in metadata")
+			} else if senderProfile != nil && senderProfile.Edges.User != nil {
+				kybStatus := senderProfile.Edges.User.KybVerificationStatus
+				logger.WithFields(logger.Fields{
+					"order_id":       event.OrderId,
+					"sender_id":      senderProfile.ID,
+					"user_id":        senderProfile.Edges.User.ID,
+					"kyb_status":     kybStatus,
+					"from_api_key":   true,
+				}).Infof("Retrieved KYB verification status from API key metadata")
+				
+				// @todo: Enforce KYB status checks here in the future if needed
+				// Example enforcement:
+				// if serverConf.Environment == "production" && kybStatus != user.KybVerificationStatusApproved {
+				//     return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(
+				//         ctx, event, network, token, recipient,
+				//         "Sender KYB verification not approved",
+				//         refundOrder, existingOrder,
+				//     )
+				// }
 			}
 		}
 	}
