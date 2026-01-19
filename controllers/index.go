@@ -1325,7 +1325,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 					apiKeyResponse, err := ctrl.apiKeyService.GetAPIKey(ctx, senderProfile, nil)
 					if err == nil && apiKeyResponse != nil {
 						companyName := kyb.CompanyName
-						resp, err := ctrl.emailService.SendPartnerOnboardingSuccessEmail(ctx, email, companyName, apiKeyResponse.Secret)
+						resp, err := ctrl.emailService.SendPartnerOnboardingSuccessEmail(ctx, email, companyName, apiKeyResponse.ID.String())
 						if err != nil {
 							logger.Errorf("Failed to send partner onboarding email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
 						} else {
