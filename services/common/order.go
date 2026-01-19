@@ -1028,6 +1028,17 @@ func validateAndPreparePaymentOrderData(
 		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, fmt.Sprintf("Message hash decryption failed %v", err), refundOrder, existingOrder)
 	}
 
+	if recipient.Metadata != nil {
+		senderAPIKey := cryptoUtils.GetAPIKeyFromMetadata(recipient.Metadata)
+		if senderAPIKey != uuid.Nil {
+			senderProfile, _ := utils.GetSenderProfileFromAPIKey(ctx, senderAPIKey)
+			if senderProfile.Edges.User != nil {
+				// @todo we can enforce KYB status checks here in the future if needed
+				// kybStatus := senderProfile.Edges.User.KybVerificationStatus
+			}
+		}
+	}
+
 	// Get institution
 	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
 	if err != nil {

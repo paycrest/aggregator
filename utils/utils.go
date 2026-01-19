@@ -18,8 +18,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
@@ -902,6 +904,31 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		ProviderID: providerID,
 		OrderType:  orderType,
 	}, nil
+}
+
+// GetSenderProfileFromAPIKey retrieves the sender profile using an API key from metadata
+func GetSenderProfileFromAPIKey(ctx context.Context, apiKeyUUID uuid.UUID) (*ent.SenderProfile, error) {  
+    // Query the API key and load the sender profile relationship
+    apiKey, err := storage.Client.APIKey.
+        Query().
+        Where(apikey.IDEQ(apiKeyUUID)).
+        WithSenderProfile(func(q *ent.SenderProfileQuery) {
+            q.WithUser() // Load user relationship to get KYB status
+        }).
+        Only(ctx)
+    
+    if err != nil {
+        if ent.IsNotFound(err) {
+            return nil, fmt.Errorf("API key not found")
+        }
+        return nil, fmt.Errorf("failed to find API key: %w", err)
+    }
+    
+    if apiKey.Edges.SenderProfile == nil {
+        return nil, fmt.Errorf("API key has no associated sender profile")
+    }
+    
+    return apiKey.Edges.SenderProfile, nil
 }
 
 // getProviderRateFromRedis retrieves the provider's current rate from Redis queue

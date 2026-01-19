@@ -28,6 +28,7 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 
@@ -429,6 +430,19 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	// Set extended expiry for private orders (10x normal validity)
 	if strings.HasPrefix(payload.Recipient.Memo, "P#P") {
 		receiveAddressExpiry = time.Now().Add(10 * orderConf.ReceiveAddressValidity)
+	}
+	
+	// Validate encrypted recipient size before creating order
+	if err := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient); err != nil {
+		logger.WithFields(logger.Fields{
+			"error":       err,
+			"institution": payload.Recipient.Institution,
+		}).Errorf("Recipient encryption size validation failed")
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Recipient",
+			Message: fmt.Sprintf("Recipient data too large: %s", err.Error()),
+		})
+		return
 	}
 
 	// Create payment order and recipient in a transaction
