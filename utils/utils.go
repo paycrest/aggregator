@@ -806,7 +806,7 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return RateValidationResult{}, fmt.Errorf("provider not found")
+			return RateValidationResult{}, fmt.Errorf("provider not found: %s", providerID)
 		}
 		return RateValidationResult{}, fmt.Errorf("internal server error")
 	}

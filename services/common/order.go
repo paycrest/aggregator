@@ -291,6 +291,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
 			transactionlog.GatewayIDEQ(event.OrderId),
 			transactionlog.NetworkEQ(network.Identifier),
+			transactionlog.TxHashEQ(event.TxHash),
 		).
 		SetTxHash(event.TxHash).
 		SetMetadata(
@@ -313,6 +314,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 				transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
 				transactionlog.GatewayIDEQ(event.OrderId),
 				transactionlog.NetworkEQ(network.Identifier),
+				transactionlog.TxHashEQ(event.TxHash),
 			).
 			Only(ctx)
 		if err != nil {
@@ -475,7 +477,10 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	var splitOrderId uuid.UUID
 
 	if strings.HasPrefix(network.Identifier, "starknet") {
-		splitOrderId, err = uuid.Parse(event.SplitOrderId)
+		splitOrderId, err = uuid.Parse(strings.ReplaceAll(event.SplitOrderId, "0x", ""))
+		if err != nil {
+			return fmt.Errorf("UpdateOrderStatusSettled.splitOrderId: %v", err)
+		}
 	} else {
 		splitOrderId, err = uuid.Parse(string(ethcommon.FromHex(event.SplitOrderId)))
 		if err != nil {
@@ -1054,7 +1059,7 @@ func validateAndPreparePaymentOrderData(
 	// Get order recipient from message hash
 	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
 	if err != nil {
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, "Message hash decryption failed", refundOrder, existingOrder)
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, fmt.Sprintf("Message hash decryption failed %v", err), refundOrder, existingOrder)
 	}
 
 	// Get institution
