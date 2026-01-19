@@ -1316,6 +1316,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 
 			// Check if this is a partner onboarding user (has referral_id)
 			if kyb.Edges.User.ReferralID != "" {
+				emailSent := false
 				senderProfile, err := storage.Client.SenderProfile.
 					Query().
 					Where(senderprofile.HasUserWith(user.IDEQ(kyb.Edges.User.ID))).
@@ -1329,12 +1330,23 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 							logger.Errorf("Failed to send partner onboarding email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
 						} else {
 							logger.Infof("Partner onboarding email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+							emailSent = true
 						}
 					} else {
 						logger.Errorf("Failed to fetch API key for partner onboarding email to %s: %v", email, err)
 					}
 				} else {
 					logger.Errorf("Failed to fetch sender profile for partner onboarding email to %s: %v", email, err)
+				}
+
+				// Fallback to standard approval email if partner email failed
+				if !emailSent {
+					resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
+					if err != nil {
+						logger.Errorf("Failed to send fallback KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+					} else {
+						logger.Infof("Fallback KYB approval email sent to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+					}
 				}
 			} else {
 				// Regular user - send standard KYB approval email
