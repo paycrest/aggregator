@@ -183,7 +183,7 @@ func (e *EmailService) SendKYBApprovalEmail(ctx context.Context, email, firstNam
 }
 
 // SendKYBRejectionEmail sends a KYB rejection email
-func (e *EmailService) SendKYBRejectionEmail(ctx context.Context, email, firstName, reasonForDecline string) (types.SendEmailResponse, error) {
+func (e *EmailService) SendKYBRejectionEmail(ctx context.Context, email, firstName, reasonForDecline string, additionalData map[string]interface{}) (types.SendEmailResponse, error) {
 	payload := types.SendEmailPayload{
 		FromAddress: e.notificationConf.EmailFromAddress,
 		ToAddress:   email,
@@ -191,6 +191,13 @@ func (e *EmailService) SendKYBRejectionEmail(ctx context.Context, email, firstNa
 			"first_name":         firstName,
 			"reason_for_decline": reasonForDecline,
 		},
+	}
+
+	// Merge additional dynamic data if provided
+	if additionalData != nil {
+		for k, v := range additionalData {
+			payload.DynamicData[k] = v
+		}
 	}
 
 	templateID := getTemplateID("kyb_rejection", e.primaryProvider.GetName())
@@ -211,8 +218,8 @@ func (e *EmailService) SendWebhookFailureEmail(ctx context.Context, email, first
 	return e.SendTemplateEmail(ctx, payload, templateID)
 }
 
-// SendPartnerOnboardingSuccessEmail sends a partner onboarding success email
-func (e *EmailService) SendPartnerOnboardingSuccessEmail(ctx context.Context, email, firstName, apiKey, password string) (types.SendEmailResponse, error) {
+// SendPartnerOnboardingSuccessEmail sends a partner onboarding success email.
+func (e *EmailService) SendPartnerOnboardingSuccessEmail(ctx context.Context, email, firstName, apiKey string) (types.SendEmailResponse, error) {
 	payload := types.SendEmailPayload{
 		FromAddress: e.notificationConf.EmailFromAddress,
 		ToAddress:   email,
@@ -220,7 +227,6 @@ func (e *EmailService) SendPartnerOnboardingSuccessEmail(ctx context.Context, em
 			"first_name": firstName,
 			"api_key":    apiKey,
 			"email":      email,
-			"password":   password,
 		},
 	}
 

@@ -163,6 +163,7 @@ type RegisterPayload struct {
 	Password   string   `json:"password" binding:"required,min=6,max=20"`
 	Currencies []string `json:"currencies"`
 	Scopes     []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	ReferralID string   `json:"referralId"` // Optional field for partner onboarding
 }
 
 // RegisterResponse is the response for the register endpoint
@@ -752,16 +753,6 @@ type BeneficialOwnerInput struct {
 	DateOfBirth                  string  `json:"dateOfBirth" binding:"required"`
 	OwnershipPercentage          float64 `json:"ownershipPercentage" binding:"required,gt=0,lte=100"`
 	GovernmentIssuedIdType       string  `json:"governmentIssuedIdType" binding:"required,oneof=passport drivers_license national_id"`
-}
-
-// PartnerOnboardingPayload combines registration and KYB data for partner onboarding
-type PartnerOnboardingPayload struct {
-	Email      string   `json:"email" binding:"required,email"`
-	Scopes     []string `json:"scopes" binding:"required,dive,oneof=sender"`
-	ReferralID string   `json:"referralId" binding:"required"`
-
-	// KYB fields (embedded KYBSubmissionInput)
-	KYBSubmissionInput
 }
 
 // KYBDocumentsResponse represents the response structure for KYB documents retrieval
