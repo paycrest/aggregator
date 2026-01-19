@@ -590,7 +590,7 @@ func init() {
 	transactionlogFields := schema.TransactionLog{}.Fields()
 	_ = transactionlogFields
 	// transactionlogDescCreatedAt is the schema descriptor for created_at field.
-	transactionlogDescCreatedAt := transactionlogFields[6].Descriptor()
+	transactionlogDescCreatedAt := transactionlogFields[5].Descriptor()
 	// transactionlog.DefaultCreatedAt holds the default value on creation for the created_at field.
 	transactionlog.DefaultCreatedAt = transactionlogDescCreatedAt.Default.(func() time.Time)
 	// transactionlogDescID is the schema descriptor for id field.

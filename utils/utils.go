@@ -3,7 +3,6 @@ package utils
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -267,18 +266,22 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	var event string
 
 	switch paymentOrder.Status {
+	case paymentorder.StatusDeposited:
+		event = "payment_order.deposited"
 	case paymentorder.StatusPending:
 		event = "payment_order.pending"
-	case paymentorder.StatusFulfilled:
-		event = "payment_order.fulfilled"
 	case paymentorder.StatusValidated:
 		event = "payment_order.validated"
-	case paymentorder.StatusExpired:
-		event = "payment_order.expired"
+	case paymentorder.StatusSettling:
+		event = "payment_order.settling"
 	case paymentorder.StatusSettled:
 		event = "payment_order.settled"
+	case paymentorder.StatusRefunding:
+		event = "payment_order.refunding"
 	case paymentorder.StatusRefunded:
 		event = "payment_order.refunded"
+	case paymentorder.StatusExpired:
+		event = "payment_order.expired"
 	default:
 		return nil
 	}

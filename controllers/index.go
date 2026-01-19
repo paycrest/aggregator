@@ -413,7 +413,7 @@ func (ctrl *Controller) GetProviderOrderStatus(ctx *gin.Context) {
 
 	status := orders[0].Status
 	if status == paymentorder.StatusCancelled {
-		status = paymentorder.StatusProcessing
+		status = paymentorder.StatusFulfilling
 	}
 
 	response := &types.ProviderOrderStatusResponse{

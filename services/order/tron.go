@@ -287,6 +287,7 @@ func (s *OrderTron) RefundOrder(ctx context.Context, network *ent.Network, order
 	// Update lock order
 	_, err = lockOrder.Update().
 		SetTxHash(txHash).
+		SetStatus(paymentorder.StatusRefunding).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - Tron.RefundOrder.updateTxHash: %w", orderIDPrefix, err)
@@ -382,6 +383,7 @@ func (s *OrderTron) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Update lock order
 	_, err = order.Update().
 		SetTxHash(txHash).
+		SetStatus(paymentorder.StatusSettling).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - Tron.SettleOrder.updateTxHash: %w", orderIDPrefix, err)

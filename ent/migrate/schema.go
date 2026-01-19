@@ -211,7 +211,7 @@ var (
 		{Name: "reference", Type: field.TypeString, Nullable: true, Size: 70},
 		{Name: "cancellation_count", Type: field.TypeInt, Nullable: true, Default: 0},
 		{Name: "cancellation_reasons", Type: field.TypeJSON, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "pending", "processing", "cancelled", "fulfilled", "validated", "expired", "settled", "refunded"}, Default: "initiated"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "deposited", "pending", "fulfilling", "fulfilled", "validated", "settling", "settled", "cancelled", "refunding", "refunded", "expired"}, Default: "initiated"},
 		{Name: "order_type", Type: field.TypeEnum, Enums: []string{"otc", "regular"}, Default: "regular"},
 		{Name: "api_key_payment_orders", Type: field.TypeUUID, Nullable: true},
 		{Name: "provider_profile_assigned_orders", Type: field.TypeString, Nullable: true},
@@ -608,7 +608,6 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"order_initiated", "crypto_deposited", "order_created", "order_processing", "order_fulfilled", "order_validated", "order_settled", "order_refunded", "gas_prefunded", "gateway_approved"}, Default: "order_initiated"},
 		{Name: "network", Type: field.TypeString, Nullable: true},
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true},
-		{Name: "metadata", Type: field.TypeJSON},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "payment_order_transactions", Type: field.TypeUUID, Nullable: true},
 	}
@@ -620,7 +619,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "transaction_logs_payment_orders_transactions",
-				Columns:    []*schema.Column{TransactionLogsColumns[7]},
+				Columns:    []*schema.Column{TransactionLogsColumns[6]},
 				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
