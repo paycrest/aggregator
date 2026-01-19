@@ -19146,7 +19146,6 @@ type TransactionLogMutation struct {
 	status        *transactionlog.Status
 	network       *string
 	tx_hash       *string
-	metadata      *map[string]interface{}
 	created_at    *time.Time
 	clearedFields map[string]struct{}
 	done          bool
@@ -19441,42 +19440,6 @@ func (m *TransactionLogMutation) ResetTxHash() {
 	delete(m.clearedFields, transactionlog.FieldTxHash)
 }
 
-// SetMetadata sets the "metadata" field.
-func (m *TransactionLogMutation) SetMetadata(value map[string]interface{}) {
-	m.metadata = &value
-}
-
-// Metadata returns the value of the "metadata" field in the mutation.
-func (m *TransactionLogMutation) Metadata() (r map[string]interface{}, exists bool) {
-	v := m.metadata
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldMetadata returns the old "metadata" field's value of the TransactionLog entity.
-// If the TransactionLog object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TransactionLogMutation) OldMetadata(ctx context.Context) (v map[string]interface{}, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldMetadata is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldMetadata requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldMetadata: %w", err)
-	}
-	return oldValue.Metadata, nil
-}
-
-// ResetMetadata resets all changes to the "metadata" field.
-func (m *TransactionLogMutation) ResetMetadata() {
-	m.metadata = nil
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (m *TransactionLogMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -19547,7 +19510,7 @@ func (m *TransactionLogMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TransactionLogMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 5)
 	if m.gateway_id != nil {
 		fields = append(fields, transactionlog.FieldGatewayID)
 	}
@@ -19559,9 +19522,6 @@ func (m *TransactionLogMutation) Fields() []string {
 	}
 	if m.tx_hash != nil {
 		fields = append(fields, transactionlog.FieldTxHash)
-	}
-	if m.metadata != nil {
-		fields = append(fields, transactionlog.FieldMetadata)
 	}
 	if m.created_at != nil {
 		fields = append(fields, transactionlog.FieldCreatedAt)
@@ -19582,8 +19542,6 @@ func (m *TransactionLogMutation) Field(name string) (ent.Value, bool) {
 		return m.Network()
 	case transactionlog.FieldTxHash:
 		return m.TxHash()
-	case transactionlog.FieldMetadata:
-		return m.Metadata()
 	case transactionlog.FieldCreatedAt:
 		return m.CreatedAt()
 	}
@@ -19603,8 +19561,6 @@ func (m *TransactionLogMutation) OldField(ctx context.Context, name string) (ent
 		return m.OldNetwork(ctx)
 	case transactionlog.FieldTxHash:
 		return m.OldTxHash(ctx)
-	case transactionlog.FieldMetadata:
-		return m.OldMetadata(ctx)
 	case transactionlog.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	}
@@ -19643,13 +19599,6 @@ func (m *TransactionLogMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTxHash(v)
-		return nil
-	case transactionlog.FieldMetadata:
-		v, ok := value.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetMetadata(v)
 		return nil
 	case transactionlog.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -19739,9 +19688,6 @@ func (m *TransactionLogMutation) ResetField(name string) error {
 		return nil
 	case transactionlog.FieldTxHash:
 		m.ResetTxHash()
-		return nil
-	case transactionlog.FieldMetadata:
-		m.ResetMetadata()
 		return nil
 	case transactionlog.FieldCreatedAt:
 		m.ResetCreatedAt()
