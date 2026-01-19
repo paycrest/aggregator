@@ -147,7 +147,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 			paymentorder.StatusNEQ(paymentorder.StatusValidated),
 			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
 			paymentorder.StatusNEQ(paymentorder.StatusSettled),
-			paymentorder.StatusNEQ(paymentorder.StatusProcessing),
+			paymentorder.StatusNEQ(paymentorder.StatusFulfilling),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -179,6 +179,15 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	_, err = s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
+	}
+
+	// Update order status to refunding after transaction submission
+	_, err = db.Client.PaymentOrder.
+		UpdateOneID(lockOrder.ID).
+		SetStatus(paymentorder.StatusRefunding).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - RefundOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -225,6 +234,15 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.sendTransaction: %w", orderIDPrefix, err)
+	}
+
+	// Update order status to settling after transaction submission
+	_, err = db.Client.PaymentOrder.
+		UpdateOneID(order.ID).
+		SetStatus(paymentorder.StatusSettling).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - SettleOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 
 	return nil

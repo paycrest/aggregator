@@ -180,6 +180,7 @@ func ProcessRefundedOrders(ctx context.Context, network *ent.Network, orderIds [
 		Where(
 			paymentorder.GatewayIDIn(orderIds...),
 			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusRefunding),
 				paymentorder.StatusEQ(paymentorder.StatusPending),
 				paymentorder.StatusEQ(paymentorder.StatusCancelled),
 			),
@@ -290,15 +291,6 @@ func UpdateReceiveAddressStatus(
 				SetGatewayID(paymentOrder.GatewayID).
 				SetTxHash(event.TxHash).
 				SetNetwork(paymentOrder.Edges.Token.Edges.Network.Identifier).
-				SetMetadata(map[string]interface{}{
-					"GatewayID": paymentOrder.GatewayID,
-					"transactionData": map[string]interface{}{
-						"from":        event.From,
-						"to":          paymentOrder.ReceiveAddress,
-						"value":       event.Value.String(),
-						"blockNumber": event.BlockNumber,
-					},
-				}).
 				Save(ctx)
 			if err != nil {
 				return true, fmt.Errorf("UpdateReceiveAddressStatus.transactionlog: %v", err)
@@ -308,6 +300,7 @@ func UpdateReceiveAddressStatus(
 				SetFromAddress(event.From).
 				SetTxHash(event.TxHash).
 				SetBlockNumber(int64(event.BlockNumber)).
+				SetStatus(paymentorder.StatusDeposited).
 				AddAmountPaid(event.Value).
 				AddTransactions(transactionLog).
 				Save(ctx)

@@ -162,7 +162,7 @@ func (s *OrderStarknet) RefundOrder(ctx context.Context, network *ent.Network, o
 			paymentorder.StatusNEQ(paymentorder.StatusValidated),
 			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
 			paymentorder.StatusNEQ(paymentorder.StatusSettled),
-			paymentorder.StatusNEQ(paymentorder.StatusProcessing),
+			paymentorder.StatusNEQ(paymentorder.StatusFulfilling),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierContainsFold("starknet"),

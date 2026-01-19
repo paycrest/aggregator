@@ -294,11 +294,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			transactionlog.TxHashEQ(event.TxHash),
 		).
 		SetTxHash(event.TxHash).
-		SetMetadata(
-			map[string]interface{}{
-				"GatewayID":       event.OrderId,
-				"TransactionData": event,
-			}).
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()
@@ -326,11 +321,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 					SetTxHash(event.TxHash).
 					SetGatewayID(event.OrderId).
 					SetNetwork(network.Identifier).
-					SetMetadata(
-						map[string]interface{}{
-							"GatewayID":       event.OrderId,
-							"TransactionData": event,
-						}).
 					Save(ctx)
 				if err != nil {
 					_ = tx.Rollback()
@@ -346,11 +336,16 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		}
 	}
 
-	// Update payment order status
+	// Update payment order status - allow refunding, pending, or cancelled orders
 	paymentOrderUpdate := tx.PaymentOrder.
 		Update().
 		Where(
 			paymentorder.GatewayIDEQ(event.OrderId),
+			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusRefunding),
+				paymentorder.StatusEQ(paymentorder.StatusPending),
+				paymentorder.StatusEQ(paymentorder.StatusCancelled),
+			),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -446,10 +441,6 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			transactionlog.NetworkEQ(network.Identifier),
 		).
 		SetTxHash(event.TxHash).
-		SetMetadata(map[string]interface{}{
-			"GatewayID":   event.OrderId,
-			"BlockNumber": event.BlockNumber,
-		}).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettled.update: %v", err)
@@ -463,10 +454,6 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			SetTxHash(event.TxHash).
 			SetGatewayID(event.OrderId).
 			SetNetwork(network.Identifier).
-			SetMetadata(map[string]interface{}{
-				"GatewayID":   event.OrderId,
-				"BlockNumber": event.BlockNumber,
-			}).
 			Save(ctx)
 		if err != nil {
 			return fmt.Errorf("UpdateOrderStatusSettled.create: %v", err)
@@ -492,6 +479,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		Update().
 		Where(
 			paymentorder.IDEQ(splitOrderId),
+			paymentorder.StatusEQ(paymentorder.StatusSettling),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -914,17 +902,6 @@ func ensureTransactionLog(
 					SetTxHash(paymentOrderFields.TxHash).
 					SetNetwork(network.Identifier).
 					SetGatewayID(paymentOrderFields.GatewayID).
-					SetMetadata(
-						map[string]interface{}{
-							"Token":           paymentOrderFields.Token,
-							"GatewayID":       paymentOrderFields.GatewayID,
-							"Amount":          paymentOrderFields.Amount,
-							"Rate":            paymentOrderFields.Rate,
-							"Memo":            paymentOrderFields.Memo,
-							"Metadata":        paymentOrderFields.Metadata,
-							"ProviderID":      paymentOrderFields.ProviderID,
-							"ProvisionBucket": paymentOrderFields.ProvisionBucket,
-						}).
 					Save(ctx)
 				if err != nil {
 					return nil, fmt.Errorf("%s - failed to create transaction log: %w", paymentOrderFields.GatewayID, err)
@@ -944,17 +921,6 @@ func ensureTransactionLog(
 		SetTxHash(paymentOrderFields.TxHash).
 		SetNetwork(network.Identifier).
 		SetGatewayID(paymentOrderFields.GatewayID).
-		SetMetadata(
-			map[string]interface{}{
-				"Token":           paymentOrderFields.Token,
-				"GatewayID":       paymentOrderFields.GatewayID,
-				"Amount":          paymentOrderFields.Amount,
-				"Rate":            paymentOrderFields.Rate,
-				"Memo":            paymentOrderFields.Memo,
-				"Metadata":        paymentOrderFields.Metadata,
-				"ProviderID":      paymentOrderFields.ProviderID,
-				"ProvisionBucket": paymentOrderFields.ProvisionBucket,
-			}).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s - failed to create transaction log: %w", paymentOrderFields.GatewayID, err)

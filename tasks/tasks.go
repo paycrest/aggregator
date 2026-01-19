@@ -664,7 +664,7 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 			Where(
 				paymentorder.IDEQ(order.ID),
 				paymentorder.Or(
-					paymentorder.StatusEQ(paymentorder.StatusProcessing),
+					paymentorder.StatusEQ(paymentorder.StatusFulfilling),
 					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
 					paymentorder.StatusEQ(paymentorder.StatusPending),
 					paymentorder.StatusEQ(paymentorder.StatusCancelled), // Include cancelled state
@@ -791,7 +791,7 @@ func SyncPaymentOrderFulfillments() {
 					),
 				),
 				paymentorder.And(
-					paymentorder.StatusEQ(paymentorder.StatusProcessing),
+					paymentorder.StatusEQ(paymentorder.StatusFulfilling),
 					paymentorder.UpdatedAtLTE(time.Now().Add(-30*time.Second)),
 					paymentorder.Not(paymentorder.HasFulfillments()),
 				),
@@ -1009,10 +1009,6 @@ func SyncPaymentOrderFulfillments() {
 					Create().
 					SetStatus(transactionlog.StatusOrderValidated).
 					SetNetwork(order.Edges.Token.Edges.Network.Identifier).
-					SetMetadata(map[string]interface{}{
-						"TransactionID": txId,
-						"PSP":           psp,
-					}).
 					Save(ctx)
 				if err != nil {
 					continue
@@ -1180,10 +1176,6 @@ func SyncPaymentOrderFulfillments() {
 							Create().
 							SetStatus(transactionlog.StatusOrderValidated).
 							SetNetwork(order.Edges.Token.Edges.Network.Identifier).
-							SetMetadata(map[string]interface{}{
-								"TransactionID": fulfillment.TxID,
-								"PSP":           fulfillment.Psp,
-							}).
 							Save(ctx)
 						if err != nil {
 							continue
@@ -1233,10 +1225,6 @@ func SyncPaymentOrderFulfillments() {
 						Create().
 						SetStatus(transactionlog.StatusOrderValidated).
 						SetNetwork(order.Edges.Token.Edges.Network.Identifier).
-						SetMetadata(map[string]interface{}{
-							"TransactionID": fulfillment.TxID,
-							"PSP":           fulfillment.Psp,
-						}).
 						Save(ctx)
 					if err != nil {
 						continue

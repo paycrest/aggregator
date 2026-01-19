@@ -162,7 +162,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 		"validated":  paymentorder.StatusValidated,
 		"fulfilled":  paymentorder.StatusFulfilled,
 		"cancelled":  paymentorder.StatusCancelled,
-		"processing": paymentorder.StatusProcessing,
+		"processing": paymentorder.StatusFulfilling, // Backward compatibility
 		"settled":    paymentorder.StatusSettled,
 	}
 
@@ -227,7 +227,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 				switch order.Status {
 				case paymentorder.StatusPending:
 					response.OTCExpiry = order.UpdatedAt.Add(orderConf.OrderRequestValidityOtc)
-				case paymentorder.StatusProcessing:
+				case paymentorder.StatusFulfilling:
 					response.OTCExpiry = order.UpdatedAt.Add(orderConf.OrderFulfillmentValidityOtc)
 				}
 			}
@@ -627,10 +627,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			transactionLog, err = tx.TransactionLog.
 				Create().
 				SetStatus(transactionlog.StatusOrderProcessing).
-				SetMetadata(
-					map[string]interface{}{
-						"ProviderId": provider.ID,
-					}).
 				Save(ctx)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
@@ -648,7 +644,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			paymentorder.IDEQ(orderID),
 			paymentorder.StatusEQ(paymentorder.StatusPending),
 		).
-		SetStatus(paymentorder.StatusProcessing).
+		SetStatus(paymentorder.StatusFulfilling).
 		SetProviderID(provider.ID)
 
 	if transactionLog != nil {
@@ -706,7 +702,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		Metadata:          order.Metadata,
 	}
 
-	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusProcessing && order.Edges.Provider == provider {
+	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling && order.Edges.Provider == provider {
 		response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
 	}
 
@@ -812,7 +808,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		Where(
 			paymentorder.IDEQ(orderID),
 			paymentorder.Or(
-				paymentorder.StatusEQ(paymentorder.StatusProcessing),
+				paymentorder.StatusEQ(paymentorder.StatusFulfilling),
 				paymentorder.StatusEQ(paymentorder.StatusFulfilled),
 			),
 		)
@@ -972,10 +968,6 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		transactionLog, err := tx.TransactionLog.Create().
 			SetStatus(transactionlog.StatusOrderValidated).
 			SetNetwork(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier).
-			SetMetadata(map[string]interface{}{
-				"TransactionID": payload.TxID,
-				"PSP":           payload.PSP,
-			}).
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -1166,10 +1158,6 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		transactionLog, err := storage.Client.TransactionLog.Create().
 			SetStatus(transactionlog.StatusOrderFulfilled).
 			SetNetwork(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier).
-			SetMetadata(map[string]interface{}{
-				"TransactionID": payload.TxID,
-				"PSP":           payload.PSP,
-			}).
 			Save(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
