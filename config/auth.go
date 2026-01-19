@@ -24,9 +24,6 @@ type AuthConfiguration struct {
 	TurnstileSiteKey   string
 	TurnstileSecretKey string
 	TurnstileEnabled   bool
-
-	// Partner onboarding config
-	PartnerOnboardingSecretKey string
 }
 
 var (
@@ -70,7 +67,6 @@ func AuthConfig() *AuthConfiguration {
 			TurnstileSiteKey:           viper.GetString("TURNSTILE_SITE_KEY"),
 			TurnstileSecretKey:         viper.GetString("TURNSTILE_SECRET_KEY"),
 			TurnstileEnabled:           viper.GetBool("TURNSTILE_ENABLED"),
-			PartnerOnboardingSecretKey: viper.GetString("PARTNER_ONBOARDING_SECRET_KEY"),
 		}
 	})
 	return authConfig

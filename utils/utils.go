@@ -1565,17 +1565,3 @@ func parseHexString(hexStr string) (decimal.Decimal, error) {
 
 	return decimal.NewFromBigInt(bigInt, 0), nil
 }
-
-// GenerateRandomPassword generates a cryptographically secure random password
-func GenerateRandomPassword(length int) (string, error) {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{}|;:,.<>?"
-	password := make([]byte, length)
-	for i := range password {
-		b := make([]byte, 1)
-		if _, err := rand.Read(b); err != nil {
-			return "", err
-		}
-		password[i] = charset[int(b[0])%len(charset)]
-	}
-	return string(password), nil
-}
