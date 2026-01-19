@@ -187,7 +187,6 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		SetStatus(paymentorder.StatusRefunding).
 		Save(ctx)
 	if err != nil {
-		// Log error but don't fail - transaction was already sent
 		return fmt.Errorf("%s - RefundOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 
@@ -243,7 +242,6 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 		SetStatus(paymentorder.StatusSettling).
 		Save(ctx)
 	if err != nil {
-		// Log error but don't fail - transaction was already sent
 		return fmt.Errorf("%s - SettleOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 

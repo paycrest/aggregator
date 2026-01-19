@@ -180,6 +180,7 @@ func ProcessRefundedOrders(ctx context.Context, network *ent.Network, orderIds [
 		Where(
 			paymentorder.GatewayIDIn(orderIds...),
 			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusRefunding),
 				paymentorder.StatusEQ(paymentorder.StatusPending),
 				paymentorder.StatusEQ(paymentorder.StatusCancelled),
 			),

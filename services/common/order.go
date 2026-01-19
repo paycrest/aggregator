@@ -341,7 +341,11 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		Update().
 		Where(
 			paymentorder.GatewayIDEQ(event.OrderId),
-			paymentorder.StatusEQ(paymentorder.StatusRefunding),
+			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusRefunding),
+				paymentorder.StatusEQ(paymentorder.StatusPending),
+				paymentorder.StatusEQ(paymentorder.StatusCancelled),
+			),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
