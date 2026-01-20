@@ -132,12 +132,11 @@ func RetryStaleUserOperations() error {
 
 	var wg sync.WaitGroup
 
-	// Create initiated orders
+	// Create deposited orders that haven't been created on-chain yet
 	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.StatusEQ(paymentorder.StatusInitiated),
-			paymentorder.FromAddressNEQ(""), // Receive address has been used (transfer received)
+			paymentorder.StatusEQ(paymentorder.StatusDeposited),
 			paymentorder.GatewayIDIsNil(),
 			paymentorder.Or(
 				paymentorder.UpdatedAtGTE(time.Now().Add(-5*time.Minute)),
