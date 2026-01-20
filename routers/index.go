@@ -123,6 +123,12 @@ func senderRoutes(route *gin.Engine) {
 	v1.GET("orders", senderCtrl.GetPaymentOrders)
 	v1.POST("orders/:id/validate", senderCtrl.ValidateOrder)
 	v1.GET("stats", senderCtrl.Stats)
+
+	v2 := route.Group("/v2/sender/")
+	v2.Use(middleware.DynamicAuthMiddleware)
+	v2.Use(middleware.OnlySenderMiddleware)
+
+	v2.POST("orders", senderCtrl.InitiatePaymentOrderV2)
 }
 
 func providerRoutes(route *gin.Engine) {
