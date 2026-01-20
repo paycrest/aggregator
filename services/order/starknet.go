@@ -73,7 +73,7 @@ func (s *OrderStarknet) CreateOrder(ctx context.Context, orderID uuid.UUID) erro
 	}
 
 	_, err = order.Update().
-		SetStatus(paymentorder.StatusInitiated).
+		SetStatus(paymentorder.StatusDeposited).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
