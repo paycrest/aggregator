@@ -70,4 +70,4 @@ h1:jXvFWwd/3vkztaI7ke2QS/uTHQESi0In+v/CqaraMyQ=
 20251213235606_unify_payment_order_tables.sql h1:OXjhdjBmiGW4MZ8AKb/wKJJoZcRynB73G6kumOr5zkI=
 20251224133609_add_indexer_created_at.sql h1:MH75KywBQ93o/cpMmeeTrSTaH6njtpPI8vF/+R9xaBI=
 20260119122748_txlog_metadata.sql h1:A2zWr0ukUmQ0266fVWnahE0fqjIr3LYkPJ63ww+nJPo=
-20260120163045_referal_id.sql h1:OVHOeAZh+QbXtNSOVYndvqJjrDgp2EusaG3byLtV9zM=
+20260120163045_referral_id.sql h1:OVHOeAZh+QbXtNSOVYndvqJjrDgp2EusaG3byLtV9zM=
