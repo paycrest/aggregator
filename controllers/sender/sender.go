@@ -801,8 +801,13 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 	amountIn := payload.AmountIn
 	switch amountIn {
 	case "fiat":
-		// Explicitly ignore payload.Rate if provided, fetch current rate
-		rateResult, err := u.ValidateRate(ctx, token, currency, amount, payload.Destination.ProviderID, payload.Source.PaymentRail)
+		// For fiat amounts, use market rate as approximation to convert to crypto,
+		// then ValidateRate will get the actual rate and validate with crypto amount
+		orderRate = currency.MarketRate
+		cryptoAmount = amount.Div(orderRate)
+
+		// ValidateRate expects crypto units, so pass cryptoAmount
+		rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmount, payload.Destination.ProviderID, payload.Source.PaymentRail)
 		if err != nil {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 				Field:   "Rate",
@@ -812,6 +817,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		}
 		rateValidationResult = rateResult
 		orderRate = rateValidationResult.Rate
+		// Recalculate cryptoAmount with the validated rate
 		cryptoAmount = amount.Div(orderRate)
 	case "crypto":
 		cryptoAmount = amount
@@ -952,7 +958,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 	}
 
 	isLocalTransfer := strings.EqualFold(token.BaseCurrency, currency.Code)
-	if isLocalTransfer && feePercent.IsZero() {
+	if isLocalTransfer && feePercent.IsZero() && senderFee.IsZero() {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 			Field:   "SenderFee",
 			Message: fmt.Sprintf("Sender fee must be greater than zero for local currency order from (%s to %s)", token.Symbol, currency.Code),
