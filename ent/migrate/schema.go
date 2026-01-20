@@ -638,6 +638,7 @@ var (
 		{Name: "is_email_verified", Type: field.TypeBool, Default: false},
 		{Name: "has_early_access", Type: field.TypeBool, Default: false},
 		{Name: "kyb_verification_status", Type: field.TypeEnum, Enums: []string{"not_started", "pending", "approved", "rejected"}, Default: "not_started"},
+		{Name: "referral_id", Type: field.TypeString, Nullable: true, Size: 100},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{
