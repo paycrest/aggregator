@@ -1029,8 +1029,10 @@ func validateAndPreparePaymentOrderData(
 	}
 
 	if recipient.Metadata != nil {
-		senderAPIKey := cryptoUtils.GetAPIKeyFromMetadata(recipient.Metadata)
-		if senderAPIKey != uuid.Nil {
+		senderAPIKey, err := cryptoUtils.GetAPIKeyFromMetadata(recipient.Metadata)
+		if err != nil {
+			// @todo enforce sender API key presence in metadata in the future if needed
+		} else if err == nil && senderAPIKey != uuid.Nil {
 			senderProfile, err := utils.GetSenderProfileFromAPIKey(ctx, senderAPIKey)
 			if err != nil {
 				logger.WithFields(logger.Fields{
@@ -1038,7 +1040,7 @@ func validateAndPreparePaymentOrderData(
 					"api_key": senderAPIKey.String(),
 					"order_id": event.OrderId,
 				}).Warnf("Failed to retrieve sender profile from API key in metadata")
-			} else if senderProfile != nil && senderProfile.Edges.User != nil {
+			} else if err == nil && senderProfile != nil && senderProfile.Edges.User != nil {
 				kybStatus := senderProfile.Edges.User.KybVerificationStatus
 				logger.WithFields(logger.Fields{
 					"order_id":       event.OrderId,

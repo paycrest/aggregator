@@ -329,7 +329,7 @@ func HMACVerificationMiddleware(c *gin.Context) {
 	// Set the user profiles in the context of the request
 	if apiKey.Edges.SenderProfile != nil {
 		c.Set("sender", apiKey.Edges.SenderProfile)
-		c.Set("api_key", apiKey.ID.String())
+		c.Set("apiKey", apiKey.ID.String())
 	}
 
 	if apiKey.Edges.ProviderProfile != nil {

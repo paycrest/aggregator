@@ -99,7 +99,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	sender := senderCtx.(*ent.SenderProfile)
 
 	// Get API key from context and add to metadata
-	apiKeyFromCtx, exists := ctx.Get("api_key")
+	apiKeyFromCtx, exists := ctx.Get("apiKey")
 	if !exists {
 		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
 		return
@@ -110,7 +110,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		payload.Recipient.Metadata = make(map[string]interface{})
 	}
 	if apiKey, ok := apiKeyFromCtx.(string); ok {
-		payload.Recipient.Metadata["api_key"] = apiKey
+		payload.Recipient.Metadata["apiKey"] = apiKey
 	}
 
 	// Get token from DB

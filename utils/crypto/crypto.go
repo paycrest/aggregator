@@ -431,27 +431,27 @@ func ValidateRecipientEncryptionSize(recipient *types.PaymentOrderRecipient) err
 }
 
 // GetAPIKeyFromMetadata extracts the API key from decrypted metadata
-func GetAPIKeyFromMetadata(metadata map[string]interface{}) (uuid.UUID) {
+func GetAPIKeyFromMetadata(metadata map[string]interface{}) (uuid.UUID, error) {
     if metadata == nil {
-        return uuid.Nil
+        return uuid.Nil, nil
     }
     
-    apiKey, ok := metadata["api_key"]
+    apiKey, ok := metadata["apiKey"]
     if !ok {
-        return uuid.Nil
+        return uuid.Nil, nil
     }
     
     apiKeyStr, ok := apiKey.(string)
     if !ok {
-        return uuid.Nil
+        return uuid.Nil, nil
     }
     
     apiKeyUUID, err := uuid.Parse(apiKeyStr)
     if err != nil {
-        return uuid.Nil
+        return uuid.Nil, fmt.Errorf("invalid apiKey format: %w", err)
     }
     
-    return apiKeyUUID
+    return apiKeyUUID, nil
 }
 
 // isHybridEncrypted checks if data is in hybrid format
