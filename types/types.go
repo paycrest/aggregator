@@ -529,6 +529,152 @@ type PaymentOrderWebhookPayload struct {
 	Data  PaymentOrderWebhookData `json:"data"`
 }
 
+// V2PaymentOrderSource represents the source configuration for v2 payment orders
+type V2PaymentOrderSource struct {
+	Type          string `json:"type" binding:"required,eq=crypto"`
+	Currency      string `json:"currency" binding:"required"`
+	PaymentRail   string `json:"paymentRail" binding:"required"`
+	RefundAddress string `json:"refundAddress" binding:"required"`
+}
+
+// V2PaymentOrderRecipient represents the recipient configuration for v2 payment orders
+type V2PaymentOrderRecipient struct {
+	Institution       string                 `json:"institution" binding:"required"`
+	AccountIdentifier string                 `json:"accountIdentifier" binding:"required"`
+	AccountName       string                 `json:"accountName" binding:"required"`
+	Memo              string                 `json:"memo" binding:"required"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// V2PaymentOrderDestination represents the destination configuration for v2 payment orders
+type V2PaymentOrderDestination struct {
+	Type       string                  `json:"type" binding:"required,eq=fiat"`
+	Currency   string                  `json:"currency" binding:"required"`
+	Country    string                  `json:"country,omitempty"`
+	ProviderID string                  `json:"providerId,omitempty"`
+	Recipient  V2PaymentOrderRecipient `json:"recipient" binding:"required"`
+}
+
+// V2PaymentOrderKYC represents KYC information for v2 payment orders
+type V2PaymentOrderKYC struct {
+	Recipient *KYCDetail `json:"recipient,omitempty"`
+	Sender    *KYCDetail `json:"sender,omitempty"`
+}
+
+// EntityType represents the type of entity
+type EntityType string
+
+const (
+	EntityTypePerson       EntityType = "person"
+	EntityTypeOrganization EntityType = "organization"
+)
+
+// KYCDetail represents KYC information
+// entityType: "person" | "organization" - CRITICAL: Differentiates structure
+type KYCDetail struct {
+	EntityType          EntityType           `json:"entityType,omitempty"`
+	PersonDetails       *PersonDetails       `json:"personDetails,omitempty"`       // Required if entityType is "person"
+	OrganizationDetails *OrganizationDetails `json:"organizationDetails,omitempty"` // Required if entityType is "organization"
+	PrincipalAddress    *PrincipalAddress    `json:"principalAddress,omitempty"`    // Structured address for the entity
+}
+
+// PersonDetails represents person-specific KYC information
+// Required if entityType is "person"
+type PersonDetails struct {
+	FullName    string      `json:"fullName,omitempty"`
+	BirthDate   string      `json:"birthDate,omitempty"`   // ISO 8601 format (YYYY-MM-DD)
+	Nationality string      `json:"nationality,omitempty"` // ISO 3166-1 alpha-2 (2-letter)
+	Contact     *Contact    `json:"contact,omitempty"`
+	IDDocument  *IDDocument `json:"idDocument,omitempty"`
+	TaxID       *TaxID      `json:"taxId,omitempty"` // For local tax/financial identifiers
+}
+
+// OrganizationDetails represents organization-specific KYC information
+// Required if entityType is "organization"
+type OrganizationDetails struct {
+	LegalName           string     `json:"legalName,omitempty"`
+	RegistrationNumber  string     `json:"registrationNumber,omitempty"`
+	RegistrationDate    string     `json:"registrationDate,omitempty"`    // ISO 8601 format (YYYY-MM-DD)
+	RegistrationCountry string     `json:"registrationCountry,omitempty"` // ISO 3166-1 alpha-2 (2-letter)
+	Contact             *Contact   `json:"contact,omitempty"`
+	TaxID               *TaxID     `json:"taxId,omitempty"`
+	Directors           []Director `json:"directors,omitempty"` // Optional: Directors/beneficial owners information
+}
+
+// Director represents a director or beneficial owner of an organization
+type Director struct {
+	PersonDetails       PersonDetails `json:"personDetails"`                 // Person details for the director
+	Role                string        `json:"role,omitempty"`                // e.g., "Director", "CEO", "Beneficial Owner"
+	OwnershipPercentage float64       `json:"ownershipPercentage,omitempty"` // Ownership percentage (0-100)
+}
+
+// Contact represents contact information
+type Contact struct {
+	Email     string `json:"email,omitempty"`
+	PhoneE164 string `json:"phoneE164,omitempty"` // E.164 format
+}
+
+// IDDocument represents identity document information
+type IDDocument struct {
+	Type          string `json:"type,omitempty"` // "passport" | "nationalID" | "driverLicense"
+	Number        string `json:"number,omitempty"`
+	IssuerCountry string `json:"issuerCountry,omitempty"` // ISO 3166-1 alpha-2 (2-letter)
+}
+
+// TaxID represents tax identification information
+type TaxID struct {
+	Type    string `json:"type,omitempty"` // For person: "TIN" | "CPF" | "SSN" | "BVN" | "Other", For organization: "VAT" | "CorpTIN" | "LEI" | "Other"
+	Value   string `json:"value,omitempty"`
+	Country string `json:"country,omitempty"` // ISO 3166-1 alpha-2 (2-letter)
+}
+
+// PrincipalAddress represents the principal address
+// Structured address for the entity
+type PrincipalAddress struct {
+	Street     string `json:"street,omitempty"`
+	City       string `json:"city,omitempty"`
+	State      string `json:"state,omitempty"`
+	PostalCode string `json:"postalCode,omitempty"`
+	Country    string `json:"country,omitempty"` // ISO 3166-1 alpha-2 (2-letter)
+}
+
+// V2PaymentOrderPayload is the payload for the v2 create payment order endpoint
+type V2PaymentOrderPayload struct {
+	Amount           string                    `json:"amount" binding:"required"`
+	Rate             string                    `json:"rate,omitempty"`
+	AmountIn         string                    `json:"amountIn,omitempty" binding:"omitempty,oneof=crypto fiat"`
+	SenderFee        string                    `json:"senderFee,omitempty"`
+	SenderFeePercent string                    `json:"senderFeePercent,omitempty"`
+	Reference        string                    `json:"reference,omitempty"`
+	Source           V2PaymentOrderSource      `json:"source" binding:"required"`
+	Destination      V2PaymentOrderDestination `json:"destination" binding:"required"`
+	KYC              *V2PaymentOrderKYC        `json:"kyc,omitempty"`
+}
+
+// V2ProviderAccount represents provider account details in v2 responses
+type V2ProviderAccount struct {
+	PaymentRail    string    `json:"paymentRail"`
+	ReceiveAddress string    `json:"receiveAddress"`
+	ValidUntil     time.Time `json:"validUntil"`
+}
+
+// V2PaymentOrderResponse is the response type for v2 payment order creation
+type V2PaymentOrderResponse struct {
+	ID               uuid.UUID                 `json:"id"`
+	Status           string                    `json:"status"`
+	Timestamp        time.Time                 `json:"timestamp"`
+	Amount           string                    `json:"amount"`
+	Rate             string                    `json:"rate,omitempty"`
+	SenderFee        string                    `json:"senderFee"`
+	SenderFeePercent string                    `json:"senderFeePercent"`
+	TransactionFee   string                    `json:"transactionFee"`
+	Reference        string                    `json:"reference"`
+	ProviderAccount  V2ProviderAccount         `json:"providerAccount"`
+	Source           V2PaymentOrderSource      `json:"source"`
+	Destination      V2PaymentOrderDestination `json:"destination"`
+	KYC              *V2PaymentOrderKYC        `json:"kyc,omitempty"`
+}
+
 // ConfirmEmailPayload is the payload for the confirmEmail endpoint
 type ConfirmEmailPayload struct {
 	Token string `json:"token" binding:"required"`
