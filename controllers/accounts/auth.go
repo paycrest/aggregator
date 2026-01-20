@@ -98,8 +98,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 	}
 
 	// Auto-verify email for partner onboarding users OR in non-production environments
-	autoVerified := payload.ReferralID != "" || (serverConf.Environment != "production" && serverConf.Environment != "staging")
-	if autoVerified {
+	if payload.ReferralID != "" || (serverConf.Environment != "production" && serverConf.Environment != "staging") {
 		userCreate = userCreate.SetIsEmailVerified(true)
 	}
 
@@ -255,21 +254,18 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Send verification email (skip if user is auto-verified)
-	var verificationToken *ent.VerificationToken
-	if !autoVerified {
-		verificationToken, err = db.Client.VerificationToken.
-			Create().
-			SetOwner(user).
-			SetScope(verificationtoken.ScopeEmailVerification).
-			SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
-			Save(ctx)
-		if err != nil {
-			logger.Errorf("Error: Failed to create verification token: %v", err)
-		}
+	// Send verification email
+	verificationToken, err := db.Client.VerificationToken.
+		Create().
+		SetOwner(user).
+		SetScope(verificationtoken.ScopeEmailVerification).
+		SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
+		Save(ctx)
+	if err != nil {
+		logger.Errorf("Error: Failed to create verification token: %v", err)
 	}
 
-	if serverConf.Environment == "production" && !autoVerified {
+	if serverConf.Environment == "production" {
 		if verificationToken != nil {
 			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
 				logger.WithFields(logger.Fields{
