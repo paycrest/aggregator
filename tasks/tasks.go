@@ -1289,7 +1289,7 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 
 		// Defensive check: Only reassign if order is in a valid state
 		// Skip if order is already processing, fulfilled, validated, settled, or refunded
-		if order.Status != paymentorder.StatusPending && order.Status != paymentorder.StatusDeposited {
+		if order.Status != paymentorder.StatusPending {
 			logger.WithFields(logger.Fields{
 				"OrderID": order.ID.String(),
 				"Status":  order.Status,

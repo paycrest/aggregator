@@ -1618,12 +1618,15 @@ func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentO
 	// Filter by status
 	statusQueryParam := ctx.Query("status")
 	statusMap := map[string]paymentorder.Status{
-		"initiated": paymentorder.StatusInitiated,
-		"deposited": paymentorder.StatusDeposited,
-		"pending":   paymentorder.StatusPending,
-		"expired":   paymentorder.StatusExpired,
-		"settled":   paymentorder.StatusSettled,
-		"refunded":  paymentorder.StatusRefunded,
+		"initiated":  paymentorder.StatusInitiated,
+		"deposited":  paymentorder.StatusDeposited,
+		"pending":    paymentorder.StatusPending,
+		"fulfilled":  paymentorder.StatusFulfilled,
+		"fulfilling": paymentorder.StatusFulfilling,
+		"validated":  paymentorder.StatusValidated,
+		"expired":    paymentorder.StatusExpired,
+		"settled":    paymentorder.StatusSettled,
+		"refunded":   paymentorder.StatusRefunded,
 	}
 
 	if status, ok := statusMap[statusQueryParam]; ok {
