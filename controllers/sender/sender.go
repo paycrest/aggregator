@@ -585,7 +585,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 	if payload.SenderFee != "" && payload.SenderFeePercent != "" {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 			Field:   "SenderFee",
-			Message: "senderFee and senderFeePercent are mutually exclusive",
+			Message: "Cannot provide both senderFee and senderFeePercent",
 		})
 		return
 	}
