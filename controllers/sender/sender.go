@@ -801,9 +801,15 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 	amountIn := payload.AmountIn
 	switch amountIn {
 	case "fiat":
-		// For fiat amounts, use market rate as approximation to convert to crypto,
-		// then ValidateRate will get the actual rate and validate with crypto amount
-		orderRate = currency.MarketRate
+		// For fiat amounts, convert to crypto first, then ValidateRate will validate with crypto amount
+		// For direct currency matches (e.g., cNGN->NGN), rate is always 1:1
+		isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
+		if isDirectMatch {
+			orderRate = decimal.NewFromInt(1)
+		} else {
+			// Use market rate as approximation for non-direct matches
+			orderRate = currency.MarketRate
+		}
 		cryptoAmount = amount.Div(orderRate)
 
 		// ValidateRate expects crypto units, so pass cryptoAmount
