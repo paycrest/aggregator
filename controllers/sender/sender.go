@@ -650,8 +650,8 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 			return
 		}
 	} else if strings.HasPrefix(payload.Source.PaymentRail, "starknet") {
-		// Starknet addresses are 66 characters (0x + 64 hex characters)
-		pattern := `^0x[a-fA-F0-9]{64}$`
+		// Starknet addresses are 65 or 66 characters (0x + 63-64 hex characters)
+		pattern := `^0x[a-fA-F0-9]{63,64}$`
 		matched, _ := regexp.MatchString(pattern, payload.Source.RefundAddress)
 		if !matched {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
