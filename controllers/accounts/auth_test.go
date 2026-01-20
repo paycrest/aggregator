@@ -70,6 +70,10 @@ func (m *mockEmailService) SendWebhookFailureEmail(ctx context.Context, email, f
 	return types.SendEmailResponse{Id: "mock-webhook-failure-id"}, nil
 }
 
+func (m *mockEmailService) SendPartnerOnboardingSuccessEmail(ctx context.Context, email, firstName, apiKey string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-partner-onboarding-id"}, nil
+}
+
 func TestAuth(t *testing.T) {
 	// Set environment to "test" so users are auto-verified (email won't be in response)
 	originalEnv := os.Getenv("ENVIRONMENT")
