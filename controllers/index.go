@@ -28,7 +28,6 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
@@ -64,7 +63,6 @@ type Controller struct {
 	kycService            types.KYCProvider
 	slackService          *svc.SlackService
 	emailService          email.EmailServiceInterface
-	apiKeyService         *svc.APIKeyService
 	cache                 map[string]bool
 	processedActions      map[string]bool
 	actionMutex           sync.RWMutex
@@ -80,7 +78,6 @@ func NewController() *Controller {
 		kycService:            smile.NewSmileIDService(),
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
 		emailService:          email.NewEmailServiceWithProviders(),
-		apiKeyService:         svc.NewAPIKeyService(),
 		cache:                 make(map[string]bool),
 		processedActions:      make(map[string]bool),
 	}
@@ -1180,42 +1177,8 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				logger.Errorf("Failed to update KYB Profile with rejection comment %s: %v", kybProfileID, err)
 			}
 
-			// Check if this is a partner onboarding user (has referral_id)
-			userRecord, err := storage.Client.User.
-				Query().
-				Where(user.EmailEQ(email)).
-				Only(ctx)
-
-			var additionalData map[string]interface{}
-			if err == nil && userRecord != nil && userRecord.ReferralID != "" {
-				// Delete API key if it exists (partner onboarding users should not have API key if KYB is rejected)
-				senderProfile, err := storage.Client.SenderProfile.
-					Query().
-					Where(senderprofile.HasUserWith(user.IDEQ(userRecord.ID))).
-					Only(ctx)
-				if err == nil && senderProfile != nil {
-					apiKey, err := senderProfile.QueryAPIKey().Only(ctx)
-					if err == nil && apiKey != nil {
-						err = storage.Client.APIKey.DeleteOneID(apiKey.ID).Exec(ctx)
-						if err != nil {
-							logger.Errorf("Failed to delete API key for partner onboarding user %s: %v", email, err)
-						} else {
-							logger.Infof("Deleted API key for partner onboarding user %s (KYB rejected)", email)
-						}
-					}
-				}
-
-				// This is a partner onboarding user - add partner-specific instructions
-				additionalData = map[string]interface{}{
-					"is_partner_onboarding": true,
-					"partner_instructions":  "To continue with your KYB verification, please reset your password using the email. Once logged in, you can complete your KYB submission.",
-					"dashboard_url":         "https://dashboard.paycrest.io",
-					"email":                 email,
-				}
-			}
-
 			// Send rejection email
-			resp, err := ctrl.emailService.SendKYBRejectionEmail(ctx, email, firstName, reasonForDecline, additionalData)
+			resp, err := ctrl.emailService.SendKYBRejectionEmail(ctx, email, firstName, reasonForDecline)
 			if err != nil {
 				logger.Errorf("Failed to send KYB rejection email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
 			} else {
@@ -1314,39 +1277,12 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
 			}
 
-			// Partner onboarding users (referral_id set) get a different email (API key id), else standard approval email.
-			emailSent := false
-			if kyb.Edges.User.ReferralID != "" {
-				senderProfile, err := storage.Client.SenderProfile.
-					Query().
-					Where(senderprofile.HasUserWith(user.IDEQ(kyb.Edges.User.ID))).
-					Only(ctx)
-				if err == nil && senderProfile != nil {
-					apiKeyResponse, err := ctrl.apiKeyService.GetAPIKey(ctx, senderProfile, nil)
-					if err == nil && apiKeyResponse != nil {
-						resp, err := ctrl.emailService.SendPartnerOnboardingSuccessEmail(ctx, email, kyb.CompanyName, apiKeyResponse.ID.String())
-						if err != nil {
-							logger.Errorf("Failed to send partner onboarding email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
-						} else {
-							logger.Infof("Partner onboarding email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
-							emailSent = true
-						}
-					} else {
-						logger.Errorf("Failed to fetch API key for partner onboarding email to %s: %v", email, err)
-					}
-				} else {
-					logger.Errorf("Failed to fetch sender profile for partner onboarding email to %s: %v", email, err)
-				}
-			}
-
-			// Fallback to standard approval email if partner email not sent
-			if !emailSent {
-				resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
-				if err != nil {
-					logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
-				} else {
-					logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
-				}
+			// Send approval email
+			resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
+			if err != nil {
+				logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+			} else {
+				logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
 			}
 
 			// Send Slack feedback notification

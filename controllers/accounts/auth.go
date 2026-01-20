@@ -92,13 +92,8 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		SetPassword(payload.Password).
 		SetScope(scope)
 
-	// Set referral_id if provided (partner onboarding users)
-	if payload.ReferralID != "" {
-		userCreate = userCreate.SetReferralID(payload.ReferralID)
-	}
-
-	// Auto-verify email for partner onboarding users OR in non-production environments
-	if payload.ReferralID != "" || (serverConf.Environment != "production" && serverConf.Environment != "staging") {
+	// Checking the environment to set the user as verified and give early access
+	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
 		userCreate = userCreate.SetIsEmailVerified(true)
 	}
 

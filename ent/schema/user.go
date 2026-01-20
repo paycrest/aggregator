@@ -44,9 +44,6 @@ func (User) Fields() []ent.Field {
 		field.Enum("kyb_verification_status").
 			Values("not_started", "pending", "approved", "rejected").
 			Default("not_started"),
-		field.String("referral_id").
-			MaxLen(100).
-			Optional(),
 	}
 }
 
