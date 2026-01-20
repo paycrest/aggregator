@@ -1293,7 +1293,7 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 			logger.WithFields(logger.Fields{
 				"OrderID": order.ID.String(),
 				"Status":  order.Status,
-			}).Infof("ReassignStaleOrderRequest: Order is not in pending/deposited state, skipping reassignment")
+			}).Infof("ReassignStaleOrderRequest: Order is not in pending state, skipping reassignment")
 			continue
 		}
 
