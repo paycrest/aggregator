@@ -1619,6 +1619,7 @@ func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentO
 	statusQueryParam := ctx.Query("status")
 	statusMap := map[string]paymentorder.Status{
 		"initiated": paymentorder.StatusInitiated,
+		"deposited": paymentorder.StatusDeposited,
 		"pending":   paymentorder.StatusPending,
 		"expired":   paymentorder.StatusExpired,
 		"settled":   paymentorder.StatusSettled,
