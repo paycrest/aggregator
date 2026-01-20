@@ -187,7 +187,7 @@ func RetryStaleUserOperations() error {
 				}
 
 				_, err = order.Update().
-					SetStatus(paymentorder.StatusInitiated).
+					SetStatus(paymentorder.StatusDeposited).
 					Save(ctx)
 				if err != nil {
 					logger.WithFields(logger.Fields{
@@ -1287,13 +1287,13 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 			continue
 		}
 
-		// Defensive check: Only reassign if order is in a valid state
+		// Defensive check: Only reassign if order is in pending state
 		// Skip if order is already processing, fulfilled, validated, settled, or refunded
-		if order.Status != paymentorder.StatusPending && order.Status != paymentorder.StatusInitiated {
+		if order.Status != paymentorder.StatusPending {
 			logger.WithFields(logger.Fields{
 				"OrderID": order.ID.String(),
 				"Status":  order.Status,
-			}).Infof("ReassignStaleOrderRequest: Order is not in pending/initiated state, skipping reassignment")
+			}).Infof("ReassignStaleOrderRequest: Order is not in pending state, skipping reassignment")
 			continue
 		}
 
