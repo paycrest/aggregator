@@ -464,11 +464,11 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 	currentOrder, err := storage.Client.PaymentOrder.Get(ctx, order.ID)
 	if err == nil {
 		// Order exists - check if it's in a state that allows assignment
-		if currentOrder.Status != paymentorder.StatusPending && currentOrder.Status != paymentorder.StatusInitiated {
+		if currentOrder.Status != paymentorder.StatusPending {
 			logger.WithFields(logger.Fields{
 				"OrderID": order.ID.String(),
 				"Status":  currentOrder.Status,
-			}).Warnf("AssignPaymentOrder: Order is not in pending/initiated state, skipping assignment")
+			}).Warnf("AssignPaymentOrder: Order is not in pending state, skipping assignment")
 			return nil // Not an error, just skip
 		}
 
