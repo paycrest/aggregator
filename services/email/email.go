@@ -183,7 +183,7 @@ func (e *EmailService) SendKYBApprovalEmail(ctx context.Context, email, firstNam
 }
 
 // SendKYBRejectionEmail sends a KYB rejection email
-func (e *EmailService) SendKYBRejectionEmail(ctx context.Context, email, firstName, reasonForDecline string) (types.SendEmailResponse, error) {
+func (e *EmailService) SendKYBRejectionEmail(ctx context.Context, email, firstName, reasonForDecline string, additionalData map[string]interface{}) (types.SendEmailResponse, error) {
 	payload := types.SendEmailPayload{
 		FromAddress: e.notificationConf.EmailFromAddress,
 		ToAddress:   email,
@@ -191,6 +191,13 @@ func (e *EmailService) SendKYBRejectionEmail(ctx context.Context, email, firstNa
 			"first_name":         firstName,
 			"reason_for_decline": reasonForDecline,
 		},
+	}
+
+	// Merge additional dynamic data if provided
+	if additionalData != nil {
+		for k, v := range additionalData {
+			payload.DynamicData[k] = v
+		}
 	}
 
 	templateID := getTemplateID("kyb_rejection", e.primaryProvider.GetName())
@@ -211,33 +218,52 @@ func (e *EmailService) SendWebhookFailureEmail(ctx context.Context, email, first
 	return e.SendTemplateEmail(ctx, payload, templateID)
 }
 
+// SendPartnerOnboardingSuccessEmail sends a partner onboarding success email.
+func (e *EmailService) SendPartnerOnboardingSuccessEmail(ctx context.Context, email, firstName, apiKey string) (types.SendEmailResponse, error) {
+	payload := types.SendEmailPayload{
+		FromAddress: e.notificationConf.EmailFromAddress,
+		ToAddress:   email,
+		DynamicData: map[string]interface{}{
+			"first_name": firstName,
+			"api_key":    apiKey,
+			"email":      email,
+		},
+	}
+
+	templateID := getTemplateID("partner_onboarding_success", e.primaryProvider.GetName())
+	return e.SendTemplateEmail(ctx, payload, templateID)
+}
+
 // getTemplateID returns the appropriate template ID based on email type and provider
 func getTemplateID(emailType, provider string) string {
 	// Template ID mapping based on provider and email type
 	templates := map[string]map[string]string{
 		"sendgrid": {
-			"verification":    "d-f26d853bbb884c0c856f0bbda894032c",
-			"password_reset":  "d-8b689801cd9947748775ccd1c4cc932e",
-			"welcome":         "d-b425f024e6554c5ba2b4d03ab0a8b25d",
-			"kyb_approval":    "d-5ebb862274214ba79eae226c09300aa7",
-			"kyb_rejection":   "d-6917f9c32105467b8dd806a5a3dd32dc",
-			"webhook_failure": "d-da75eee4966544ad92dcd060421d4e12",
+			"verification":               "d-f26d853bbb884c0c856f0bbda894032c",
+			"password_reset":             "d-8b689801cd9947748775ccd1c4cc932e",
+			"welcome":                    "d-b425f024e6554c5ba2b4d03ab0a8b25d",
+			"kyb_approval":               "d-5ebb862274214ba79eae226c09300aa7",
+			"kyb_rejection":              "d-6917f9c32105467b8dd806a5a3dd32dc",
+			"webhook_failure":            "d-da75eee4966544ad92dcd060421d4e12",
+			"partner_onboarding_success": "d-da75eee4966544ad92dcd060421d4a13",
 		},
 		"brevo": {
-			"verification":    "5",
-			"password_reset":  "6",
-			"welcome":         "4",
-			"kyb_approval":    "7",
-			"kyb_rejection":   "8",
-			"webhook_failure": "9",
+			"verification":               "5",
+			"password_reset":             "6",
+			"welcome":                    "4",
+			"kyb_approval":               "7",
+			"kyb_rejection":              "8",
+			"webhook_failure":            "9",
+			"partner_onboarding_success": "57",
 		},
 		"mailgun": {
-			"verification":    "mailgun-verification-template-id",    // TODO: Add actual template ID
-			"password_reset":  "mailgun-password-reset-template-id",  // TODO: Add actual template ID
-			"welcome":         "mailgun-welcome-template-id",         // TODO: Add actual template ID
-			"kyb_approval":    "mailgun-kyb-approval-template-id",    // TODO: Add actual template ID
-			"kyb_rejection":   "mailgun-kyb-rejection-template-id",   // TODO: Add actual template ID
-			"webhook_failure": "mailgun-webhook-failure-template-id", // TODO: Add actual template ID
+			"verification":               "mailgun-verification-template-id",               // TODO: Add actual template ID
+			"password_reset":             "mailgun-password-reset-template-id",             // TODO: Add actual template ID
+			"welcome":                    "mailgun-welcome-template-id",                    // TODO: Add actual template ID
+			"kyb_approval":               "mailgun-kyb-approval-template-id",               // TODO: Add actual template ID
+			"kyb_rejection":              "mailgun-kyb-rejection-template-id",              // TODO: Add actual template ID
+			"webhook_failure":            "mailgun-webhook-failure-template-id",            // TODO: Add actual template ID
+			"partner_onboarding_success": "mailgun-partner-onboarding-success-template-id", // TODO: Add actual template ID
 		},
 	}
 

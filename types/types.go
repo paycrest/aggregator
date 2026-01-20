@@ -163,6 +163,7 @@ type RegisterPayload struct {
 	Password   string   `json:"password" binding:"required,min=6,max=20"`
 	Currencies []string `json:"currencies"`
 	Scopes     []string `json:"scopes" binding:"required,dive,oneof=sender provider"`
+	ReferralID string   `json:"referralId"`
 }
 
 // RegisterResponse is the response for the register endpoint
