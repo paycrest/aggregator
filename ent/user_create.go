@@ -128,20 +128,6 @@ func (_c *UserCreate) SetNillableKybVerificationStatus(v *user.KybVerificationSt
 	return _c
 }
 
-// SetReferralID sets the "referral_id" field.
-func (_c *UserCreate) SetReferralID(v string) *UserCreate {
-	_c.mutation.SetReferralID(v)
-	return _c
-}
-
-// SetNillableReferralID sets the "referral_id" field if the given value is not nil.
-func (_c *UserCreate) SetNillableReferralID(v *string) *UserCreate {
-	if v != nil {
-		_c.SetReferralID(*v)
-	}
-	return _c
-}
-
 // SetID sets the "id" field.
 func (_c *UserCreate) SetID(v uuid.UUID) *UserCreate {
 	_c.mutation.SetID(v)
@@ -348,11 +334,6 @@ func (_c *UserCreate) check() error {
 			return &ValidationError{Name: "kyb_verification_status", err: fmt.Errorf(`ent: validator failed for field "User.kyb_verification_status": %w`, err)}
 		}
 	}
-	if v, ok := _c.mutation.ReferralID(); ok {
-		if err := user.ReferralIDValidator(v); err != nil {
-			return &ValidationError{Name: "referral_id", err: fmt.Errorf(`ent: validator failed for field "User.referral_id": %w`, err)}
-		}
-	}
 	return nil
 }
 
@@ -428,10 +409,6 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.KybVerificationStatus(); ok {
 		_spec.SetField(user.FieldKybVerificationStatus, field.TypeEnum, value)
 		_node.KybVerificationStatus = value
-	}
-	if value, ok := _c.mutation.ReferralID(); ok {
-		_spec.SetField(user.FieldReferralID, field.TypeString, value)
-		_node.ReferralID = value
 	}
 	if nodes := _c.mutation.SenderProfileIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -657,24 +634,6 @@ func (u *UserUpsert) UpdateKybVerificationStatus() *UserUpsert {
 	return u
 }
 
-// SetReferralID sets the "referral_id" field.
-func (u *UserUpsert) SetReferralID(v string) *UserUpsert {
-	u.Set(user.FieldReferralID, v)
-	return u
-}
-
-// UpdateReferralID sets the "referral_id" field to the value that was provided on create.
-func (u *UserUpsert) UpdateReferralID() *UserUpsert {
-	u.SetExcluded(user.FieldReferralID)
-	return u
-}
-
-// ClearReferralID clears the value of the "referral_id" field.
-func (u *UserUpsert) ClearReferralID() *UserUpsert {
-	u.SetNull(user.FieldReferralID)
-	return u
-}
-
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -849,27 +808,6 @@ func (u *UserUpsertOne) SetKybVerificationStatus(v user.KybVerificationStatus) *
 func (u *UserUpsertOne) UpdateKybVerificationStatus() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateKybVerificationStatus()
-	})
-}
-
-// SetReferralID sets the "referral_id" field.
-func (u *UserUpsertOne) SetReferralID(v string) *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.SetReferralID(v)
-	})
-}
-
-// UpdateReferralID sets the "referral_id" field to the value that was provided on create.
-func (u *UserUpsertOne) UpdateReferralID() *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateReferralID()
-	})
-}
-
-// ClearReferralID clears the value of the "referral_id" field.
-func (u *UserUpsertOne) ClearReferralID() *UserUpsertOne {
-	return u.Update(func(s *UserUpsert) {
-		s.ClearReferralID()
 	})
 }
 
@@ -1214,27 +1152,6 @@ func (u *UserUpsertBulk) SetKybVerificationStatus(v user.KybVerificationStatus) 
 func (u *UserUpsertBulk) UpdateKybVerificationStatus() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateKybVerificationStatus()
-	})
-}
-
-// SetReferralID sets the "referral_id" field.
-func (u *UserUpsertBulk) SetReferralID(v string) *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.SetReferralID(v)
-	})
-}
-
-// UpdateReferralID sets the "referral_id" field to the value that was provided on create.
-func (u *UserUpsertBulk) UpdateReferralID() *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.UpdateReferralID()
-	})
-}
-
-// ClearReferralID clears the value of the "referral_id" field.
-func (u *UserUpsertBulk) ClearReferralID() *UserUpsertBulk {
-	return u.Update(func(s *UserUpsert) {
-		s.ClearReferralID()
 	})
 }
 

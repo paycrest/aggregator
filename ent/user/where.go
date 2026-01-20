@@ -101,11 +101,6 @@ func HasEarlyAccess(v bool) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldHasEarlyAccess, v))
 }
 
-// ReferralID applies equality check predicate on the "referral_id" field. It's identical to ReferralIDEQ.
-func ReferralID(v string) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldReferralID, v))
-}
-
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldCreatedAt, v))
@@ -549,81 +544,6 @@ func KybVerificationStatusIn(vs ...KybVerificationStatus) predicate.User {
 // KybVerificationStatusNotIn applies the NotIn predicate on the "kyb_verification_status" field.
 func KybVerificationStatusNotIn(vs ...KybVerificationStatus) predicate.User {
 	return predicate.User(sql.FieldNotIn(FieldKybVerificationStatus, vs...))
-}
-
-// ReferralIDEQ applies the EQ predicate on the "referral_id" field.
-func ReferralIDEQ(v string) predicate.User {
-	return predicate.User(sql.FieldEQ(FieldReferralID, v))
-}
-
-// ReferralIDNEQ applies the NEQ predicate on the "referral_id" field.
-func ReferralIDNEQ(v string) predicate.User {
-	return predicate.User(sql.FieldNEQ(FieldReferralID, v))
-}
-
-// ReferralIDIn applies the In predicate on the "referral_id" field.
-func ReferralIDIn(vs ...string) predicate.User {
-	return predicate.User(sql.FieldIn(FieldReferralID, vs...))
-}
-
-// ReferralIDNotIn applies the NotIn predicate on the "referral_id" field.
-func ReferralIDNotIn(vs ...string) predicate.User {
-	return predicate.User(sql.FieldNotIn(FieldReferralID, vs...))
-}
-
-// ReferralIDGT applies the GT predicate on the "referral_id" field.
-func ReferralIDGT(v string) predicate.User {
-	return predicate.User(sql.FieldGT(FieldReferralID, v))
-}
-
-// ReferralIDGTE applies the GTE predicate on the "referral_id" field.
-func ReferralIDGTE(v string) predicate.User {
-	return predicate.User(sql.FieldGTE(FieldReferralID, v))
-}
-
-// ReferralIDLT applies the LT predicate on the "referral_id" field.
-func ReferralIDLT(v string) predicate.User {
-	return predicate.User(sql.FieldLT(FieldReferralID, v))
-}
-
-// ReferralIDLTE applies the LTE predicate on the "referral_id" field.
-func ReferralIDLTE(v string) predicate.User {
-	return predicate.User(sql.FieldLTE(FieldReferralID, v))
-}
-
-// ReferralIDContains applies the Contains predicate on the "referral_id" field.
-func ReferralIDContains(v string) predicate.User {
-	return predicate.User(sql.FieldContains(FieldReferralID, v))
-}
-
-// ReferralIDHasPrefix applies the HasPrefix predicate on the "referral_id" field.
-func ReferralIDHasPrefix(v string) predicate.User {
-	return predicate.User(sql.FieldHasPrefix(FieldReferralID, v))
-}
-
-// ReferralIDHasSuffix applies the HasSuffix predicate on the "referral_id" field.
-func ReferralIDHasSuffix(v string) predicate.User {
-	return predicate.User(sql.FieldHasSuffix(FieldReferralID, v))
-}
-
-// ReferralIDIsNil applies the IsNil predicate on the "referral_id" field.
-func ReferralIDIsNil() predicate.User {
-	return predicate.User(sql.FieldIsNull(FieldReferralID))
-}
-
-// ReferralIDNotNil applies the NotNil predicate on the "referral_id" field.
-func ReferralIDNotNil() predicate.User {
-	return predicate.User(sql.FieldNotNull(FieldReferralID))
-}
-
-// ReferralIDEqualFold applies the EqualFold predicate on the "referral_id" field.
-func ReferralIDEqualFold(v string) predicate.User {
-	return predicate.User(sql.FieldEqualFold(FieldReferralID, v))
-}
-
-// ReferralIDContainsFold applies the ContainsFold predicate on the "referral_id" field.
-func ReferralIDContainsFold(v string) predicate.User {
-	return predicate.User(sql.FieldContainsFold(FieldReferralID, v))
 }
 
 // HasSenderProfile applies the HasEdge predicate on the "sender_profile" edge.
