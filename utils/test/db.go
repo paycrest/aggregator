@@ -471,23 +471,19 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		return nil, err
 	}
 
-	// Create ProviderCurrencies entry
 	currencyID := payload["currency_id"].(uuid.UUID)
 	currency, err := db.Client.FiatCurrency.Get(context.Background(), currencyID)
 	if err != nil {
 		return nil, err
 	}
-
-	_, err = db.Client.ProviderCurrencies.
-		Create().
-		SetProvider(profile).
-		SetCurrency(currency).
+	_, err = db.Client.ProviderBalances.Create().
+		SetFiatCurrency(currency).
 		SetAvailableBalance(decimal.Zero).
 		SetTotalBalance(decimal.Zero).
 		SetReservedBalance(decimal.Zero).
 		SetIsAvailable(true).
+		AddProviderIDs(profile.ID).
 		Save(context.Background())
-
 	return profile, err
 }
 

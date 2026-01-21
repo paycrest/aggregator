@@ -26,7 +26,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -66,8 +66,8 @@ type Client struct {
 	PaymentOrderFulfillment *PaymentOrderFulfillmentClient
 	// PaymentWebhook is the client for interacting with the PaymentWebhook builders.
 	PaymentWebhook *PaymentWebhookClient
-	// ProviderCurrencies is the client for interacting with the ProviderCurrencies builders.
-	ProviderCurrencies *ProviderCurrenciesClient
+	// ProviderBalances is the client for interacting with the ProviderBalances builders.
+	ProviderBalances *ProviderBalancesClient
 	// ProviderFiatAccount is the client for interacting with the ProviderFiatAccount builders.
 	ProviderFiatAccount *ProviderFiatAccountClient
 	// ProviderOrderToken is the client for interacting with the ProviderOrderToken builders.
@@ -113,7 +113,7 @@ func (c *Client) init() {
 	c.PaymentOrder = NewPaymentOrderClient(c.config)
 	c.PaymentOrderFulfillment = NewPaymentOrderFulfillmentClient(c.config)
 	c.PaymentWebhook = NewPaymentWebhookClient(c.config)
-	c.ProviderCurrencies = NewProviderCurrenciesClient(c.config)
+	c.ProviderBalances = NewProviderBalancesClient(c.config)
 	c.ProviderFiatAccount = NewProviderFiatAccountClient(c.config)
 	c.ProviderOrderToken = NewProviderOrderTokenClient(c.config)
 	c.ProviderProfile = NewProviderProfileClient(c.config)
@@ -228,7 +228,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		PaymentOrder:                NewPaymentOrderClient(cfg),
 		PaymentOrderFulfillment:     NewPaymentOrderFulfillmentClient(cfg),
 		PaymentWebhook:              NewPaymentWebhookClient(cfg),
-		ProviderCurrencies:          NewProviderCurrenciesClient(cfg),
+		ProviderBalances:            NewProviderBalancesClient(cfg),
 		ProviderFiatAccount:         NewProviderFiatAccountClient(cfg),
 		ProviderOrderToken:          NewProviderOrderTokenClient(cfg),
 		ProviderProfile:             NewProviderProfileClient(cfg),
@@ -270,7 +270,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		PaymentOrder:                NewPaymentOrderClient(cfg),
 		PaymentOrderFulfillment:     NewPaymentOrderFulfillmentClient(cfg),
 		PaymentWebhook:              NewPaymentWebhookClient(cfg),
-		ProviderCurrencies:          NewProviderCurrenciesClient(cfg),
+		ProviderBalances:            NewProviderBalancesClient(cfg),
 		ProviderFiatAccount:         NewProviderFiatAccountClient(cfg),
 		ProviderOrderToken:          NewProviderOrderTokenClient(cfg),
 		ProviderProfile:             NewProviderProfileClient(cfg),
@@ -314,7 +314,7 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
 		c.Institution, c.KYBProfile, c.Network, c.PaymentOrder,
-		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderCurrencies,
+		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderBalances,
 		c.ProviderFiatAccount, c.ProviderOrderToken, c.ProviderProfile,
 		c.ProviderRating, c.ProvisionBucket, c.SenderOrderToken, c.SenderProfile,
 		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
@@ -329,7 +329,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
 		c.Institution, c.KYBProfile, c.Network, c.PaymentOrder,
-		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderCurrencies,
+		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderBalances,
 		c.ProviderFiatAccount, c.ProviderOrderToken, c.ProviderProfile,
 		c.ProviderRating, c.ProvisionBucket, c.SenderOrderToken, c.SenderProfile,
 		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
@@ -361,8 +361,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PaymentOrderFulfillment.mutate(ctx, m)
 	case *PaymentWebhookMutation:
 		return c.PaymentWebhook.mutate(ctx, m)
-	case *ProviderCurrenciesMutation:
-		return c.ProviderCurrencies.mutate(ctx, m)
+	case *ProviderBalancesMutation:
+		return c.ProviderBalances.mutate(ctx, m)
 	case *ProviderFiatAccountMutation:
 		return c.ProviderFiatAccount.mutate(ctx, m)
 	case *ProviderOrderTokenMutation:
@@ -830,15 +830,15 @@ func (c *FiatCurrencyClient) GetX(ctx context.Context, id uuid.UUID) *FiatCurren
 	return obj
 }
 
-// QueryProviderCurrencies queries the provider_currencies edge of a FiatCurrency.
-func (c *FiatCurrencyClient) QueryProviderCurrencies(_m *FiatCurrency) *ProviderCurrenciesQuery {
-	query := (&ProviderCurrenciesClient{config: c.config}).Query()
+// QueryProviderBalances queries the provider_balances edge of a FiatCurrency.
+func (c *FiatCurrencyClient) QueryProviderBalances(_m *FiatCurrency) *ProviderBalancesQuery {
+	query := (&ProviderBalancesClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(fiatcurrency.Table, fiatcurrency.FieldID, id),
-			sqlgraph.To(providercurrencies.Table, providercurrencies.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderCurrenciesTable, fiatcurrency.ProviderCurrenciesColumn),
+			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderBalancesTable, fiatcurrency.ProviderBalancesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2090,107 +2090,107 @@ func (c *PaymentWebhookClient) mutate(ctx context.Context, m *PaymentWebhookMuta
 	}
 }
 
-// ProviderCurrenciesClient is a client for the ProviderCurrencies schema.
-type ProviderCurrenciesClient struct {
+// ProviderBalancesClient is a client for the ProviderBalances schema.
+type ProviderBalancesClient struct {
 	config
 }
 
-// NewProviderCurrenciesClient returns a client for the ProviderCurrencies from the given config.
-func NewProviderCurrenciesClient(c config) *ProviderCurrenciesClient {
-	return &ProviderCurrenciesClient{config: c}
+// NewProviderBalancesClient returns a client for the ProviderBalances from the given config.
+func NewProviderBalancesClient(c config) *ProviderBalancesClient {
+	return &ProviderBalancesClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `providercurrencies.Hooks(f(g(h())))`.
-func (c *ProviderCurrenciesClient) Use(hooks ...Hook) {
-	c.hooks.ProviderCurrencies = append(c.hooks.ProviderCurrencies, hooks...)
+// A call to `Use(f, g, h)` equals to `providerbalances.Hooks(f(g(h())))`.
+func (c *ProviderBalancesClient) Use(hooks ...Hook) {
+	c.hooks.ProviderBalances = append(c.hooks.ProviderBalances, hooks...)
 }
 
 // Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `providercurrencies.Intercept(f(g(h())))`.
-func (c *ProviderCurrenciesClient) Intercept(interceptors ...Interceptor) {
-	c.inters.ProviderCurrencies = append(c.inters.ProviderCurrencies, interceptors...)
+// A call to `Intercept(f, g, h)` equals to `providerbalances.Intercept(f(g(h())))`.
+func (c *ProviderBalancesClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ProviderBalances = append(c.inters.ProviderBalances, interceptors...)
 }
 
-// Create returns a builder for creating a ProviderCurrencies entity.
-func (c *ProviderCurrenciesClient) Create() *ProviderCurrenciesCreate {
-	mutation := newProviderCurrenciesMutation(c.config, OpCreate)
-	return &ProviderCurrenciesCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a ProviderBalances entity.
+func (c *ProviderBalancesClient) Create() *ProviderBalancesCreate {
+	mutation := newProviderBalancesMutation(c.config, OpCreate)
+	return &ProviderBalancesCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of ProviderCurrencies entities.
-func (c *ProviderCurrenciesClient) CreateBulk(builders ...*ProviderCurrenciesCreate) *ProviderCurrenciesCreateBulk {
-	return &ProviderCurrenciesCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of ProviderBalances entities.
+func (c *ProviderBalancesClient) CreateBulk(builders ...*ProviderBalancesCreate) *ProviderBalancesCreateBulk {
+	return &ProviderBalancesCreateBulk{config: c.config, builders: builders}
 }
 
 // MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
 // a builder and applies setFunc on it.
-func (c *ProviderCurrenciesClient) MapCreateBulk(slice any, setFunc func(*ProviderCurrenciesCreate, int)) *ProviderCurrenciesCreateBulk {
+func (c *ProviderBalancesClient) MapCreateBulk(slice any, setFunc func(*ProviderBalancesCreate, int)) *ProviderBalancesCreateBulk {
 	rv := reflect.ValueOf(slice)
 	if rv.Kind() != reflect.Slice {
-		return &ProviderCurrenciesCreateBulk{err: fmt.Errorf("calling to ProviderCurrenciesClient.MapCreateBulk with wrong type %T, need slice", slice)}
+		return &ProviderBalancesCreateBulk{err: fmt.Errorf("calling to ProviderBalancesClient.MapCreateBulk with wrong type %T, need slice", slice)}
 	}
-	builders := make([]*ProviderCurrenciesCreate, rv.Len())
+	builders := make([]*ProviderBalancesCreate, rv.Len())
 	for i := 0; i < rv.Len(); i++ {
 		builders[i] = c.Create()
 		setFunc(builders[i], i)
 	}
-	return &ProviderCurrenciesCreateBulk{config: c.config, builders: builders}
+	return &ProviderBalancesCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for ProviderCurrencies.
-func (c *ProviderCurrenciesClient) Update() *ProviderCurrenciesUpdate {
-	mutation := newProviderCurrenciesMutation(c.config, OpUpdate)
-	return &ProviderCurrenciesUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for ProviderBalances.
+func (c *ProviderBalancesClient) Update() *ProviderBalancesUpdate {
+	mutation := newProviderBalancesMutation(c.config, OpUpdate)
+	return &ProviderBalancesUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *ProviderCurrenciesClient) UpdateOne(_m *ProviderCurrencies) *ProviderCurrenciesUpdateOne {
-	mutation := newProviderCurrenciesMutation(c.config, OpUpdateOne, withProviderCurrencies(_m))
-	return &ProviderCurrenciesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *ProviderBalancesClient) UpdateOne(_m *ProviderBalances) *ProviderBalancesUpdateOne {
+	mutation := newProviderBalancesMutation(c.config, OpUpdateOne, withProviderBalances(_m))
+	return &ProviderBalancesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *ProviderCurrenciesClient) UpdateOneID(id uuid.UUID) *ProviderCurrenciesUpdateOne {
-	mutation := newProviderCurrenciesMutation(c.config, OpUpdateOne, withProviderCurrenciesID(id))
-	return &ProviderCurrenciesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *ProviderBalancesClient) UpdateOneID(id uuid.UUID) *ProviderBalancesUpdateOne {
+	mutation := newProviderBalancesMutation(c.config, OpUpdateOne, withProviderBalancesID(id))
+	return &ProviderBalancesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for ProviderCurrencies.
-func (c *ProviderCurrenciesClient) Delete() *ProviderCurrenciesDelete {
-	mutation := newProviderCurrenciesMutation(c.config, OpDelete)
-	return &ProviderCurrenciesDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for ProviderBalances.
+func (c *ProviderBalancesClient) Delete() *ProviderBalancesDelete {
+	mutation := newProviderBalancesMutation(c.config, OpDelete)
+	return &ProviderBalancesDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *ProviderCurrenciesClient) DeleteOne(_m *ProviderCurrencies) *ProviderCurrenciesDeleteOne {
+func (c *ProviderBalancesClient) DeleteOne(_m *ProviderBalances) *ProviderBalancesDeleteOne {
 	return c.DeleteOneID(_m.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ProviderCurrenciesClient) DeleteOneID(id uuid.UUID) *ProviderCurrenciesDeleteOne {
-	builder := c.Delete().Where(providercurrencies.ID(id))
+func (c *ProviderBalancesClient) DeleteOneID(id uuid.UUID) *ProviderBalancesDeleteOne {
+	builder := c.Delete().Where(providerbalances.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &ProviderCurrenciesDeleteOne{builder}
+	return &ProviderBalancesDeleteOne{builder}
 }
 
-// Query returns a query builder for ProviderCurrencies.
-func (c *ProviderCurrenciesClient) Query() *ProviderCurrenciesQuery {
-	return &ProviderCurrenciesQuery{
+// Query returns a query builder for ProviderBalances.
+func (c *ProviderBalancesClient) Query() *ProviderBalancesQuery {
+	return &ProviderBalancesQuery{
 		config: c.config,
-		ctx:    &QueryContext{Type: TypeProviderCurrencies},
+		ctx:    &QueryContext{Type: TypeProviderBalances},
 		inters: c.Interceptors(),
 	}
 }
 
-// Get returns a ProviderCurrencies entity by its id.
-func (c *ProviderCurrenciesClient) Get(ctx context.Context, id uuid.UUID) (*ProviderCurrencies, error) {
-	return c.Query().Where(providercurrencies.ID(id)).Only(ctx)
+// Get returns a ProviderBalances entity by its id.
+func (c *ProviderBalancesClient) Get(ctx context.Context, id uuid.UUID) (*ProviderBalances, error) {
+	return c.Query().Where(providerbalances.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *ProviderCurrenciesClient) GetX(ctx context.Context, id uuid.UUID) *ProviderCurrencies {
+func (c *ProviderBalancesClient) GetX(ctx context.Context, id uuid.UUID) *ProviderBalances {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -2198,15 +2198,15 @@ func (c *ProviderCurrenciesClient) GetX(ctx context.Context, id uuid.UUID) *Prov
 	return obj
 }
 
-// QueryProvider queries the provider edge of a ProviderCurrencies.
-func (c *ProviderCurrenciesClient) QueryProvider(_m *ProviderCurrencies) *ProviderProfileQuery {
+// QueryProvider queries the provider edge of a ProviderBalances.
+func (c *ProviderBalancesClient) QueryProvider(_m *ProviderBalances) *ProviderProfileQuery {
 	query := (&ProviderProfileClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(providercurrencies.Table, providercurrencies.FieldID, id),
+			sqlgraph.From(providerbalances.Table, providerbalances.FieldID, id),
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, providercurrencies.ProviderTable, providercurrencies.ProviderColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, providerbalances.ProviderTable, providerbalances.ProviderPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2214,15 +2214,31 @@ func (c *ProviderCurrenciesClient) QueryProvider(_m *ProviderCurrencies) *Provid
 	return query
 }
 
-// QueryCurrency queries the currency edge of a ProviderCurrencies.
-func (c *ProviderCurrenciesClient) QueryCurrency(_m *ProviderCurrencies) *FiatCurrencyQuery {
+// QueryFiatCurrency queries the fiat_currency edge of a ProviderBalances.
+func (c *ProviderBalancesClient) QueryFiatCurrency(_m *ProviderBalances) *FiatCurrencyQuery {
 	query := (&FiatCurrencyClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(providercurrencies.Table, providercurrencies.FieldID, id),
+			sqlgraph.From(providerbalances.Table, providerbalances.FieldID, id),
 			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, providercurrencies.CurrencyTable, providercurrencies.CurrencyColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerbalances.FiatCurrencyTable, providerbalances.FiatCurrencyColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryToken queries the token edge of a ProviderBalances.
+func (c *ProviderBalancesClient) QueryToken(_m *ProviderBalances) *TokenQuery {
+	query := (&TokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerbalances.Table, providerbalances.FieldID, id),
+			sqlgraph.To(token.Table, token.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerbalances.TokenTable, providerbalances.TokenColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2231,27 +2247,27 @@ func (c *ProviderCurrenciesClient) QueryCurrency(_m *ProviderCurrencies) *FiatCu
 }
 
 // Hooks returns the client hooks.
-func (c *ProviderCurrenciesClient) Hooks() []Hook {
-	return c.hooks.ProviderCurrencies
+func (c *ProviderBalancesClient) Hooks() []Hook {
+	return c.hooks.ProviderBalances
 }
 
 // Interceptors returns the client interceptors.
-func (c *ProviderCurrenciesClient) Interceptors() []Interceptor {
-	return c.inters.ProviderCurrencies
+func (c *ProviderBalancesClient) Interceptors() []Interceptor {
+	return c.inters.ProviderBalances
 }
 
-func (c *ProviderCurrenciesClient) mutate(ctx context.Context, m *ProviderCurrenciesMutation) (Value, error) {
+func (c *ProviderBalancesClient) mutate(ctx context.Context, m *ProviderBalancesMutation) (Value, error) {
 	switch m.Op() {
 	case OpCreate:
-		return (&ProviderCurrenciesCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&ProviderBalancesCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdate:
-		return (&ProviderCurrenciesUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&ProviderBalancesUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdateOne:
-		return (&ProviderCurrenciesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&ProviderBalancesUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpDelete, OpDeleteOne:
-		return (&ProviderCurrenciesDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+		return (&ProviderBalancesDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
-		return nil, fmt.Errorf("ent: unknown ProviderCurrencies mutation op: %q", m.Op())
+		return nil, fmt.Errorf("ent: unknown ProviderBalances mutation op: %q", m.Op())
 	}
 }
 
@@ -2725,15 +2741,15 @@ func (c *ProviderProfileClient) QueryAPIKey(_m *ProviderProfile) *APIKeyQuery {
 	return query
 }
 
-// QueryProviderCurrencies queries the provider_currencies edge of a ProviderProfile.
-func (c *ProviderProfileClient) QueryProviderCurrencies(_m *ProviderProfile) *ProviderCurrenciesQuery {
-	query := (&ProviderCurrenciesClient{config: c.config}).Query()
+// QueryProviderBalances queries the provider_balances edge of a ProviderProfile.
+func (c *ProviderProfileClient) QueryProviderBalances(_m *ProviderProfile) *ProviderBalancesQuery {
+	query := (&ProviderBalancesClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, id),
-			sqlgraph.To(providercurrencies.Table, providercurrencies.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderCurrenciesTable, providerprofile.ProviderCurrenciesColumn),
+			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, providerprofile.ProviderBalancesTable, providerprofile.ProviderBalancesPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3710,6 +3726,22 @@ func (c *TokenClient) QueryProviderOrderTokens(_m *Token) *ProviderOrderTokenQue
 	return query
 }
 
+// QueryProviderBalances queries the provider_balances edge of a Token.
+func (c *TokenClient) QueryProviderBalances(_m *Token) *ProviderBalancesQuery {
+	query := (&ProviderBalancesClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(token.Table, token.FieldID, id),
+			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, token.ProviderBalancesTable, token.ProviderBalancesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TokenClient) Hooks() []Hook {
 	return c.hooks.Token
@@ -4354,14 +4386,14 @@ type (
 	hooks struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, Network, PaymentOrder, PaymentOrderFulfillment, PaymentWebhook,
-		ProviderCurrencies, ProviderFiatAccount, ProviderOrderToken, ProviderProfile,
+		ProviderBalances, ProviderFiatAccount, ProviderOrderToken, ProviderProfile,
 		ProviderRating, ProvisionBucket, SenderOrderToken, SenderProfile, Token,
 		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Hook
 	}
 	inters struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, Network, PaymentOrder, PaymentOrderFulfillment, PaymentWebhook,
-		ProviderCurrencies, ProviderFiatAccount, ProviderOrderToken, ProviderProfile,
+		ProviderBalances, ProviderFiatAccount, ProviderOrderToken, ProviderProfile,
 		ProviderRating, ProvisionBucket, SenderOrderToken, SenderProfile, Token,
 		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Interceptor
 	}

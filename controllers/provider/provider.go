@@ -17,7 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
@@ -116,8 +116,8 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 	currency := ctx.Query("currency")
 	if currency != "" {
 		// Check if the provided currency exists in the provider's currencies
-		currencyExists, err := provider.QueryProviderCurrencies().
-			Where(providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency))).
+		currencyExists, err := provider.QueryProviderBalances().
+			Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency))).
 			Exist(ctx)
 		if err != nil {
 			logger.Errorf("error checking provider currency: %v", err)
@@ -1023,7 +1023,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
 
-		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, tx)
+		err = ctrl.balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, tx)
 		if err != nil {
 			// Check if error is due to order already being settled (balance already released)
 			// If so, check order status and return success instead of error
@@ -1142,7 +1142,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
 
-		err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
+		err = ctrl.balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, nil)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
@@ -1324,7 +1324,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	currency := order.Edges.ProvisionBucket.Edges.Currency.Code
 	amount := order.Amount.Mul(order.Rate).RoundBank(0)
 
-	err = ctrl.balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
+	err = ctrl.balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, nil)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -1474,8 +1474,8 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	// Check if currency in query is present in provider currencies
 	currency := ctx.Query("currency")
 	if currency != "" {
-		currencyExists, err := provider.QueryProviderCurrencies().
-			Where(providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency))).
+		currencyExists, err := provider.QueryProviderBalances().
+			Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency))).
 			Exist(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -1640,9 +1640,9 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		Query().
 		Where(providerprofile.IDEQ(providerCtx.(*ent.ProviderProfile).ID)).
 		WithAPIKey().
-		WithProviderCurrencies(
-			func(query *ent.ProviderCurrenciesQuery) {
-				query.WithCurrency()
+		WithProviderBalances(
+			func(query *ent.ProviderBalancesQuery) {
+				query.WithFiatCurrency().Where(providerbalances.HasFiatCurrency())
 			},
 		).
 		Only(ctx)
@@ -1717,12 +1717,12 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		}
 	}
 
-	for _, pc := range provider.Edges.ProviderCurrencies {
-		if !u.ContainsString(currencyCodes, pc.Edges.Currency.Code) {
+	for _, pb := range provider.Edges.ProviderBalances {
+		if pb.Edges.FiatCurrency != nil && !u.ContainsString(currencyCodes, pb.Edges.FiatCurrency.Code) {
 			logger.WithFields(logger.Fields{
 				"Error":    "currency not found in node response",
-				"Currency": pc.Edges.Currency.Code,
-			}).Errorf("failed to parse node info: currency %s not found in node response", pc.Edges.Currency.Code)
+				"Currency": pb.Edges.FiatCurrency.Code,
+			}).Errorf("failed to parse node info: currency %s not found in node response", pb.Edges.FiatCurrency.Code)
 			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", "Failed to fetch node info", nil)
 			return
 		}
@@ -1871,7 +1871,7 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 	}
 
 	// Update the balance using the provider ID from context
-	err = ctrl.balanceService.UpdateProviderBalance(ctx, provider.ID, payload.Currency, availableBalance, totalBalance, reservedBalance)
+	err = ctrl.balanceService.UpdateProviderFiatBalance(ctx, provider.ID, payload.Currency, availableBalance, totalBalance, reservedBalance)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),

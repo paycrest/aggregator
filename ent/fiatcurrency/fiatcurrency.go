@@ -33,8 +33,8 @@ const (
 	FieldMarketRate = "market_rate"
 	// FieldIsEnabled holds the string denoting the is_enabled field in the database.
 	FieldIsEnabled = "is_enabled"
-	// EdgeProviderCurrencies holds the string denoting the provider_currencies edge name in mutations.
-	EdgeProviderCurrencies = "provider_currencies"
+	// EdgeProviderBalances holds the string denoting the provider_balances edge name in mutations.
+	EdgeProviderBalances = "provider_balances"
 	// EdgeProvisionBuckets holds the string denoting the provision_buckets edge name in mutations.
 	EdgeProvisionBuckets = "provision_buckets"
 	// EdgeInstitutions holds the string denoting the institutions edge name in mutations.
@@ -43,13 +43,13 @@ const (
 	EdgeProviderOrderTokens = "provider_order_tokens"
 	// Table holds the table name of the fiatcurrency in the database.
 	Table = "fiat_currencies"
-	// ProviderCurrenciesTable is the table that holds the provider_currencies relation/edge.
-	ProviderCurrenciesTable = "provider_currencies"
-	// ProviderCurrenciesInverseTable is the table name for the ProviderCurrencies entity.
-	// It exists in this package in order to avoid circular dependency with the "providercurrencies" package.
-	ProviderCurrenciesInverseTable = "provider_currencies"
-	// ProviderCurrenciesColumn is the table column denoting the provider_currencies relation/edge.
-	ProviderCurrenciesColumn = "fiat_currency_provider_currencies"
+	// ProviderBalancesTable is the table that holds the provider_balances relation/edge.
+	ProviderBalancesTable = "provider_balances"
+	// ProviderBalancesInverseTable is the table name for the ProviderBalances entity.
+	// It exists in this package in order to avoid circular dependency with the "providerbalances" package.
+	ProviderBalancesInverseTable = "provider_balances"
+	// ProviderBalancesColumn is the table column denoting the provider_balances relation/edge.
+	ProviderBalancesColumn = "fiat_currency_provider_balances"
 	// ProvisionBucketsTable is the table that holds the provision_buckets relation/edge.
 	ProvisionBucketsTable = "provision_buckets"
 	// ProvisionBucketsInverseTable is the table name for the ProvisionBucket entity.
@@ -165,17 +165,17 @@ func ByIsEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsEnabled, opts...).ToFunc()
 }
 
-// ByProviderCurrenciesCount orders the results by provider_currencies count.
-func ByProviderCurrenciesCount(opts ...sql.OrderTermOption) OrderOption {
+// ByProviderBalancesCount orders the results by provider_balances count.
+func ByProviderBalancesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProviderCurrenciesStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newProviderBalancesStep(), opts...)
 	}
 }
 
-// ByProviderCurrencies orders the results by provider_currencies terms.
-func ByProviderCurrencies(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByProviderBalances orders the results by provider_balances terms.
+func ByProviderBalances(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProviderCurrenciesStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newProviderBalancesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -220,11 +220,11 @@ func ByProviderOrderTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOpti
 		sqlgraph.OrderByNeighborTerms(s, newProviderOrderTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-func newProviderCurrenciesStep() *sqlgraph.Step {
+func newProviderBalancesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProviderCurrenciesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProviderCurrenciesTable, ProviderCurrenciesColumn),
+		sqlgraph.To(ProviderBalancesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderBalancesTable, ProviderBalancesColumn),
 	)
 }
 func newProvisionBucketsStep() *sqlgraph.Step {

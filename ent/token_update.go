@@ -15,6 +15,7 @@ import (
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/token"
@@ -172,6 +173,21 @@ func (_u *TokenUpdate) AddProviderOrderTokens(v ...*ProviderOrderToken) *TokenUp
 	return _u.AddProviderOrderTokenIDs(ids...)
 }
 
+// AddProviderBalanceIDs adds the "provider_balances" edge to the ProviderBalances entity by IDs.
+func (_u *TokenUpdate) AddProviderBalanceIDs(ids ...uuid.UUID) *TokenUpdate {
+	_u.mutation.AddProviderBalanceIDs(ids...)
+	return _u
+}
+
+// AddProviderBalances adds the "provider_balances" edges to the ProviderBalances entity.
+func (_u *TokenUpdate) AddProviderBalances(v ...*ProviderBalances) *TokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddProviderBalanceIDs(ids...)
+}
+
 // Mutation returns the TokenMutation object of the builder.
 func (_u *TokenUpdate) Mutation() *TokenMutation {
 	return _u.mutation
@@ -244,6 +260,27 @@ func (_u *TokenUpdate) RemoveProviderOrderTokens(v ...*ProviderOrderToken) *Toke
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveProviderOrderTokenIDs(ids...)
+}
+
+// ClearProviderBalances clears all "provider_balances" edges to the ProviderBalances entity.
+func (_u *TokenUpdate) ClearProviderBalances() *TokenUpdate {
+	_u.mutation.ClearProviderBalances()
+	return _u
+}
+
+// RemoveProviderBalanceIDs removes the "provider_balances" edge to ProviderBalances entities by IDs.
+func (_u *TokenUpdate) RemoveProviderBalanceIDs(ids ...uuid.UUID) *TokenUpdate {
+	_u.mutation.RemoveProviderBalanceIDs(ids...)
+	return _u
+}
+
+// RemoveProviderBalances removes "provider_balances" edges to ProviderBalances entities.
+func (_u *TokenUpdate) RemoveProviderBalances(v ...*ProviderBalances) *TokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProviderBalanceIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -497,6 +534,51 @@ func (_u *TokenUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.ProviderBalancesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   token.ProviderBalancesTable,
+			Columns: []string{token.ProviderBalancesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedProviderBalancesIDs(); len(nodes) > 0 && !_u.mutation.ProviderBalancesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   token.ProviderBalancesTable,
+			Columns: []string{token.ProviderBalancesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderBalancesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   token.ProviderBalancesTable,
+			Columns: []string{token.ProviderBalancesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{token.Label}
@@ -656,6 +738,21 @@ func (_u *TokenUpdateOne) AddProviderOrderTokens(v ...*ProviderOrderToken) *Toke
 	return _u.AddProviderOrderTokenIDs(ids...)
 }
 
+// AddProviderBalanceIDs adds the "provider_balances" edge to the ProviderBalances entity by IDs.
+func (_u *TokenUpdateOne) AddProviderBalanceIDs(ids ...uuid.UUID) *TokenUpdateOne {
+	_u.mutation.AddProviderBalanceIDs(ids...)
+	return _u
+}
+
+// AddProviderBalances adds the "provider_balances" edges to the ProviderBalances entity.
+func (_u *TokenUpdateOne) AddProviderBalances(v ...*ProviderBalances) *TokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddProviderBalanceIDs(ids...)
+}
+
 // Mutation returns the TokenMutation object of the builder.
 func (_u *TokenUpdateOne) Mutation() *TokenMutation {
 	return _u.mutation
@@ -728,6 +825,27 @@ func (_u *TokenUpdateOne) RemoveProviderOrderTokens(v ...*ProviderOrderToken) *T
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveProviderOrderTokenIDs(ids...)
+}
+
+// ClearProviderBalances clears all "provider_balances" edges to the ProviderBalances entity.
+func (_u *TokenUpdateOne) ClearProviderBalances() *TokenUpdateOne {
+	_u.mutation.ClearProviderBalances()
+	return _u
+}
+
+// RemoveProviderBalanceIDs removes the "provider_balances" edge to ProviderBalances entities by IDs.
+func (_u *TokenUpdateOne) RemoveProviderBalanceIDs(ids ...uuid.UUID) *TokenUpdateOne {
+	_u.mutation.RemoveProviderBalanceIDs(ids...)
+	return _u
+}
+
+// RemoveProviderBalances removes "provider_balances" edges to ProviderBalances entities.
+func (_u *TokenUpdateOne) RemoveProviderBalances(v ...*ProviderBalances) *TokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProviderBalanceIDs(ids...)
 }
 
 // Where appends a list predicates to the TokenUpdate builder.
@@ -1004,6 +1122,51 @@ func (_u *TokenUpdateOne) sqlSave(ctx context.Context) (_node *Token, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProviderBalancesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   token.ProviderBalancesTable,
+			Columns: []string{token.ProviderBalancesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedProviderBalancesIDs(); len(nodes) > 0 && !_u.mutation.ProviderBalancesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   token.ProviderBalancesTable,
+			Columns: []string{token.ProviderBalancesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderBalancesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   token.ProviderBalancesTable,
+			Columns: []string{token.ProviderBalancesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

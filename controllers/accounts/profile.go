@@ -11,7 +11,7 @@ import (
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/network"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -523,21 +523,23 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			return
 		}
 
-		pc, err := tx.ProviderCurrencies.Query().
-			Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(availabilityOp.currencyCode))).
+		pb, err := tx.ProviderBalances.Query().
+			Where(
+				providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(availabilityOp.currencyCode)),
+			).
 			Only(ctx)
 		if ent.IsNotFound(err) {
-			_, err = tx.ProviderCurrencies.Create().
-				SetProvider(provider).
-				SetCurrency(curr).
+			_, err = tx.ProviderBalances.Create().
+				SetFiatCurrency(curr).
 				SetAvailableBalance(decimal.Zero).
 				SetTotalBalance(decimal.Zero).
 				SetReservedBalance(decimal.Zero).
 				SetIsAvailable(availabilityOp.isAvailable).
+				AddProviderIDs(provider.ID).
 				Save(ctx)
 		} else if err == nil {
-			_, err = pc.Update().SetIsAvailable(availabilityOp.isAvailable).Save(ctx)
+			_, err = pb.Update().SetIsAvailable(availabilityOp.isAvailable).Save(ctx)
 		}
 		if err != nil {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update availability", nil)
@@ -829,9 +831,9 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	linkedProvider, err := storage.Client.ProviderProfile.
 		Query().
 		Where(providerprofile.IDEQ(sender.ProviderID)).
-		WithProviderCurrencies(
-			func(query *ent.ProviderCurrenciesQuery) {
-				query.WithCurrency()
+		WithProviderBalances(
+			func(q *ent.ProviderBalancesQuery) {
+				q.WithFiatCurrency().Where(providerbalances.HasFiatCurrency())
 			},
 		).
 		Only(ctx)
@@ -839,10 +841,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		if ent.IsNotFound(err) {
 			// do nothing
 		} else {
-			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", err),
-				"SenderID": sender.ID,
-			}).Errorf("Failed to fetch linked providerf for sender")
+			logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "SenderID": sender.ID}).Errorf("Failed to fetch linked provider for sender")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 			return
 		}
@@ -850,10 +849,11 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 
 	if linkedProvider != nil {
 		response.ProviderID = sender.ProviderID
-		// Extract currency codes from linked provider
-		currencyCodes := make([]string, len(linkedProvider.Edges.ProviderCurrencies))
-		for i, pc := range linkedProvider.Edges.ProviderCurrencies {
-			currencyCodes[i] = pc.Edges.Currency.Code
+		var currencyCodes []string
+		for _, pb := range linkedProvider.Edges.ProviderBalances {
+			if pb.Edges.FiatCurrency != nil {
+				currencyCodes = append(currencyCodes, pb.Edges.FiatCurrency.Code)
+			}
 		}
 		response.ProviderCurrencies = currencyCodes
 	}
@@ -878,28 +878,23 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		return
 	}
 
-	// Get currencies through ProviderCurrencies
-	providerCurrencies, err := provider.QueryProviderCurrencies().
-		WithCurrency().
+	pbList, err := provider.QueryProviderBalances().
+		WithFiatCurrency().
+		Where(providerbalances.HasFiatCurrency()).
 		All(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"ProviderID": provider.ID,
-		}).Errorf("Failed to fetch currencies for provider")
+		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": provider.ID}).Errorf("Failed to fetch fiat balances for provider")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 		return
 	}
-
-	// Provider profile should also return all the currencies associated with the provider
 	var currencyCodes []string
 	currencyAvailability := make(map[string]bool)
-	for _, pc := range providerCurrencies {
-		if !pc.Edges.Currency.IsEnabled {
+	for _, pb := range pbList {
+		if pb.Edges.FiatCurrency == nil || !pb.Edges.FiatCurrency.IsEnabled {
 			continue
 		}
-		currencyCodes = append(currencyCodes, pc.Edges.Currency.Code)
-		currencyAvailability[pc.Edges.Currency.Code] = pc.IsAvailable
+		currencyCodes = append(currencyCodes, pb.Edges.FiatCurrency.Code)
+		currencyAvailability[pb.Edges.FiatCurrency.Code] = pb.IsAvailable
 	}
 
 	// Get token settings, optionally filtering by currency query parameter

@@ -320,41 +320,34 @@ var (
 			},
 		},
 	}
-	// ProviderCurrenciesColumns holds the columns for the "provider_currencies" table.
-	ProviderCurrenciesColumns = []*schema.Column{
+	// ProviderBalancesColumns holds the columns for the "provider_balances" table.
+	ProviderBalancesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "available_balance", Type: field.TypeFloat64},
 		{Name: "total_balance", Type: field.TypeFloat64},
 		{Name: "reserved_balance", Type: field.TypeFloat64},
 		{Name: "is_available", Type: field.TypeBool, Default: true},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "fiat_currency_provider_currencies", Type: field.TypeUUID},
-		{Name: "provider_profile_provider_currencies", Type: field.TypeString},
+		{Name: "fiat_currency_provider_balances", Type: field.TypeUUID, Nullable: true},
+		{Name: "token_provider_balances", Type: field.TypeInt, Nullable: true},
 	}
-	// ProviderCurrenciesTable holds the schema information for the "provider_currencies" table.
-	ProviderCurrenciesTable = &schema.Table{
-		Name:       "provider_currencies",
-		Columns:    ProviderCurrenciesColumns,
-		PrimaryKey: []*schema.Column{ProviderCurrenciesColumns[0]},
+	// ProviderBalancesTable holds the schema information for the "provider_balances" table.
+	ProviderBalancesTable = &schema.Table{
+		Name:       "provider_balances",
+		Columns:    ProviderBalancesColumns,
+		PrimaryKey: []*schema.Column{ProviderBalancesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provider_currencies_fiat_currencies_provider_currencies",
-				Columns:    []*schema.Column{ProviderCurrenciesColumns[6]},
+				Symbol:     "provider_balances_fiat_currencies_provider_balances",
+				Columns:    []*schema.Column{ProviderBalancesColumns[6]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "provider_currencies_provider_profiles_provider_currencies",
-				Columns:    []*schema.Column{ProviderCurrenciesColumns[7]},
-				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				Symbol:     "provider_balances_tokens_provider_balances",
+				Columns:    []*schema.Column{ProviderBalancesColumns[7]},
+				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "providercurrencies_provider_profile_provider_currencies_fiat_currency_provider_currencies",
-				Unique:  true,
-				Columns: []*schema.Column{ProviderCurrenciesColumns[7], ProviderCurrenciesColumns[6]},
 			},
 		},
 	}
@@ -695,6 +688,31 @@ var (
 		Columns:    WebhookRetryAttemptsColumns,
 		PrimaryKey: []*schema.Column{WebhookRetryAttemptsColumns[0]},
 	}
+	// ProviderProfileProviderBalancesColumns holds the columns for the "provider_profile_provider_balances" table.
+	ProviderProfileProviderBalancesColumns = []*schema.Column{
+		{Name: "provider_profile_id", Type: field.TypeString},
+		{Name: "provider_balances_id", Type: field.TypeUUID},
+	}
+	// ProviderProfileProviderBalancesTable holds the schema information for the "provider_profile_provider_balances" table.
+	ProviderProfileProviderBalancesTable = &schema.Table{
+		Name:       "provider_profile_provider_balances",
+		Columns:    ProviderProfileProviderBalancesColumns,
+		PrimaryKey: []*schema.Column{ProviderProfileProviderBalancesColumns[0], ProviderProfileProviderBalancesColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "provider_profile_provider_balances_provider_profile_id",
+				Columns:    []*schema.Column{ProviderProfileProviderBalancesColumns[0]},
+				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "provider_profile_provider_balances_provider_balances_id",
+				Columns:    []*schema.Column{ProviderProfileProviderBalancesColumns[1]},
+				RefColumns: []*schema.Column{ProviderBalancesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// ProvisionBucketProviderProfilesColumns holds the columns for the "provision_bucket_provider_profiles" table.
 	ProvisionBucketProviderProfilesColumns = []*schema.Column{
 		{Name: "provision_bucket_id", Type: field.TypeInt},
@@ -732,7 +750,7 @@ var (
 		PaymentOrdersTable,
 		PaymentOrderFulfillmentsTable,
 		PaymentWebhooksTable,
-		ProviderCurrenciesTable,
+		ProviderBalancesTable,
 		ProviderFiatAccountsTable,
 		ProviderOrderTokensTable,
 		ProviderProfilesTable,
@@ -745,6 +763,7 @@ var (
 		UsersTable,
 		VerificationTokensTable,
 		WebhookRetryAttemptsTable,
+		ProviderProfileProviderBalancesTable,
 		ProvisionBucketProviderProfilesTable,
 	}
 )
@@ -763,8 +782,8 @@ func init() {
 	PaymentOrderFulfillmentsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	PaymentWebhooksTable.ForeignKeys[0].RefTable = NetworksTable
 	PaymentWebhooksTable.ForeignKeys[1].RefTable = PaymentOrdersTable
-	ProviderCurrenciesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
-	ProviderCurrenciesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
+	ProviderBalancesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
+	ProviderBalancesTable.ForeignKeys[1].RefTable = TokensTable
 	ProviderFiatAccountsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
@@ -778,6 +797,8 @@ func init() {
 	TokensTable.ForeignKeys[0].RefTable = NetworksTable
 	TransactionLogsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	VerificationTokensTable.ForeignKeys[0].RefTable = UsersTable
+	ProviderProfileProviderBalancesTable.ForeignKeys[0].RefTable = ProviderProfilesTable
+	ProviderProfileProviderBalancesTable.ForeignKeys[1].RefTable = ProviderBalancesTable
 	ProvisionBucketProviderProfilesTable.ForeignKeys[0].RefTable = ProvisionBucketsTable
 	ProvisionBucketProviderProfilesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 }

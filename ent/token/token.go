@@ -36,6 +36,8 @@ const (
 	EdgeSenderOrderTokens = "sender_order_tokens"
 	// EdgeProviderOrderTokens holds the string denoting the provider_order_tokens edge name in mutations.
 	EdgeProviderOrderTokens = "provider_order_tokens"
+	// EdgeProviderBalances holds the string denoting the provider_balances edge name in mutations.
+	EdgeProviderBalances = "provider_balances"
 	// Table holds the table name of the token in the database.
 	Table = "tokens"
 	// NetworkTable is the table that holds the network relation/edge.
@@ -66,6 +68,13 @@ const (
 	ProviderOrderTokensInverseTable = "provider_order_tokens"
 	// ProviderOrderTokensColumn is the table column denoting the provider_order_tokens relation/edge.
 	ProviderOrderTokensColumn = "token_provider_order_tokens"
+	// ProviderBalancesTable is the table that holds the provider_balances relation/edge.
+	ProviderBalancesTable = "provider_balances"
+	// ProviderBalancesInverseTable is the table name for the ProviderBalances entity.
+	// It exists in this package in order to avoid circular dependency with the "providerbalances" package.
+	ProviderBalancesInverseTable = "provider_balances"
+	// ProviderBalancesColumn is the table column denoting the provider_balances relation/edge.
+	ProviderBalancesColumn = "token_provider_balances"
 )
 
 // Columns holds all SQL columns for token fields.
@@ -209,6 +218,20 @@ func ByProviderOrderTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOpti
 		sqlgraph.OrderByNeighborTerms(s, newProviderOrderTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByProviderBalancesCount orders the results by provider_balances count.
+func ByProviderBalancesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderBalancesStep(), opts...)
+	}
+}
+
+// ByProviderBalances orders the results by provider_balances terms.
+func ByProviderBalances(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderBalancesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newNetworkStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -235,5 +258,12 @@ func newProviderOrderTokensStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProviderOrderTokensInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ProviderOrderTokensTable, ProviderOrderTokensColumn),
+	)
+}
+func newProviderBalancesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderBalancesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderBalancesTable, ProviderBalancesColumn),
 	)
 }

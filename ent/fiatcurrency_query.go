@@ -16,7 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 )
@@ -28,7 +28,7 @@ type FiatCurrencyQuery struct {
 	order                   []fiatcurrency.OrderOption
 	inters                  []Interceptor
 	predicates              []predicate.FiatCurrency
-	withProviderCurrencies  *ProviderCurrenciesQuery
+	withProviderBalances    *ProviderBalancesQuery
 	withProvisionBuckets    *ProvisionBucketQuery
 	withInstitutions        *InstitutionQuery
 	withProviderOrderTokens *ProviderOrderTokenQuery
@@ -68,9 +68,9 @@ func (_q *FiatCurrencyQuery) Order(o ...fiatcurrency.OrderOption) *FiatCurrencyQ
 	return _q
 }
 
-// QueryProviderCurrencies chains the current query on the "provider_currencies" edge.
-func (_q *FiatCurrencyQuery) QueryProviderCurrencies() *ProviderCurrenciesQuery {
-	query := (&ProviderCurrenciesClient{config: _q.config}).Query()
+// QueryProviderBalances chains the current query on the "provider_balances" edge.
+func (_q *FiatCurrencyQuery) QueryProviderBalances() *ProviderBalancesQuery {
+	query := (&ProviderBalancesClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -81,8 +81,8 @@ func (_q *FiatCurrencyQuery) QueryProviderCurrencies() *ProviderCurrenciesQuery 
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(fiatcurrency.Table, fiatcurrency.FieldID, selector),
-			sqlgraph.To(providercurrencies.Table, providercurrencies.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderCurrenciesTable, fiatcurrency.ProviderCurrenciesColumn),
+			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderBalancesTable, fiatcurrency.ProviderBalancesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -348,7 +348,7 @@ func (_q *FiatCurrencyQuery) Clone() *FiatCurrencyQuery {
 		order:                   append([]fiatcurrency.OrderOption{}, _q.order...),
 		inters:                  append([]Interceptor{}, _q.inters...),
 		predicates:              append([]predicate.FiatCurrency{}, _q.predicates...),
-		withProviderCurrencies:  _q.withProviderCurrencies.Clone(),
+		withProviderBalances:    _q.withProviderBalances.Clone(),
 		withProvisionBuckets:    _q.withProvisionBuckets.Clone(),
 		withInstitutions:        _q.withInstitutions.Clone(),
 		withProviderOrderTokens: _q.withProviderOrderTokens.Clone(),
@@ -358,14 +358,14 @@ func (_q *FiatCurrencyQuery) Clone() *FiatCurrencyQuery {
 	}
 }
 
-// WithProviderCurrencies tells the query-builder to eager-load the nodes that are connected to
-// the "provider_currencies" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *FiatCurrencyQuery) WithProviderCurrencies(opts ...func(*ProviderCurrenciesQuery)) *FiatCurrencyQuery {
-	query := (&ProviderCurrenciesClient{config: _q.config}).Query()
+// WithProviderBalances tells the query-builder to eager-load the nodes that are connected to
+// the "provider_balances" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *FiatCurrencyQuery) WithProviderBalances(opts ...func(*ProviderBalancesQuery)) *FiatCurrencyQuery {
+	query := (&ProviderBalancesClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withProviderCurrencies = query
+	_q.withProviderBalances = query
 	return _q
 }
 
@@ -481,7 +481,7 @@ func (_q *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 		nodes       = []*FiatCurrency{}
 		_spec       = _q.querySpec()
 		loadedTypes = [4]bool{
-			_q.withProviderCurrencies != nil,
+			_q.withProviderBalances != nil,
 			_q.withProvisionBuckets != nil,
 			_q.withInstitutions != nil,
 			_q.withProviderOrderTokens != nil,
@@ -505,11 +505,11 @@ func (_q *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withProviderCurrencies; query != nil {
-		if err := _q.loadProviderCurrencies(ctx, query, nodes,
-			func(n *FiatCurrency) { n.Edges.ProviderCurrencies = []*ProviderCurrencies{} },
-			func(n *FiatCurrency, e *ProviderCurrencies) {
-				n.Edges.ProviderCurrencies = append(n.Edges.ProviderCurrencies, e)
+	if query := _q.withProviderBalances; query != nil {
+		if err := _q.loadProviderBalances(ctx, query, nodes,
+			func(n *FiatCurrency) { n.Edges.ProviderBalances = []*ProviderBalances{} },
+			func(n *FiatCurrency, e *ProviderBalances) {
+				n.Edges.ProviderBalances = append(n.Edges.ProviderBalances, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -542,7 +542,7 @@ func (_q *FiatCurrencyQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	return nodes, nil
 }
 
-func (_q *FiatCurrencyQuery) loadProviderCurrencies(ctx context.Context, query *ProviderCurrenciesQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *ProviderCurrencies)) error {
+func (_q *FiatCurrencyQuery) loadProviderBalances(ctx context.Context, query *ProviderBalancesQuery, nodes []*FiatCurrency, init func(*FiatCurrency), assign func(*FiatCurrency, *ProviderBalances)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*FiatCurrency)
 	for i := range nodes {
@@ -553,21 +553,21 @@ func (_q *FiatCurrencyQuery) loadProviderCurrencies(ctx context.Context, query *
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.ProviderCurrencies(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(fiatcurrency.ProviderCurrenciesColumn), fks...))
+	query.Where(predicate.ProviderBalances(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(fiatcurrency.ProviderBalancesColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.fiat_currency_provider_currencies
+		fk := n.fiat_currency_provider_balances
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "fiat_currency_provider_currencies" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "fiat_currency_provider_balances" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "fiat_currency_provider_currencies" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "fiat_currency_provider_balances" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
