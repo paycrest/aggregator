@@ -109,7 +109,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	if payload.Recipient.Metadata == nil {
 		payload.Recipient.Metadata = make(map[string]interface{})
 	}
-	if apiKey, ok := apiKeyFromCtx.(string); ok {
+	if apiKey, ok := apiKeyFromCtx.(string); ok && apiKey != "" {
 		payload.Recipient.Metadata["apiKey"] = apiKey
 	}
 
