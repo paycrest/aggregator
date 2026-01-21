@@ -2239,6 +2239,22 @@ func fetchProviderFiatBalances(providerID string) (map[string]*types.ProviderBal
 		}
 	}
 
+	// Sync payout_address from provider's walletAddress to all ProviderOrderToken records
+	if walletAddress := response.Data.ServiceInfo.WalletAddress; walletAddress != "" {
+		ctx := context.Background()
+		_, err := storage.Client.ProviderOrderToken.
+			Update().
+			Where(providerordertoken.HasProviderWith(providerprofile.IDEQ(providerID))).
+			SetPayoutAddress(walletAddress).
+			Save(ctx)
+		if err != nil {
+			logger.Warnf("Failed to sync payout_address for provider %s: %v", providerID, err)
+			// Don't return error - this is a non-critical update
+		} else {
+			logger.Debugf("Synced payout_address for provider %s: %s", providerID, walletAddress)
+		}
+	}
+
 	return balances, nil
 }
 
@@ -2248,7 +2264,7 @@ func fetchProviderTokenBalances(providerID string) (map[int]*types.ProviderBalan
 	pots, err := storage.Client.ProviderOrderToken.Query().
 		Where(
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(providerID)),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 		).
 		WithToken(func(q *ent.TokenQuery) { q.WithNetwork() }).
 		All(ctx)
@@ -2265,7 +2281,7 @@ func fetchProviderTokenBalances(providerID string) (map[int]*types.ProviderBalan
 		if rpcEndpoint == "" {
 			continue
 		}
-		raw, err := getTokenBalance(rpcEndpoint, tok.ContractAddress, pot.Address)
+		raw, err := getTokenBalance(rpcEndpoint, tok.ContractAddress, pot.SettlementAddress)
 		if err != nil {
 			logger.Warnf("Failed to fetch token balance for provider %s token %d: %v", providerID, tok.ID, err)
 			continue

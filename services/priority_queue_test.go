@@ -166,7 +166,7 @@ func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey strin
 				providerordertoken.HasCurrencyWith(
 					fiatcurrency.CodeEQ(bucketCurrency.Code),
 				),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			First(ctx)
 		if err != nil {

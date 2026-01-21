@@ -2613,7 +2613,7 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(request.ProviderID)),
 			providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
 			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(request.CurrencyCode)),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
@@ -2648,7 +2648,7 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 	}
 
 	// Index provider address
-	eventCounts, err := indexerInstance.IndexProviderAddress(ctx, network, providerOrderToken.Address, request.FromBlock, request.ToBlock, request.TxHash)
+	eventCounts, err := indexerInstance.IndexProviderAddress(ctx, network, providerOrderToken.SettlementAddress, request.FromBlock, request.ToBlock, request.TxHash)
 	if err != nil {
 		logger.Errorf("Failed to index provider address: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to index provider address", nil)

@@ -567,7 +567,7 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.PaymentOrder)
 			providerordertoken.HasCurrencyWith(
 				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 			),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
@@ -575,7 +575,7 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.PaymentOrder)
 	}
 
 	var providerAddress string
-	providerAddressTron, _ := util.Base58ToAddress(token.Address)
+	providerAddressTron, _ := util.Base58ToAddress(token.SettlementAddress)
 	providerAddress = providerAddressTron.Hex()[4:]
 
 	if providerAddress == "" {

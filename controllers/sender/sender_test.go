@@ -125,7 +125,7 @@ func setup() error {
 		"min_order_amount":      decimal.NewFromFloat(1.0),
 		"max_order_amount_otc":  decimal.NewFromFloat(10000.0),
 		"min_order_amount_otc":  decimal.NewFromFloat(100.0),
-		"address":               "0x1234567890123456789012345678901234567890",
+		"settlement_address":    "0x1234567890123456789012345678901234567890",
 		"network":               testCtx.networkIdentifier,
 	})
 	if err != nil {
@@ -630,7 +630,7 @@ func TestSender(t *testing.T) {
 				"min_order_amount":         decimal.NewFromFloat(1),
 				"max_order_amount_otc":     decimal.Zero,
 				"min_order_amount_otc":     decimal.Zero,
-				"address":                  "0x1234567890123456789012345678901234567890",
+				"settlement_address":       "0x1234567890123456789012345678901234567890",
 			})
 			if err != nil {
 				t.Logf("Failed to create provider order token: %v", err)
@@ -815,7 +815,7 @@ func TestSender(t *testing.T) {
 				"min_order_amount":         decimal.NewFromFloat(1),
 				"max_order_amount_otc":     decimal.Zero,
 				"min_order_amount_otc":     decimal.Zero,
-				"address":                  "0x1234567890123456789012345678901234567890",
+				"settlement_address":       "0x1234567890123456789012345678901234567890",
 			})
 			if err != nil {
 				t.Logf("Failed to create provider order token: %v", err)
@@ -1000,7 +1000,7 @@ func TestSender(t *testing.T) {
 				"min_order_amount":      decimal.NewFromFloat(1),
 				"max_order_amount_otc":  decimal.Zero,
 				"min_order_amount_otc":  decimal.Zero,
-				"address":               "0x1234567890123456789012345678901234567890",
+				"settlement_address":    "0x1234567890123456789012345678901234567890",
 			})
 			if err != nil {
 				t.Logf("Failed to create provider order token: %v", err)

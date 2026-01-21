@@ -39,7 +39,8 @@ func (ProviderOrderToken) Fields() []ent.Field {
 			GoType(decimal.Decimal{}),
 		field.Float("rate_slippage").
 			GoType(decimal.Decimal{}),
-		field.String("address").Optional(),
+		field.String("settlement_address").Optional(),
+		field.String("payout_address").Optional(),
 		field.String("network"),
 	}
 }

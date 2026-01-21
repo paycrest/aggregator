@@ -1146,7 +1146,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 					providerordertoken.NetworkEQ(networkIdentifier),
-					providerordertoken.AddressNEQ(""),
+					providerordertoken.SettlementAddressNEQ(""),
 				).Only(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
@@ -1173,7 +1173,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 					),
 					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-					providerordertoken.AddressNEQ(""),
+					providerordertoken.SettlementAddressNEQ(""),
 				).First(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {

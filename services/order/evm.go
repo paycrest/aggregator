@@ -328,7 +328,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.PaymentOrder) 
 			providerordertoken.HasCurrencyWith(
 				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 			),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
@@ -351,7 +351,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.PaymentOrder) 
 		"settle",
 		utils.StringToByte32(splitOrderID),
 		utils.StringToByte32(string(orderID)),
-		ethcommon.HexToAddress(token.Address),
+		ethcommon.HexToAddress(token.SettlementAddress),
 		uint64(orderPercent),
 		uint64(0), // rebatePercent - default to 0 for now
 	)

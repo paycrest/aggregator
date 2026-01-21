@@ -536,7 +536,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		SetConversionRateType(providerordertoken.ConversionRateType(payload["conversion_rate_type"].(string))).
 		SetFixedConversionRate(payload["fixed_conversion_rate"].(decimal.Decimal)).
 		SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
-		SetAddress(payload["address"].(string)).
+		SetSettlementAddress(payload["settlement_address"].(string)).
 		SetNetwork(payload["network"].(string)).
 		SetTokenID(payload["token_id"].(int)).
 		SetCurrencyID(payload["currency_id"].(uuid.UUID)).

@@ -306,7 +306,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			Where(
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucket.Edges.Currency.Code)),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			WithToken().
 			All(ctx)
@@ -1047,7 +1047,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				providerordertoken.HasCurrencyWith(
 					fiatcurrency.CodeEQ(bucketCurrency.Code),
 				),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			First(ctx)
 		if err != nil {
