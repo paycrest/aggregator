@@ -572,7 +572,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			// Update existing token using transaction-bound client
 			_, err := tx.ProviderOrderToken.
 				UpdateOneID(op.ExistingToken.ID).
-				SetAddress(op.TokenPayload.Address).
+				SetSettlementAddress(op.TokenPayload.SettlementAddress).
 				SetNetwork(op.TokenPayload.Network).
 				SetRateSlippage(op.TokenPayload.RateSlippage).
 				SetConversionRateType(op.TokenPayload.ConversionRateType).
@@ -606,7 +606,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
 				SetMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
 				SetMinOrderAmountOtc(op.TokenPayload.MinOrderAmountOTC).
-				SetAddress(op.TokenPayload.Address).
+				SetSettlementAddress(op.TokenPayload.SettlementAddress).
 				SetNetwork(op.TokenPayload.Network).
 				SetProviderID(provider.ID).
 				SetRateSlippage(op.TokenPayload.RateSlippage).
@@ -952,7 +952,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 			MaxOrderAmountOTC:      orderToken.MaxOrderAmountOtc,
 			MinOrderAmountOTC:      orderToken.MinOrderAmountOtc,
 			RateSlippage:           orderToken.RateSlippage,
-			Address:                orderToken.Address,
+			SettlementAddress:      orderToken.SettlementAddress,
 			Network:                orderToken.Network,
 		}
 		tokensPayload[i] = payload

@@ -1297,7 +1297,7 @@ func TestProfile(t *testing.T) {
 				SetMinOrderAmount(decimal.NewFromInt(10)).
 				SetMaxOrderAmountOtc(decimal.Zero).
 				SetMinOrderAmountOtc(decimal.Zero).
-				SetAddress("address_usd").
+				SetSettlementAddress("address_usd").
 				SetNetwork("polygon").
 				SetRateSlippage(decimal.NewFromInt(0)).
 				Save(ctx)

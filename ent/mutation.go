@@ -12561,7 +12561,8 @@ type ProviderOrderTokenMutation struct {
 	addmin_order_amount_otc     *decimal.Decimal
 	rate_slippage               *decimal.Decimal
 	addrate_slippage            *decimal.Decimal
-	address                     *string
+	settlement_address          *string
+	payout_address              *string
 	network                     *string
 	clearedFields               map[string]struct{}
 	provider                    *string
@@ -13173,53 +13174,102 @@ func (m *ProviderOrderTokenMutation) ResetRateSlippage() {
 	m.addrate_slippage = nil
 }
 
-// SetAddress sets the "address" field.
-func (m *ProviderOrderTokenMutation) SetAddress(s string) {
-	m.address = &s
+// SetSettlementAddress sets the "settlement_address" field.
+func (m *ProviderOrderTokenMutation) SetSettlementAddress(s string) {
+	m.settlement_address = &s
 }
 
-// Address returns the value of the "address" field in the mutation.
-func (m *ProviderOrderTokenMutation) Address() (r string, exists bool) {
-	v := m.address
+// SettlementAddress returns the value of the "settlement_address" field in the mutation.
+func (m *ProviderOrderTokenMutation) SettlementAddress() (r string, exists bool) {
+	v := m.settlement_address
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldAddress returns the old "address" field's value of the ProviderOrderToken entity.
+// OldSettlementAddress returns the old "settlement_address" field's value of the ProviderOrderToken entity.
 // If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderOrderTokenMutation) OldAddress(ctx context.Context) (v string, err error) {
+func (m *ProviderOrderTokenMutation) OldSettlementAddress(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAddress is only allowed on UpdateOne operations")
+		return v, errors.New("OldSettlementAddress is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAddress requires an ID field in the mutation")
+		return v, errors.New("OldSettlementAddress requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAddress: %w", err)
+		return v, fmt.Errorf("querying old value for OldSettlementAddress: %w", err)
 	}
-	return oldValue.Address, nil
+	return oldValue.SettlementAddress, nil
 }
 
-// ClearAddress clears the value of the "address" field.
-func (m *ProviderOrderTokenMutation) ClearAddress() {
-	m.address = nil
-	m.clearedFields[providerordertoken.FieldAddress] = struct{}{}
+// ClearSettlementAddress clears the value of the "settlement_address" field.
+func (m *ProviderOrderTokenMutation) ClearSettlementAddress() {
+	m.settlement_address = nil
+	m.clearedFields[providerordertoken.FieldSettlementAddress] = struct{}{}
 }
 
-// AddressCleared returns if the "address" field was cleared in this mutation.
-func (m *ProviderOrderTokenMutation) AddressCleared() bool {
-	_, ok := m.clearedFields[providerordertoken.FieldAddress]
+// SettlementAddressCleared returns if the "settlement_address" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) SettlementAddressCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldSettlementAddress]
 	return ok
 }
 
-// ResetAddress resets all changes to the "address" field.
-func (m *ProviderOrderTokenMutation) ResetAddress() {
-	m.address = nil
-	delete(m.clearedFields, providerordertoken.FieldAddress)
+// ResetSettlementAddress resets all changes to the "settlement_address" field.
+func (m *ProviderOrderTokenMutation) ResetSettlementAddress() {
+	m.settlement_address = nil
+	delete(m.clearedFields, providerordertoken.FieldSettlementAddress)
+}
+
+// SetPayoutAddress sets the "payout_address" field.
+func (m *ProviderOrderTokenMutation) SetPayoutAddress(s string) {
+	m.payout_address = &s
+}
+
+// PayoutAddress returns the value of the "payout_address" field in the mutation.
+func (m *ProviderOrderTokenMutation) PayoutAddress() (r string, exists bool) {
+	v := m.payout_address
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayoutAddress returns the old "payout_address" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldPayoutAddress(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayoutAddress is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayoutAddress requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayoutAddress: %w", err)
+	}
+	return oldValue.PayoutAddress, nil
+}
+
+// ClearPayoutAddress clears the value of the "payout_address" field.
+func (m *ProviderOrderTokenMutation) ClearPayoutAddress() {
+	m.payout_address = nil
+	m.clearedFields[providerordertoken.FieldPayoutAddress] = struct{}{}
+}
+
+// PayoutAddressCleared returns if the "payout_address" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) PayoutAddressCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldPayoutAddress]
+	return ok
+}
+
+// ResetPayoutAddress resets all changes to the "payout_address" field.
+func (m *ProviderOrderTokenMutation) ResetPayoutAddress() {
+	m.payout_address = nil
+	delete(m.clearedFields, providerordertoken.FieldPayoutAddress)
 }
 
 // SetNetwork sets the "network" field.
@@ -13409,7 +13459,7 @@ func (m *ProviderOrderTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderOrderTokenMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 13)
 	if m.created_at != nil {
 		fields = append(fields, providerordertoken.FieldCreatedAt)
 	}
@@ -13440,8 +13490,11 @@ func (m *ProviderOrderTokenMutation) Fields() []string {
 	if m.rate_slippage != nil {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
 	}
-	if m.address != nil {
-		fields = append(fields, providerordertoken.FieldAddress)
+	if m.settlement_address != nil {
+		fields = append(fields, providerordertoken.FieldSettlementAddress)
+	}
+	if m.payout_address != nil {
+		fields = append(fields, providerordertoken.FieldPayoutAddress)
 	}
 	if m.network != nil {
 		fields = append(fields, providerordertoken.FieldNetwork)
@@ -13474,8 +13527,10 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.MinOrderAmountOtc()
 	case providerordertoken.FieldRateSlippage:
 		return m.RateSlippage()
-	case providerordertoken.FieldAddress:
-		return m.Address()
+	case providerordertoken.FieldSettlementAddress:
+		return m.SettlementAddress()
+	case providerordertoken.FieldPayoutAddress:
+		return m.PayoutAddress()
 	case providerordertoken.FieldNetwork:
 		return m.Network()
 	}
@@ -13507,8 +13562,10 @@ func (m *ProviderOrderTokenMutation) OldField(ctx context.Context, name string) 
 		return m.OldMinOrderAmountOtc(ctx)
 	case providerordertoken.FieldRateSlippage:
 		return m.OldRateSlippage(ctx)
-	case providerordertoken.FieldAddress:
-		return m.OldAddress(ctx)
+	case providerordertoken.FieldSettlementAddress:
+		return m.OldSettlementAddress(ctx)
+	case providerordertoken.FieldPayoutAddress:
+		return m.OldPayoutAddress(ctx)
 	case providerordertoken.FieldNetwork:
 		return m.OldNetwork(ctx)
 	}
@@ -13590,12 +13647,19 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetRateSlippage(v)
 		return nil
-	case providerordertoken.FieldAddress:
+	case providerordertoken.FieldSettlementAddress:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetAddress(v)
+		m.SetSettlementAddress(v)
+		return nil
+	case providerordertoken.FieldPayoutAddress:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayoutAddress(v)
 		return nil
 	case providerordertoken.FieldNetwork:
 		v, ok := value.(string)
@@ -13721,8 +13785,11 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 // mutation.
 func (m *ProviderOrderTokenMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(providerordertoken.FieldAddress) {
-		fields = append(fields, providerordertoken.FieldAddress)
+	if m.FieldCleared(providerordertoken.FieldSettlementAddress) {
+		fields = append(fields, providerordertoken.FieldSettlementAddress)
+	}
+	if m.FieldCleared(providerordertoken.FieldPayoutAddress) {
+		fields = append(fields, providerordertoken.FieldPayoutAddress)
 	}
 	return fields
 }
@@ -13738,8 +13805,11 @@ func (m *ProviderOrderTokenMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ProviderOrderTokenMutation) ClearField(name string) error {
 	switch name {
-	case providerordertoken.FieldAddress:
-		m.ClearAddress()
+	case providerordertoken.FieldSettlementAddress:
+		m.ClearSettlementAddress()
+		return nil
+	case providerordertoken.FieldPayoutAddress:
+		m.ClearPayoutAddress()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken nullable field %s", name)
@@ -13779,8 +13849,11 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 	case providerordertoken.FieldRateSlippage:
 		m.ResetRateSlippage()
 		return nil
-	case providerordertoken.FieldAddress:
-		m.ResetAddress()
+	case providerordertoken.FieldSettlementAddress:
+		m.ResetSettlementAddress()
+		return nil
+	case providerordertoken.FieldPayoutAddress:
+		m.ResetPayoutAddress()
 		return nil
 	case providerordertoken.FieldNetwork:
 		m.ResetNetwork()

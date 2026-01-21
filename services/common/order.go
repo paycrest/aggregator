@@ -1149,7 +1149,7 @@ func validateAndPreparePaymentOrderData(
 				providerordertoken.HasCurrencyWith(
 					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 				),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			WithProvider().
 			Only(ctx)

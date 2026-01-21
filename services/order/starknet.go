@@ -271,7 +271,7 @@ func (s *OrderStarknet) SettleOrder(ctx context.Context, orderID uuid.UUID) erro
 			providerordertoken.HasCurrencyWith(
 				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 			),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
@@ -305,7 +305,7 @@ func (s *OrderStarknet) SettleOrder(ctx context.Context, orderID uuid.UUID) erro
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.parseSplitOrderID: %w", orderIDPrefix, err)
 	}
-	providerContractAddressFelt, err := utils.HexToFelt(token.Address)
+	providerContractAddressFelt, err := utils.HexToFelt(token.SettlementAddress)
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.parseProviderAddress: %w", orderIDPrefix, err)
 	}

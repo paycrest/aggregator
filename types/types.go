@@ -251,7 +251,7 @@ type ProviderOrderTokenPayload struct {
 	MaxOrderAmountOTC      decimal.Decimal                       `json:"maxOrderAmountOtc" binding:"required,gte=0"`
 	MinOrderAmountOTC      decimal.Decimal                       `json:"minOrderAmountOtc" binding:"required,gte=0"`
 	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"omitempty,gte=0.1"`
-	Address                string                                `json:"address" binding:"required"`
+	SettlementAddress      string                                `json:"settlementAddress" binding:"required"`
 	Network                string                                `json:"network" binding:"required"`
 }
 
@@ -1017,10 +1017,11 @@ type ProviderInfoResponse struct {
 			TotalBalance     string `json:"totalBalance"`
 		} `json:"balances"`
 		ServiceInfo struct {
-			Currencies  []string `json:"currencies"`
-			LastUpdated string   `json:"lastUpdated"`
-			TotalPSPs   int      `json:"totalPSPs"`
-			Version     string   `json:"version"`
+			Currencies    []string `json:"currencies"`
+			LastUpdated   string   `json:"lastUpdated"`
+			TotalPSPs     int      `json:"totalPSPs"`
+			Version       string   `json:"version"`
+			WalletAddress string   `json:"walletAddress"`
 		} `json:"serviceInfo"`
 		TotalBalances map[string]struct {
 			AvailableBalance string `json:"availableBalance"`
