@@ -79,12 +79,18 @@ func JWTMiddleware(c *gin.Context) {
 			Query().
 			Where(senderprofile.HasUserWith(user.IDEQ(userUUID))).
 			WithOrderTokens().
+			WithAPIKey().
 			Only(c)
 		if err != nil {
 			c.Set("sender", nil)
+		} else {
+			c.Set("sender", senderProfile)
+			
+			// Set API key in context if available
+			if senderProfile.Edges.APIKey != nil {
+				c.Set("apiKey", senderProfile.Edges.APIKey.ID.String())
+			}
 		}
-
-		c.Set("sender", senderProfile)
 	}
 
 	if scope == "provider" || senderAndProvider {

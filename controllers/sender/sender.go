@@ -446,7 +446,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	if strings.HasPrefix(payload.Recipient.Memo, "P#P") {
 		receiveAddressExpiry = time.Now().Add(10 * orderConf.ReceiveAddressValidity)
 	}
-	
+
 	if serverConf.Environment == "production" || serverConf.Environment == "staging" {
 		// Validate encrypted recipient size before creating order
 		if err := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient); err != nil {

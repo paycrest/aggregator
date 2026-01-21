@@ -443,7 +443,7 @@ func GetAPIKeyFromMetadata(metadata map[string]interface{}) (uuid.UUID, error) {
     
     apiKeyStr, ok := apiKey.(string)
     if !ok {
-        return uuid.Nil, nil
+        return uuid.Nil, fmt.Errorf("invalid apiKey type (expected string)")
     }
     
     apiKeyUUID, err := uuid.Parse(apiKeyStr)
