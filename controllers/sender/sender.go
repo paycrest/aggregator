@@ -447,17 +447,19 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddressExpiry = time.Now().Add(10 * orderConf.ReceiveAddressValidity)
 	}
 	
-	// Validate encrypted recipient size before creating order
-	if err := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient); err != nil {
-		logger.WithFields(logger.Fields{
-			"error":       err,
-			"institution": payload.Recipient.Institution,
-		}).Errorf("Recipient encryption size validation failed")
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-			Field:   "Recipient",
-			Message: fmt.Sprintf("Recipient data too large: %s", err.Error()),
-		})
-		return
+	if serverConf.Environment == "production" || serverConf.Environment == "staging" {
+		// Validate encrypted recipient size before creating order
+		if err := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient); err != nil {
+			logger.WithFields(logger.Fields{
+				"error":       err,
+				"institution": payload.Recipient.Institution,
+			}).Errorf("Recipient encryption size validation failed")
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Recipient",
+				Message: fmt.Sprintf("Recipient data too large: %s", err.Error()),
+			})
+			return
+		}
 	}
 
 	// Create payment order and recipient in a transaction
