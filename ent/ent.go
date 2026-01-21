@@ -22,7 +22,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -105,7 +105,7 @@ func checkColumn(t, c string) error {
 			paymentorder.Table:                paymentorder.ValidColumn,
 			paymentorderfulfillment.Table:     paymentorderfulfillment.ValidColumn,
 			paymentwebhook.Table:              paymentwebhook.ValidColumn,
-			providercurrencies.Table:          providercurrencies.ValidColumn,
+			providerbalances.Table:            providerbalances.ValidColumn,
 			providerfiataccount.Table:         providerfiataccount.ValidColumn,
 			providerordertoken.Table:          providerordertoken.ValidColumn,
 			providerprofile.Table:             providerprofile.ValidColumn,

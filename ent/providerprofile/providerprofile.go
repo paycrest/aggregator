@@ -33,8 +33,8 @@ const (
 	EdgeUser = "user"
 	// EdgeAPIKey holds the string denoting the api_key edge name in mutations.
 	EdgeAPIKey = "api_key"
-	// EdgeProviderCurrencies holds the string denoting the provider_currencies edge name in mutations.
-	EdgeProviderCurrencies = "provider_currencies"
+	// EdgeProviderBalances holds the string denoting the provider_balances edge name in mutations.
+	EdgeProviderBalances = "provider_balances"
 	// EdgeProvisionBuckets holds the string denoting the provision_buckets edge name in mutations.
 	EdgeProvisionBuckets = "provision_buckets"
 	// EdgeOrderTokens holds the string denoting the order_tokens edge name in mutations.
@@ -61,13 +61,11 @@ const (
 	APIKeyInverseTable = "api_keys"
 	// APIKeyColumn is the table column denoting the api_key relation/edge.
 	APIKeyColumn = "provider_profile_api_key"
-	// ProviderCurrenciesTable is the table that holds the provider_currencies relation/edge.
-	ProviderCurrenciesTable = "provider_currencies"
-	// ProviderCurrenciesInverseTable is the table name for the ProviderCurrencies entity.
-	// It exists in this package in order to avoid circular dependency with the "providercurrencies" package.
-	ProviderCurrenciesInverseTable = "provider_currencies"
-	// ProviderCurrenciesColumn is the table column denoting the provider_currencies relation/edge.
-	ProviderCurrenciesColumn = "provider_profile_provider_currencies"
+	// ProviderBalancesTable is the table that holds the provider_balances relation/edge. The primary key declared below.
+	ProviderBalancesTable = "provider_profile_provider_balances"
+	// ProviderBalancesInverseTable is the table name for the ProviderBalances entity.
+	// It exists in this package in order to avoid circular dependency with the "providerbalances" package.
+	ProviderBalancesInverseTable = "provider_balances"
 	// ProvisionBucketsTable is the table that holds the provision_buckets relation/edge. The primary key declared below.
 	ProvisionBucketsTable = "provision_bucket_provider_profiles"
 	// ProvisionBucketsInverseTable is the table name for the ProvisionBucket entity.
@@ -122,6 +120,9 @@ var ForeignKeys = []string{
 }
 
 var (
+	// ProviderBalancesPrimaryKey and ProviderBalancesColumn2 are the table columns denoting the
+	// primary key for the provider_balances relation (M2M).
+	ProviderBalancesPrimaryKey = []string{"provider_profile_id", "provider_balances_id"}
 	// ProvisionBucketsPrimaryKey and ProvisionBucketsColumn2 are the table columns denoting the
 	// primary key for the provision_buckets relation (M2M).
 	ProvisionBucketsPrimaryKey = []string{"provision_bucket_id", "provider_profile_id"}
@@ -266,17 +267,17 @@ func ByAPIKeyField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByProviderCurrenciesCount orders the results by provider_currencies count.
-func ByProviderCurrenciesCount(opts ...sql.OrderTermOption) OrderOption {
+// ByProviderBalancesCount orders the results by provider_balances count.
+func ByProviderBalancesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProviderCurrenciesStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newProviderBalancesStep(), opts...)
 	}
 }
 
-// ByProviderCurrencies orders the results by provider_currencies terms.
-func ByProviderCurrencies(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByProviderBalances orders the results by provider_balances terms.
+func ByProviderBalances(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProviderCurrenciesStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newProviderBalancesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -356,11 +357,11 @@ func newAPIKeyStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2O, false, APIKeyTable, APIKeyColumn),
 	)
 }
-func newProviderCurrenciesStep() *sqlgraph.Step {
+func newProviderBalancesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProviderCurrenciesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProviderCurrenciesTable, ProviderCurrenciesColumn),
+		sqlgraph.To(ProviderBalancesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, ProviderBalancesTable, ProviderBalancesPrimaryKey...),
 	)
 }
 func newProvisionBucketsStep() *sqlgraph.Step {

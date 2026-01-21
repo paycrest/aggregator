@@ -11,13 +11,13 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
-	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/providerbalances"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
 )
 
-// ProviderCurrencies is the model entity for the ProviderCurrencies schema.
-type ProviderCurrencies struct {
+// ProviderBalances is the model entity for the ProviderBalances schema.
+type ProviderBalances struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
@@ -32,63 +32,74 @@ type ProviderCurrencies struct {
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the ProviderCurrenciesQuery when eager-loading is set.
-	Edges                                ProviderCurrenciesEdges `json:"edges"`
-	fiat_currency_provider_currencies    *uuid.UUID
-	provider_profile_provider_currencies *string
-	selectValues                         sql.SelectValues
+	// The values are being populated by the ProviderBalancesQuery when eager-loading is set.
+	Edges                           ProviderBalancesEdges `json:"edges"`
+	fiat_currency_provider_balances *uuid.UUID
+	token_provider_balances         *int
+	selectValues                    sql.SelectValues
 }
 
-// ProviderCurrenciesEdges holds the relations/edges for other nodes in the graph.
-type ProviderCurrenciesEdges struct {
+// ProviderBalancesEdges holds the relations/edges for other nodes in the graph.
+type ProviderBalancesEdges struct {
 	// Provider holds the value of the provider edge.
-	Provider *ProviderProfile `json:"provider,omitempty"`
-	// Currency holds the value of the currency edge.
-	Currency *FiatCurrency `json:"currency,omitempty"`
+	Provider []*ProviderProfile `json:"provider,omitempty"`
+	// FiatCurrency holds the value of the fiat_currency edge.
+	FiatCurrency *FiatCurrency `json:"fiat_currency,omitempty"`
+	// Token holds the value of the token edge.
+	Token *Token `json:"token,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // ProviderOrErr returns the Provider value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e ProviderCurrenciesEdges) ProviderOrErr() (*ProviderProfile, error) {
-	if e.Provider != nil {
+// was not loaded in eager-loading.
+func (e ProviderBalancesEdges) ProviderOrErr() ([]*ProviderProfile, error) {
+	if e.loadedTypes[0] {
 		return e.Provider, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: providerprofile.Label}
 	}
 	return nil, &NotLoadedError{edge: "provider"}
 }
 
-// CurrencyOrErr returns the Currency value or an error if the edge
+// FiatCurrencyOrErr returns the FiatCurrency value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e ProviderCurrenciesEdges) CurrencyOrErr() (*FiatCurrency, error) {
-	if e.Currency != nil {
-		return e.Currency, nil
+func (e ProviderBalancesEdges) FiatCurrencyOrErr() (*FiatCurrency, error) {
+	if e.FiatCurrency != nil {
+		return e.FiatCurrency, nil
 	} else if e.loadedTypes[1] {
 		return nil, &NotFoundError{label: fiatcurrency.Label}
 	}
-	return nil, &NotLoadedError{edge: "currency"}
+	return nil, &NotLoadedError{edge: "fiat_currency"}
+}
+
+// TokenOrErr returns the Token value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProviderBalancesEdges) TokenOrErr() (*Token, error) {
+	if e.Token != nil {
+		return e.Token, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: token.Label}
+	}
+	return nil, &NotLoadedError{edge: "token"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*ProviderCurrencies) scanValues(columns []string) ([]any, error) {
+func (*ProviderBalances) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providercurrencies.FieldAvailableBalance, providercurrencies.FieldTotalBalance, providercurrencies.FieldReservedBalance:
+		case providerbalances.FieldAvailableBalance, providerbalances.FieldTotalBalance, providerbalances.FieldReservedBalance:
 			values[i] = new(decimal.Decimal)
-		case providercurrencies.FieldIsAvailable:
+		case providerbalances.FieldIsAvailable:
 			values[i] = new(sql.NullBool)
-		case providercurrencies.FieldUpdatedAt:
+		case providerbalances.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
-		case providercurrencies.FieldID:
+		case providerbalances.FieldID:
 			values[i] = new(uuid.UUID)
-		case providercurrencies.ForeignKeys[0]: // fiat_currency_provider_currencies
+		case providerbalances.ForeignKeys[0]: // fiat_currency_provider_balances
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case providercurrencies.ForeignKeys[1]: // provider_profile_provider_currencies
-			values[i] = new(sql.NullString)
+		case providerbalances.ForeignKeys[1]: // token_provider_balances
+			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -97,62 +108,62 @@ func (*ProviderCurrencies) scanValues(columns []string) ([]any, error) {
 }
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
-// to the ProviderCurrencies fields.
-func (_m *ProviderCurrencies) assignValues(columns []string, values []any) error {
+// to the ProviderBalances fields.
+func (_m *ProviderBalances) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
 	for i := range columns {
 		switch columns[i] {
-		case providercurrencies.FieldID:
+		case providerbalances.FieldID:
 			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				_m.ID = *value
 			}
-		case providercurrencies.FieldAvailableBalance:
+		case providerbalances.FieldAvailableBalance:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field available_balance", values[i])
 			} else if value != nil {
 				_m.AvailableBalance = *value
 			}
-		case providercurrencies.FieldTotalBalance:
+		case providerbalances.FieldTotalBalance:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field total_balance", values[i])
 			} else if value != nil {
 				_m.TotalBalance = *value
 			}
-		case providercurrencies.FieldReservedBalance:
+		case providerbalances.FieldReservedBalance:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
 				return fmt.Errorf("unexpected type %T for field reserved_balance", values[i])
 			} else if value != nil {
 				_m.ReservedBalance = *value
 			}
-		case providercurrencies.FieldIsAvailable:
+		case providerbalances.FieldIsAvailable:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field is_available", values[i])
 			} else if value.Valid {
 				_m.IsAvailable = value.Bool
 			}
-		case providercurrencies.FieldUpdatedAt:
+		case providerbalances.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
-		case providercurrencies.ForeignKeys[0]:
+		case providerbalances.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field fiat_currency_provider_currencies", values[i])
+				return fmt.Errorf("unexpected type %T for field fiat_currency_provider_balances", values[i])
 			} else if value.Valid {
-				_m.fiat_currency_provider_currencies = new(uuid.UUID)
-				*_m.fiat_currency_provider_currencies = *value.S.(*uuid.UUID)
+				_m.fiat_currency_provider_balances = new(uuid.UUID)
+				*_m.fiat_currency_provider_balances = *value.S.(*uuid.UUID)
 			}
-		case providercurrencies.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider_profile_provider_currencies", values[i])
+		case providerbalances.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field token_provider_balances", value)
 			} else if value.Valid {
-				_m.provider_profile_provider_currencies = new(string)
-				*_m.provider_profile_provider_currencies = value.String
+				_m.token_provider_balances = new(int)
+				*_m.token_provider_balances = int(value.Int64)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -161,44 +172,49 @@ func (_m *ProviderCurrencies) assignValues(columns []string, values []any) error
 	return nil
 }
 
-// Value returns the ent.Value that was dynamically selected and assigned to the ProviderCurrencies.
+// Value returns the ent.Value that was dynamically selected and assigned to the ProviderBalances.
 // This includes values selected through modifiers, order, etc.
-func (_m *ProviderCurrencies) Value(name string) (ent.Value, error) {
+func (_m *ProviderBalances) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryProvider queries the "provider" edge of the ProviderCurrencies entity.
-func (_m *ProviderCurrencies) QueryProvider() *ProviderProfileQuery {
-	return NewProviderCurrenciesClient(_m.config).QueryProvider(_m)
+// QueryProvider queries the "provider" edge of the ProviderBalances entity.
+func (_m *ProviderBalances) QueryProvider() *ProviderProfileQuery {
+	return NewProviderBalancesClient(_m.config).QueryProvider(_m)
 }
 
-// QueryCurrency queries the "currency" edge of the ProviderCurrencies entity.
-func (_m *ProviderCurrencies) QueryCurrency() *FiatCurrencyQuery {
-	return NewProviderCurrenciesClient(_m.config).QueryCurrency(_m)
+// QueryFiatCurrency queries the "fiat_currency" edge of the ProviderBalances entity.
+func (_m *ProviderBalances) QueryFiatCurrency() *FiatCurrencyQuery {
+	return NewProviderBalancesClient(_m.config).QueryFiatCurrency(_m)
 }
 
-// Update returns a builder for updating this ProviderCurrencies.
-// Note that you need to call ProviderCurrencies.Unwrap() before calling this method if this ProviderCurrencies
+// QueryToken queries the "token" edge of the ProviderBalances entity.
+func (_m *ProviderBalances) QueryToken() *TokenQuery {
+	return NewProviderBalancesClient(_m.config).QueryToken(_m)
+}
+
+// Update returns a builder for updating this ProviderBalances.
+// Note that you need to call ProviderBalances.Unwrap() before calling this method if this ProviderBalances
 // was returned from a transaction, and the transaction was committed or rolled back.
-func (_m *ProviderCurrencies) Update() *ProviderCurrenciesUpdateOne {
-	return NewProviderCurrenciesClient(_m.config).UpdateOne(_m)
+func (_m *ProviderBalances) Update() *ProviderBalancesUpdateOne {
+	return NewProviderBalancesClient(_m.config).UpdateOne(_m)
 }
 
-// Unwrap unwraps the ProviderCurrencies entity that was returned from a transaction after it was closed,
+// Unwrap unwraps the ProviderBalances entity that was returned from a transaction after it was closed,
 // so that all future queries will be executed through the driver which created the transaction.
-func (_m *ProviderCurrencies) Unwrap() *ProviderCurrencies {
+func (_m *ProviderBalances) Unwrap() *ProviderBalances {
 	_tx, ok := _m.config.driver.(*txDriver)
 	if !ok {
-		panic("ent: ProviderCurrencies is not a transactional entity")
+		panic("ent: ProviderBalances is not a transactional entity")
 	}
 	_m.config.driver = _tx.drv
 	return _m
 }
 
 // String implements the fmt.Stringer.
-func (_m *ProviderCurrencies) String() string {
+func (_m *ProviderBalances) String() string {
 	var builder strings.Builder
-	builder.WriteString("ProviderCurrencies(")
+	builder.WriteString("ProviderBalances(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("available_balance=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AvailableBalance))
@@ -218,5 +234,5 @@ func (_m *ProviderCurrencies) String() string {
 	return builder.String()
 }
 
-// ProviderCurrenciesSlice is a parsable slice of ProviderCurrencies.
-type ProviderCurrenciesSlice []*ProviderCurrencies
+// ProviderBalancesSlice is a parsable slice of ProviderBalances.
+type ProviderBalancesSlice []*ProviderBalances

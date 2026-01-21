@@ -45,8 +45,8 @@ type FiatCurrency struct {
 
 // FiatCurrencyEdges holds the relations/edges for other nodes in the graph.
 type FiatCurrencyEdges struct {
-	// ProviderCurrencies holds the value of the provider_currencies edge.
-	ProviderCurrencies []*ProviderCurrencies `json:"provider_currencies,omitempty"`
+	// ProviderBalances holds the value of the provider_balances edge.
+	ProviderBalances []*ProviderBalances `json:"provider_balances,omitempty"`
 	// ProvisionBuckets holds the value of the provision_buckets edge.
 	ProvisionBuckets []*ProvisionBucket `json:"provision_buckets,omitempty"`
 	// Institutions holds the value of the institutions edge.
@@ -58,13 +58,13 @@ type FiatCurrencyEdges struct {
 	loadedTypes [4]bool
 }
 
-// ProviderCurrenciesOrErr returns the ProviderCurrencies value or an error if the edge
+// ProviderBalancesOrErr returns the ProviderBalances value or an error if the edge
 // was not loaded in eager-loading.
-func (e FiatCurrencyEdges) ProviderCurrenciesOrErr() ([]*ProviderCurrencies, error) {
+func (e FiatCurrencyEdges) ProviderBalancesOrErr() ([]*ProviderBalances, error) {
 	if e.loadedTypes[0] {
-		return e.ProviderCurrencies, nil
+		return e.ProviderBalances, nil
 	}
-	return nil, &NotLoadedError{edge: "provider_currencies"}
+	return nil, &NotLoadedError{edge: "provider_balances"}
 }
 
 // ProvisionBucketsOrErr returns the ProvisionBuckets value or an error if the edge
@@ -199,9 +199,9 @@ func (_m *FiatCurrency) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryProviderCurrencies queries the "provider_currencies" edge of the FiatCurrency entity.
-func (_m *FiatCurrency) QueryProviderCurrencies() *ProviderCurrenciesQuery {
-	return NewFiatCurrencyClient(_m.config).QueryProviderCurrencies(_m)
+// QueryProviderBalances queries the "provider_balances" edge of the FiatCurrency entity.
+func (_m *FiatCurrency) QueryProviderBalances() *ProviderBalancesQuery {
+	return NewFiatCurrencyClient(_m.config).QueryProviderBalances(_m)
 }
 
 // QueryProvisionBuckets queries the "provision_buckets" edge of the FiatCurrency entity.

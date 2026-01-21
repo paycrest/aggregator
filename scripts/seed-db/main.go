@@ -12,6 +12,7 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils/crypto"
@@ -233,15 +234,13 @@ func seedProvider(ctx context.Context, client *ent.Client, bucket *ent.Provision
 		return "", "", "", fmt.Errorf("failed creating provider: %s", err)
 	}
 
-	// Create ProviderCurrencies entry
-	_, err = client.ProviderCurrencies.
-		Create().
-		SetProvider(provider).
-		SetCurrency(currency).
+	_, err = client.ProviderBalances.Create().
+		SetFiatCurrency(currency).
 		SetAvailableBalance(decimal.Zero).
 		SetTotalBalance(decimal.Zero).
 		SetReservedBalance(decimal.Zero).
 		SetIsAvailable(true).
+		AddProviderIDs(provider.ID).
 		Save(ctx)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed creating provider: %s", err)
