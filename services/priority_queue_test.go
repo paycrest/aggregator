@@ -227,7 +227,8 @@ func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey strin
 					logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "OrderID": order.ID.String(), "ProviderID": order.ProviderID}).Errorf("failed to get provider fiat balance")
 					continue
 				}
-				if !s.balanceService.CheckBalanceSufficiency(bal, order.Amount.Mul(order.Rate).RoundBank(0)) {
+				required := order.Amount.Mul(order.Rate).Round(int32(bucketCurrency.Decimals))
+				if !s.balanceService.CheckBalanceSufficiency(bal, required) {
 					err = fmt.Errorf("insufficient balance")
 					logger.WithFields(logger.Fields{
 						"Error":      fmt.Sprintf("%v", err),
