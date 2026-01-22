@@ -183,7 +183,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 				SetTotalBalance(decimal.Zero).
 				SetReservedBalance(decimal.Zero).
 				SetIsAvailable(true).
-				AddProviderIDs(provider.ID).
+				SetProviderID(provider.ID).
 				Save(ctx)
 			if err != nil {
 				_ = tx.Rollback()

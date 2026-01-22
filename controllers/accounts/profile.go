@@ -255,15 +255,16 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	}
 
 	// Capture currency availability update intent (no writes yet)
+	// Only update availability when explicitly set (IsAvailable is *bool to detect presence)
 	var availabilityOp *struct {
 		currencyCode string
 		isAvailable  bool
 	}
-	if payload.Currency != "" {
+	if payload.Currency != "" && payload.IsAvailable != nil {
 		availabilityOp = &struct {
 			currencyCode string
 			isAvailable  bool
-		}{payload.Currency, payload.IsAvailable}
+		}{payload.Currency, *payload.IsAvailable}
 	}
 
 	// PHASE 1: Validate all tokens and prepare operations
@@ -536,7 +537,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetTotalBalance(decimal.Zero).
 				SetReservedBalance(decimal.Zero).
 				SetIsAvailable(availabilityOp.isAvailable).
-				AddProviderIDs(provider.ID).
+				SetProviderID(provider.ID).
 				Save(ctx)
 		} else if err == nil {
 			_, err = pb.Update().SetIsAvailable(availabilityOp.isAvailable).Save(ctx)

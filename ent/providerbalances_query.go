@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -81,7 +80,7 @@ func (_q *ProviderBalancesQuery) QueryProvider() *ProviderProfileQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerbalances.Table, providerbalances.FieldID, selector),
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, providerbalances.ProviderTable, providerbalances.ProviderPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerbalances.ProviderTable, providerbalances.ProviderColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -452,7 +451,7 @@ func (_q *ProviderBalancesQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 			_q.withToken != nil,
 		}
 	)
-	if _q.withFiatCurrency != nil || _q.withToken != nil {
+	if _q.withProvider != nil || _q.withFiatCurrency != nil || _q.withToken != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -477,9 +476,8 @@ func (_q *ProviderBalancesQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 		return nodes, nil
 	}
 	if query := _q.withProvider; query != nil {
-		if err := _q.loadProvider(ctx, query, nodes,
-			func(n *ProviderBalances) { n.Edges.Provider = []*ProviderProfile{} },
-			func(n *ProviderBalances, e *ProviderProfile) { n.Edges.Provider = append(n.Edges.Provider, e) }); err != nil {
+		if err := _q.loadProvider(ctx, query, nodes, nil,
+			func(n *ProviderBalances, e *ProviderProfile) { n.Edges.Provider = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -499,62 +497,33 @@ func (_q *ProviderBalancesQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 }
 
 func (_q *ProviderBalancesQuery) loadProvider(ctx context.Context, query *ProviderProfileQuery, nodes []*ProviderBalances, init func(*ProviderBalances), assign func(*ProviderBalances, *ProviderProfile)) error {
-	edgeIDs := make([]driver.Value, len(nodes))
-	byID := make(map[uuid.UUID]*ProviderBalances)
-	nids := make(map[string]map[*ProviderBalances]struct{})
-	for i, node := range nodes {
-		edgeIDs[i] = node.ID
-		byID[node.ID] = node
-		if init != nil {
-			init(node)
+	ids := make([]string, 0, len(nodes))
+	nodeids := make(map[string][]*ProviderBalances)
+	for i := range nodes {
+		if nodes[i].provider_profile_provider_balances == nil {
+			continue
 		}
+		fk := *nodes[i].provider_profile_provider_balances
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(providerbalances.ProviderTable)
-		s.Join(joinT).On(s.C(providerprofile.FieldID), joinT.C(providerbalances.ProviderPrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(providerbalances.ProviderPrimaryKey[1]), edgeIDs...))
-		columns := s.SelectedColumns()
-		s.Select(joinT.C(providerbalances.ProviderPrimaryKey[1]))
-		s.AppendSelect(columns...)
-		s.SetDistinct(false)
-	})
-	if err := query.prepareQuery(ctx); err != nil {
-		return err
+	if len(ids) == 0 {
+		return nil
 	}
-	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
-		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-			assign := spec.Assign
-			values := spec.ScanValues
-			spec.ScanValues = func(columns []string) ([]any, error) {
-				values, err := values(columns[1:])
-				if err != nil {
-					return nil, err
-				}
-				return append([]any{new(uuid.UUID)}, values...), nil
-			}
-			spec.Assign = func(columns []string, values []any) error {
-				outValue := *values[0].(*uuid.UUID)
-				inValue := values[1].(*sql.NullString).String
-				if nids[inValue] == nil {
-					nids[inValue] = map[*ProviderBalances]struct{}{byID[outValue]: {}}
-					return assign(columns[1:], values[1:])
-				}
-				nids[inValue][byID[outValue]] = struct{}{}
-				return nil
-			}
-		})
-	})
-	neighbors, err := withInterceptors[[]*ProviderProfile](ctx, query, qr, query.inters)
+	query.Where(providerprofile.IDIn(ids...))
+	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nids[n.ID]
+		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "provider" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "provider_profile_provider_balances" returned %v`, n.ID)
 		}
-		for kn := range nodes {
-			assign(kn, n)
+		for i := range nodes {
+			assign(nodes[i], n)
 		}
 	}
 	return nil

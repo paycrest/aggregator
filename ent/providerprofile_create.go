@@ -463,10 +463,10 @@ func (_c *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Creat
 	}
 	if nodes := _c.mutation.ProviderBalancesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   providerprofile.ProviderBalancesTable,
-			Columns: providerprofile.ProviderBalancesPrimaryKey,
+			Columns: []string{providerprofile.ProviderBalancesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),

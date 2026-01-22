@@ -482,7 +482,7 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetTotalBalance(decimal.Zero).
 		SetReservedBalance(decimal.Zero).
 		SetIsAvailable(true).
-		AddProviderIDs(profile.ID).
+		SetProviderID(profile.ID).
 		Save(context.Background())
 	return profile, err
 }

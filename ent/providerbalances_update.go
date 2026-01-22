@@ -116,19 +116,15 @@ func (_u *ProviderBalancesUpdate) SetUpdatedAt(v time.Time) *ProviderBalancesUpd
 	return _u
 }
 
-// AddProviderIDs adds the "provider" edge to the ProviderProfile entity by IDs.
-func (_u *ProviderBalancesUpdate) AddProviderIDs(ids ...string) *ProviderBalancesUpdate {
-	_u.mutation.AddProviderIDs(ids...)
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
+func (_u *ProviderBalancesUpdate) SetProviderID(id string) *ProviderBalancesUpdate {
+	_u.mutation.SetProviderID(id)
 	return _u
 }
 
-// AddProvider adds the "provider" edges to the ProviderProfile entity.
-func (_u *ProviderBalancesUpdate) AddProvider(v ...*ProviderProfile) *ProviderBalancesUpdate {
-	ids := make([]string, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddProviderIDs(ids...)
+// SetProvider sets the "provider" edge to the ProviderProfile entity.
+func (_u *ProviderBalancesUpdate) SetProvider(v *ProviderProfile) *ProviderBalancesUpdate {
+	return _u.SetProviderID(v.ID)
 }
 
 // SetFiatCurrencyID sets the "fiat_currency" edge to the FiatCurrency entity by ID.
@@ -174,25 +170,10 @@ func (_u *ProviderBalancesUpdate) Mutation() *ProviderBalancesMutation {
 	return _u.mutation
 }
 
-// ClearProvider clears all "provider" edges to the ProviderProfile entity.
+// ClearProvider clears the "provider" edge to the ProviderProfile entity.
 func (_u *ProviderBalancesUpdate) ClearProvider() *ProviderBalancesUpdate {
 	_u.mutation.ClearProvider()
 	return _u
-}
-
-// RemoveProviderIDs removes the "provider" edge to ProviderProfile entities by IDs.
-func (_u *ProviderBalancesUpdate) RemoveProviderIDs(ids ...string) *ProviderBalancesUpdate {
-	_u.mutation.RemoveProviderIDs(ids...)
-	return _u
-}
-
-// RemoveProvider removes "provider" edges to ProviderProfile entities.
-func (_u *ProviderBalancesUpdate) RemoveProvider(v ...*ProviderProfile) *ProviderBalancesUpdate {
-	ids := make([]string, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveProviderIDs(ids...)
 }
 
 // ClearFiatCurrency clears the "fiat_currency" edge to the FiatCurrency entity.
@@ -243,7 +224,18 @@ func (_u *ProviderBalancesUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *ProviderBalancesUpdate) check() error {
+	if _u.mutation.ProviderCleared() && len(_u.mutation.ProviderIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ProviderBalances.provider"`)
+	}
+	return nil
+}
+
 func (_u *ProviderBalancesUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(providerbalances.Table, providerbalances.Columns, sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -278,39 +270,23 @@ func (_u *ProviderBalancesUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   providerbalances.ProviderTable,
-			Columns: providerbalances.ProviderPrimaryKey,
+			Columns: []string{providerbalances.ProviderColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
 			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedProviderIDs(); len(nodes) > 0 && !_u.mutation.ProviderCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerbalances.ProviderTable,
-			Columns: providerbalances.ProviderPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   providerbalances.ProviderTable,
-			Columns: providerbalances.ProviderPrimaryKey,
+			Columns: []string{providerbalances.ProviderColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -482,19 +458,15 @@ func (_u *ProviderBalancesUpdateOne) SetUpdatedAt(v time.Time) *ProviderBalances
 	return _u
 }
 
-// AddProviderIDs adds the "provider" edge to the ProviderProfile entity by IDs.
-func (_u *ProviderBalancesUpdateOne) AddProviderIDs(ids ...string) *ProviderBalancesUpdateOne {
-	_u.mutation.AddProviderIDs(ids...)
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
+func (_u *ProviderBalancesUpdateOne) SetProviderID(id string) *ProviderBalancesUpdateOne {
+	_u.mutation.SetProviderID(id)
 	return _u
 }
 
-// AddProvider adds the "provider" edges to the ProviderProfile entity.
-func (_u *ProviderBalancesUpdateOne) AddProvider(v ...*ProviderProfile) *ProviderBalancesUpdateOne {
-	ids := make([]string, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddProviderIDs(ids...)
+// SetProvider sets the "provider" edge to the ProviderProfile entity.
+func (_u *ProviderBalancesUpdateOne) SetProvider(v *ProviderProfile) *ProviderBalancesUpdateOne {
+	return _u.SetProviderID(v.ID)
 }
 
 // SetFiatCurrencyID sets the "fiat_currency" edge to the FiatCurrency entity by ID.
@@ -540,25 +512,10 @@ func (_u *ProviderBalancesUpdateOne) Mutation() *ProviderBalancesMutation {
 	return _u.mutation
 }
 
-// ClearProvider clears all "provider" edges to the ProviderProfile entity.
+// ClearProvider clears the "provider" edge to the ProviderProfile entity.
 func (_u *ProviderBalancesUpdateOne) ClearProvider() *ProviderBalancesUpdateOne {
 	_u.mutation.ClearProvider()
 	return _u
-}
-
-// RemoveProviderIDs removes the "provider" edge to ProviderProfile entities by IDs.
-func (_u *ProviderBalancesUpdateOne) RemoveProviderIDs(ids ...string) *ProviderBalancesUpdateOne {
-	_u.mutation.RemoveProviderIDs(ids...)
-	return _u
-}
-
-// RemoveProvider removes "provider" edges to ProviderProfile entities.
-func (_u *ProviderBalancesUpdateOne) RemoveProvider(v ...*ProviderProfile) *ProviderBalancesUpdateOne {
-	ids := make([]string, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveProviderIDs(ids...)
 }
 
 // ClearFiatCurrency clears the "fiat_currency" edge to the FiatCurrency entity.
@@ -622,7 +579,18 @@ func (_u *ProviderBalancesUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *ProviderBalancesUpdateOne) check() error {
+	if _u.mutation.ProviderCleared() && len(_u.mutation.ProviderIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "ProviderBalances.provider"`)
+	}
+	return nil
+}
+
 func (_u *ProviderBalancesUpdateOne) sqlSave(ctx context.Context) (_node *ProviderBalances, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(providerbalances.Table, providerbalances.Columns, sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -674,39 +642,23 @@ func (_u *ProviderBalancesUpdateOne) sqlSave(ctx context.Context) (_node *Provid
 	}
 	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   providerbalances.ProviderTable,
-			Columns: providerbalances.ProviderPrimaryKey,
+			Columns: []string{providerbalances.ProviderColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
 			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedProviderIDs(); len(nodes) > 0 && !_u.mutation.ProviderCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerbalances.ProviderTable,
-			Columns: providerbalances.ProviderPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := _u.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   providerbalances.ProviderTable,
-			Columns: providerbalances.ProviderPrimaryKey,
+			Columns: []string{providerbalances.ProviderColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),

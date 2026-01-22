@@ -243,15 +243,18 @@ func (svc *BalanceManagementService) ReleaseFiatBalance(ctx context.Context, pro
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": providerID, "Currency": currencyCode}).Errorf("Failed to get provider fiat balance for release")
 		return fmt.Errorf("failed to get provider fiat balance: %w", err)
 	}
+	amountToRelease := amount
 	if bal.ReservedBalance.LessThan(amount) {
 		if !bal.ReservedBalance.Equal(decimal.Zero) {
 			logger.WithFields(logger.Fields{"ProviderID": providerID, "Currency": currencyCode, "ReservedBalance": bal.ReservedBalance.String(), "ReleaseAmount": amount.String()}).Warnf("Insufficient reserved fiat balance for release")
 			return fmt.Errorf("insufficient reserved balance: reserved=%s, requested=%s", bal.ReservedBalance.String(), amount.String())
 		}
-		logger.WithFields(logger.Fields{"ProviderID": providerID, "Currency": currencyCode, "Requested": amount.String()}).Infof("Provider has zero reserved fiat balance, allowing full release")
+		// Reserved is zero, nothing to release
+		amountToRelease = decimal.Zero
+		logger.WithFields(logger.Fields{"ProviderID": providerID, "Currency": currencyCode, "Requested": amount.String()}).Infof("Provider has zero reserved fiat balance, skipping release")
 	}
-	newReserved := bal.ReservedBalance.Sub(amount)
-	newAvail := bal.AvailableBalance.Add(amount)
+	newReserved := bal.ReservedBalance.Sub(amountToRelease)
+	newAvail := bal.AvailableBalance.Add(amountToRelease)
 	_, err = bal.Update().SetAvailableBalance(newAvail).SetReservedBalance(newReserved).SetUpdatedAt(time.Now()).Save(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": providerID, "Currency": currencyCode}).Errorf("Failed to release reserved fiat balance")
@@ -293,12 +296,18 @@ func (svc *BalanceManagementService) ReleaseTokenBalance(ctx context.Context, pr
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": providerID, "TokenID": tokenID}).Errorf("Failed to get provider token balance for release")
 		return fmt.Errorf("failed to get provider token balance: %w", err)
 	}
-	if bal.ReservedBalance.LessThan(amount) && !bal.ReservedBalance.Equal(decimal.Zero) {
-		logger.WithFields(logger.Fields{"ProviderID": providerID, "TokenID": tokenID, "ReservedBalance": bal.ReservedBalance.String(), "ReleaseAmount": amount.String()}).Warnf("Insufficient reserved token balance for release")
-		return fmt.Errorf("insufficient reserved token balance: reserved=%s, requested=%s", bal.ReservedBalance.String(), amount.String())
+	amountToRelease := amount
+	if bal.ReservedBalance.LessThan(amount) {
+		if !bal.ReservedBalance.Equal(decimal.Zero) {
+			logger.WithFields(logger.Fields{"ProviderID": providerID, "TokenID": tokenID, "ReservedBalance": bal.ReservedBalance.String(), "ReleaseAmount": amount.String()}).Warnf("Insufficient reserved token balance for release")
+			return fmt.Errorf("insufficient reserved token balance: reserved=%s, requested=%s", bal.ReservedBalance.String(), amount.String())
+		}
+		// Reserved is zero, nothing to release
+		amountToRelease = decimal.Zero
+		logger.WithFields(logger.Fields{"ProviderID": providerID, "TokenID": tokenID, "Requested": amount.String()}).Infof("Provider has zero reserved token balance, skipping release")
 	}
-	newReserved := bal.ReservedBalance.Sub(amount)
-	newAvail := bal.AvailableBalance.Add(amount)
+	newReserved := bal.ReservedBalance.Sub(amountToRelease)
+	newAvail := bal.AvailableBalance.Add(amountToRelease)
 	_, err = bal.Update().SetAvailableBalance(newAvail).SetReservedBalance(newReserved).SetUpdatedAt(time.Now()).Save(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": providerID, "TokenID": tokenID}).Errorf("Failed to release reserved token balance")
@@ -430,11 +439,15 @@ func (svc *BalanceManagementService) CancelOrderAndReleaseBalance(ctx context.Co
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "OrderID": orderID, "ProviderID": providerID, "Currency": currencyCode}).Errorf("Failed to get provider fiat balance for order cancellation")
 		return fmt.Errorf("failed to get provider fiat balance: %w", err)
 	}
-	newReservedBalance := bal.ReservedBalance.Sub(amount)
-	newAvailableBalance := bal.AvailableBalance.Add(amount)
-	if newReservedBalance.LessThan(decimal.Zero) {
-		newReservedBalance = decimal.Zero
-		logger.WithFields(logger.Fields{"OrderID": orderID, "ProviderID": providerID, "Currency": currencyCode, "Amount": amount.String()}).Warnf("Adjusted reserved balance to zero for cancelled order")
+	// Only release what's actually reserved to avoid over-crediting
+	amountToRelease := decimal.Min(amount, bal.ReservedBalance)
+	if amountToRelease.LessThan(decimal.Zero) {
+		amountToRelease = decimal.Zero
+	}
+	newReservedBalance := bal.ReservedBalance.Sub(amountToRelease)
+	newAvailableBalance := bal.AvailableBalance.Add(amountToRelease)
+	if amountToRelease.LessThan(amount) {
+		logger.WithFields(logger.Fields{"OrderID": orderID, "ProviderID": providerID, "Currency": currencyCode, "RequestedAmount": amount.String(), "ActualReleased": amountToRelease.String()}).Warnf("Released less than requested for cancelled order")
 	}
 	_, err = bal.Update().
 		SetAvailableBalance(newAvailableBalance).
@@ -463,12 +476,13 @@ func (svc *BalanceManagementService) CancelOrderAndReleaseBalance(ctx context.Co
 	}
 
 	logger.WithFields(logger.Fields{
-		"OrderID":      orderID,
-		"ProviderID":   providerID,
-		"Currency":     currencyCode,
-		"Amount":       amount.String(),
-		"NewAvailable": newAvailableBalance.String(),
-		"NewReserved":  newReservedBalance.String(),
+		"OrderID":         orderID,
+		"ProviderID":      providerID,
+		"Currency":        currencyCode,
+		"RequestedAmount": amount.String(),
+		"ReleasedAmount":  amountToRelease.String(),
+		"NewAvailable":    newAvailableBalance.String(),
+		"NewReserved":     newReservedBalance.String(),
 	}).Infof("Successfully cancelled order and released reserved balance")
 
 	return nil
@@ -486,11 +500,15 @@ func (svc *BalanceManagementService) CancelOrderAndReleaseBalanceWithinTransacti
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "OrderID": orderID, "ProviderID": providerID, "Currency": currencyCode}).Errorf("Failed to get provider fiat balance for order cancellation within transaction")
 		return fmt.Errorf("failed to get provider fiat balance: %w", err)
 	}
-	newReservedBalance := bal.ReservedBalance.Sub(amount)
-	newAvailableBalance := bal.AvailableBalance.Add(amount)
-	if newReservedBalance.LessThan(decimal.Zero) {
-		newReservedBalance = decimal.Zero
-		logger.WithFields(logger.Fields{"OrderID": orderID, "ProviderID": providerID, "Currency": currencyCode, "Amount": amount.String()}).Warnf("Adjusted reserved balance to zero for cancelled order within transaction")
+	// Only release what's actually reserved to avoid over-crediting
+	amountToRelease := decimal.Min(amount, bal.ReservedBalance)
+	if amountToRelease.LessThan(decimal.Zero) {
+		amountToRelease = decimal.Zero
+	}
+	newReservedBalance := bal.ReservedBalance.Sub(amountToRelease)
+	newAvailableBalance := bal.AvailableBalance.Add(amountToRelease)
+	if amountToRelease.LessThan(amount) {
+		logger.WithFields(logger.Fields{"OrderID": orderID, "ProviderID": providerID, "Currency": currencyCode, "RequestedAmount": amount.String(), "ActualReleased": amountToRelease.String()}).Warnf("Released less than requested for cancelled order within transaction")
 	}
 	_, err = bal.Update().
 		SetAvailableBalance(newAvailableBalance).
@@ -746,8 +764,8 @@ func (svc *BalanceManagementService) ValidateAndFixBalances(ctx context.Context,
 // CheckBalanceHealth performs a health check on the given balance (loaded with WithProvider/WithFiatCurrency/WithToken for full labels).
 func (svc *BalanceManagementService) CheckBalanceHealth(balance *ent.ProviderBalances) *BalanceHealthReport {
 	providerID := ""
-	if len(balance.Edges.Provider) > 0 {
-		providerID = balance.Edges.Provider[0].ID
+	if balance.Edges.Provider != nil {
+		providerID = balance.Edges.Provider.ID
 	}
 	currencyCode := ""
 	if balance.Edges.FiatCurrency != nil {

@@ -135,7 +135,7 @@ func (_q *ProviderProfileQuery) QueryProviderBalances() *ProviderBalancesQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
 			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, providerprofile.ProviderBalancesTable, providerprofile.ProviderBalancesPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderBalancesTable, providerprofile.ProviderBalancesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -784,63 +784,33 @@ func (_q *ProviderProfileQuery) loadAPIKey(ctx context.Context, query *APIKeyQue
 	return nil
 }
 func (_q *ProviderProfileQuery) loadProviderBalances(ctx context.Context, query *ProviderBalancesQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderBalances)) error {
-	edgeIDs := make([]driver.Value, len(nodes))
-	byID := make(map[string]*ProviderProfile)
-	nids := make(map[uuid.UUID]map[*ProviderProfile]struct{})
-	for i, node := range nodes {
-		edgeIDs[i] = node.ID
-		byID[node.ID] = node
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*ProviderProfile)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
 		if init != nil {
-			init(node)
+			init(nodes[i])
 		}
 	}
-	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(providerprofile.ProviderBalancesTable)
-		s.Join(joinT).On(s.C(providerbalances.FieldID), joinT.C(providerprofile.ProviderBalancesPrimaryKey[1]))
-		s.Where(sql.InValues(joinT.C(providerprofile.ProviderBalancesPrimaryKey[0]), edgeIDs...))
-		columns := s.SelectedColumns()
-		s.Select(joinT.C(providerprofile.ProviderBalancesPrimaryKey[0]))
-		s.AppendSelect(columns...)
-		s.SetDistinct(false)
-	})
-	if err := query.prepareQuery(ctx); err != nil {
-		return err
-	}
-	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
-		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-			assign := spec.Assign
-			values := spec.ScanValues
-			spec.ScanValues = func(columns []string) ([]any, error) {
-				values, err := values(columns[1:])
-				if err != nil {
-					return nil, err
-				}
-				return append([]any{new(sql.NullString)}, values...), nil
-			}
-			spec.Assign = func(columns []string, values []any) error {
-				outValue := values[0].(*sql.NullString).String
-				inValue := *values[1].(*uuid.UUID)
-				if nids[inValue] == nil {
-					nids[inValue] = map[*ProviderProfile]struct{}{byID[outValue]: {}}
-					return assign(columns[1:], values[1:])
-				}
-				nids[inValue][byID[outValue]] = struct{}{}
-				return nil
-			}
-		})
-	})
-	neighbors, err := withInterceptors[[]*ProviderBalances](ctx, query, qr, query.inters)
+	query.withFKs = true
+	query.Where(predicate.ProviderBalances(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(providerprofile.ProviderBalancesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nids[n.ID]
+		fk := n.provider_profile_provider_balances
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "provider_profile_provider_balances" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected "provider_balances" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_provider_balances" returned %v for node %v`, *fk, n.ID)
 		}
-		for kn := range nodes {
-			assign(kn, n)
-		}
+		assign(node, n)
 	}
 	return nil
 }

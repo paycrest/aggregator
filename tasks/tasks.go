@@ -2328,7 +2328,7 @@ func updateProviderFiatBalance(providerID, currency string, balance *types.Provi
 				SetReservedBalance(balance.ReservedBalance).
 				SetUpdatedAt(time.Now()).
 				SetIsAvailable(isAvailable).
-				AddProviderIDs(provider.ID).
+				SetProviderID(provider.ID).
 				Save(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to create provider fiat balance: %w", err)
@@ -2387,7 +2387,7 @@ func updateProviderTokenBalance(providerID string, tokenID int, balance *types.P
 				SetReservedBalance(decimal.Zero).
 				SetUpdatedAt(time.Now()).
 				SetIsAvailable(isAvailable).
-				AddProviderIDs(provider.ID).
+				SetProviderID(provider.ID).
 				Save(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to create provider token balance: %w", err)

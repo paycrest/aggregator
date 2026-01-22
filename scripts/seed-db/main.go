@@ -267,7 +267,7 @@ func seedProvider(ctx context.Context, client *ent.Client, bucket *ent.Provision
 		SetFloatingConversionRate(decimal.NewFromFloat(1)).
 		SetMinOrderAmount(bucket.MinAmount).
 		SetMaxOrderAmount(bucket.MaxAmount).
-		SetAddress("0x409689E3008d43a9eb439e7B275749D4a71D8E2D").
+		SetSettlementAddress("0x409689E3008d43a9eb439e7B275749D4a71D8E2D").
 		SetNetwork("arbitrum-sepolia").
 		SetProvider(provider).
 		SetCurrency(currency).

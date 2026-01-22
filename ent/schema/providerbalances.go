@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
@@ -34,7 +35,8 @@ func (ProviderBalances) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("provider", ProviderProfile.Type).
 			Ref("provider_balances").
-			Required(),
+			Required().
+			Unique(), // O2M: each balance belongs to exactly one provider
 		edge.From("fiat_currency", FiatCurrency.Type).
 			Ref("provider_balances").
 			Unique(),
@@ -45,6 +47,12 @@ func (ProviderBalances) Edges() []ent.Edge {
 }
 
 // Indexes of the ProviderBalances.
+// Composite unique indexes ensure a provider can only have one balance per currency/token.
 func (ProviderBalances) Indexes() []ent.Index {
-	return nil
+	return []ent.Index{
+		// Unique constraint: one fiat balance per provider per currency
+		index.Edges("provider", "fiat_currency").Unique(),
+		// Unique constraint: one token balance per provider per token
+		index.Edges("provider", "token").Unique(),
+	}
 }

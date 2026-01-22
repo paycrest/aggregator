@@ -88,19 +88,15 @@ func (_c *ProviderBalancesCreate) SetNillableID(v *uuid.UUID) *ProviderBalancesC
 	return _c
 }
 
-// AddProviderIDs adds the "provider" edge to the ProviderProfile entity by IDs.
-func (_c *ProviderBalancesCreate) AddProviderIDs(ids ...string) *ProviderBalancesCreate {
-	_c.mutation.AddProviderIDs(ids...)
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
+func (_c *ProviderBalancesCreate) SetProviderID(id string) *ProviderBalancesCreate {
+	_c.mutation.SetProviderID(id)
 	return _c
 }
 
-// AddProvider adds the "provider" edges to the ProviderProfile entity.
-func (_c *ProviderBalancesCreate) AddProvider(v ...*ProviderProfile) *ProviderBalancesCreate {
-	ids := make([]string, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddProviderIDs(ids...)
+// SetProvider sets the "provider" edge to the ProviderProfile entity.
+func (_c *ProviderBalancesCreate) SetProvider(v *ProviderProfile) *ProviderBalancesCreate {
+	return _c.SetProviderID(v.ID)
 }
 
 // SetFiatCurrencyID sets the "fiat_currency" edge to the FiatCurrency entity by ID.
@@ -268,10 +264,10 @@ func (_c *ProviderBalancesCreate) createSpec() (*ProviderBalances, *sqlgraph.Cre
 	}
 	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   providerbalances.ProviderTable,
-			Columns: providerbalances.ProviderPrimaryKey,
+			Columns: []string{providerbalances.ProviderColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
@@ -280,6 +276,7 @@ func (_c *ProviderBalancesCreate) createSpec() (*ProviderBalances, *sqlgraph.Cre
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.provider_profile_provider_balances = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.FiatCurrencyIDs(); len(nodes) > 0 {
