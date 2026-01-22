@@ -508,7 +508,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		"min_order_amount_otc":     decimal.NewFromFloat(100.0),
 		"provider":                 nil,
 		"token_id":                 0,
-		"address":                  "0x1234567890123456789012345678901234567890",
+		"settlement_address":       "0x1234567890123456789012345678901234567890",
 		"network":                  "localhost",
 	}
 
