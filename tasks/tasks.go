@@ -2289,11 +2289,26 @@ func fetchProviderTokenBalances(providerID string) (map[int]*types.ProviderBalan
 		// raw is in smallest units; convert using token decimals
 		dec := int32(tok.Decimals)
 		bal := decimal.NewFromBigInt(raw, -dec)
-		balances[tok.ID] = &types.ProviderBalance{
-			TotalBalance:     bal,
-			AvailableBalance: bal,
-			ReservedBalance:  decimal.Zero,
-			LastUpdated:      time.Now(),
+		now := time.Now()
+		
+		// Aggregate balances by token ID - multiple settlement addresses for same token should be summed
+		if existing, exists := balances[tok.ID]; exists {
+			// Add to existing balance
+			existing.TotalBalance = existing.TotalBalance.Add(bal)
+			existing.AvailableBalance = existing.AvailableBalance.Add(bal)
+			existing.ReservedBalance = existing.ReservedBalance.Add(decimal.Zero) // ReservedBalance stays summed (zero in this case)
+			// Update LastUpdated to the newest timestamp
+			if now.After(existing.LastUpdated) {
+				existing.LastUpdated = now
+			}
+		} else {
+			// Create new entry
+			balances[tok.ID] = &types.ProviderBalance{
+				TotalBalance:     bal,
+				AvailableBalance: bal,
+				ReservedBalance:  decimal.Zero,
+				LastUpdated:      now,
+			}
 		}
 	}
 	return balances, nil
@@ -2321,9 +2336,18 @@ func updateProviderFiatBalance(providerID, currency string, balance *types.Provi
 			}
 			// Set is_available to false if both available and reserved balances are zero
 			isAvailable := !(balance.AvailableBalance.IsZero() && balance.ReservedBalance.IsZero())
+			// Cap available balance by total - reserved to prevent inflating availability
+			maxAvailable := balance.TotalBalance.Sub(balance.ReservedBalance)
+			availableBalance := balance.AvailableBalance
+			if maxAvailable.LessThan(availableBalance) {
+				availableBalance = maxAvailable
+			}
+			if availableBalance.LessThan(decimal.Zero) {
+				availableBalance = decimal.Zero
+			}
 			_, err = storage.Client.ProviderBalances.Create().
 				SetFiatCurrency(fiat).
-				SetAvailableBalance(balance.AvailableBalance).
+				SetAvailableBalance(availableBalance).
 				SetTotalBalance(balance.TotalBalance).
 				SetReservedBalance(balance.ReservedBalance).
 				SetUpdatedAt(time.Now()).
@@ -2338,9 +2362,13 @@ func updateProviderFiatBalance(providerID, currency string, balance *types.Provi
 		return fmt.Errorf("failed to query provider fiat balance: %w", err)
 	}
 	// Preserve existing ReservedBalance (our internal reservations for pending orders)
-	// and recalculate AvailableBalance = TotalBalance - ReservedBalance
+	// Cap available balance by min(provider's reported available, total - reserved)
 	existingReserved := existing.ReservedBalance
-	newAvail := balance.TotalBalance.Sub(existingReserved)
+	maxAvailable := balance.TotalBalance.Sub(existingReserved)
+	newAvail := balance.AvailableBalance
+	if maxAvailable.LessThan(newAvail) {
+		newAvail = maxAvailable
+	}
 	if newAvail.LessThan(decimal.Zero) {
 		newAvail = decimal.Zero
 	}

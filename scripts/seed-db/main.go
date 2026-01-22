@@ -240,7 +240,7 @@ func seedProvider(ctx context.Context, client *ent.Client, bucket *ent.Provision
 		SetTotalBalance(decimal.Zero).
 		SetReservedBalance(decimal.Zero).
 		SetIsAvailable(true).
-		AddProviderIDs(provider.ID).
+		SetProviderID(provider.ID).
 		Save(ctx)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed creating provider: %s", err)
