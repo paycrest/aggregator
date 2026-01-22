@@ -116,6 +116,12 @@ func (svc *BalanceManagementService) UpdateProviderTokenBalance(ctx context.Cont
 // ReserveFiatBalance reserves an amount from a provider's available fiat balance.
 // If tx is nil, a new transaction will be created and committed.
 func (svc *BalanceManagementService) ReserveFiatBalance(ctx context.Context, providerID string, currencyCode string, amount decimal.Decimal, tx *ent.Tx) error {
+	// Reject non-positive amounts before any transaction operations
+	if amount.LessThanOrEqual(decimal.Zero) {
+		logger.WithFields(logger.Fields{"ProviderID": providerID, "Currency": currencyCode, "Amount": amount.String()}).Errorf("ReserveFiatBalance: invalid amount - must be greater than zero")
+		return fmt.Errorf("ReserveFiatBalance: amount must be greater than zero, got %s", amount.String())
+	}
+
 	internalTx := false
 	if tx == nil {
 		if err := svc.ValidateAndFixBalances(ctx, providerID, currencyCode); err != nil {
@@ -167,6 +173,12 @@ func (svc *BalanceManagementService) ReserveFiatBalance(ctx context.Context, pro
 // ReserveTokenBalance reserves an amount from a provider's available token balance.
 // If tx is nil, a new transaction will be created and committed.
 func (svc *BalanceManagementService) ReserveTokenBalance(ctx context.Context, providerID string, tokenID int, amount decimal.Decimal, tx *ent.Tx) error {
+	// Reject non-positive amounts before any transaction operations
+	if amount.LessThanOrEqual(decimal.Zero) {
+		logger.WithFields(logger.Fields{"ProviderID": providerID, "TokenID": tokenID, "Amount": amount.String()}).Errorf("ReserveTokenBalance: invalid amount - must be greater than zero")
+		return fmt.Errorf("ReserveTokenBalance: amount must be greater than zero, got %s", amount.String())
+	}
+
 	internalTx := false
 	if tx == nil {
 		var txErr error
@@ -214,6 +226,12 @@ func (svc *BalanceManagementService) ReserveTokenBalance(ctx context.Context, pr
 // ReleaseFiatBalance releases a previously reserved fiat amount.
 // If tx is provided, the operation is performed within that transaction.
 func (svc *BalanceManagementService) ReleaseFiatBalance(ctx context.Context, providerID string, currencyCode string, amount decimal.Decimal, tx *ent.Tx) error {
+	// Reject non-positive amounts before any transaction operations
+	if amount.LessThanOrEqual(decimal.Zero) {
+		logger.WithFields(logger.Fields{"ProviderID": providerID, "Currency": currencyCode, "Amount": amount.String()}).Errorf("ReleaseFiatBalance: invalid amount - must be greater than zero")
+		return fmt.Errorf("ReleaseFiatBalance: amount must be greater than zero, got %s", amount.String())
+	}
+
 	if tx == nil {
 		if err := svc.ValidateAndFixBalances(ctx, providerID, currencyCode); err != nil {
 			logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": providerID, "Currency": currencyCode}).Errorf("Failed to validate or fix balances before fiat release")
@@ -273,6 +291,12 @@ func (svc *BalanceManagementService) ReleaseFiatBalance(ctx context.Context, pro
 // ReleaseTokenBalance releases a previously reserved token amount.
 // If tx is provided, the operation is performed within that transaction.
 func (svc *BalanceManagementService) ReleaseTokenBalance(ctx context.Context, providerID string, tokenID int, amount decimal.Decimal, tx *ent.Tx) error {
+	// Reject non-positive amounts before any transaction operations
+	if amount.LessThanOrEqual(decimal.Zero) {
+		logger.WithFields(logger.Fields{"ProviderID": providerID, "TokenID": tokenID, "Amount": amount.String()}).Errorf("ReleaseTokenBalance: invalid amount - must be greater than zero")
+		return fmt.Errorf("ReleaseTokenBalance: amount must be greater than zero, got %s", amount.String())
+	}
+
 	var bal *ent.ProviderBalances
 	var err error
 	var shouldCommit bool

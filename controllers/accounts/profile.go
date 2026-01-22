@@ -78,6 +78,12 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			// Ignore ErrTxDone - transaction may already be committed
+			// This is expected when commit succeeds
+		}
+	}()
 
 	update := tx.SenderProfile.Update().Where(senderprofile.IDEQ(sender.ID))
 
@@ -219,6 +225,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
+	// After successful commit, deferred rollback will be a no-op
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Profile updated successfully", nil)
 }
@@ -712,9 +719,13 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	}
 
 	// Update provider profile with deduplicated buckets
-	if len(dedupedBuckets) > 0 {
+	// When Tokens field is present, always clear existing buckets first
+	if payload.Tokens != nil {
 		txUpdate.ClearProvisionBuckets()
-		txUpdate.AddProvisionBuckets(dedupedBuckets...)
+		// Only add buckets if there are any matches
+		if len(dedupedBuckets) > 0 {
+			txUpdate.AddProvisionBuckets(dedupedBuckets...)
+		}
 	}
 
 	// Save provider profile update within the transaction
