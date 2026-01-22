@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/providerbalances"
+	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
 )
@@ -33,16 +34,17 @@ type ProviderBalances struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderBalancesQuery when eager-loading is set.
-	Edges                           ProviderBalancesEdges `json:"edges"`
-	fiat_currency_provider_balances *uuid.UUID
-	token_provider_balances         *int
-	selectValues                    sql.SelectValues
+	Edges                              ProviderBalancesEdges `json:"edges"`
+	fiat_currency_provider_balances    *uuid.UUID
+	provider_profile_provider_balances *string
+	token_provider_balances            *int
+	selectValues                       sql.SelectValues
 }
 
 // ProviderBalancesEdges holds the relations/edges for other nodes in the graph.
 type ProviderBalancesEdges struct {
 	// Provider holds the value of the provider edge.
-	Provider []*ProviderProfile `json:"provider,omitempty"`
+	Provider *ProviderProfile `json:"provider,omitempty"`
 	// FiatCurrency holds the value of the fiat_currency edge.
 	FiatCurrency *FiatCurrency `json:"fiat_currency,omitempty"`
 	// Token holds the value of the token edge.
@@ -53,10 +55,12 @@ type ProviderBalancesEdges struct {
 }
 
 // ProviderOrErr returns the Provider value or an error if the edge
-// was not loaded in eager-loading.
-func (e ProviderBalancesEdges) ProviderOrErr() ([]*ProviderProfile, error) {
-	if e.loadedTypes[0] {
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProviderBalancesEdges) ProviderOrErr() (*ProviderProfile, error) {
+	if e.Provider != nil {
 		return e.Provider, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: providerprofile.Label}
 	}
 	return nil, &NotLoadedError{edge: "provider"}
 }
@@ -98,7 +102,9 @@ func (*ProviderBalances) scanValues(columns []string) ([]any, error) {
 			values[i] = new(uuid.UUID)
 		case providerbalances.ForeignKeys[0]: // fiat_currency_provider_balances
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case providerbalances.ForeignKeys[1]: // token_provider_balances
+		case providerbalances.ForeignKeys[1]: // provider_profile_provider_balances
+			values[i] = new(sql.NullString)
+		case providerbalances.ForeignKeys[2]: // token_provider_balances
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -159,6 +165,13 @@ func (_m *ProviderBalances) assignValues(columns []string, values []any) error {
 				*_m.fiat_currency_provider_balances = *value.S.(*uuid.UUID)
 			}
 		case providerbalances.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_profile_provider_balances", values[i])
+			} else if value.Valid {
+				_m.provider_profile_provider_balances = new(string)
+				*_m.provider_profile_provider_balances = value.String
+			}
+		case providerbalances.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field token_provider_balances", value)
 			} else if value.Valid {

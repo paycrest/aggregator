@@ -61,11 +61,13 @@ const (
 	APIKeyInverseTable = "api_keys"
 	// APIKeyColumn is the table column denoting the api_key relation/edge.
 	APIKeyColumn = "provider_profile_api_key"
-	// ProviderBalancesTable is the table that holds the provider_balances relation/edge. The primary key declared below.
-	ProviderBalancesTable = "provider_profile_provider_balances"
+	// ProviderBalancesTable is the table that holds the provider_balances relation/edge.
+	ProviderBalancesTable = "provider_balances"
 	// ProviderBalancesInverseTable is the table name for the ProviderBalances entity.
 	// It exists in this package in order to avoid circular dependency with the "providerbalances" package.
 	ProviderBalancesInverseTable = "provider_balances"
+	// ProviderBalancesColumn is the table column denoting the provider_balances relation/edge.
+	ProviderBalancesColumn = "provider_profile_provider_balances"
 	// ProvisionBucketsTable is the table that holds the provision_buckets relation/edge. The primary key declared below.
 	ProvisionBucketsTable = "provision_bucket_provider_profiles"
 	// ProvisionBucketsInverseTable is the table name for the ProvisionBucket entity.
@@ -120,9 +122,6 @@ var ForeignKeys = []string{
 }
 
 var (
-	// ProviderBalancesPrimaryKey and ProviderBalancesColumn2 are the table columns denoting the
-	// primary key for the provider_balances relation (M2M).
-	ProviderBalancesPrimaryKey = []string{"provider_profile_id", "provider_balances_id"}
 	// ProvisionBucketsPrimaryKey and ProvisionBucketsColumn2 are the table columns denoting the
 	// primary key for the provision_buckets relation (M2M).
 	ProvisionBucketsPrimaryKey = []string{"provision_bucket_id", "provider_profile_id"}
@@ -361,7 +360,7 @@ func newProviderBalancesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProviderBalancesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, false, ProviderBalancesTable, ProviderBalancesPrimaryKey...),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderBalancesTable, ProviderBalancesColumn),
 	)
 }
 func newProvisionBucketsStep() *sqlgraph.Step {

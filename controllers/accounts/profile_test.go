@@ -502,7 +502,7 @@ func TestProfile(t *testing.T) {
 				TradingName:    "My Trading Name",
 				Currency:       "KES",
 				HostIdentifier: "https://example.com",
-				IsAvailable:    true,
+				IsAvailable:    &[]bool{true}[0],
 			}
 
 			res := profileUpdateRequest(payload)
@@ -540,7 +540,7 @@ func TestProfile(t *testing.T) {
 				TradingName:    "Updated Trading Name",
 				HostIdentifier: testCtx.providerProfile.HostIdentifier,
 				Currency:       "KES",
-				IsAvailable:    false,
+				IsAvailable:    &[]bool{false}[0],
 			}
 
 			res := profileUpdateRequest(payload)
@@ -736,7 +736,7 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					VisibilityMode: "public",
-					IsAvailable:    true,
+					IsAvailable:    &[]bool{true}[0],
 				}
 				res := profileUpdateRequest(payload)
 
@@ -1103,7 +1103,7 @@ func TestProfile(t *testing.T) {
 					TradingName:    "Updated Trading Name",
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
-					IsAvailable:    true,
+					IsAvailable:    &[]bool{true}[0],
 					FiatAccounts: []types.FiatAccountPayload{
 						{
 							AccountIdentifier: "4444444444",
@@ -1280,7 +1280,7 @@ func TestProfile(t *testing.T) {
 				SetTotalBalance(decimal.Zero).
 				SetReservedBalance(decimal.Zero).
 				SetIsAvailable(true).
-				AddProviderIDs(testCtx.providerProfile.ID).
+				SetProviderID(testCtx.providerProfile.ID).
 				Save(ctx)
 			assert.NoError(t, err)
 

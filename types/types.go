@@ -260,7 +260,7 @@ type ProviderProfilePayload struct {
 	TradingName    string                      `json:"tradingName"`
 	Currency       string                      `json:"currency" binding:"required"`
 	HostIdentifier string                      `json:"hostIdentifier"`
-	IsAvailable    bool                        `json:"isAvailable"`
+	IsAvailable    *bool                       `json:"isAvailable,omitempty"`
 	Tokens         []ProviderOrderTokenPayload `json:"tokens"`
 	FiatAccounts   []FiatAccountPayload        `json:"fiatAccounts"`
 	VisibilityMode string                      `json:"visibilityMode"`

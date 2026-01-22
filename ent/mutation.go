@@ -11077,8 +11077,7 @@ type ProviderBalancesMutation struct {
 	is_available         *bool
 	updated_at           *time.Time
 	clearedFields        map[string]struct{}
-	provider             map[string]struct{}
-	removedprovider      map[string]struct{}
+	provider             *string
 	clearedprovider      bool
 	fiat_currency        *uuid.UUID
 	clearedfiat_currency bool
@@ -11433,14 +11432,9 @@ func (m *ProviderBalancesMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// AddProviderIDs adds the "provider" edge to the ProviderProfile entity by ids.
-func (m *ProviderBalancesMutation) AddProviderIDs(ids ...string) {
-	if m.provider == nil {
-		m.provider = make(map[string]struct{})
-	}
-	for i := range ids {
-		m.provider[ids[i]] = struct{}{}
-	}
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
+func (m *ProviderBalancesMutation) SetProviderID(id string) {
+	m.provider = &id
 }
 
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
@@ -11453,29 +11447,20 @@ func (m *ProviderBalancesMutation) ProviderCleared() bool {
 	return m.clearedprovider
 }
 
-// RemoveProviderIDs removes the "provider" edge to the ProviderProfile entity by IDs.
-func (m *ProviderBalancesMutation) RemoveProviderIDs(ids ...string) {
-	if m.removedprovider == nil {
-		m.removedprovider = make(map[string]struct{})
-	}
-	for i := range ids {
-		delete(m.provider, ids[i])
-		m.removedprovider[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedProvider returns the removed IDs of the "provider" edge to the ProviderProfile entity.
-func (m *ProviderBalancesMutation) RemovedProviderIDs() (ids []string) {
-	for id := range m.removedprovider {
-		ids = append(ids, id)
+// ProviderID returns the "provider" edge ID in the mutation.
+func (m *ProviderBalancesMutation) ProviderID() (id string, exists bool) {
+	if m.provider != nil {
+		return *m.provider, true
 	}
 	return
 }
 
 // ProviderIDs returns the "provider" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProviderID instead. It exists only for internal usage by the builders.
 func (m *ProviderBalancesMutation) ProviderIDs() (ids []string) {
-	for id := range m.provider {
-		ids = append(ids, id)
+	if id := m.provider; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
@@ -11484,7 +11469,6 @@ func (m *ProviderBalancesMutation) ProviderIDs() (ids []string) {
 func (m *ProviderBalancesMutation) ResetProvider() {
 	m.provider = nil
 	m.clearedprovider = false
-	m.removedprovider = nil
 }
 
 // SetFiatCurrencyID sets the "fiat_currency" edge to the FiatCurrency entity by id.
@@ -11823,11 +11807,9 @@ func (m *ProviderBalancesMutation) AddedEdges() []string {
 func (m *ProviderBalancesMutation) AddedIDs(name string) []ent.Value {
 	switch name {
 	case providerbalances.EdgeProvider:
-		ids := make([]ent.Value, 0, len(m.provider))
-		for id := range m.provider {
-			ids = append(ids, id)
+		if id := m.provider; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
 	case providerbalances.EdgeFiatCurrency:
 		if id := m.fiat_currency; id != nil {
 			return []ent.Value{*id}
@@ -11843,23 +11825,12 @@ func (m *ProviderBalancesMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderBalancesMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 3)
-	if m.removedprovider != nil {
-		edges = append(edges, providerbalances.EdgeProvider)
-	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ProviderBalancesMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case providerbalances.EdgeProvider:
-		ids := make([]ent.Value, 0, len(m.removedprovider))
-		for id := range m.removedprovider {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
@@ -11896,6 +11867,9 @@ func (m *ProviderBalancesMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ProviderBalancesMutation) ClearEdge(name string) error {
 	switch name {
+	case providerbalances.EdgeProvider:
+		m.ClearProvider()
+		return nil
 	case providerbalances.EdgeFiatCurrency:
 		m.ClearFiatCurrency()
 		return nil

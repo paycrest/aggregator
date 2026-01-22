@@ -257,7 +257,7 @@ func HasProvider() predicate.ProviderBalances {
 	return predicate.ProviderBalances(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, ProviderTable, ProviderPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, ProviderTable, ProviderColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})

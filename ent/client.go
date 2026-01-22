@@ -2206,7 +2206,7 @@ func (c *ProviderBalancesClient) QueryProvider(_m *ProviderBalances) *ProviderPr
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerbalances.Table, providerbalances.FieldID, id),
 			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, providerbalances.ProviderTable, providerbalances.ProviderPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerbalances.ProviderTable, providerbalances.ProviderColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2749,7 +2749,7 @@ func (c *ProviderProfileClient) QueryProviderBalances(_m *ProviderProfile) *Prov
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, id),
 			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, providerprofile.ProviderBalancesTable, providerprofile.ProviderBalancesPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderBalancesTable, providerprofile.ProviderBalancesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

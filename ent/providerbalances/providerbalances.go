@@ -33,11 +33,13 @@ const (
 	EdgeToken = "token"
 	// Table holds the table name of the providerbalances in the database.
 	Table = "provider_balances"
-	// ProviderTable is the table that holds the provider relation/edge. The primary key declared below.
-	ProviderTable = "provider_profile_provider_balances"
+	// ProviderTable is the table that holds the provider relation/edge.
+	ProviderTable = "provider_balances"
 	// ProviderInverseTable is the table name for the ProviderProfile entity.
 	// It exists in this package in order to avoid circular dependency with the "providerprofile" package.
 	ProviderInverseTable = "provider_profiles"
+	// ProviderColumn is the table column denoting the provider relation/edge.
+	ProviderColumn = "provider_profile_provider_balances"
 	// FiatCurrencyTable is the table that holds the fiat_currency relation/edge.
 	FiatCurrencyTable = "provider_balances"
 	// FiatCurrencyInverseTable is the table name for the FiatCurrency entity.
@@ -68,14 +70,9 @@ var Columns = []string{
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"fiat_currency_provider_balances",
+	"provider_profile_provider_balances",
 	"token_provider_balances",
 }
-
-var (
-	// ProviderPrimaryKey and ProviderColumn2 are the table columns denoting the
-	// primary key for the provider relation (M2M).
-	ProviderPrimaryKey = []string{"provider_profile_id", "provider_balances_id"}
-)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -136,17 +133,10 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// ByProviderCount orders the results by provider count.
-func ByProviderCount(opts ...sql.OrderTermOption) OrderOption {
+// ByProviderField orders the results by provider field.
+func ByProviderField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProviderStep(), opts...)
-	}
-}
-
-// ByProvider orders the results by provider terms.
-func ByProvider(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProviderStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newProviderStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -167,7 +157,7 @@ func newProviderStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProviderInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, true, ProviderTable, ProviderPrimaryKey...),
+		sqlgraph.Edge(sqlgraph.M2O, true, ProviderTable, ProviderColumn),
 	)
 }
 func newFiatCurrencyStep() *sqlgraph.Step {

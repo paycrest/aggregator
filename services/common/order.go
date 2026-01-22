@@ -536,7 +536,16 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			if newTotalBalance.LessThan(decimal.Zero) {
 				newTotalBalance = decimal.Zero
 			}
-			err = balanceService.UpdateProviderFiatBalance(ctx, providerID, currency, currentBalance.AvailableBalance, newTotalBalance, newReservedBalance)
+			// Ensure available doesn't exceed (total - reserved) after clamping
+			maxAvailable := newTotalBalance.Sub(newReservedBalance)
+			newAvailableBalance := currentBalance.AvailableBalance
+			if newAvailableBalance.GreaterThan(maxAvailable) {
+				newAvailableBalance = maxAvailable
+			}
+			if newAvailableBalance.LessThan(decimal.Zero) {
+				newAvailableBalance = decimal.Zero
+			}
+			err = balanceService.UpdateProviderFiatBalance(ctx, providerID, currency, newAvailableBalance, newTotalBalance, newReservedBalance)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":      fmt.Sprintf("%v", err),

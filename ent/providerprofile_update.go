@@ -502,10 +502,10 @@ func (_u *ProviderProfileUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if _u.mutation.ProviderBalancesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   providerprofile.ProviderBalancesTable,
-			Columns: providerprofile.ProviderBalancesPrimaryKey,
+			Columns: []string{providerprofile.ProviderBalancesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
@@ -515,10 +515,10 @@ func (_u *ProviderProfileUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if nodes := _u.mutation.RemovedProviderBalancesIDs(); len(nodes) > 0 && !_u.mutation.ProviderBalancesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   providerprofile.ProviderBalancesTable,
-			Columns: providerprofile.ProviderBalancesPrimaryKey,
+			Columns: []string{providerprofile.ProviderBalancesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
@@ -531,10 +531,10 @@ func (_u *ProviderProfileUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if nodes := _u.mutation.ProviderBalancesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   providerprofile.ProviderBalancesTable,
-			Columns: providerprofile.ProviderBalancesPrimaryKey,
+			Columns: []string{providerprofile.ProviderBalancesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
@@ -1270,10 +1270,10 @@ func (_u *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provide
 	}
 	if _u.mutation.ProviderBalancesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   providerprofile.ProviderBalancesTable,
-			Columns: providerprofile.ProviderBalancesPrimaryKey,
+			Columns: []string{providerprofile.ProviderBalancesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
@@ -1283,10 +1283,10 @@ func (_u *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provide
 	}
 	if nodes := _u.mutation.RemovedProviderBalancesIDs(); len(nodes) > 0 && !_u.mutation.ProviderBalancesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   providerprofile.ProviderBalancesTable,
-			Columns: providerprofile.ProviderBalancesPrimaryKey,
+			Columns: []string{providerprofile.ProviderBalancesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
@@ -1299,10 +1299,10 @@ func (_u *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provide
 	}
 	if nodes := _u.mutation.ProviderBalancesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   providerprofile.ProviderBalancesTable,
-			Columns: providerprofile.ProviderBalancesPrimaryKey,
+			Columns: []string{providerprofile.ProviderBalancesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
