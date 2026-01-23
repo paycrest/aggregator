@@ -261,7 +261,7 @@ func seedProvider(ctx context.Context, client *ent.Client, bucket *ent.Provision
 		SetProviderID(provider.ID).
 		Save(ctx)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed creating provider: %s", err)
+		return "", "", "", fmt.Errorf("failed creating provider balance: %s", err)
 	}
 
 	apiKeyCreate, secretKey, encodedSecret, err := initAPIKeyCreate(client)
