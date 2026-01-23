@@ -200,23 +200,43 @@ func (_u *ProviderOrderTokenUpdate) AddRateSlippage(v decimal.Decimal) *Provider
 	return _u
 }
 
-// SetAddress sets the "address" field.
-func (_u *ProviderOrderTokenUpdate) SetAddress(v string) *ProviderOrderTokenUpdate {
-	_u.mutation.SetAddress(v)
+// SetSettlementAddress sets the "settlement_address" field.
+func (_u *ProviderOrderTokenUpdate) SetSettlementAddress(v string) *ProviderOrderTokenUpdate {
+	_u.mutation.SetSettlementAddress(v)
 	return _u
 }
 
-// SetNillableAddress sets the "address" field if the given value is not nil.
-func (_u *ProviderOrderTokenUpdate) SetNillableAddress(v *string) *ProviderOrderTokenUpdate {
+// SetNillableSettlementAddress sets the "settlement_address" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdate) SetNillableSettlementAddress(v *string) *ProviderOrderTokenUpdate {
 	if v != nil {
-		_u.SetAddress(*v)
+		_u.SetSettlementAddress(*v)
 	}
 	return _u
 }
 
-// ClearAddress clears the value of the "address" field.
-func (_u *ProviderOrderTokenUpdate) ClearAddress() *ProviderOrderTokenUpdate {
-	_u.mutation.ClearAddress()
+// ClearSettlementAddress clears the value of the "settlement_address" field.
+func (_u *ProviderOrderTokenUpdate) ClearSettlementAddress() *ProviderOrderTokenUpdate {
+	_u.mutation.ClearSettlementAddress()
+	return _u
+}
+
+// SetPayoutAddress sets the "payout_address" field.
+func (_u *ProviderOrderTokenUpdate) SetPayoutAddress(v string) *ProviderOrderTokenUpdate {
+	_u.mutation.SetPayoutAddress(v)
+	return _u
+}
+
+// SetNillablePayoutAddress sets the "payout_address" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdate) SetNillablePayoutAddress(v *string) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetPayoutAddress(*v)
+	}
+	return _u
+}
+
+// ClearPayoutAddress clears the value of the "payout_address" field.
+func (_u *ProviderOrderTokenUpdate) ClearPayoutAddress() *ProviderOrderTokenUpdate {
+	_u.mutation.ClearPayoutAddress()
 	return _u
 }
 
@@ -405,11 +425,17 @@ func (_u *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (_node int, err
 	if value, ok := _u.mutation.AddedRateSlippage(); ok {
 		_spec.AddField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.Address(); ok {
-		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)
+	if value, ok := _u.mutation.SettlementAddress(); ok {
+		_spec.SetField(providerordertoken.FieldSettlementAddress, field.TypeString, value)
 	}
-	if _u.mutation.AddressCleared() {
-		_spec.ClearField(providerordertoken.FieldAddress, field.TypeString)
+	if _u.mutation.SettlementAddressCleared() {
+		_spec.ClearField(providerordertoken.FieldSettlementAddress, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutAddress(); ok {
+		_spec.SetField(providerordertoken.FieldPayoutAddress, field.TypeString, value)
+	}
+	if _u.mutation.PayoutAddressCleared() {
+		_spec.ClearField(providerordertoken.FieldPayoutAddress, field.TypeString)
 	}
 	if value, ok := _u.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
@@ -688,23 +714,43 @@ func (_u *ProviderOrderTokenUpdateOne) AddRateSlippage(v decimal.Decimal) *Provi
 	return _u
 }
 
-// SetAddress sets the "address" field.
-func (_u *ProviderOrderTokenUpdateOne) SetAddress(v string) *ProviderOrderTokenUpdateOne {
-	_u.mutation.SetAddress(v)
+// SetSettlementAddress sets the "settlement_address" field.
+func (_u *ProviderOrderTokenUpdateOne) SetSettlementAddress(v string) *ProviderOrderTokenUpdateOne {
+	_u.mutation.SetSettlementAddress(v)
 	return _u
 }
 
-// SetNillableAddress sets the "address" field if the given value is not nil.
-func (_u *ProviderOrderTokenUpdateOne) SetNillableAddress(v *string) *ProviderOrderTokenUpdateOne {
+// SetNillableSettlementAddress sets the "settlement_address" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdateOne) SetNillableSettlementAddress(v *string) *ProviderOrderTokenUpdateOne {
 	if v != nil {
-		_u.SetAddress(*v)
+		_u.SetSettlementAddress(*v)
 	}
 	return _u
 }
 
-// ClearAddress clears the value of the "address" field.
-func (_u *ProviderOrderTokenUpdateOne) ClearAddress() *ProviderOrderTokenUpdateOne {
-	_u.mutation.ClearAddress()
+// ClearSettlementAddress clears the value of the "settlement_address" field.
+func (_u *ProviderOrderTokenUpdateOne) ClearSettlementAddress() *ProviderOrderTokenUpdateOne {
+	_u.mutation.ClearSettlementAddress()
+	return _u
+}
+
+// SetPayoutAddress sets the "payout_address" field.
+func (_u *ProviderOrderTokenUpdateOne) SetPayoutAddress(v string) *ProviderOrderTokenUpdateOne {
+	_u.mutation.SetPayoutAddress(v)
+	return _u
+}
+
+// SetNillablePayoutAddress sets the "payout_address" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdateOne) SetNillablePayoutAddress(v *string) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetPayoutAddress(*v)
+	}
+	return _u
+}
+
+// ClearPayoutAddress clears the value of the "payout_address" field.
+func (_u *ProviderOrderTokenUpdateOne) ClearPayoutAddress() *ProviderOrderTokenUpdateOne {
+	_u.mutation.ClearPayoutAddress()
 	return _u
 }
 
@@ -923,11 +969,17 @@ func (_u *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Prov
 	if value, ok := _u.mutation.AddedRateSlippage(); ok {
 		_spec.AddField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.Address(); ok {
-		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)
+	if value, ok := _u.mutation.SettlementAddress(); ok {
+		_spec.SetField(providerordertoken.FieldSettlementAddress, field.TypeString, value)
 	}
-	if _u.mutation.AddressCleared() {
-		_spec.ClearField(providerordertoken.FieldAddress, field.TypeString)
+	if _u.mutation.SettlementAddressCleared() {
+		_spec.ClearField(providerordertoken.FieldSettlementAddress, field.TypeString)
+	}
+	if value, ok := _u.mutation.PayoutAddress(); ok {
+		_spec.SetField(providerordertoken.FieldPayoutAddress, field.TypeString, value)
+	}
+	if _u.mutation.PayoutAddressCleared() {
+		_spec.ClearField(providerordertoken.FieldPayoutAddress, field.TypeString)
 	}
 	if value, ok := _u.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)

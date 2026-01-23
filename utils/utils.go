@@ -23,7 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
@@ -880,14 +880,12 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		// Amount is within regular limits - proceed normally
 	}
 
-	// Check if provider has sufficient balance
-	_, err = storage.Client.ProviderCurrencies.
-		Query().
+	_, err = storage.Client.ProviderBalances.Query().
 		Where(
-			providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
-			providercurrencies.AvailableBalanceGT(amount.Mul(rateResponse)),
-			providercurrencies.IsAvailableEQ(true),
+			providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+			providerbalances.AvailableBalanceGT(amount.Mul(rateResponse)),
+			providerbalances.IsAvailableEQ(true),
 		).
 		Only(ctx)
 	if err != nil {
@@ -1140,15 +1138,15 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 				Where(
 					providerordertoken.HasProviderWith(
 						providerprofile.IDEQ(parts[0]),
-						providerprofile.HasProviderCurrenciesWith(
-							providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-							providercurrencies.IsAvailableEQ(true),
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providerbalances.IsAvailableEQ(true),
 						),
 					),
 					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 					providerordertoken.NetworkEQ(networkIdentifier),
-					providerordertoken.AddressNEQ(""),
+					providerordertoken.SettlementAddressNEQ(""),
 				).Only(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
@@ -1168,14 +1166,14 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 				Where(
 					providerordertoken.HasProviderWith(
 						providerprofile.IDEQ(parts[0]),
-						providerprofile.HasProviderCurrenciesWith(
-							providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-							providercurrencies.IsAvailableEQ(true),
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providerbalances.IsAvailableEQ(true),
 						),
 					),
 					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-					providerordertoken.AddressNEQ(""),
+					providerordertoken.SettlementAddressNEQ(""),
 				).First(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
@@ -1255,14 +1253,12 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 
 		// Check if fiat amount is within the bucket range
 		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
-			// Amount is within bucket range - check provider balance before returning
-			_, err := storage.Client.ProviderCurrencies.
-				Query().
+			_, err := storage.Client.ProviderBalances.Query().
 				Where(
-					providercurrencies.HasProviderWith(providerprofile.IDEQ(providerID)),
-					providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-					providercurrencies.AvailableBalanceGT(fiatAmount),
-					providercurrencies.IsAvailableEQ(true),
+					providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+					providerbalances.AvailableBalanceGT(fiatAmount),
+					providerbalances.IsAvailableEQ(true),
 				).
 				Only(ctx)
 			if err != nil {
@@ -1337,11 +1333,9 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 	providers, err := storage.Client.ProviderProfile.
 		Query().
 		Where(
-			providerprofile.HasProviderCurrenciesWith(
-				providercurrencies.HasCurrencyWith(
-					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
-				),
-				providercurrencies.IsAvailableEQ(true),
+			providerprofile.HasProviderBalancesWith(
+				providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
+				providerbalances.IsAvailableEQ(true),
 			),
 			providerprofile.HostIdentifierNotNil(),
 			providerprofile.IsActiveEQ(true),

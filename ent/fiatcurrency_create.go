@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/shopspring/decimal"
@@ -129,19 +129,19 @@ func (_c *FiatCurrencyCreate) SetNillableID(v *uuid.UUID) *FiatCurrencyCreate {
 	return _c
 }
 
-// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
-func (_c *FiatCurrencyCreate) AddProviderCurrencyIDs(ids ...uuid.UUID) *FiatCurrencyCreate {
-	_c.mutation.AddProviderCurrencyIDs(ids...)
+// AddProviderBalanceIDs adds the "provider_balances" edge to the ProviderBalances entity by IDs.
+func (_c *FiatCurrencyCreate) AddProviderBalanceIDs(ids ...uuid.UUID) *FiatCurrencyCreate {
+	_c.mutation.AddProviderBalanceIDs(ids...)
 	return _c
 }
 
-// AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
-func (_c *FiatCurrencyCreate) AddProviderCurrencies(v ...*ProviderCurrencies) *FiatCurrencyCreate {
+// AddProviderBalances adds the "provider_balances" edges to the ProviderBalances entity.
+func (_c *FiatCurrencyCreate) AddProviderBalances(v ...*ProviderBalances) *FiatCurrencyCreate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddProviderCurrencyIDs(ids...)
+	return _c.AddProviderBalanceIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -347,15 +347,15 @@ func (_c *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec)
 		_spec.SetField(fiatcurrency.FieldIsEnabled, field.TypeBool, value)
 		_node.IsEnabled = value
 	}
-	if nodes := _c.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderBalancesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   fiatcurrency.ProviderCurrenciesTable,
-			Columns: []string{fiatcurrency.ProviderCurrenciesColumn},
+			Table:   fiatcurrency.ProviderBalancesTable,
+			Columns: []string{fiatcurrency.ProviderBalancesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

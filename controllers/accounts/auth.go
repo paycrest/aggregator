@@ -11,7 +11,6 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	userEnt "github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/ent/verificationtoken"
@@ -176,16 +175,15 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			return
 		}
 
-		// Create ProviderCurrencies entries for each currency
 		for _, currency := range fiatCurrencies {
-			_, err = tx.ProviderCurrencies.
+			_, err = tx.ProviderBalances.
 				Create().
-				SetProvider(provider).
-				SetCurrency(currency).
+				SetFiatCurrency(currency).
 				SetAvailableBalance(decimal.Zero).
 				SetTotalBalance(decimal.Zero).
 				SetReservedBalance(decimal.Zero).
 				SetIsAvailable(true).
+				SetProviderID(provider.ID).
 				Save(ctx)
 			if err != nil {
 				_ = tx.Rollback()

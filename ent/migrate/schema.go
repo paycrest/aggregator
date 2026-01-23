@@ -320,41 +320,53 @@ var (
 			},
 		},
 	}
-	// ProviderCurrenciesColumns holds the columns for the "provider_currencies" table.
-	ProviderCurrenciesColumns = []*schema.Column{
+	// ProviderBalancesColumns holds the columns for the "provider_balances" table.
+	ProviderBalancesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "available_balance", Type: field.TypeFloat64},
 		{Name: "total_balance", Type: field.TypeFloat64},
 		{Name: "reserved_balance", Type: field.TypeFloat64},
 		{Name: "is_available", Type: field.TypeBool, Default: true},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "fiat_currency_provider_currencies", Type: field.TypeUUID},
-		{Name: "provider_profile_provider_currencies", Type: field.TypeString},
+		{Name: "fiat_currency_provider_balances", Type: field.TypeUUID, Nullable: true},
+		{Name: "provider_profile_provider_balances", Type: field.TypeString},
+		{Name: "token_provider_balances", Type: field.TypeInt, Nullable: true},
 	}
-	// ProviderCurrenciesTable holds the schema information for the "provider_currencies" table.
-	ProviderCurrenciesTable = &schema.Table{
-		Name:       "provider_currencies",
-		Columns:    ProviderCurrenciesColumns,
-		PrimaryKey: []*schema.Column{ProviderCurrenciesColumns[0]},
+	// ProviderBalancesTable holds the schema information for the "provider_balances" table.
+	ProviderBalancesTable = &schema.Table{
+		Name:       "provider_balances",
+		Columns:    ProviderBalancesColumns,
+		PrimaryKey: []*schema.Column{ProviderBalancesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provider_currencies_fiat_currencies_provider_currencies",
-				Columns:    []*schema.Column{ProviderCurrenciesColumns[6]},
+				Symbol:     "provider_balances_fiat_currencies_provider_balances",
+				Columns:    []*schema.Column{ProviderBalancesColumns[6]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "provider_currencies_provider_profiles_provider_currencies",
-				Columns:    []*schema.Column{ProviderCurrenciesColumns[7]},
+				Symbol:     "provider_balances_provider_profiles_provider_balances",
+				Columns:    []*schema.Column{ProviderBalancesColumns[7]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "provider_balances_tokens_provider_balances",
+				Columns:    []*schema.Column{ProviderBalancesColumns[8]},
+				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "providercurrencies_provider_profile_provider_currencies_fiat_currency_provider_currencies",
+				Name:    "providerbalances_provider_profile_provider_balances_fiat_currency_provider_balances",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderCurrenciesColumns[7], ProviderCurrenciesColumns[6]},
+				Columns: []*schema.Column{ProviderBalancesColumns[7], ProviderBalancesColumns[6]},
+			},
+			{
+				Name:    "providerbalances_provider_profile_provider_balances_token_provider_balances",
+				Unique:  true,
+				Columns: []*schema.Column{ProviderBalancesColumns[7], ProviderBalancesColumns[8]},
 			},
 		},
 	}
@@ -402,7 +414,8 @@ var (
 		{Name: "max_order_amount_otc", Type: field.TypeFloat64},
 		{Name: "min_order_amount_otc", Type: field.TypeFloat64},
 		{Name: "rate_slippage", Type: field.TypeFloat64},
-		{Name: "address", Type: field.TypeString, Nullable: true},
+		{Name: "settlement_address", Type: field.TypeString, Nullable: true},
+		{Name: "payout_address", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString},
 		{Name: "fiat_currency_provider_order_tokens", Type: field.TypeUUID},
 		{Name: "provider_profile_order_tokens", Type: field.TypeString},
@@ -416,19 +429,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_order_tokens_fiat_currencies_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[13]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[14]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_provider_profiles_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[14]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[15]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_tokens_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[15]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[16]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -437,7 +450,7 @@ var (
 			{
 				Name:    "providerordertoken_network_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderOrderTokensColumns[12], ProviderOrderTokensColumns[14], ProviderOrderTokensColumns[15], ProviderOrderTokensColumns[13]},
+				Columns: []*schema.Column{ProviderOrderTokensColumns[13], ProviderOrderTokensColumns[15], ProviderOrderTokensColumns[16], ProviderOrderTokensColumns[14]},
 			},
 		},
 	}
@@ -732,7 +745,7 @@ var (
 		PaymentOrdersTable,
 		PaymentOrderFulfillmentsTable,
 		PaymentWebhooksTable,
-		ProviderCurrenciesTable,
+		ProviderBalancesTable,
 		ProviderFiatAccountsTable,
 		ProviderOrderTokensTable,
 		ProviderProfilesTable,
@@ -763,8 +776,9 @@ func init() {
 	PaymentOrderFulfillmentsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	PaymentWebhooksTable.ForeignKeys[0].RefTable = NetworksTable
 	PaymentWebhooksTable.ForeignKeys[1].RefTable = PaymentOrdersTable
-	ProviderCurrenciesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
-	ProviderCurrenciesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
+	ProviderBalancesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
+	ProviderBalancesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
+	ProviderBalancesTable.ForeignKeys[2].RefTable = TokensTable
 	ProviderFiatAccountsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable

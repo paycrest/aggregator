@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -174,19 +174,19 @@ func (_c *ProviderProfileCreate) SetAPIKey(v *APIKey) *ProviderProfileCreate {
 	return _c.SetAPIKeyID(v.ID)
 }
 
-// AddProviderCurrencyIDs adds the "provider_currencies" edge to the ProviderCurrencies entity by IDs.
-func (_c *ProviderProfileCreate) AddProviderCurrencyIDs(ids ...uuid.UUID) *ProviderProfileCreate {
-	_c.mutation.AddProviderCurrencyIDs(ids...)
+// AddProviderBalanceIDs adds the "provider_balances" edge to the ProviderBalances entity by IDs.
+func (_c *ProviderProfileCreate) AddProviderBalanceIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	_c.mutation.AddProviderBalanceIDs(ids...)
 	return _c
 }
 
-// AddProviderCurrencies adds the "provider_currencies" edges to the ProviderCurrencies entity.
-func (_c *ProviderProfileCreate) AddProviderCurrencies(v ...*ProviderCurrencies) *ProviderProfileCreate {
+// AddProviderBalances adds the "provider_balances" edges to the ProviderBalances entity.
+func (_c *ProviderProfileCreate) AddProviderBalances(v ...*ProviderBalances) *ProviderProfileCreate {
 	ids := make([]uuid.UUID, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddProviderCurrencyIDs(ids...)
+	return _c.AddProviderBalanceIDs(ids...)
 }
 
 // AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
@@ -461,15 +461,15 @@ func (_c *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Creat
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.ProviderCurrenciesIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.ProviderBalancesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   providerprofile.ProviderCurrenciesTable,
-			Columns: []string{providerprofile.ProviderCurrenciesColumn},
+			Table:   providerprofile.ProviderBalancesTable,
+			Columns: []string{providerprofile.ProviderBalancesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providercurrencies.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

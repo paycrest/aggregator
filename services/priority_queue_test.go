@@ -22,7 +22,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -65,7 +65,7 @@ func (s *TestPriorityQueueService) sendOrderRequest(ctx context.Context, order t
 	amount := order.Amount.Mul(order.Rate).Round(int32(bucketCurrency.Decimals))
 
 	// Reserve balance (keep the original logic)
-	err := s.balanceService.ReserveBalance(ctx, order.ProviderID, bucketCurrency.Code, amount, nil)
+	err := s.balanceService.ReserveFiatBalance(ctx, order.ProviderID, bucketCurrency.Code, amount, nil)
 	if err != nil {
 		return err
 	}
@@ -157,16 +157,16 @@ func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey strin
 				providerordertoken.NetworkEQ(network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(order.ProviderID),
-					providerprofile.HasProviderCurrenciesWith(
-						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
-						providercurrencies.IsAvailableEQ(true),
+					providerprofile.HasProviderBalancesWith(
+						providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+						providerbalances.IsAvailableEQ(true),
 					),
 				),
 				providerordertoken.HasTokenWith(tokenEnt.IDEQ(order.Token.ID)),
 				providerordertoken.HasCurrencyWith(
 					fiatcurrency.CodeEQ(bucketCurrency.Code),
 				),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			First(ctx)
 		if err != nil {
@@ -222,8 +222,14 @@ func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey strin
 				break
 			} else {
 				// Regular order (or default for any non-OTC order type) - check balance sufficiency
-				_, err := s.balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, bucketCurrency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+				bal, err := s.balanceService.GetProviderFiatBalance(ctx, order.ProviderID, bucketCurrency.Code)
 				if err != nil {
+					logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "OrderID": order.ID.String(), "ProviderID": order.ProviderID}).Errorf("failed to get provider fiat balance")
+					continue
+				}
+				required := order.Amount.Mul(order.Rate).Round(int32(bucketCurrency.Decimals))
+				if !s.balanceService.CheckBalanceSufficiency(bal, required) {
+					err = fmt.Errorf("insufficient balance")
 					logger.WithFields(logger.Fields{
 						"Error":      fmt.Sprintf("%v", err),
 						"OrderID":    order.ID.String(),
@@ -394,17 +400,15 @@ func setupForPQ() error {
 		return fmt.Errorf("UpdateUser.KybVerificationStatus: %w", err)
 	}
 
-	// Update ProviderCurrencies with sufficient balance for the publicProviderProfile
-	_, err = db.Client.ProviderCurrencies.
-		Update().
-		Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(publicProviderProfile.ID))).
-		Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID))).
-		SetAvailableBalance(decimal.NewFromFloat(100000)). // Set sufficient balance
+	_, err = db.Client.ProviderBalances.Update().
+		Where(providerbalances.HasProviderWith(providerprofile.IDEQ(publicProviderProfile.ID))).
+		Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(currency.ID))).
+		SetAvailableBalance(decimal.NewFromFloat(100000)).
 		SetTotalBalance(decimal.NewFromFloat(100000)).
 		SetIsAvailable(true).
 		Save(context.Background())
 	if err != nil {
-		return fmt.Errorf("UpdateProviderCurrencies.publicProvider: %w", err)
+		return fmt.Errorf("UpdateProviderBalances.publicProvider: %w", err)
 	}
 
 	bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
@@ -436,16 +440,14 @@ func setupForPQ() error {
 	}
 	testCtxForPQ.privateProviderProfile = privateProviderProfile
 
-	// Update ProviderCurrencies with sufficient balance for the privateProviderProfile
-	_, err = db.Client.ProviderCurrencies.
-		Update().
-		Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(privateProviderProfile.ID))).
-		Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID))).
-		SetAvailableBalance(decimal.NewFromFloat(100000)). // Set sufficient balance
+	_, err = db.Client.ProviderBalances.Update().
+		Where(providerbalances.HasProviderWith(providerprofile.IDEQ(privateProviderProfile.ID))).
+		Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(currency.ID))).
+		SetAvailableBalance(decimal.NewFromFloat(100000)).
 		SetTotalBalance(decimal.NewFromFloat(100000)).
 		Save(context.Background())
 	if err != nil {
-		return fmt.Errorf("UpdateProviderCurrencies.privateProvider: %w", err)
+		return fmt.Errorf("UpdateProviderBalances.privateProvider: %w", err)
 	}
 
 	_, err = test.CreateTestProvisionBucket(map[string]interface{}{

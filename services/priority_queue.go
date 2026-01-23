@@ -11,7 +11,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -73,11 +73,10 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 				providerprofile.IsActive(true),
 				providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-				providerprofile.HasProviderCurrenciesWith(
-					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
-					providercurrencies.AvailableBalanceGT(bucket.MinAmount),
-					providercurrencies.IsAvailableEQ(true),
-					// TODO: add check to enforce critical balance threshold in the future
+				providerprofile.HasProviderBalancesWith(
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
+					providerbalances.AvailableBalanceGT(bucket.MinAmount),
+					providerbalances.IsAvailableEQ(true),
 				),
 			).
 			All(ctx)
@@ -153,11 +152,10 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 						Where(
 							providerprofile.IDEQ(orderToken.Edges.Provider.ID),
 							providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-							providerprofile.HasProviderCurrenciesWith(
-								providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
-								providercurrencies.AvailableBalanceGT(bucket.MinAmount),
-								providercurrencies.IsAvailableEQ(true),
-								// TODO: add check to enforce critical balance threshold in the future
+							providerprofile.HasProviderBalancesWith(
+								providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
+								providerbalances.AvailableBalanceGT(bucket.MinAmount),
+								providerbalances.IsAvailableEQ(true),
 							),
 						).
 						Only(ctx)
@@ -297,8 +295,8 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// Build new queue in temporary key first
 	newQueueEntries := 0
 	for _, provider := range providers {
-		exists, err := provider.QueryProviderCurrencies().
-			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID))).
+		exists, err := provider.QueryProviderBalances().
+			Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID))).
 			Exist(ctx)
 		if err != nil || !exists {
 			continue
@@ -308,7 +306,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			Where(
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucket.Edges.Currency.Code)),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			WithToken().
 			All(ctx)
@@ -790,7 +788,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	}()
 
 	// Reserve balance within the transaction
-	err = s.balanceService.ReserveBalance(ctx, order.ProviderID, currency, amount, tx)
+	err = s.balanceService.ReserveFiatBalance(ctx, order.ProviderID, currency, amount, tx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -1040,16 +1038,16 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				providerordertoken.NetworkEQ(network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(order.ProviderID),
-					providerprofile.HasProviderCurrenciesWith(
-						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
-						providercurrencies.IsAvailableEQ(true),
+					providerprofile.HasProviderBalancesWith(
+						providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+						providerbalances.IsAvailableEQ(true),
 					),
 				),
 				providerordertoken.HasTokenWith(token.IDEQ(order.Token.ID)),
 				providerordertoken.HasCurrencyWith(
 					fiatcurrency.CodeEQ(bucketCurrency.Code),
 				),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			First(ctx)
 		if err != nil {
@@ -1104,16 +1102,14 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				}
 				break
 			} else {
-				// Regular order (or default for any non-OTC order type) - check balance sufficiency
-				_, err := s.balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, bucketCurrency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+				// Regular order - check balance sufficiency
+				bal, err := s.balanceService.GetProviderFiatBalance(ctx, order.ProviderID, bucketCurrency.Code)
 				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", err),
-						"OrderID":    order.ID.String(),
-						"ProviderID": order.ProviderID,
-						"Currency":   bucketCurrency.Code,
-						"Amount":     order.Amount.String(),
-					}).Errorf("failed to check balance sufficiency")
+					logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "OrderID": order.ID.String(), "ProviderID": order.ProviderID, "Currency": bucketCurrency.Code}).Errorf("failed to get provider fiat balance")
+					continue
+				}
+				if !s.balanceService.CheckBalanceSufficiency(bal, order.Amount.Mul(order.Rate).RoundBank(0)) {
+					logger.WithFields(logger.Fields{"OrderID": order.ID.String(), "ProviderID": order.ProviderID, "Currency": bucketCurrency.Code, "Amount": order.Amount.String()}).Errorf("insufficient balance")
 					continue
 				}
 

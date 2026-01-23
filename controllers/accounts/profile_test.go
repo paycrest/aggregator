@@ -20,7 +20,7 @@ import (
 	"github.com/paycrest/aggregator/ent/enttest"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/migrate"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -502,7 +502,7 @@ func TestProfile(t *testing.T) {
 				TradingName:    "My Trading Name",
 				Currency:       "KES",
 				HostIdentifier: "https://example.com",
-				IsAvailable:    true,
+				IsAvailable:    &[]bool{true}[0],
 			}
 
 			res := profileUpdateRequest(payload)
@@ -520,25 +520,19 @@ func TestProfile(t *testing.T) {
 				Query().
 				Where(
 					providerprofile.HasUserWith(user.ID(testCtx.user.ID)),
-					providerprofile.HasProviderCurrenciesWith(
-						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(payload.Currency)),
+					providerprofile.HasProviderBalancesWith(
+						providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(payload.Currency)),
 					),
 				).
-				WithProviderCurrencies(
-					func(query *ent.ProviderCurrenciesQuery) {
-						query.WithCurrency()
-					},
-				).
+				WithProviderBalances(func(q *ent.ProviderBalancesQuery) { q.WithFiatCurrency().Where(providerbalances.HasFiatCurrency()) }).
 				Only(context.Background())
 			assert.NoError(t, err)
 
 			assert.Equal(t, payload.TradingName, providerProfile.TradingName)
 			assert.Equal(t, payload.HostIdentifier, providerProfile.HostIdentifier)
-			// assert for currencies
-			assert.Equal(t, len(providerProfile.Edges.ProviderCurrencies), 1)
-			assert.Equal(t, providerProfile.Edges.ProviderCurrencies[0].Edges.Currency.Code, payload.Currency)
-			// assert availability from ProviderCurrencies
-			assert.True(t, providerProfile.Edges.ProviderCurrencies[0].IsAvailable)
+			assert.Equal(t, len(providerProfile.Edges.ProviderBalances), 1)
+			assert.Equal(t, providerProfile.Edges.ProviderBalances[0].Edges.FiatCurrency.Code, payload.Currency)
+			assert.True(t, providerProfile.Edges.ProviderBalances[0].IsAvailable)
 		})
 
 		t.Run("with availability set to false", func(t *testing.T) {
@@ -546,7 +540,7 @@ func TestProfile(t *testing.T) {
 				TradingName:    "Updated Trading Name",
 				HostIdentifier: testCtx.providerProfile.HostIdentifier,
 				Currency:       "KES",
-				IsAvailable:    false,
+				IsAvailable:    &[]bool{false}[0],
 			}
 
 			res := profileUpdateRequest(payload)
@@ -563,19 +557,14 @@ func TestProfile(t *testing.T) {
 			providerProfile, err := db.Client.ProviderProfile.
 				Query().
 				Where(providerprofile.HasUserWith(user.ID(testCtx.user.ID))).
-				WithProviderCurrencies(
-					func(query *ent.ProviderCurrenciesQuery) {
-						query.WithCurrency()
-					},
-				).
+				WithProviderBalances(func(q *ent.ProviderBalancesQuery) { q.WithFiatCurrency().Where(providerbalances.HasFiatCurrency()) }).
 				Only(context.Background())
 			assert.NoError(t, err)
 
 			assert.Equal(t, "Updated Trading Name", providerProfile.TradingName)
 
-			// Assert availability from ProviderCurrencies
-			assert.Len(t, providerProfile.Edges.ProviderCurrencies, 1)
-			assert.False(t, providerProfile.Edges.ProviderCurrencies[0].IsAvailable)
+			assert.Len(t, providerProfile.Edges.ProviderBalances, 1)
+			assert.False(t, providerProfile.Edges.ProviderBalances[0].IsAvailable)
 		})
 
 		t.Run("with token rate slippage", func(t *testing.T) {
@@ -747,7 +736,7 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					VisibilityMode: "public",
-					IsAvailable:    true,
+					IsAvailable:    &[]bool{true}[0],
 				}
 				res := profileUpdateRequest(payload)
 
@@ -764,20 +753,19 @@ func TestProfile(t *testing.T) {
 					Query().
 					Where(
 						providerprofile.HasUserWith(user.ID(testCtx.user.ID)),
-						providerprofile.HasProviderCurrenciesWith(
-							providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(payload.Currency)),
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(payload.Currency)),
 						),
 					).
-					WithProviderCurrencies().
+					WithProviderBalances().
 					Only(context.Background())
 				assert.NoError(t, err)
 
 				assert.Equal(t, "Updated Trading Name", providerProfile.TradingName)
 				assert.Equal(t, "public", string(providerProfile.VisibilityMode))
 
-				// Assert availability from ProviderCurrencies
-				assert.Len(t, providerProfile.Edges.ProviderCurrencies, 1)
-				assert.True(t, providerProfile.Edges.ProviderCurrencies[0].IsAvailable)
+				assert.Len(t, providerProfile.Edges.ProviderBalances, 1)
+				assert.True(t, providerProfile.Edges.ProviderBalances[0].IsAvailable)
 
 			})
 		})
@@ -1115,7 +1103,7 @@ func TestProfile(t *testing.T) {
 					TradingName:    "Updated Trading Name",
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
-					IsAvailable:    true,
+					IsAvailable:    &[]bool{true}[0],
 					FiatAccounts: []types.FiatAccountPayload{
 						{
 							AccountIdentifier: "4444444444",
@@ -1286,14 +1274,13 @@ func TestProfile(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			// Add USD to the provider profile's currencies
-			_, err = db.Client.ProviderCurrencies.
-				Create().
-				SetProviderID(testCtx.providerProfile.ID).
-				SetCurrency(usd).
+			_, err = db.Client.ProviderBalances.Create().
+				SetFiatCurrency(usd).
 				SetAvailableBalance(decimal.Zero).
 				SetTotalBalance(decimal.Zero).
 				SetReservedBalance(decimal.Zero).
+				SetIsAvailable(true).
+				SetProviderID(testCtx.providerProfile.ID).
 				Save(ctx)
 			assert.NoError(t, err)
 
@@ -1310,7 +1297,7 @@ func TestProfile(t *testing.T) {
 				SetMinOrderAmount(decimal.NewFromInt(10)).
 				SetMaxOrderAmountOtc(decimal.Zero).
 				SetMinOrderAmountOtc(decimal.Zero).
-				SetAddress("address_usd").
+				SetSettlementAddress("address_usd").
 				SetNetwork("polygon").
 				SetRateSlippage(decimal.NewFromInt(0)).
 				Save(ctx)

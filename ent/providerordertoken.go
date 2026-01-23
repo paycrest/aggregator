@@ -42,8 +42,10 @@ type ProviderOrderToken struct {
 	MinOrderAmountOtc decimal.Decimal `json:"min_order_amount_otc,omitempty"`
 	// RateSlippage holds the value of the "rate_slippage" field.
 	RateSlippage decimal.Decimal `json:"rate_slippage,omitempty"`
-	// Address holds the value of the "address" field.
-	Address string `json:"address,omitempty"`
+	// SettlementAddress holds the value of the "settlement_address" field.
+	SettlementAddress string `json:"settlement_address,omitempty"`
+	// PayoutAddress holds the value of the "payout_address" field.
+	PayoutAddress string `json:"payout_address,omitempty"`
 	// Network holds the value of the "network" field.
 	Network string `json:"network,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -110,7 +112,7 @@ func (*ProviderOrderToken) scanValues(columns []string) ([]any, error) {
 			values[i] = new(decimal.Decimal)
 		case providerordertoken.FieldID:
 			values[i] = new(sql.NullInt64)
-		case providerordertoken.FieldConversionRateType, providerordertoken.FieldAddress, providerordertoken.FieldNetwork:
+		case providerordertoken.FieldConversionRateType, providerordertoken.FieldSettlementAddress, providerordertoken.FieldPayoutAddress, providerordertoken.FieldNetwork:
 			values[i] = new(sql.NullString)
 		case providerordertoken.FieldCreatedAt, providerordertoken.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -201,11 +203,17 @@ func (_m *ProviderOrderToken) assignValues(columns []string, values []any) error
 			} else if value != nil {
 				_m.RateSlippage = *value
 			}
-		case providerordertoken.FieldAddress:
+		case providerordertoken.FieldSettlementAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field address", values[i])
+				return fmt.Errorf("unexpected type %T for field settlement_address", values[i])
 			} else if value.Valid {
-				_m.Address = value.String
+				_m.SettlementAddress = value.String
+			}
+		case providerordertoken.FieldPayoutAddress:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payout_address", values[i])
+			} else if value.Valid {
+				_m.PayoutAddress = value.String
 			}
 		case providerordertoken.FieldNetwork:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -315,8 +323,11 @@ func (_m *ProviderOrderToken) String() string {
 	builder.WriteString("rate_slippage=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RateSlippage))
 	builder.WriteString(", ")
-	builder.WriteString("address=")
-	builder.WriteString(_m.Address)
+	builder.WriteString("settlement_address=")
+	builder.WriteString(_m.SettlementAddress)
+	builder.WriteString(", ")
+	builder.WriteString("payout_address=")
+	builder.WriteString(_m.PayoutAddress)
 	builder.WriteString(", ")
 	builder.WriteString("network=")
 	builder.WriteString(_m.Network)

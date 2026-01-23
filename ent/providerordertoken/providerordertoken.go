@@ -35,8 +35,10 @@ const (
 	FieldMinOrderAmountOtc = "min_order_amount_otc"
 	// FieldRateSlippage holds the string denoting the rate_slippage field in the database.
 	FieldRateSlippage = "rate_slippage"
-	// FieldAddress holds the string denoting the address field in the database.
-	FieldAddress = "address"
+	// FieldSettlementAddress holds the string denoting the settlement_address field in the database.
+	FieldSettlementAddress = "settlement_address"
+	// FieldPayoutAddress holds the string denoting the payout_address field in the database.
+	FieldPayoutAddress = "payout_address"
 	// FieldNetwork holds the string denoting the network field in the database.
 	FieldNetwork = "network"
 	// EdgeProvider holds the string denoting the provider edge name in mutations.
@@ -83,7 +85,8 @@ var Columns = []string{
 	FieldMaxOrderAmountOtc,
 	FieldMinOrderAmountOtc,
 	FieldRateSlippage,
-	FieldAddress,
+	FieldSettlementAddress,
+	FieldPayoutAddress,
 	FieldNetwork,
 }
 
@@ -200,9 +203,14 @@ func ByRateSlippage(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRateSlippage, opts...).ToFunc()
 }
 
-// ByAddress orders the results by the address field.
-func ByAddress(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAddress, opts...).ToFunc()
+// BySettlementAddress orders the results by the settlement_address field.
+func BySettlementAddress(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSettlementAddress, opts...).ToFunc()
+}
+
+// ByPayoutAddress orders the results by the payout_address field.
+func ByPayoutAddress(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayoutAddress, opts...).ToFunc()
 }
 
 // ByNetwork orders the results by the network field.

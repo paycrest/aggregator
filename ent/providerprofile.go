@@ -48,8 +48,8 @@ type ProviderProfileEdges struct {
 	User *User `json:"user,omitempty"`
 	// APIKey holds the value of the api_key edge.
 	APIKey *APIKey `json:"api_key,omitempty"`
-	// ProviderCurrencies holds the value of the provider_currencies edge.
-	ProviderCurrencies []*ProviderCurrencies `json:"provider_currencies,omitempty"`
+	// ProviderBalances holds the value of the provider_balances edge.
+	ProviderBalances []*ProviderBalances `json:"provider_balances,omitempty"`
 	// ProvisionBuckets holds the value of the provision_buckets edge.
 	ProvisionBuckets []*ProvisionBucket `json:"provision_buckets,omitempty"`
 	// OrderTokens holds the value of the order_tokens edge.
@@ -87,13 +87,13 @@ func (e ProviderProfileEdges) APIKeyOrErr() (*APIKey, error) {
 	return nil, &NotLoadedError{edge: "api_key"}
 }
 
-// ProviderCurrenciesOrErr returns the ProviderCurrencies value or an error if the edge
+// ProviderBalancesOrErr returns the ProviderBalances value or an error if the edge
 // was not loaded in eager-loading.
-func (e ProviderProfileEdges) ProviderCurrenciesOrErr() ([]*ProviderCurrencies, error) {
+func (e ProviderProfileEdges) ProviderBalancesOrErr() ([]*ProviderBalances, error) {
 	if e.loadedTypes[2] {
-		return e.ProviderCurrencies, nil
+		return e.ProviderBalances, nil
 	}
-	return nil, &NotLoadedError{edge: "provider_currencies"}
+	return nil, &NotLoadedError{edge: "provider_balances"}
 }
 
 // ProvisionBucketsOrErr returns the ProvisionBuckets value or an error if the edge
@@ -249,9 +249,9 @@ func (_m *ProviderProfile) QueryAPIKey() *APIKeyQuery {
 	return NewProviderProfileClient(_m.config).QueryAPIKey(_m)
 }
 
-// QueryProviderCurrencies queries the "provider_currencies" edge of the ProviderProfile entity.
-func (_m *ProviderProfile) QueryProviderCurrencies() *ProviderCurrenciesQuery {
-	return NewProviderProfileClient(_m.config).QueryProviderCurrencies(_m)
+// QueryProviderBalances queries the "provider_balances" edge of the ProviderProfile entity.
+func (_m *ProviderProfile) QueryProviderBalances() *ProviderBalancesQuery {
+	return NewProviderProfileClient(_m.config).QueryProviderBalances(_m)
 }
 
 // QueryProvisionBuckets queries the "provision_buckets" edge of the ProviderProfile entity.

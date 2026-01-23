@@ -471,23 +471,19 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		return nil, err
 	}
 
-	// Create ProviderCurrencies entry
 	currencyID := payload["currency_id"].(uuid.UUID)
 	currency, err := db.Client.FiatCurrency.Get(context.Background(), currencyID)
 	if err != nil {
 		return nil, err
 	}
-
-	_, err = db.Client.ProviderCurrencies.
-		Create().
-		SetProvider(profile).
-		SetCurrency(currency).
+	_, err = db.Client.ProviderBalances.Create().
+		SetFiatCurrency(currency).
 		SetAvailableBalance(decimal.Zero).
 		SetTotalBalance(decimal.Zero).
 		SetReservedBalance(decimal.Zero).
 		SetIsAvailable(true).
+		SetProviderID(profile.ID).
 		Save(context.Background())
-
 	return profile, err
 }
 
@@ -512,7 +508,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		"min_order_amount_otc":     decimal.NewFromFloat(100.0),
 		"provider":                 nil,
 		"token_id":                 0,
-		"address":                  "0x1234567890123456789012345678901234567890",
+		"settlement_address":       "0x1234567890123456789012345678901234567890",
 		"network":                  "localhost",
 	}
 
@@ -540,7 +536,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		SetConversionRateType(providerordertoken.ConversionRateType(payload["conversion_rate_type"].(string))).
 		SetFixedConversionRate(payload["fixed_conversion_rate"].(decimal.Decimal)).
 		SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
-		SetAddress(payload["address"].(string)).
+		SetSettlementAddress(payload["settlement_address"].(string)).
 		SetNetwork(payload["network"].(string)).
 		SetTokenID(payload["token_id"].(int)).
 		SetCurrencyID(payload["currency_id"].(uuid.UUID)).

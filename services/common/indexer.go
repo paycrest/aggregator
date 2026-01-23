@@ -11,7 +11,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
@@ -362,11 +362,11 @@ func GetProviderAddresses(ctx context.Context, token *ent.Token, currencyCode st
 		Where(
 			providerordertoken.HasTokenWith(tokenent.IDEQ(token.ID)),
 			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 			providerordertoken.HasProviderWith(
-				providerprofile.HasProviderCurrenciesWith(
-					providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
-					providercurrencies.IsAvailableEQ(true),
+				providerprofile.HasProviderBalancesWith(
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+					providerbalances.IsAvailableEQ(true),
 				),
 				providerprofile.IsActiveEQ(true),
 			),
@@ -379,8 +379,8 @@ func GetProviderAddresses(ctx context.Context, token *ent.Token, currencyCode st
 
 	var addresses []string
 	for _, pot := range providerOrderTokens {
-		if pot.Address != "" {
-			addresses = append(addresses, pot.Address)
+		if pot.SettlementAddress != "" {
+			addresses = append(addresses, pot.SettlementAddress)
 		}
 	}
 
@@ -407,12 +407,12 @@ func GetProviderAddressFromOrder(ctx context.Context, order *ent.PaymentOrder) (
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(order.Edges.Provider.ID)),
 			providerordertoken.HasTokenWith(tokenent.IDEQ(order.Edges.Token.ID)),
 			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get provider order token: %w", err)
 	}
 
-	return providerOrderToken.Address, nil
+	return providerOrderToken.SettlementAddress, nil
 }

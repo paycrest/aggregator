@@ -36,8 +36,8 @@ type PaymentOrderFulfillment func(*sql.Selector)
 // PaymentWebhook is the predicate function for paymentwebhook builders.
 type PaymentWebhook func(*sql.Selector)
 
-// ProviderCurrencies is the predicate function for providercurrencies builders.
-type ProviderCurrencies func(*sql.Selector)
+// ProviderBalances is the predicate function for providerbalances builders.
+type ProviderBalances func(*sql.Selector)
 
 // ProviderFiatAccount is the predicate function for providerfiataccount builders.
 type ProviderFiatAccount func(*sql.Selector)

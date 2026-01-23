@@ -21,7 +21,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -125,7 +125,7 @@ func setup() error {
 		"min_order_amount":      decimal.NewFromFloat(1.0),
 		"max_order_amount_otc":  decimal.NewFromFloat(10000.0),
 		"min_order_amount_otc":  decimal.NewFromFloat(100.0),
-		"address":               "0x1234567890123456789012345678901234567890",
+		"settlement_address":    "0x1234567890123456789012345678901234567890",
 		"network":               testCtx.networkIdentifier,
 	})
 	if err != nil {
@@ -144,19 +144,17 @@ func setup() error {
 		return fmt.Errorf("CreateTestProvisionBucket.sender_test: %w", err)
 	}
 
-	// Update ProviderCurrencies to have sufficient balance for validation
-	_, err = db.Client.ProviderCurrencies.
-		Update().
+	_, err = db.Client.ProviderBalances.Update().
 		Where(
-			providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
-			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+			providerbalances.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
+			providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
 		).
 		SetAvailableBalance(decimal.NewFromFloat(1000000.0)).
 		SetTotalBalance(decimal.NewFromFloat(1000000.0)).
 		SetIsAvailable(true).
 		Save(context.Background())
 	if err != nil {
-		return fmt.Errorf("UpdateProviderCurrencies.sender_test: %w", err)
+		return fmt.Errorf("UpdateProviderBalances.sender_test: %w", err)
 	}
 
 	// Populate Redis bucket with provider data for validateBucketRate
@@ -609,16 +607,15 @@ func TestSender(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			_, err = db.Client.ProviderCurrencies.
-				Update().
+			_, err = db.Client.ProviderBalances.Update().
 				Where(
-					providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
-					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+					providerbalances.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 				).
 				SetAvailableBalance(decimal.NewFromFloat(100000)).
 				SetTotalBalance(decimal.NewFromFloat(100000)).
 				Save(context.Background())
-			assert.NoError(t, err, "Failed to update provider currency balance")
+			assert.NoError(t, err, "Failed to update provider fiat balance")
 
 			// Add provider order token (required for rate validation)
 			providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
@@ -633,7 +630,7 @@ func TestSender(t *testing.T) {
 				"min_order_amount":         decimal.NewFromFloat(1),
 				"max_order_amount_otc":     decimal.Zero,
 				"min_order_amount_otc":     decimal.Zero,
-				"address":                  "0x1234567890123456789012345678901234567890",
+				"settlement_address":       "0x1234567890123456789012345678901234567890",
 			})
 			if err != nil {
 				t.Logf("Failed to create provider order token: %v", err)
@@ -796,17 +793,15 @@ func TestSender(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			// Update provider currency balance to ensure sufficient liquidity for rate validation
-			_, err = db.Client.ProviderCurrencies.
-				Update().
+			_, err = db.Client.ProviderBalances.Update().
 				Where(
-					providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
-					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+					providerbalances.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 				).
 				SetAvailableBalance(decimal.NewFromFloat(100000)).
 				SetTotalBalance(decimal.NewFromFloat(100000)).
 				Save(context.Background())
-			assert.NoError(t, err, "Failed to update provider currency balance")
+			assert.NoError(t, err, "Failed to update provider fiat balance")
 
 			providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
 				"provider":                 providerProfile,
@@ -820,7 +815,7 @@ func TestSender(t *testing.T) {
 				"min_order_amount":         decimal.NewFromFloat(1),
 				"max_order_amount_otc":     decimal.Zero,
 				"min_order_amount_otc":     decimal.Zero,
-				"address":                  "0x1234567890123456789012345678901234567890",
+				"settlement_address":       "0x1234567890123456789012345678901234567890",
 			})
 			if err != nil {
 				t.Logf("Failed to create provider order token: %v", err)
@@ -979,24 +974,20 @@ func TestSender(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			// Update ProviderCurrencies balance - query first to ensure it exists
-			providerCurrency, err := db.Client.ProviderCurrencies.
-				Query().
+			pb, err := db.Client.ProviderBalances.Query().
 				Where(
-					providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
-					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+					providerbalances.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 				).
 				Only(context.Background())
 			if err != nil {
-				t.Fatalf("ProviderCurrencies not found for provider %s and currency %s: %v", providerProfile.ID, currency.ID, err)
+				t.Fatalf("ProviderBalances not found for provider %s and currency %s: %v", providerProfile.ID, currency.ID, err)
 			}
-
-			_, err = db.Client.ProviderCurrencies.
-				UpdateOneID(providerCurrency.ID).
+			_, err = db.Client.ProviderBalances.UpdateOneID(pb.ID).
 				SetAvailableBalance(decimal.NewFromFloat(100000)).
 				SetTotalBalance(decimal.NewFromFloat(100000)).
 				Save(context.Background())
-			assert.NoError(t, err, "Failed to update provider currency balance")
+			assert.NoError(t, err, "Failed to update provider fiat balance")
 
 			providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
 				"provider":              providerProfile,
@@ -1009,7 +1000,7 @@ func TestSender(t *testing.T) {
 				"min_order_amount":      decimal.NewFromFloat(1),
 				"max_order_amount_otc":  decimal.Zero,
 				"min_order_amount_otc":  decimal.Zero,
-				"address":               "0x1234567890123456789012345678901234567890",
+				"settlement_address":    "0x1234567890123456789012345678901234567890",
 			})
 			if err != nil {
 				t.Logf("Failed to create provider order token: %v", err)

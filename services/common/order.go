@@ -16,7 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -391,7 +391,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
 
-		err = balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
+		err = balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, nil)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
@@ -526,26 +526,26 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
 
-		// Get current balance to update it appropriately
-		currentBalance, err := balanceService.GetProviderBalance(ctx, providerID, currency)
+		currentBalance, err := balanceService.GetProviderFiatBalance(ctx, providerID, currency)
 		if err == nil && currentBalance != nil {
-			// For settlement, we only reduce the reserved balance since the available balance was already reduced during assignment
 			newReservedBalance := currentBalance.ReservedBalance.Sub(amount)
-
-			// Ensure reserved balance doesn't go negative
 			if newReservedBalance.LessThan(decimal.Zero) {
 				newReservedBalance = decimal.Zero
 			}
-
-			// For settlement, we reduce the reserved balance and total balance
-			// Available balance was already reduced during assignment
-			// Total balance is reduced because the provider has actually spent money to fulfill the order
 			newTotalBalance := currentBalance.TotalBalance.Sub(amount)
 			if newTotalBalance.LessThan(decimal.Zero) {
 				newTotalBalance = decimal.Zero
 			}
-
-			err = balanceService.UpdateProviderBalance(ctx, providerID, currency, currentBalance.AvailableBalance, newTotalBalance, newReservedBalance)
+			// Ensure available doesn't exceed (total - reserved) after clamping
+			maxAvailable := newTotalBalance.Sub(newReservedBalance)
+			newAvailableBalance := currentBalance.AvailableBalance
+			if newAvailableBalance.GreaterThan(maxAvailable) {
+				newAvailableBalance = maxAvailable
+			}
+			if newAvailableBalance.LessThan(decimal.Zero) {
+				newAvailableBalance = decimal.Zero
+			}
+			err = balanceService.UpdateProviderFiatBalance(ctx, providerID, currency, newAvailableBalance, newTotalBalance, newReservedBalance)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":      fmt.Sprintf("%v", err),
@@ -1148,9 +1148,9 @@ func validateAndPreparePaymentOrderData(
 				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(paymentOrderFields.ProviderID),
-					providerprofile.HasProviderCurrenciesWith(
-						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
-						providercurrencies.IsAvailableEQ(true),
+					providerprofile.HasProviderBalancesWith(
+						providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
+						providerbalances.IsAvailableEQ(true),
 					),
 					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				),
@@ -1158,7 +1158,7 @@ func validateAndPreparePaymentOrderData(
 				providerordertoken.HasCurrencyWith(
 					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 				),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			WithProvider().
 			Only(ctx)

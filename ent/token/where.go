@@ -507,6 +507,29 @@ func HasProviderOrderTokensWith(preds ...predicate.ProviderOrderToken) predicate
 	})
 }
 
+// HasProviderBalances applies the HasEdge predicate on the "provider_balances" edge.
+func HasProviderBalances() predicate.Token {
+	return predicate.Token(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProviderBalancesTable, ProviderBalancesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProviderBalancesWith applies the HasEdge predicate on the "provider_balances" edge with a given conditions (other predicates).
+func HasProviderBalancesWith(preds ...predicate.ProviderBalances) predicate.Token {
+	return predicate.Token(func(s *sql.Selector) {
+		step := newProviderBalancesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Token) predicate.Token {
 	return predicate.Token(sql.AndPredicates(predicates...))
