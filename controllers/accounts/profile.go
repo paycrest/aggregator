@@ -207,10 +207,13 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	}
 
 	// Set activation status based on whether at least one token is configured
-	if hasConfiguredToken && !sender.IsActive {
-		update.SetIsActive(true)
-	} else if !hasConfiguredToken && sender.IsActive {
-		update.SetIsActive(false)
+	// Only update activation when Tokens field is present in the payload
+	if len(payload.Tokens) > 0 {
+		if hasConfiguredToken && !sender.IsActive {
+			update.SetIsActive(true)
+		} else if !hasConfiguredToken && sender.IsActive {
+			update.SetIsActive(false)
+		}
 	}
 
 	// Save the sender profile update within the transaction
@@ -486,8 +489,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		isUpdate := err == nil
 		if err != nil && !ent.IsNotFound(err) {
 			logger.WithFields(logger.Fields{
-				"Error":             fmt.Sprintf("%v", err),
-				"Institution":       fiatAccountPayload.Institution,
+				"Error":       fmt.Sprintf("%v", err),
+				"Institution": fiatAccountPayload.Institution,
 			}).Errorf("Failed to check for existing fiat account")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 			return
@@ -679,8 +682,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 				}
 				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"Institution":       op.Payload.Institution,
+					"Error":       fmt.Sprintf("%v", err),
+					"Institution": op.Payload.Institution,
 				}).Errorf("Failed to update fiat account")
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
@@ -699,8 +702,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 				}
 				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"Institution":       op.Payload.Institution,
+					"Error":       fmt.Sprintf("%v", err),
+					"Institution": op.Payload.Institution,
 				}).Errorf("Failed to create fiat account")
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return

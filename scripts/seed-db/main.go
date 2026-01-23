@@ -40,6 +40,7 @@ func main() {
 	_, _ = client.FiatCurrency.Delete().Exec(ctx)
 	_, _ = client.ProvisionBucket.Delete().Exec(ctx)
 	_, _ = client.User.Delete().Exec(ctx)
+	_, _ = client.ProviderBalances.Delete().Exec(ctx)
 	_, _ = client.ProviderProfile.Delete().Exec(ctx)
 	_, _ = client.ProviderOrderToken.Delete().Exec(ctx)
 	_, _ = client.SenderProfile.Delete().Exec(ctx)
