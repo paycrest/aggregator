@@ -18,7 +18,6 @@ import (
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/google/uuid"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
@@ -428,30 +427,6 @@ func ValidateRecipientEncryptionSize(recipient *types.PaymentOrderRecipient) err
 	}
 
 	return nil
-}
-
-// GetAPIKeyFromMetadata extracts the API key from decrypted metadata
-func GetAPIKeyFromMetadata(metadata map[string]interface{}) (uuid.UUID, error) {
-    if metadata == nil {
-        return uuid.Nil, nil
-    }
-    
-    apiKey, ok := metadata["apiKey"]
-    if !ok {
-        return uuid.Nil, nil
-    }
-    
-    apiKeyStr, ok := apiKey.(string)
-    if !ok {
-        return uuid.Nil, fmt.Errorf("invalid apiKey type (expected string)")
-    }
-    
-    apiKeyUUID, err := uuid.Parse(apiKeyStr)
-    if err != nil {
-        return uuid.Nil, fmt.Errorf("invalid apiKey format: %w", err)
-    }
-    
-    return apiKeyUUID, nil
 }
 
 // isHybridEncrypted checks if data is in hybrid format

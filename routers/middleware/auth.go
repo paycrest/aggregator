@@ -83,14 +83,9 @@ func JWTMiddleware(c *gin.Context) {
 			Only(c)
 		if err != nil {
 			c.Set("sender", nil)
-		} else {
-			c.Set("sender", senderProfile)
-			
-			// Set API key in context if available
-			if senderProfile.Edges.APIKey != nil {
-				c.Set("apiKey", senderProfile.Edges.APIKey.ID.String())
-			}
 		}
+		
+		c.Set("sender", senderProfile)
 	}
 
 	if scope == "provider" || senderAndProvider {
@@ -335,7 +330,6 @@ func HMACVerificationMiddleware(c *gin.Context) {
 	// Set the user profiles in the context of the request
 	if apiKey.Edges.SenderProfile != nil {
 		c.Set("sender", apiKey.Edges.SenderProfile)
-		c.Set("apiKey", publicKey)
 	}
 
 	if apiKey.Edges.ProviderProfile != nil {
@@ -432,7 +426,6 @@ func APIKeyMiddleware(c *gin.Context) {
 	// Set the user profiles in the context of the request
 	if apiKeyEnt.Edges.SenderProfile != nil {
 		c.Set("sender", apiKeyEnt.Edges.SenderProfile)
-		c.Set("apiKey", apiKey)
 	}
 
 	if apiKeyEnt.Edges.ProviderProfile != nil {

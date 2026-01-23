@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
@@ -1029,37 +1030,27 @@ func validateAndPreparePaymentOrderData(
 	}
 
 	if recipient.Metadata != nil {
-		senderAPIKey, err := cryptoUtils.GetAPIKeyFromMetadata(recipient.Metadata)
+		senderAPIKey, err := getAPIKeyFromMetadata(recipient.Metadata)
 		if err != nil {
-			// @todo enforce sender API key presence in metadata in the future if needed
+			// TODO: enforce sender API key presence in metadata in the future if needed
 		} else if err == nil && senderAPIKey != uuid.Nil {
-			senderProfile, err := utils.GetSenderProfileFromAPIKey(ctx, senderAPIKey)
+			_, err := getSenderProfileFromAPIKey(ctx, senderAPIKey)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"error":   err,
 					"api_key": senderAPIKey.String(),
 					"order_id": event.OrderId,
-				}).Warnf("Failed to retrieve sender profile from API key in metadata")
-			} else if err == nil && senderProfile != nil && senderProfile.Edges.User != nil {
-				kybStatus := senderProfile.Edges.User.KybVerificationStatus
-				logger.WithFields(logger.Fields{
-					"order_id":       event.OrderId,
-					"sender_id":      senderProfile.ID,
-					"user_id":        senderProfile.Edges.User.ID,
-					"kyb_status":     kybStatus,
-					"from_api_key":   true,
-				}).Infof("Retrieved KYB verification status from API key metadata")
-				
-				// @todo: Enforce KYB status checks here in the future if needed
-				// Example enforcement:
-				// if serverConf.Environment == "production" && kybStatus != user.KybVerificationStatusApproved {
-				//     return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(
-				//         ctx, event, network, token, recipient,
-				//         "Sender KYB verification not approved",
-				//         refundOrder, existingOrder,
-				//     )
-				// }
-			}
+				}).Infof("Failed to retrieve sender profile from API key in metadata")
+			}				
+			//{ TODO: Enforce KYB status checks here in the future if needed
+			// Example enforcement:
+			// if serverConf.Environment == "production" && kybStatus != user.KybVerificationStatusApproved {
+			//     return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(
+			//         ctx, event, network, token, recipient,
+			//         "Sender KYB verification not approved",
+			//         refundOrder, existingOrder,
+			//     )
+			// }}
 		}
 	}
 
@@ -1319,4 +1310,50 @@ func createBasicPaymentOrderAndCancel(
 		return fmt.Errorf("failed to handle cancellation due to %s: %w", cancellationReason, err)
 	}
 	return nil
+}
+
+// getSenderProfileFromAPIKey retrieves the sender profile associated with the given API key UUID.
+func getSenderProfileFromAPIKey(ctx context.Context, apiKeyUUID uuid.UUID) (*ent.SenderProfile, error) {  
+    // Query the API key and load the sender profile relationship
+    apiKey, err := db.Client.APIKey.
+        Query().
+        Where(apikey.IDEQ(apiKeyUUID)).
+        Only(ctx)
+    
+    if err != nil {
+        if ent.IsNotFound(err) {
+            return nil, fmt.Errorf("API key not found")
+        }
+        return nil, fmt.Errorf("failed to find API key: %w", err)
+    }
+    
+    if apiKey.Edges.SenderProfile == nil {
+        return nil, fmt.Errorf("API key has no associated sender profile")
+    }
+    
+    return apiKey.Edges.SenderProfile, nil
+}
+
+// getAPIKeyFromMetadata extracts and validates the API key UUID from the given metadata map.
+func getAPIKeyFromMetadata(metadata map[string]interface{}) (uuid.UUID, error) {
+    if metadata == nil {
+        return uuid.Nil, nil
+    }
+    
+    apiKey, ok := metadata["apiKey"]
+    if !ok {
+        return uuid.Nil, nil
+    }
+    
+    apiKeyStr, ok := apiKey.(string)
+    if !ok {
+        return uuid.Nil, fmt.Errorf("invalid apiKey type (expected string)")
+    }
+    
+    apiKeyUUID, err := uuid.Parse(apiKeyStr)
+    if err != nil {
+        return uuid.Nil, fmt.Errorf("invalid apiKey format: %w", err)
+    }
+    
+    return apiKeyUUID, nil
 }

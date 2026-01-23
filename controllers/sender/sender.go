@@ -98,21 +98,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 	sender := senderCtx.(*ent.SenderProfile)
 
-	// Get API key from context and add to metadata
-	apiKeyFromCtx, exists := ctx.Get("apiKey")
-	if !exists {
-		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
-		return
-	}
-
-	// Initialize metadata if nil and add API key
-	if payload.Recipient.Metadata == nil {
-		payload.Recipient.Metadata = make(map[string]interface{})
-	}
-	if apiKey, ok := apiKeyFromCtx.(string); ok && apiKey != "" {
-		payload.Recipient.Metadata["apiKey"] = apiKey
-	}
-
 	// Get token from DB
 	token, err := storage.Client.Token.
 		Query().
@@ -448,15 +433,29 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	if serverConf.Environment == "production" || serverConf.Environment == "staging" {
-		// Validate encrypted recipient size before creating order
-		if err := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient); err != nil {
+		// get sender api key from sender context
+		senderApiKey := sender.Edges.APIKey
+		
+		if payload.Recipient.Metadata == nil {
+			payload.Recipient.Metadata = make(map[string]interface{})
+		}
+		
+		// Add API key to metadata for encryption
+		payload.Recipient.Metadata["apiKey"] = senderApiKey.ID.String()
+
+		validationErr := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient)
+
+		delete(payload.Recipient.Metadata, "apiKey")
+    
+		// Now check validation result
+		if validationErr != nil {
 			logger.WithFields(logger.Fields{
-				"error":       err,
+				"error":       validationErr,
 				"institution": payload.Recipient.Institution,
 			}).Errorf("Recipient encryption size validation failed")
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 				Field:   "Recipient",
-				Message: fmt.Sprintf("Recipient data too large: %s", err.Error()),
+				Message: "Recipient data too large for encryption",
 			})
 			return
 		}
