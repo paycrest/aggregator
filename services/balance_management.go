@@ -11,6 +11,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 )
@@ -110,6 +111,130 @@ func (svc *BalanceManagementService) UpdateProviderTokenBalance(ctx context.Cont
 		return fmt.Errorf("failed to update token balance: %w", err)
 	}
 	logger.WithFields(logger.Fields{"ProviderID": providerID, "TokenID": tokenID, "AvailableBalance": available.String(), "TotalBalance": total.String(), "ReservedBalance": reserved.String()}).Infof("Provider token balance updated successfully")
+	return nil
+}
+
+// UpsertProviderFiatBalance creates or updates the fiat balance for a provider and currency.
+// On update, it preserves ReservedBalance (internal reservations for pending orders) and caps
+// AvailableBalance by TotalBalance - ReservedBalance to prevent inflating availability.
+// New entries are created with is_available=false.
+func (svc *BalanceManagementService) UpsertProviderFiatBalance(ctx context.Context, providerID string, currencyCode string, balance *types.ProviderBalance) error {
+	existing, err := svc.client.ProviderBalances.Query().
+		Where(
+			providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
+			providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+		).
+		Only(ctx)
+	if err != nil {
+		if !ent.IsNotFound(err) {
+			return fmt.Errorf("failed to query provider fiat balance: %w", err)
+		}
+		// Create new entry
+		provider, err := svc.client.ProviderProfile.Get(ctx, providerID)
+		if err != nil {
+			return fmt.Errorf("failed to get provider: %w", err)
+		}
+		fiat, err := svc.client.FiatCurrency.Query().Where(fiatcurrency.CodeEQ(currencyCode)).Only(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get fiat currency: %w", err)
+		}
+		// Cap available balance by total - reserved to prevent inflating availability
+		maxAvailable := balance.TotalBalance.Sub(balance.ReservedBalance)
+		availableBalance := balance.AvailableBalance
+		if maxAvailable.LessThan(availableBalance) {
+			availableBalance = maxAvailable
+		}
+		if availableBalance.LessThan(decimal.Zero) {
+			availableBalance = decimal.Zero
+		}
+		_, err = svc.client.ProviderBalances.Create().
+			SetFiatCurrency(fiat).
+			SetAvailableBalance(availableBalance).
+			SetTotalBalance(balance.TotalBalance).
+			SetReservedBalance(balance.ReservedBalance).
+			SetIsAvailable(false). // New entries default to false
+			SetUpdatedAt(time.Now()).
+			SetProviderID(provider.ID).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create provider fiat balance: %w", err)
+		}
+		return nil
+	}
+	// Preserve existing ReservedBalance (our internal reservations for pending orders)
+	// Cap available balance by min(provider's reported available, total - reserved)
+	existingReserved := existing.ReservedBalance
+	maxAvailable := balance.TotalBalance.Sub(existingReserved)
+	newAvail := balance.AvailableBalance
+	if maxAvailable.LessThan(newAvail) {
+		newAvail = maxAvailable
+	}
+	if newAvail.LessThan(decimal.Zero) {
+		newAvail = decimal.Zero
+	}
+	// Preserve existing is_available status when updating (not modified here)
+	_, err = existing.Update().
+		SetTotalBalance(balance.TotalBalance).
+		SetAvailableBalance(newAvail).
+		SetUpdatedAt(time.Now()).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provider fiat balance: %w", err)
+	}
+	return nil
+}
+
+// UpsertProviderTokenBalance creates or updates the token balance for a provider and token.
+// On update, it preserves ReservedBalance and sets AvailableBalance = TotalBalance - ReservedBalance.
+// New entries are created with is_available=false.
+func (svc *BalanceManagementService) UpsertProviderTokenBalance(ctx context.Context, providerID string, tokenID int, balance *types.ProviderBalance) error {
+	existing, err := svc.client.ProviderBalances.Query().
+		Where(
+			providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
+			providerbalances.HasTokenWith(token.IDEQ(tokenID)),
+		).
+		Only(ctx)
+	if err != nil {
+		if !ent.IsNotFound(err) {
+			return fmt.Errorf("failed to query provider token balance: %w", err)
+		}
+		// Create new entry
+		provider, err := svc.client.ProviderProfile.Get(ctx, providerID)
+		if err != nil {
+			return fmt.Errorf("failed to get provider: %w", err)
+		}
+		tok, err := svc.client.Token.Get(ctx, tokenID)
+		if err != nil {
+			return fmt.Errorf("failed to get token: %w", err)
+		}
+		_, err = svc.client.ProviderBalances.Create().
+			SetToken(tok).
+			SetTotalBalance(balance.TotalBalance).
+			SetAvailableBalance(balance.TotalBalance).
+			SetReservedBalance(decimal.Zero).
+			SetIsAvailable(false). // New entries default to false
+			SetUpdatedAt(time.Now()).
+			SetProviderID(provider.ID).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create provider token balance: %w", err)
+		}
+		return nil
+	}
+	existingReserved := existing.ReservedBalance
+	newAvail := balance.TotalBalance.Sub(existingReserved)
+	if newAvail.LessThan(decimal.Zero) {
+		newAvail = decimal.Zero
+	}
+	// Preserve existing is_available status when updating (not modified here)
+	_, err = existing.Update().
+		SetTotalBalance(balance.TotalBalance).
+		SetAvailableBalance(newAvail).
+		SetUpdatedAt(time.Now()).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to update provider token balance: %w", err)
+	}
 	return nil
 }
 
