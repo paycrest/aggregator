@@ -2375,12 +2375,9 @@ func updateProviderFiatBalance(providerID, currency string, balance *types.Provi
 	if newAvail.LessThan(decimal.Zero) {
 		newAvail = decimal.Zero
 	}
-	// Set is_available to false if both available and reserved balances are zero
-	isAvailable := !(newAvail.IsZero() && existingReserved.IsZero())
 	_, err = existing.Update().
 		SetTotalBalance(balance.TotalBalance).
 		SetAvailableBalance(newAvail).
-		SetIsAvailable(isAvailable).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
@@ -2432,12 +2429,9 @@ func updateProviderTokenBalance(providerID string, tokenID int, balance *types.P
 	if newAvail.LessThan(decimal.Zero) {
 		newAvail = decimal.Zero
 	}
-	// Set is_available to false if both available and reserved balances are zero
-	isAvailable := !(newAvail.IsZero() && existingReserved.IsZero())
 	_, err = existing.Update().
 		SetTotalBalance(balance.TotalBalance).
 		SetAvailableBalance(newAvail).
-		SetIsAvailable(isAvailable).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
