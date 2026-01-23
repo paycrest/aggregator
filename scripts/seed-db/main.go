@@ -12,7 +12,6 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils/crypto"
@@ -34,24 +33,42 @@ func main() {
 	defer client.Close()
 	ctx := context.Background()
 
-	// Delete existing data
-	_, _ = client.Network.Delete().Exec(ctx)
-	_, _ = client.Token.Delete().Exec(ctx)
-	_, _ = client.FiatCurrency.Delete().Exec(ctx)
-	_, _ = client.ProvisionBucket.Delete().Exec(ctx)
-	_, _ = client.User.Delete().Exec(ctx)
-	_, _ = client.ProviderBalances.Delete().Exec(ctx)
-	_, _ = client.ProviderProfile.Delete().Exec(ctx)
-	_, _ = client.ProviderOrderToken.Delete().Exec(ctx)
-	_, _ = client.SenderProfile.Delete().Exec(ctx)
-	_, _ = client.ReceiveAddress.Delete().Exec(ctx)
+	// Delete existing data (child rows first, then parents)
+	// Delete child entities first to avoid foreign key constraint violations
+	if _, err := client.ProviderOrderToken.Delete().Exec(ctx); err != nil {
+		logger.Fatalf("failed to delete ProviderOrderToken: %s", err)
+	}
+	if _, err := client.ProviderBalances.Delete().Exec(ctx); err != nil {
+		logger.Fatalf("failed to delete ProviderBalances: %s", err)
+	}
+	if _, err := client.SenderProfile.Delete().Exec(ctx); err != nil {
+		logger.Fatalf("failed to delete SenderProfile: %s", err)
+	}
+	if _, err := client.ProviderProfile.Delete().Exec(ctx); err != nil {
+		logger.Fatalf("failed to delete ProviderProfile: %s", err)
+	}
+	if _, err := client.ProvisionBucket.Delete().Exec(ctx); err != nil {
+		logger.Fatalf("failed to delete ProvisionBucket: %s", err)
+	}
+	if _, err := client.Token.Delete().Exec(ctx); err != nil {
+		logger.Fatalf("failed to delete Token: %s", err)
+	}
+	if _, err := client.Network.Delete().Exec(ctx); err != nil {
+		logger.Fatalf("failed to delete Network: %s", err)
+	}
+	if _, err := client.FiatCurrency.Delete().Exec(ctx); err != nil {
+		logger.Fatalf("failed to delete FiatCurrency: %s", err)
+	}
+	if _, err := client.User.Delete().Exec(ctx); err != nil {
+		logger.Fatalf("failed to delete User: %s", err)
+	}
 
 	// Seed Network
 	fmt.Println("seeding network...")
 	network, err := client.Network.
 		Create().
 		SetIdentifier("arbitrum-sepolia").
-		SetChainID(11155111).
+		SetChainID(421614).
 		SetFee(decimal.NewFromInt(0)).
 		SetRPCEndpoint("wss://arbitrum-sepolia.infura.io/ws/v3/4458cf4d1689497b9a38b1d6bbf05e78").
 		SetIsTestnet(true).
