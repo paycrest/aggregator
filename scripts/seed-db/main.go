@@ -170,7 +170,10 @@ func initAPIKeyCreate(client *ent.Client) (*ent.APIKeyCreate, string, string, er
 	if err != nil {
 		return nil, "", "", fmt.Errorf("failed to generate API key: %s", err)
 	}
-	encryptedSecret, _ := crypto.EncryptPlain([]byte(secretKey))
+	encryptedSecret, err := crypto.EncryptPlain([]byte(secretKey))
+	if err != nil {
+		return nil, "", "", fmt.Errorf("failed to encrypt API secret: %s", err)
+	}
 	encodedSecret := base64.StdEncoding.EncodeToString(encryptedSecret)
 
 	return client.APIKey.Create(), secretKey, encodedSecret, nil
