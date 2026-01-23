@@ -2290,7 +2290,7 @@ func fetchProviderTokenBalances(providerID string) (map[int]*types.ProviderBalan
 		dec := int32(tok.Decimals)
 		bal := decimal.NewFromBigInt(raw, -dec)
 		now := time.Now()
-		
+
 		// Aggregate balances by token ID - multiple settlement addresses for same token should be summed
 		if existing, exists := balances[tok.ID]; exists {
 			// Add to existing balance
