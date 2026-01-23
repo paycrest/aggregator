@@ -2061,10 +2061,118 @@ func ProcessStuckValidatedOrders() error {
 	return nil
 }
 
+// initializeProviderBalances creates balance entries for all providers based on their provider_order_tokens configuration.
+// For each provider, it creates:
+// - Token balance entries for all tokens in provider_order_tokens (with is_available=false)
+// - Fiat balance entries for all currencies in provider_order_tokens (with is_available=false)
+// Existing balance entries are not modified (preserves is_available status).
+func initializeProviderBalances(ctx context.Context, providers []*ent.ProviderProfile) error {
+	for _, provider := range providers {
+		// Get all provider_order_tokens for this provider
+		orderTokens, err := storage.Client.ProviderOrderToken.
+			Query().
+			Where(providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID))).
+			WithToken().
+			WithCurrency().
+			All(ctx)
+		if err != nil {
+			logger.Warnf("Failed to fetch provider_order_tokens for provider %s: %v", provider.ID, err)
+			continue
+		}
+
+		// Track unique tokens and currencies
+		tokenIDs := make(map[int]bool)
+		currencyCodes := make(map[string]bool)
+
+		for _, orderToken := range orderTokens {
+			// Track unique tokens
+			if orderToken.Edges.Token != nil {
+				tokenIDs[orderToken.Edges.Token.ID] = true
+			}
+			// Track unique currencies
+			if orderToken.Edges.Currency != nil {
+				currencyCodes[orderToken.Edges.Currency.Code] = true
+			}
+		}
+
+		// Create token balance entries for missing tokens
+		for tokenID := range tokenIDs {
+			exists, err := storage.Client.ProviderBalances.Query().
+				Where(
+					providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+					providerbalances.HasTokenWith(tokenent.IDEQ(tokenID)),
+				).
+				Exist(ctx)
+			if err != nil {
+				logger.Warnf("Failed to check token balance existence for provider %s token %d: %v", provider.ID, tokenID, err)
+				continue
+			}
+			if !exists {
+				tok, err := storage.Client.Token.Get(ctx, tokenID)
+				if err != nil {
+					logger.Warnf("Failed to get token %d for provider %s: %v", tokenID, provider.ID, err)
+					continue
+				}
+				_, err = storage.Client.ProviderBalances.Create().
+					SetProviderID(provider.ID).
+					SetToken(tok).
+					SetTotalBalance(decimal.Zero).
+					SetAvailableBalance(decimal.Zero).
+					SetReservedBalance(decimal.Zero).
+					SetIsAvailable(false).
+					SetUpdatedAt(time.Now()).
+					Save(ctx)
+				if err != nil {
+					logger.Warnf("Failed to create token balance entry for provider %s token %d: %v", provider.ID, tokenID, err)
+					continue
+				}
+				logger.Debugf("Created token balance entry for provider %s token %d (is_available=false)", provider.ID, tokenID)
+			}
+		}
+
+		// Create fiat balance entries for missing currencies
+		for currencyCode := range currencyCodes {
+			exists, err := storage.Client.ProviderBalances.Query().
+				Where(
+					providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+				).
+				Exist(ctx)
+			if err != nil {
+				logger.Warnf("Failed to check fiat balance existence for provider %s currency %s: %v", provider.ID, currencyCode, err)
+				continue
+			}
+			if !exists {
+				fiat, err := storage.Client.FiatCurrency.Query().Where(fiatcurrency.CodeEQ(currencyCode)).Only(ctx)
+				if err != nil {
+					logger.Warnf("Failed to get fiat currency %s for provider %s: %v", currencyCode, provider.ID, err)
+					continue
+				}
+				_, err = storage.Client.ProviderBalances.Create().
+					SetProviderID(provider.ID).
+					SetFiatCurrency(fiat).
+					SetTotalBalance(decimal.Zero).
+					SetAvailableBalance(decimal.Zero).
+					SetReservedBalance(decimal.Zero).
+					SetIsAvailable(false).
+					SetUpdatedAt(time.Now()).
+					Save(ctx)
+				if err != nil {
+					logger.Warnf("Failed to create fiat balance entry for provider %s currency %s: %v", provider.ID, currencyCode, err)
+					continue
+				}
+				logger.Debugf("Created fiat balance entry for provider %s currency %s (is_available=false)", provider.ID, currencyCode)
+			}
+		}
+	}
+	return nil
+}
+
 // FetchProviderBalances fetches balance updates from all providers
 func FetchProviderBalances() error {
 	ctx := context.Background()
 	startTime := time.Now()
+	balanceService := services.NewBalanceManagementService()
 
 	// Get all provider profiles
 	providers, err := storage.Client.ProviderProfile.
@@ -2072,9 +2180,6 @@ func FetchProviderBalances() error {
 		Where(
 			providerprofile.HostIdentifierNEQ(""),
 			providerprofile.IsActiveEQ(true),
-			providerprofile.HasProviderBalancesWith(
-				providerbalances.IsAvailableEQ(true),
-			),
 		).
 		All(ctx)
 	if err != nil {
@@ -2085,6 +2190,13 @@ func FetchProviderBalances() error {
 	if len(providers) == 0 {
 		logger.Infof("No providers found, skipping balance fetch")
 		return nil
+	}
+
+	// Initialize balance entries for all providers based on their provider_order_tokens
+	// This ensures all providers have balance entries (with is_available=false) even if they haven't been fetched yet
+	if err := initializeProviderBalances(ctx, providers); err != nil {
+		logger.Warnf("Failed to initialize provider balances: %v (continuing with fetch)", err)
+		// Don't return error - continue with balance fetch even if initialization fails
 	}
 
 	type balanceResult struct {
@@ -2139,7 +2251,7 @@ func FetchProviderBalances() error {
 		}
 		for currency, balance := range result.fiatBalances {
 			err := utils.Retry(3, 2*time.Second, func() error {
-				return updateProviderFiatBalance(result.providerID, currency, balance)
+				return balanceService.UpsertProviderFiatBalance(ctx, result.providerID, currency, balance)
 			})
 			if err != nil {
 				logger.Errorf("Failed to update fiat balance for provider %s currency %s: %v", result.providerID, currency, err)
@@ -2150,7 +2262,7 @@ func FetchProviderBalances() error {
 		}
 		for tokenID, balance := range result.tokenBalances {
 			err := utils.Retry(3, 2*time.Second, func() error {
-				return updateProviderTokenBalance(result.providerID, tokenID, balance)
+				return balanceService.UpsertProviderTokenBalance(ctx, result.providerID, tokenID, balance)
 			})
 			if err != nil {
 				logger.Errorf("Failed to update token balance for provider %s token %d: %v", result.providerID, tokenID, err)
@@ -2336,122 +2448,6 @@ func fetchProviderTokenBalances(providerID string) (map[int]*types.ProviderBalan
 	return balances, nil
 }
 
-// updateProviderFiatBalance updates or creates the fiat balance for a provider and currency.
-// On update, it preserves ReservedBalance and sets AvailableBalance = TotalBalance - ReservedBalance.
-func updateProviderFiatBalance(providerID, currency string, balance *types.ProviderBalance) error {
-	ctx := context.Background()
-	existing, err := storage.Client.ProviderBalances.Query().
-		Where(
-			providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
-			providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency)),
-		).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			provider, err := storage.Client.ProviderProfile.Get(ctx, providerID)
-			if err != nil {
-				return fmt.Errorf("failed to get provider: %w", err)
-			}
-			fiat, err := storage.Client.FiatCurrency.Query().Where(fiatcurrency.CodeEQ(currency)).Only(ctx)
-			if err != nil {
-				return fmt.Errorf("failed to get fiat currency: %w", err)
-			}
-			// Cap available balance by total - reserved to prevent inflating availability
-			maxAvailable := balance.TotalBalance.Sub(balance.ReservedBalance)
-			availableBalance := balance.AvailableBalance
-			if maxAvailable.LessThan(availableBalance) {
-				availableBalance = maxAvailable
-			}
-			if availableBalance.LessThan(decimal.Zero) {
-				availableBalance = decimal.Zero
-			}
-			_, err = storage.Client.ProviderBalances.Create().
-				SetFiatCurrency(fiat).
-				SetAvailableBalance(availableBalance).
-				SetTotalBalance(balance.TotalBalance).
-				SetReservedBalance(balance.ReservedBalance).
-				SetUpdatedAt(time.Now()).
-				SetProviderID(provider.ID).
-				Save(ctx)
-			if err != nil {
-				return fmt.Errorf("failed to create provider fiat balance: %w", err)
-			}
-			return nil
-		}
-		return fmt.Errorf("failed to query provider fiat balance: %w", err)
-	}
-	// Preserve existing ReservedBalance (our internal reservations for pending orders)
-	// Cap available balance by min(provider's reported available, total - reserved)
-	existingReserved := existing.ReservedBalance
-	maxAvailable := balance.TotalBalance.Sub(existingReserved)
-	newAvail := balance.AvailableBalance
-	if maxAvailable.LessThan(newAvail) {
-		newAvail = maxAvailable
-	}
-	if newAvail.LessThan(decimal.Zero) {
-		newAvail = decimal.Zero
-	}
-	_, err = existing.Update().
-		SetTotalBalance(balance.TotalBalance).
-		SetAvailableBalance(newAvail).
-		SetUpdatedAt(time.Now()).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to update provider fiat balance: %w", err)
-	}
-	return nil
-}
-
-// updateProviderTokenBalance updates or creates the token balance for a provider and token.
-// On update, it preserves ReservedBalance and sets AvailableBalance = TotalBalance - ReservedBalance.
-func updateProviderTokenBalance(providerID string, tokenID int, balance *types.ProviderBalance) error {
-	ctx := context.Background()
-	existing, err := storage.Client.ProviderBalances.Query().
-		Where(
-			providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
-			providerbalances.HasTokenWith(tokenent.IDEQ(tokenID)),
-		).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			provider, err := storage.Client.ProviderProfile.Get(ctx, providerID)
-			if err != nil {
-				return fmt.Errorf("failed to get provider: %w", err)
-			}
-			tok, err := storage.Client.Token.Get(ctx, tokenID)
-			if err != nil {
-				return fmt.Errorf("failed to get token: %w", err)
-			}
-			_, err = storage.Client.ProviderBalances.Create().
-				SetToken(tok).
-				SetTotalBalance(balance.TotalBalance).
-				SetAvailableBalance(balance.TotalBalance).
-				SetReservedBalance(decimal.Zero).
-				SetUpdatedAt(time.Now()).
-				SetProviderID(provider.ID).
-				Save(ctx)
-			if err != nil {
-				return fmt.Errorf("failed to create provider token balance: %w", err)
-			}
-			return nil
-		}
-		return fmt.Errorf("failed to query provider token balance: %w", err)
-	}
-	existingReserved := existing.ReservedBalance
-	newAvail := balance.TotalBalance.Sub(existingReserved)
-	if newAvail.LessThan(decimal.Zero) {
-		newAvail = decimal.Zero
-	}
-	_, err = existing.Update().
-		SetTotalBalance(balance.TotalBalance).
-		SetAvailableBalance(newAvail).
-		SetUpdatedAt(time.Now()).
-		Save(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to update provider token balance: %w", err)
-	}
-	return nil
-}
 
 // StartCronJobs starts cron jobs
 func StartCronJobs() {
