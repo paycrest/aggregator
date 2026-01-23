@@ -2072,6 +2072,9 @@ func FetchProviderBalances() error {
 		Where(
 			providerprofile.HostIdentifierNEQ(""),
 			providerprofile.IsActiveEQ(true),
+			providerprofile.HasProviderBalancesWith(
+				providerbalances.IsAvailableEQ(true),
+			),
 		).
 		All(ctx)
 	if err != nil {
