@@ -2097,8 +2097,27 @@ func FetchProviderBalances() error {
 	results := make(chan balanceResult, len(providers))
 	for _, provider := range providers {
 		go func(p *ent.ProviderProfile) {
-			fiat, err1 := fetchProviderFiatBalances(p.ID)
-			token, err2 := fetchProviderTokenBalances(p.ID)
+			var fiat map[string]*types.ProviderBalance
+			var token map[int]*types.ProviderBalance
+			var err1, err2 error
+
+			// Fetch fiat and token balances in parallel
+			var wg sync.WaitGroup
+			wg.Add(2)
+
+			go func() {
+				defer wg.Done()
+				fiat, err1 = fetchProviderFiatBalances(p.ID)
+			}()
+
+			go func() {
+				defer wg.Done()
+				token, err2 = fetchProviderTokenBalances(p.ID)
+			}()
+
+			wg.Wait()
+
+			// Combine errors
 			err := err1
 			if err == nil {
 				err = err2
@@ -2337,8 +2356,6 @@ func updateProviderFiatBalance(providerID, currency string, balance *types.Provi
 			if err != nil {
 				return fmt.Errorf("failed to get fiat currency: %w", err)
 			}
-			// Set is_available to false if both available and reserved balances are zero
-			isAvailable := !(balance.AvailableBalance.IsZero() && balance.ReservedBalance.IsZero())
 			// Cap available balance by total - reserved to prevent inflating availability
 			maxAvailable := balance.TotalBalance.Sub(balance.ReservedBalance)
 			availableBalance := balance.AvailableBalance
@@ -2354,7 +2371,6 @@ func updateProviderFiatBalance(providerID, currency string, balance *types.Provi
 				SetTotalBalance(balance.TotalBalance).
 				SetReservedBalance(balance.ReservedBalance).
 				SetUpdatedAt(time.Now()).
-				SetIsAvailable(isAvailable).
 				SetProviderID(provider.ID).
 				Save(ctx)
 			if err != nil {
@@ -2406,15 +2422,12 @@ func updateProviderTokenBalance(providerID string, tokenID int, balance *types.P
 			if err != nil {
 				return fmt.Errorf("failed to get token: %w", err)
 			}
-			// Set is_available to false if total balance is zero (both available and reserved are zero)
-			isAvailable := !balance.TotalBalance.IsZero()
 			_, err = storage.Client.ProviderBalances.Create().
 				SetToken(tok).
 				SetTotalBalance(balance.TotalBalance).
 				SetAvailableBalance(balance.TotalBalance).
 				SetReservedBalance(decimal.Zero).
 				SetUpdatedAt(time.Now()).
-				SetIsAvailable(isAvailable).
 				SetProviderID(provider.ID).
 				Save(ctx)
 			if err != nil {
