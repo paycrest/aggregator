@@ -2398,7 +2398,7 @@ func fetchProviderTokenBalances(providerID string) (map[int]*types.ProviderBalan
 	pots, err := storage.Client.ProviderOrderToken.Query().
 		Where(
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(providerID)),
-			providerordertoken.SettlementAddressNEQ(""),
+			providerordertoken.PayoutAddressNEQ(""),
 		).
 		WithToken(func(q *ent.TokenQuery) { q.WithNetwork() }).
 		All(ctx)
@@ -2415,7 +2415,7 @@ func fetchProviderTokenBalances(providerID string) (map[int]*types.ProviderBalan
 		if rpcEndpoint == "" {
 			continue
 		}
-		raw, err := getTokenBalance(rpcEndpoint, tok.ContractAddress, pot.SettlementAddress)
+		raw, err := getTokenBalance(rpcEndpoint, tok.ContractAddress, pot.PayoutAddress)
 		if err != nil {
 			logger.Warnf("Failed to fetch token balance for provider %s token %d: %v", providerID, tok.ID, err)
 			continue
@@ -2425,7 +2425,7 @@ func fetchProviderTokenBalances(providerID string) (map[int]*types.ProviderBalan
 		bal := decimal.NewFromBigInt(raw, -dec)
 		now := time.Now()
 
-		// Aggregate balances by token ID - multiple settlement addresses for same token should be summed
+		// Aggregate balances by token ID - multiple payout addresses for same token should be summed
 		if existing, exists := balances[tok.ID]; exists {
 			// Add to existing balance
 			existing.TotalBalance = existing.TotalBalance.Add(bal)
