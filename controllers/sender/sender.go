@@ -438,8 +438,22 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			payload.Recipient.Metadata = make(map[string]interface{})
 		}
 		
-		// Add API key to metadata for encryption
+if serverConf.Environment == "production" || serverConf.Environment == "staging" {
+	
+	if payload.Recipient.Metadata == nil {
+		payload.Recipient.Metadata = make(map[string]interface{})
+	}
+	
+	// Only add API key to metadata if sender has an associated API key
+	if sender.Edges.APIKey != nil {
 		payload.Recipient.Metadata["apiKey"] = sender.Edges.APIKey.ID.String()
+	}
+
+	validationErr := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient)
+
+	if sender.Edges.APIKey != nil {
+		delete(payload.Recipient.Metadata, "apiKey")
+	}
 
 		validationErr := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient)
 
