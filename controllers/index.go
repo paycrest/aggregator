@@ -34,6 +34,7 @@ import (
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/email"
+	explorer "github.com/paycrest/aggregator/services/explorer"
 	"github.com/paycrest/aggregator/services/indexer"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/services/kyc/smile"
@@ -2665,7 +2666,7 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 // GetEtherscanQueueStats controller returns statistics about the Etherscan queue
 func (ctrl *Controller) GetEtherscanQueueStats(ctx *gin.Context) {
 	// Create Etherscan service instance
-	etherscanService, err := svc.NewEtherscanService()
+	etherscanService, err := explorer.NewEtherscanService()
 	if err != nil {
 		logger.Errorf("Error: Failed to create Etherscan service: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create Etherscan service", err.Error())
