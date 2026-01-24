@@ -1036,12 +1036,10 @@ func validateAndPreparePaymentOrderData(
 		} else if err == nil && senderAPIKey != uuid.Nil {
 			_, err := getSenderProfileFromAPIKey(ctx, senderAPIKey)
 			if err != nil {
-				logger.WithFields(logger.Fields{
-					"error":   err,
-					"api_key": senderAPIKey.String(),
-					"order_id": event.OrderId,
-				}).Infof("Failed to retrieve sender profile from API key in metadata")
-			}				
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"order_id": event.OrderId,
+			}).Infof("Failed to retrieve sender profile from API key in metadata")
 			//{ TODO: Enforce KYB status checks here in the future if needed
 			// Example enforcement:
 			// if serverConf.Environment == "production" && kybStatus != user.KybVerificationStatusApproved {
