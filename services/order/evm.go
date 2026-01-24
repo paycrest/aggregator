@@ -62,7 +62,9 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
-		WithSenderProfile().
+		WithSenderProfile(func(sq *ent.SenderProfileQuery) {
+			sq.WithAPIKey()
+		}).
 		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.fetchOrder: %w", orderIDPrefix, err)
@@ -78,6 +80,14 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	// Create createOrder data
+	if order.Metadata == nil {
+		// Use the correct map type for order.Metadata
+		order.Metadata = map[string]interface{}{}
+	}
+	if order.Edges.SenderProfile == nil || order.Edges.SenderProfile.Edges.APIKey == nil {
+		return fmt.Errorf("%s - CreateOrder.missingAPIKey: sender profile API key not found", orderIDPrefix)
+	}
+	order.Metadata["apiKey"] = order.Edges.SenderProfile.Edges.APIKey.ID.String()
 	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.encryptOrderRecipient: %w", orderIDPrefix, err)

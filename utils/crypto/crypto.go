@@ -387,6 +387,48 @@ func EncryptOrderRecipient(order *ent.PaymentOrder) (string, error) {
 	return base64.StdEncoding.EncodeToString(messageCipher), nil
 }
 
+// ValidateRecipientEncryptionSize validates that the recipient data can be encrypted within the size limit
+// This is called during order creation to fail fast before persisting the order
+func ValidateRecipientEncryptionSize(recipient *types.PaymentOrderRecipient) error {
+	// Generate a nonce to match the actual encryption structure
+	nonce := make([]byte, 12)
+	if _, err := rand.Read(nonce); err != nil {
+		return fmt.Errorf("failed to generate nonce: %w", err)
+	}
+
+	var providerID string
+	if recipient.ProviderID != "" {
+		providerID = recipient.ProviderID
+	}
+
+	// Create the same message structure that will be encrypted
+	message := struct {
+		Nonce             string
+		AccountIdentifier string
+		AccountName       string
+		Institution       string
+		ProviderID        string
+		Memo              string
+		Metadata          map[string]interface{}
+	}{
+		base64.StdEncoding.EncodeToString(nonce),
+		recipient.AccountIdentifier,
+		recipient.AccountName,
+		recipient.Institution,
+		providerID,
+		recipient.Memo,
+		recipient.Metadata,
+	}
+
+	// Attempt to encrypt with the same max size limit
+	_, err := encryptHybridJSON(message, cryptoConf.AggregatorPublicKey, cryptoConf.MessageHashMaxSize)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // isHybridEncrypted checks if data is in hybrid format
 func isHybridEncrypted(data []byte) bool {
 	if len(data) < 4 {
