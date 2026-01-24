@@ -8,10 +8,12 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/providerbalances"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	blockchainUtils "github.com/paycrest/aggregator/utils/blockchain"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 )
@@ -235,6 +237,76 @@ func (svc *BalanceManagementService) UpsertProviderTokenBalance(ctx context.Cont
 	if err != nil {
 		return fmt.Errorf("failed to update provider token balance: %w", err)
 	}
+	return nil
+}
+
+// FetchAndUpdateProviderTokenBalances fetches on-chain token balances for a provider and updates them in the database.
+// This is called asynchronously when a provider updates their fiat balance, ensuring token balances stay current.
+func (svc *BalanceManagementService) FetchAndUpdateProviderTokenBalances(ctx context.Context, providerID string) error {
+	// Get all provider order tokens with payout addresses
+	pots, err := svc.client.ProviderOrderToken.Query().
+		Where(
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(providerID)),
+			providerordertoken.PayoutAddressNEQ(""),
+		).
+		WithToken(func(q *ent.TokenQuery) { q.WithNetwork() }).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query provider order tokens: %w", err)
+	}
+
+	// Aggregate balances by token ID
+	balances := make(map[int]*types.ProviderBalance)
+	for _, pot := range pots {
+		tok := pot.Edges.Token
+		if tok == nil || tok.Edges.Network == nil {
+			continue
+		}
+		rpcEndpoint := tok.Edges.Network.RPCEndpoint
+		if rpcEndpoint == "" {
+			continue
+		}
+		raw, err := blockchainUtils.GetTokenBalance(rpcEndpoint, tok.ContractAddress, pot.PayoutAddress)
+		if err != nil {
+			logger.Warnf("Failed to fetch token balance for provider %s token %d: %v", providerID, tok.ID, err)
+			continue
+		}
+		// raw is in smallest units; convert using token decimals
+		dec := int32(tok.Decimals)
+		bal := decimal.NewFromBigInt(raw, -dec)
+		now := time.Now()
+
+		// Aggregate balances by token ID - multiple payout addresses for same token should be summed
+		if existing, exists := balances[tok.ID]; exists {
+			// Add to existing balance
+			existing.TotalBalance = existing.TotalBalance.Add(bal)
+			existing.AvailableBalance = existing.AvailableBalance.Add(bal)
+			existing.ReservedBalance = existing.ReservedBalance.Add(decimal.Zero)
+			// Update LastUpdated to the newest timestamp
+			if now.After(existing.LastUpdated) {
+				existing.LastUpdated = now
+			}
+		} else {
+			// Create new entry
+			balances[tok.ID] = &types.ProviderBalance{
+				TotalBalance:     bal,
+				AvailableBalance: bal,
+				ReservedBalance:  decimal.Zero,
+				LastUpdated:      now,
+			}
+		}
+	}
+
+	// Update all token balances in the database
+	for tokenID, balance := range balances {
+		err := svc.UpsertProviderTokenBalance(ctx, providerID, tokenID, balance)
+		if err != nil {
+			logger.Warnf("Failed to update token balance for provider %s token %d: %v", providerID, tokenID, err)
+			continue
+		}
+	}
+
+	logger.Debugf("Successfully fetched and updated token balances for provider %s", providerID)
 	return nil
 }
 
