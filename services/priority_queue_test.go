@@ -577,15 +577,18 @@ func TestPriorityQueueTest(t *testing.T) {
 		err = service.ProcessBucketQueues()
 		assert.NoError(t, err)
 
-		// Wait for goroutines to complete (ProcessBucketQueues launches goroutines)
-		time.Sleep(200 * time.Millisecond)
-
 		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+
+		// ProcessBucketQueues launches goroutines; wait until the queue is populated.
+		assert.Eventually(t, func() bool {
+			data, err := db.RedisClient.LRange(context.Background(), redisKey, 0, -1).Result()
+			return err == nil && len(data) == 1
+		}, 2*time.Second, 50*time.Millisecond)
 
 		data, err := db.RedisClient.LRange(context.Background(), redisKey, 0, -1).Result()
 		assert.NoError(t, err)
-		// ProcessBucketQueues rebuilds queues from GetProvisionBuckets which filters providers
-		// The provider should meet all criteria (active, KYB approved, public, has balance)
+		// ProcessBucketQueues rebuilds queues from GetProvisionBuckets which filters providers.
+		// The provider should meet all criteria (active, KYB approved, public, has balance).
 		assert.Equal(t, 1, len(data))
 	})
 

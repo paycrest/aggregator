@@ -12,8 +12,6 @@ import (
 	"sync"
 	"time"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-co-op/gocron"
 	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
@@ -31,8 +29,8 @@ import (
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/webhookretryattempt"
 	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/services/common"
-	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/services/indexer"
 	orderService "github.com/paycrest/aggregator/services/order"
@@ -690,6 +688,23 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 			return
 		}
 
+		// Best-effort: release any reserved balance held by this provider for the order.
+		// This prevents "stuck" reserved balances from blocking future assignments.
+		if order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+			currency := order.Edges.ProvisionBucket.Edges.Currency.Code
+			amount := order.Amount.Mul(order.Rate).RoundBank(0)
+			balanceSvc := balance.New()
+			if relErr := balanceSvc.ReleaseFiatBalance(ctx, order.Edges.Provider.ID, currency, amount, nil); relErr != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", relErr),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Currency":   currency,
+					"Amount":     amount.String(),
+				}).Warnf("reassignCancelledOrder: failed to release reserved balance (best effort)")
+			}
+		}
+
 		if fulfillment != nil {
 			err = storage.Client.PaymentOrderFulfillment.
 				DeleteOneID(fulfillment.ID).
@@ -1255,6 +1270,8 @@ func SyncPaymentOrderFulfillments() {
 // ReassignStaleOrderRequest reassigns expired order requests to providers
 func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *redis.Message) {
 	for msg := range orderRequestChan {
+		isDelEvent := strings.Contains(msg.Channel, ":del:")
+
 		key := strings.Split(msg.Payload, "_")
 		orderID := key[len(key)-1]
 
@@ -1265,6 +1282,23 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 				"OrderID": orderID,
 			}).Errorf("ReassignStaleOrderRequest: Failed to parse order ID")
 			continue
+		}
+
+		// If this is a DEL event (e.g. provider accept/decline), wait briefly for any concurrent DB update
+		// (AcceptOrder updates order status in a separate transaction after deleting the Redis key).
+		if isDelEvent {
+			shouldSkip := false
+			for i := 0; i < 3; i++ {
+				currentOrder, err := storage.Client.PaymentOrder.Get(ctx, orderUUID)
+				if err == nil && currentOrder != nil && currentOrder.Status != paymentorder.StatusPending {
+					shouldSkip = true
+					break
+				}
+				time.Sleep(250 * time.Millisecond)
+			}
+			if shouldSkip {
+				continue
+			}
 		}
 
 		// Get the order from the database
@@ -1296,6 +1330,44 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 				"Status":  order.Status,
 			}).Infof("ReassignStaleOrderRequest: Order is not in pending state, skipping reassignment")
 			continue
+		}
+
+		// Best-effort: release reserved balance for the provider that was previously notified.
+		// For regular (public) assignments, the provider isn't persisted on the order until AcceptOrder,
+		// so we rely on order_request_meta_* as the source of truth.
+		metaKey := fmt.Sprintf("order_request_meta_%s", order.ID)
+		meta, metaErr := storage.RedisClient.HGetAll(ctx, metaKey).Result()
+		if metaErr == nil && len(meta) > 0 {
+			metaProviderID := meta["providerId"]
+			metaCurrency := meta["currency"]
+			metaAmountStr := meta["amount"]
+
+			// Increment exclude list for this provider (tracks retries and prevents immediate re-selection).
+			if metaProviderID != "" {
+				excludeKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
+				_, _ = storage.RedisClient.RPush(ctx, excludeKey, metaProviderID).Result()
+				_ = storage.RedisClient.ExpireAt(ctx, excludeKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+			}
+
+			// Release reserved amount (best effort; failures should not block reassignment).
+			if metaProviderID != "" && metaCurrency != "" && metaAmountStr != "" {
+				amountDec, err := decimal.NewFromString(metaAmountStr)
+				if err == nil {
+					balanceSvc := balance.New()
+					if relErr := balanceSvc.ReleaseFiatBalance(ctx, metaProviderID, metaCurrency, amountDec, nil); relErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", relErr),
+							"OrderID":    order.ID.String(),
+							"ProviderID": metaProviderID,
+							"Currency":   metaCurrency,
+							"Amount":     metaAmountStr,
+						}).Warnf("ReassignStaleOrderRequest: failed to release reserved balance (best effort)")
+					}
+				}
+			}
+
+			// Cleanup metadata key regardless of success to avoid stale entries.
+			_, _ = storage.RedisClient.Del(ctx, metaKey).Result()
 		}
 
 		// Defensive check: Verify order request doesn't already exist (race condition protection)
@@ -1507,7 +1579,6 @@ func ProcessExpiredOrdersRefunds() error {
 	wg.Wait()
 	return nil
 }
-
 
 // SubscribeToRedisKeyspaceEvents subscribes to redis keyspace events according to redis.conf settings
 func SubscribeToRedisKeyspaceEvents() {
@@ -2154,7 +2225,40 @@ func initializeProviderBalances(ctx context.Context, providers []*ent.ProviderPr
 func FetchProviderBalances() error {
 	ctx := context.Background()
 	startTime := time.Now()
-	balanceService := services.NewBalanceManagementService()
+	balanceService := balance.New()
+
+	logProviderBalanceHealth := func(providerID string, reason string, err error) {
+		balances, getErr := balanceService.GetProviderBalances(ctx, providerID)
+		if getErr != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderID": providerID,
+				"Reason":     reason,
+				"Error":      fmt.Sprintf("%v", err),
+				"GetError":   fmt.Sprintf("%v", getErr),
+			}).Errorf("Balance health check skipped: failed to load provider balances")
+			return
+		}
+
+		for _, bal := range balances {
+			report := balanceService.CheckBalanceHealth(bal)
+			if report == nil || report.Status == "HEALTHY" {
+				continue
+			}
+			logger.WithFields(logger.Fields{
+				"ProviderID":       report.ProviderID,
+				"CurrencyCode":     report.CurrencyCode,
+				"Status":           report.Status,
+				"Severity":         report.Severity,
+				"AvailableBalance": report.AvailableBalance.String(),
+				"ReservedBalance":  report.ReservedBalance.String(),
+				"TotalBalance":     report.TotalBalance.String(),
+				"Issues":           report.Issues,
+				"Recommendations":  report.Recommendations,
+				"Reason":           reason,
+				"Error":            fmt.Sprintf("%v", err),
+			}).Errorf("Provider balance health check flagged issues")
+		}
+	}
 
 	// Get all provider profiles
 	providers, err := storage.Client.ProviderProfile.
@@ -2201,12 +2305,12 @@ func FetchProviderBalances() error {
 
 			go func() {
 				defer wg.Done()
-				fiat, err1 = fetchProviderFiatBalances(p.ID)
+				fiat, err1 = balanceService.FetchProviderFiatBalances(ctx, p.ID)
 			}()
 
 			go func() {
 				defer wg.Done()
-				token, err2 = fetchProviderTokenBalances(p.ID)
+				token, err2 = balanceService.FetchProviderTokenBalances(ctx, p.ID)
 			}()
 
 			wg.Wait()
@@ -2228,15 +2332,18 @@ func FetchProviderBalances() error {
 		result := <-results
 		if result.err != nil {
 			logger.Errorf("Failed to fetch balances for provider %s: %v", result.providerID, result.err)
+			logProviderBalanceHealth(result.providerID, "fetch_failed", result.err)
 			errorCount++
 			continue
 		}
+		hadUpsertError := false
 		for currency, balance := range result.fiatBalances {
 			err := utils.Retry(3, 2*time.Second, func() error {
 				return balanceService.UpsertProviderFiatBalance(ctx, result.providerID, currency, balance)
 			})
 			if err != nil {
 				logger.Errorf("Failed to update fiat balance for provider %s currency %s: %v", result.providerID, currency, err)
+				hadUpsertError = true
 				errorCount++
 				continue
 			}
@@ -2248,10 +2355,14 @@ func FetchProviderBalances() error {
 			})
 			if err != nil {
 				logger.Errorf("Failed to update token balance for provider %s token %d: %v", result.providerID, tokenID, err)
+				hadUpsertError = true
 				errorCount++
 				continue
 			}
 			totalBalanceUpdates++
+		}
+		if hadUpsertError {
+			logProviderBalanceHealth(result.providerID, "upsert_failed", fmt.Errorf("one or more balance upserts failed"))
 		}
 		successCount++
 		logger.Infof("Successfully updated balances for provider %s", result.providerID)
@@ -2279,157 +2390,6 @@ func FetchProviderBalances() error {
 
 	return nil
 }
-
-// fetchProviderFiatBalances fetches fiat balances from the provider /info endpoint.
-func fetchProviderFiatBalances(providerID string) (map[string]*types.ProviderBalance, error) {
-	// Get provider with host identifier
-	provider, err := storage.Client.ProviderProfile.
-		Query().
-		Where(providerprofile.IDEQ(providerID)).
-		Only(context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get provider: %v", err)
-	}
-
-	// Check if provider has host identifier
-	if provider.HostIdentifier == "" {
-		return nil, fmt.Errorf("provider %s has no host identifier", providerID)
-	}
-
-	// Call provider /info endpoint without HMAC (endpoint doesn't require authentication)
-	res, err := fastshot.NewClient(provider.HostIdentifier).
-		Config().SetTimeout(30 * time.Second).
-		Build().GET("/info").
-		Send()
-	if err != nil {
-		return nil, fmt.Errorf("failed to call provider /info endpoint: %v", err)
-	}
-
-	// Parse JSON response
-	data, err := utils.ParseJSONResponse(res.RawResponse)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse response: %v", err)
-	}
-
-	// Parse the response data into ProviderInfoResponse using proper JSON unmarshaling
-	responseBytes, err := json.Marshal(data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal response data: %v", err)
-	}
-
-	var response types.ProviderInfoResponse
-	if err := json.Unmarshal(responseBytes, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response data: %v", err)
-	}
-
-	// Convert response to ProviderBalance map
-	balances := make(map[string]*types.ProviderBalance)
-
-	// Use totalBalances from response
-	for currency, balanceData := range response.Data.TotalBalances {
-		availableBalance, err := decimal.NewFromString(balanceData.AvailableBalance)
-		if err != nil {
-			logger.Warnf("Failed to parse available balance for %s: %v", currency, err)
-			continue
-		}
-		if availableBalance.IsNegative() {
-			logger.Errorf("Negative available balance for %s: %v", currency, availableBalance)
-			continue
-		}
-
-		totalBalance, err := decimal.NewFromString(balanceData.TotalBalance)
-		if err != nil {
-			logger.Warnf("Failed to parse total balance for %s: %v", currency, err)
-			continue
-		}
-		if totalBalance.IsNegative() {
-			logger.Errorf("Negative total balance for %s: %v", currency, totalBalance)
-			continue
-		}
-
-		balances[currency] = &types.ProviderBalance{
-			AvailableBalance: availableBalance,
-			TotalBalance:     totalBalance,
-			ReservedBalance:  decimal.Zero, // Provider doesn't track reserved balance
-			LastUpdated:      time.Now(),
-		}
-	}
-
-	// Sync payout_address from provider's walletAddress to all ProviderOrderToken records
-	if walletAddress := response.Data.ServiceInfo.WalletAddress; walletAddress != "" {
-		ctx := context.Background()
-		_, err := storage.Client.ProviderOrderToken.
-			Update().
-			Where(providerordertoken.HasProviderWith(providerprofile.IDEQ(providerID))).
-			SetPayoutAddress(walletAddress).
-			Save(ctx)
-		if err != nil {
-			logger.Warnf("Failed to sync payout_address for provider %s: %v", providerID, err)
-			// Don't return error - this is a non-critical update
-		} else {
-			logger.Debugf("Synced payout_address for provider %s: %s", providerID, walletAddress)
-		}
-	}
-
-	return balances, nil
-}
-
-// fetchProviderTokenBalances fetches on-chain token balances for a provider's ProviderOrderToken addresses.
-func fetchProviderTokenBalances(providerID string) (map[int]*types.ProviderBalance, error) {
-	ctx := context.Background()
-	pots, err := storage.Client.ProviderOrderToken.Query().
-		Where(
-			providerordertoken.HasProviderWith(providerprofile.IDEQ(providerID)),
-			providerordertoken.PayoutAddressNEQ(""),
-		).
-		WithToken(func(q *ent.TokenQuery) { q.WithNetwork() }).
-		All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query provider order tokens: %w", err)
-	}
-	balances := make(map[int]*types.ProviderBalance)
-	for _, pot := range pots {
-		tok := pot.Edges.Token
-		if tok == nil || tok.Edges.Network == nil {
-			continue
-		}
-		rpcEndpoint := tok.Edges.Network.RPCEndpoint
-		if rpcEndpoint == "" {
-			continue
-		}
-		raw, err := blockchainUtils.GetTokenBalance(rpcEndpoint, tok.ContractAddress, pot.PayoutAddress)
-		if err != nil {
-			logger.Warnf("Failed to fetch token balance for provider %s token %d: %v", providerID, tok.ID, err)
-			continue
-		}
-		// raw is in smallest units; convert using token decimals
-		dec := int32(tok.Decimals)
-		bal := decimal.NewFromBigInt(raw, -dec)
-		now := time.Now()
-
-		// Aggregate balances by token ID - multiple payout addresses for same token should be summed
-		if existing, exists := balances[tok.ID]; exists {
-			// Add to existing balance
-			existing.TotalBalance = existing.TotalBalance.Add(bal)
-			existing.AvailableBalance = existing.AvailableBalance.Add(bal)
-			existing.ReservedBalance = existing.ReservedBalance.Add(decimal.Zero) // ReservedBalance stays summed (zero in this case)
-			// Update LastUpdated to the newest timestamp
-			if now.After(existing.LastUpdated) {
-				existing.LastUpdated = now
-			}
-		} else {
-			// Create new entry
-			balances[tok.ID] = &types.ProviderBalance{
-				TotalBalance:     bal,
-				AvailableBalance: bal,
-				ReservedBalance:  decimal.Zero,
-				LastUpdated:      now,
-			}
-		}
-	}
-	return balances, nil
-}
-
 
 // StartCronJobs starts cron jobs
 func StartCronJobs() {
