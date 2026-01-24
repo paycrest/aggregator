@@ -433,15 +433,13 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	if serverConf.Environment == "production" || serverConf.Environment == "staging" {
-		// get sender api key from sender context
-		senderApiKey := sender.Edges.APIKey
 		
 		if payload.Recipient.Metadata == nil {
 			payload.Recipient.Metadata = make(map[string]interface{})
 		}
 		
 		// Add API key to metadata for encryption
-		payload.Recipient.Metadata["apiKey"] = senderApiKey.ID.String()
+		payload.Recipient.Metadata["apiKey"] = sender.Edges.APIKey.ID.String()
 
 		validationErr := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient)
 

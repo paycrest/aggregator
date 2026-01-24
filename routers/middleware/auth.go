@@ -84,7 +84,7 @@ func JWTMiddleware(c *gin.Context) {
 		if err != nil {
 			c.Set("sender", nil)
 		}
-		
+
 		c.Set("sender", senderProfile)
 	}
 

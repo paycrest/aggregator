@@ -904,7 +904,6 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 	}, nil
 }
 
-
 // getProviderRateFromRedis retrieves the provider's current rate from Redis queue
 func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal) (decimal.Decimal, bool) {
 	// Get redis keys for provision buckets for this currency
