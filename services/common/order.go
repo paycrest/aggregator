@@ -25,6 +25,7 @@ import (
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/balance"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -386,7 +387,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
 		// Only attempt balance operations if we have the required edge data
 		// Create a new balance service instance for this transaction
-		balanceService := svc.NewBalanceManagementService()
+		balanceService := balance.New()
 
 		providerID := paymentOrder.Edges.Provider.ID
 		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
@@ -521,7 +522,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
 		// Only attempt balance operations if we have the required edge data
 		// Create a new balance service instance for this transaction
-		balanceService := svc.NewBalanceManagementService()
+		balanceService := balance.New()
 
 		providerID := paymentOrder.Edges.Provider.ID
 		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code

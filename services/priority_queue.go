@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
+	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -30,13 +31,13 @@ var (
 )
 
 type PriorityQueueService struct {
-	balanceService *BalanceManagementService
+	balanceService *balance.Service
 }
 
 // NewPriorityQueueService creates a new instance of PriorityQueueService
 func NewPriorityQueueService() *PriorityQueueService {
 	return &PriorityQueueService{
-		balanceService: NewBalanceManagementService(),
+		balanceService: balance.New(),
 	}
 }
 
@@ -176,6 +177,66 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 		}
 
 		bucket.Edges.ProviderProfiles = availableProviders
+
+		// If no providers are eligible for this bucket, log balance health for a small sample of
+		// candidate providers to aid ops debugging (no new endpoints).
+		if len(bucket.Edges.ProviderProfiles) == 0 {
+			logger.WithFields(logger.Fields{
+				"BucketMinAmount": bucket.MinAmount,
+				"BucketMaxAmount": bucket.MaxAmount,
+				"Currency":        bucket.Edges.Currency.Code,
+			}).Warnf("No eligible providers found for bucket")
+
+			// Sample a few providers linked to this bucket (best effort; avoid heavy DB reads).
+			candidates, candErr := bucket.QueryProviderProfiles().
+				Where(
+					providerprofile.IsActive(true),
+					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
+					providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+				).
+				Limit(3).
+				All(ctx)
+			if candErr != nil {
+				continue
+			}
+
+			for _, p := range candidates {
+				bals, balErr := s.balanceService.GetProviderBalances(ctx, p.ID)
+				if balErr != nil {
+					logger.WithFields(logger.Fields{
+						"ProviderID": p.ID,
+						"Currency":   bucket.Edges.Currency.Code,
+						"Error":      fmt.Sprintf("%v", balErr),
+					}).Warnf("Balance health check: failed to load provider balances")
+					continue
+				}
+
+				for _, b := range bals {
+					// Only inspect the relevant fiat currency for this bucket.
+					if b.Edges.FiatCurrency == nil || b.Edges.FiatCurrency.Code != bucket.Edges.Currency.Code {
+						continue
+					}
+					report := s.balanceService.CheckBalanceHealth(b)
+					if report == nil || report.Status == "HEALTHY" {
+						continue
+					}
+					logger.WithFields(logger.Fields{
+						"ProviderID":       report.ProviderID,
+						"CurrencyCode":     report.CurrencyCode,
+						"Status":           report.Status,
+						"Severity":         report.Severity,
+						"AvailableBalance": report.AvailableBalance.String(),
+						"ReservedBalance":  report.ReservedBalance.String(),
+						"TotalBalance":     report.TotalBalance.String(),
+						"IsAvailable":      b.IsAvailable,
+						"Issues":           report.Issues,
+						"Recommendations":  report.Recommendations,
+						"BucketMinAmount":  bucket.MinAmount,
+						"BucketMaxAmount":  bucket.MaxAmount,
+					}).Errorf("Bucket provider candidate has unhealthy balance")
+				}
+			}
+		}
 	}
 
 	return buckets, nil
@@ -867,6 +928,27 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 		return err
 	}
 
+	// Persist order request metadata in a separate key so we can recover provider/currency/amount
+	// after the main order_request key expires (Redis expiry events fire after deletion).
+	metaKey := fmt.Sprintf("order_request_meta_%s", order.ID)
+	metaData := map[string]interface{}{
+		"amount":     orderRequestData["amount"],
+		"currency":   orderRequestData["currency"],
+		"providerId": orderRequestData["providerId"],
+	}
+	err = storage.RedisClient.HSet(ctx, metaKey, metaData).Err()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"MetaKey":    metaKey,
+		}).Errorf("Failed to persist order request metadata in Redis")
+		// Cleanup: delete the orphaned order request key before returning
+		_ = storage.RedisClient.Del(ctx, orderKey).Err()
+		return err
+	}
+
 	// Set a TTL for the order request
 	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity)).Err()
 	if err != nil {
@@ -874,7 +956,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"Error":    fmt.Sprintf("%v", err),
 			"OrderKey": orderKey,
 		}).Errorf("Failed to set TTL for order request")
-		// Cleanup: delete the orphaned key before returning
+		// Cleanup: delete the orphaned keys before returning
 		cleanupErr := storage.RedisClient.Del(ctx, orderKey).Err()
 		if cleanupErr != nil {
 			logger.WithFields(logger.Fields{
@@ -882,6 +964,22 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 				"OrderKey": orderKey,
 			}).Errorf("Failed to cleanup orderKey after ExpireAt failure")
 		}
+		_ = storage.RedisClient.Del(ctx, metaKey).Err()
+		return err
+	}
+
+	// Set TTL for metadata key longer than the order request key to ensure it exists during expiry handling.
+	err = storage.RedisClient.ExpireAt(ctx, metaKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"MetaKey":    metaKey,
+		}).Errorf("Failed to set TTL for order request metadata key")
+		// Cleanup: delete keys before returning
+		_ = storage.RedisClient.Del(ctx, orderKey).Err()
+		_ = storage.RedisClient.Del(ctx, metaKey).Err()
 		return err
 	}
 
@@ -894,7 +992,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 		}).Errorf("Failed to notify provider")
-		// Cleanup: delete the orphaned key before returning
+		// Cleanup: delete the orphaned keys before returning
 		cleanupErr := storage.RedisClient.Del(ctx, orderKey).Err()
 		if cleanupErr != nil {
 			logger.WithFields(logger.Fields{
@@ -902,6 +1000,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 				"OrderKey": orderKey,
 			}).Errorf("Failed to cleanup orderKey after notifyProvider failure")
 		}
+		_ = storage.RedisClient.Del(ctx, metaKey).Err()
 		return err
 	}
 
@@ -913,8 +1012,9 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 		}).Errorf("Failed to commit order processing transaction")
-		// Cleanup Redis key since DB transaction failed
+		// Cleanup Redis keys since DB transaction failed
 		_ = storage.RedisClient.Del(ctx, orderKey).Err()
+		_ = storage.RedisClient.Del(ctx, metaKey).Err()
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 

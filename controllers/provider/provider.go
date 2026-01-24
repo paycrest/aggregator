@@ -22,7 +22,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
-	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/balance"
 	orderService "github.com/paycrest/aggregator/services/order"
 	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
@@ -38,13 +38,13 @@ var orderConf = config.OrderConfig()
 
 // ProviderController is a controller type for provider endpoints
 type ProviderController struct {
-	balanceService *services.BalanceManagementService
+	balanceService *balance.Service
 }
 
 // NewProviderController creates a new instance of ProviderController with injected services
 func NewProviderController() *ProviderController {
 	return &ProviderController{
-		balanceService: services.NewBalanceManagementService(),
+		balanceService: balance.New(),
 	}
 }
 
@@ -566,6 +566,9 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		return
 	}
 
+	// Best-effort cleanup of metadata key used for timeout recovery.
+	_, _ = storage.RedisClient.Del(ctx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
+
 	// Delete order request from Redis
 	_, err = storage.RedisClient.Del(ctx, fmt.Sprintf("order_request_%s", orderID)).Result()
 	if err != nil {
@@ -741,6 +744,27 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusNotFound, "error", "Order request not found or is expired", nil)
 		return
 	}
+
+	// Best-effort: release reserved balance for declined order requests.
+	if currency := result["currency"]; currency != "" {
+		if amountStr := result["amount"]; amountStr != "" {
+			amt, amtErr := decimal.NewFromString(amountStr)
+			if amtErr == nil {
+				if relErr := ctrl.balanceService.ReleaseFiatBalance(ctx, provider.ID, currency, amt, nil); relErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", relErr),
+						"OrderID":    orderID.String(),
+						"ProviderID": provider.ID,
+						"Currency":   currency,
+						"Amount":     amountStr,
+					}).Warnf("DeclineOrder: failed to release reserved balance (best effort)")
+				}
+			}
+		}
+	}
+
+	// Best-effort cleanup of metadata key used for timeout recovery.
+	_, _ = storage.RedisClient.Del(ctx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
 
 	// Delete order request from Redis
 	_, err = storage.RedisClient.Del(ctx, fmt.Sprintf("order_request_%s", orderID)).Result()
@@ -1056,17 +1080,6 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			}).Errorf("failed to release reserved balance for fulfilled order")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			_ = tx.Rollback()
-			return
-		}
-
-		// Commit the transaction
-		if err := tx.Commit(); err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":   fmt.Sprintf("%v", err),
-				"Trx Id":  payload.TxID,
-				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
-			}).Errorf("Failed to commit transaction: %v", err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		}
 
@@ -1871,8 +1884,18 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 		return
 	}
 
-	// Update the balance using the provider ID from context
-	err = ctrl.balanceService.UpdateProviderFiatBalance(ctx, provider.ID, payload.Currency, availableBalance, totalBalance, reservedBalance)
+	// Provider-reported reservedBalance is ignored; ReservedBalance is managed internally by the aggregator.
+	// Keep parsing/validation for backwards compatibility with existing provider payloads.
+	if !reservedBalance.Equal(decimal.Zero) {
+		logger.WithFields(logger.Fields{
+			"ProviderID":      provider.ID,
+			"Currency":        payload.Currency,
+			"ReservedBalance": reservedBalance.String(),
+		}).Debugf("UpdateProviderBalance: ignoring provider-reported reservedBalance")
+	}
+
+	// Update the balance using the provider ID from context, preserving internal reservations.
+	err = ctrl.balanceService.UpdateProviderFiatBalanceFromProvider(ctx, provider.ID, payload.Currency, availableBalance, totalBalance)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
