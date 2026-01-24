@@ -1037,11 +1037,11 @@ func validateAndPreparePaymentOrderData(
 			_, err := getSenderProfileFromAPIKey(ctx, senderAPIKey)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"error":   err,
+					"error":    err,
 					"order_id": event.OrderId,
 				}).Infof("Failed to retrieve sender profile from API key in metadata")
-			}				
-			//{ TODO: Enforce KYB status checks here in the future if needed
+			}
+			// TODO: Enforce KYB status checks here in the future if needed
 			// Example enforcement:
 			// if serverConf.Environment == "production" && kybStatus != user.KybVerificationStatusApproved {
 			//     return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(
@@ -1049,7 +1049,7 @@ func validateAndPreparePaymentOrderData(
 			//         "Sender KYB verification not approved",
 			//         refundOrder, existingOrder,
 			//     )
-			// }}
+			// }
 		}
 	}
 
@@ -1312,50 +1312,50 @@ func createBasicPaymentOrderAndCancel(
 }
 
 // getSenderProfileFromAPIKey retrieves the sender profile associated with the given API key UUID.
-func getSenderProfileFromAPIKey(ctx context.Context, apiKeyUUID uuid.UUID) (*ent.SenderProfile, error) {  
-    // Query the API key and load the sender profile relationship
-    apiKey, err := db.Client.APIKey.
-        Query().
-        Where(apikey.IDEQ(apiKeyUUID)).
-		WithSenderProfile(func(spq *ent.SenderProfileQuery) {  
-			spq.WithUser() // Load User edge for KYB status if needed in the future  
+func getSenderProfileFromAPIKey(ctx context.Context, apiKeyUUID uuid.UUID) (*ent.SenderProfile, error) {
+	// Query the API key and load the sender profile relationship
+	apiKey, err := db.Client.APIKey.
+		Query().
+		Where(apikey.IDEQ(apiKeyUUID)).
+		WithSenderProfile(func(spq *ent.SenderProfileQuery) {
+			spq.WithUser() // Load User edge for KYB status if needed in the future
 		}).
-        Only(ctx)
-    
-    if err != nil {
-        if ent.IsNotFound(err) {
-            return nil, fmt.Errorf("API key not found")
-        }
-        return nil, fmt.Errorf("failed to find API key: %w", err)
-    }
-    
-    if apiKey.Edges.SenderProfile == nil {
-        return nil, fmt.Errorf("API key has no associated sender profile")
-    }
-    
-    return apiKey.Edges.SenderProfile, nil
+		Only(ctx)
+
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("API key not found")
+		}
+		return nil, fmt.Errorf("failed to find API key: %w", err)
+	}
+
+	if apiKey.Edges.SenderProfile == nil {
+		return nil, fmt.Errorf("API key has no associated sender profile")
+	}
+
+	return apiKey.Edges.SenderProfile, nil
 }
 
 // getAPIKeyFromMetadata extracts and validates the API key UUID from the given metadata map.
 func getAPIKeyFromMetadata(metadata map[string]interface{}) (uuid.UUID, error) {
-    if metadata == nil {
-        return uuid.Nil, nil
-    }
-    
-    apiKey, ok := metadata["apiKey"]
-    if !ok {
-        return uuid.Nil, nil
-    }
-    
-    apiKeyStr, ok := apiKey.(string)
-    if !ok {
-        return uuid.Nil, fmt.Errorf("invalid apiKey type (expected string)")
-    }
-    
-    apiKeyUUID, err := uuid.Parse(apiKeyStr)
-    if err != nil {
-        return uuid.Nil, fmt.Errorf("invalid apiKey format: %w", err)
-    }
-    
-    return apiKeyUUID, nil
+	if metadata == nil {
+		return uuid.Nil, nil
+	}
+
+	apiKey, ok := metadata["apiKey"]
+	if !ok {
+		return uuid.Nil, nil
+	}
+
+	apiKeyStr, ok := apiKey.(string)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("invalid apiKey type (expected string)")
+	}
+
+	apiKeyUUID, err := uuid.Parse(apiKeyStr)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid apiKey format: %w", err)
+	}
+
+	return apiKeyUUID, nil
 }
