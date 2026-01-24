@@ -79,6 +79,7 @@ func JWTMiddleware(c *gin.Context) {
 			Query().
 			Where(senderprofile.HasUserWith(user.IDEQ(userUUID))).
 			WithOrderTokens().
+			WithAPIKey().
 			Only(c)
 		if err != nil {
 			c.Set("sender", nil)
