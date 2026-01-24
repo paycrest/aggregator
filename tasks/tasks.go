@@ -40,6 +40,7 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
+	blockchainUtils "github.com/paycrest/aggregator/utils/blockchain"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
@@ -1455,7 +1456,7 @@ func ProcessExpiredOrdersRefunds() error {
 			}
 
 			// Check balance of token at receive address
-			balance, err := getTokenBalance(rpcEndpoint, tokenContract, receiveAddress)
+			balance, err := blockchainUtils.GetTokenBalance(rpcEndpoint, tokenContract, receiveAddress)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":             err.Error(),
@@ -1507,25 +1508,6 @@ func ProcessExpiredOrdersRefunds() error {
 	return nil
 }
 
-func getTokenBalance(rpcEndpoint string, tokenContractAddress string, walletAddress string) (*big.Int, error) {
-	client, err := ethclient.Dial(rpcEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create RPC client: %w", err)
-	}
-	defer client.Close()
-
-	tokenContract, err := contracts.NewERC20Token(ethcommon.HexToAddress(tokenContractAddress), client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create token contract instance: %w", err)
-	}
-
-	balance, err := tokenContract.BalanceOf(nil, ethcommon.HexToAddress(walletAddress))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get token balance: %w", err)
-	}
-
-	return balance, nil
-}
 
 // SubscribeToRedisKeyspaceEvents subscribes to redis keyspace events according to redis.conf settings
 func SubscribeToRedisKeyspaceEvents() {
@@ -2415,7 +2397,7 @@ func fetchProviderTokenBalances(providerID string) (map[int]*types.ProviderBalan
 		if rpcEndpoint == "" {
 			continue
 		}
-		raw, err := getTokenBalance(rpcEndpoint, tok.ContractAddress, pot.PayoutAddress)
+		raw, err := blockchainUtils.GetTokenBalance(rpcEndpoint, tok.ContractAddress, pot.PayoutAddress)
 		if err != nil {
 			logger.Warnf("Failed to fetch token balance for provider %s token %d: %v", providerID, tok.ID, err)
 			continue

@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"net/http"
@@ -1881,6 +1882,18 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update balance", nil)
 		return
 	}
+
+	// Trigger async token balance fetch when fiat balance is updated
+	// This ensures token balances stay current when providers are actively updating fiat balances
+	go func() {
+		err := ctrl.balanceService.FetchAndUpdateProviderTokenBalances(context.Background(), provider.ID)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"ProviderID": provider.ID,
+			}).Warnf("Failed to fetch token balances after fiat balance update")
+		}
+	}()
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Balance updated successfully", nil)
 }
