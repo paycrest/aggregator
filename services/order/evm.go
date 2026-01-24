@@ -62,7 +62,9 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
-		WithSenderProfile().
+		WithSenderProfile(func(sq *ent.SenderProfileQuery) {
+			sq.WithAPIKey()
+		}).
 		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.fetchOrder: %w", orderIDPrefix, err)
@@ -78,6 +80,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	// Create createOrder data
+	order.Metadata["apiKey"] = order.Edges.SenderProfile.Edges.APIKey.ID.String()
 	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.encryptOrderRecipient: %w", orderIDPrefix, err)
