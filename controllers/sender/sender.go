@@ -433,32 +433,22 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	if serverConf.Environment == "production" || serverConf.Environment == "staging" {
-		
+
 		if payload.Recipient.Metadata == nil {
 			payload.Recipient.Metadata = make(map[string]interface{})
 		}
-		
-if serverConf.Environment == "production" || serverConf.Environment == "staging" {
-	
-	if payload.Recipient.Metadata == nil {
-		payload.Recipient.Metadata = make(map[string]interface{})
-	}
-	
-	// Only add API key to metadata if sender has an associated API key
-	if sender.Edges.APIKey != nil {
-		payload.Recipient.Metadata["apiKey"] = sender.Edges.APIKey.ID.String()
-	}
 
-	validationErr := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient)
-
-	if sender.Edges.APIKey != nil {
-		delete(payload.Recipient.Metadata, "apiKey")
-	}
+		// Only add API key to metadata if sender has an associated API key
+		if sender.Edges.APIKey != nil {
+			payload.Recipient.Metadata["apiKey"] = sender.Edges.APIKey.ID.String()
+		}
 
 		validationErr := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient)
 
-		delete(payload.Recipient.Metadata, "apiKey")
-    
+		if sender.Edges.APIKey != nil {
+			delete(payload.Recipient.Metadata, "apiKey")
+		}
+
 		// Now check validation result
 		if validationErr != nil {
 			logger.WithFields(logger.Fields{
