@@ -437,6 +437,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		if payload.Recipient.Metadata == nil {
 			payload.Recipient.Metadata = make(map[string]interface{})
 		}
+		// Always remove any user-supplied apiKey to prevent spoofing
+		delete(payload.Recipient.Metadata, "apiKey")
 
 		// Only add API key to metadata if sender has an associated API key
 		if sender.Edges.APIKey != nil {
@@ -445,9 +447,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 
 		validationErr := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient)
 
-		if sender.Edges.APIKey != nil {
-			delete(payload.Recipient.Metadata, "apiKey")
-		}
+		// Remove internal apiKey after validation (it should not be persisted in clear form)
+		delete(payload.Recipient.Metadata, "apiKey")
 
 		// Now check validation result
 		if validationErr != nil {
