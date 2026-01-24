@@ -80,6 +80,13 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	// Create createOrder data
+	if order.Metadata == nil {
+		// Use the correct map type for order.Metadata
+		order.Metadata = map[string]interface{}{}
+	}
+	if order.Edges.SenderProfile == nil || order.Edges.SenderProfile.Edges.APIKey == nil {
+		return fmt.Errorf("%s - CreateOrder.missingAPIKey: sender profile API key not found", orderIDPrefix)
+	}
 	order.Metadata["apiKey"] = order.Edges.SenderProfile.Edges.APIKey.ID.String()
 	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order)
 	if err != nil {
