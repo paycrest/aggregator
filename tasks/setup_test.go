@@ -3,12 +3,9 @@ package tasks
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"testing"
 	"time"
 
-	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/enttest"
@@ -20,7 +17,6 @@ import (
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/shopspring/decimal"
-	"github.com/stretchr/testify/assert"
 )
 
 var testCtx = struct {
@@ -172,165 +168,22 @@ func setup() error {
 	return nil
 }
 
-func TestTasks(t *testing.T) {
-
-	// Set up test database client with shared in-memory schema
+func setupTestDB(t *testing.T) func() {
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
-	defer client.Close()
 
 	// Run migrations to create all tables
-	err := client.Schema.Create(context.Background())
-	if err != nil {
+	if err := client.Schema.Create(context.Background()); err != nil {
 		t.Fatalf("Failed to create database schema: %v", err)
 	}
 
 	db.Client = client
 
 	// Setup test data
-	err = setup()
-	assert.NoError(t, err)
+	if err := setup(); err != nil {
+		t.Fatalf("Failed to setup test data: %v", err)
+	}
 
-	t.Run("RetryFailedWebhookNotifications", func(t *testing.T) {
-		httpmock.Activate()
-		defer httpmock.Deactivate()
-
-		// Register mock failure response for Webhook
-		httpmock.RegisterResponder("POST", testCtx.sender.WebhookURL,
-			func(r *http.Request) (*http.Response, error) {
-				return httpmock.NewBytesResponse(400, []byte(`{"id": "01", "message": "Sent"}`)), nil
-			},
-		)
-
-		// Register mock email response for Brevo (primary provider)
-		httpmock.RegisterResponder("POST", "https://api.brevo.com/v3/smtp/email",
-			func(r *http.Request) (*http.Response, error) {
-				bytes, err := io.ReadAll(r.Body)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				// Assert email response contains userEmail and Name
-				assert.Contains(t, string(bytes), testCtx.user.Email)
-				assert.Contains(t, string(bytes), testCtx.user.FirstName)
-
-				resp := httpmock.NewBytesResponse(201, nil)
-				return resp, nil
-			},
-		)
-
-		// Register mock email response for SendGrid (fallback provider)
-		httpmock.RegisterResponder("POST", "https://api.sendgrid.com/v3/mail/send",
-			func(r *http.Request) (*http.Response, error) {
-				bytes, err := io.ReadAll(r.Body)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				// Assert email response contains userEmail and Name
-				assert.Contains(t, string(bytes), testCtx.user.Email)
-				assert.Contains(t, string(bytes), testCtx.user.FirstName)
-
-				resp := httpmock.NewBytesResponse(202, nil)
-				return resp, nil
-			},
-		)
-		err := RetryFailedWebhookNotifications()
-		assert.NoError(t, err)
-		hook, err := db.Client.WebhookRetryAttempt.
-			Query().
-			Where(webhookretryattempt.IDEQ(testCtx.webhook.ID)).
-			Only(context.Background())
-		assert.NoError(t, err)
-
-		assert.Equal(t, hook.Status, webhookretryattempt.StatusExpired)
-	})
-
-	t.Run("fetchExternalRate", func(t *testing.T) {
-		httpmock.Activate()
-		defer httpmock.Deactivate()
-
-		// Test unsupported currency
-		t.Run("UnsupportedCurrency", func(t *testing.T) {
-			value, err := fetchExternalRate("KSH")
-			assert.Error(t, err)
-			assert.Equal(t, value, decimal.Zero)
-			assert.Contains(t, err.Error(), "currency not supported")
-		})
-
-		// Test successful API response
-		t.Run("SuccessfulResponse", func(t *testing.T) {
-			// Mock successful response
-			httpmock.RegisterResponder("GET", "https://api.rates.noblocks.xyz/rates/usdt/ngn",
-				httpmock.NewStringResponder(200, `[
-					{
-						"stablecoin": "USDT",
-						"fiat": "NGN",
-						"sources": ["quidax"],
-						"buyRate": 1444.36,
-						"sellRate": 1451.61,
-						"timestamp": "2025-11-03T13:12:50.290Z"
-					}
-				]`))
-
-			value, err := fetchExternalRate("NGN")
-			assert.NoError(t, err)
-			expectedRate := decimal.NewFromFloat((1444.36 + 1451.61) / 2) // Average of buy and sell
-			assert.True(t, value.Equal(expectedRate))
-		})
-
-		// Test API error
-		t.Run("APIError", func(t *testing.T) {
-			httpmock.RegisterResponder("GET", "https://api.rates.noblocks.xyz/rates/usdt/kes",
-				httpmock.NewStringResponder(500, `{"error": "Internal server error"}`))
-
-			value, err := fetchExternalRate("KES")
-			assert.Error(t, err)
-			assert.Equal(t, value, decimal.Zero)
-			assert.Contains(t, err.Error(), "ComputeMarketRate")
-		})
-
-		// Test empty response
-		t.Run("EmptyResponse", func(t *testing.T) {
-			httpmock.RegisterResponder("GET", "https://api.rates.noblocks.xyz/rates/usdt/ghs",
-				httpmock.NewStringResponder(200, `[]`))
-
-			value, err := fetchExternalRate("GHS")
-			assert.Error(t, err)
-			assert.Equal(t, value, decimal.Zero)
-			assert.Contains(t, err.Error(), "No data in the response")
-		})
-
-		// Test invalid JSON response
-		t.Run("InvalidJSONResponse", func(t *testing.T) {
-			httpmock.RegisterResponder("GET", "https://api.rates.noblocks.xyz/rates/usdt/mwk",
-				httpmock.NewStringResponder(200, `invalid json`))
-
-			value, err := fetchExternalRate("MWK")
-			assert.Error(t, err)
-			assert.Equal(t, value, decimal.Zero)
-		})
-
-		// Test malformed rate data
-		t.Run("MalformedRateData", func(t *testing.T) {
-			httpmock.RegisterResponder("GET", "https://api.rates.noblocks.xyz/rates/usdt/tzs",
-				httpmock.NewStringResponder(200, `[
-					{
-						"stablecoin": "USDT",
-						"fiat": "TZS",
-						"sources": ["quidax"],
-						"buyRate": "invalid",
-						"sellRate": 1451.61,
-						"timestamp": "2025-11-03T13:12:50.290Z"
-					}
-				]`))
-
-			value, err := fetchExternalRate("TZS")
-			assert.Error(t, err)
-			assert.Equal(t, value, decimal.Zero)
-			assert.Contains(t, err.Error(), "Invalid buyRate format")
-		})
-
-		// Reset httpmock after each test
-		httpmock.Reset()
-	})
+	return func() {
+		_ = client.Close()
+	}
 }

@@ -51,11 +51,9 @@ func main() {
 	// 	logger.Errorf("FixDatabaseMishap: %v", err)
 	// }
 
-	// Fetch provider balances
-	err = tasks.FetchProviderBalances()
-	if err != nil {
-		logger.Errorf("Failed to fetch provider balances: %v", err)
-	}
+	// Start initial provider balances warmup asynchronously (readiness-gated).
+	// Sender order creation will return 503 until warmup completes.
+	tasks.StartProviderBalancesWarmup()
 
 	// Initialize Redis
 	if err := storage.InitializeRedis(); err != nil {
