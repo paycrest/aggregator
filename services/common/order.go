@@ -116,8 +116,18 @@ func ProcessPaymentOrderFromBlockchain(
 		}
 	}
 
+	logger.WithFields(logger.Fields{
+		"ExistingOrderWithMessageHash": existingOrderWithMessageHash,
+	}).Infof("Existing order with message hash")
+
 	// Validate and prepare payment order data (pass existing order so it can be used if cancellation is needed)
 	paymentOrderFields, _, _, _, _, err := validateAndPreparePaymentOrderData(ctx, network, event, refundOrder, existingOrderWithMessageHash)
+	
+	logger.WithFields(logger.Fields{
+		"PaymentOrderFields": paymentOrderFields,
+		"Err": err,
+	}).Infof("Validate and prepare payment order data")
+	
 	if err != nil {
 		return err
 	}
@@ -1060,6 +1070,10 @@ func validateAndPreparePaymentOrderData(
 		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Institution lookup failed", refundOrder, existingOrder)
 	}
 
+	logger.WithFields(logger.Fields{
+		"Institution": institution,
+	}).Infof("Institution lookup successful")
+
 	// Get currency
 	currency, err := db.Client.FiatCurrency.
 		Query().
@@ -1072,9 +1086,19 @@ func validateAndPreparePaymentOrderData(
 		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Currency lookup failed", refundOrder, existingOrder)
 	}
 
+	logger.WithFields(logger.Fields{
+		"Currency": currency,
+	}).Infof("Currency lookup successful")
+
 	// Adjust amounts for token decimals
 	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 	event.ProtocolFee = event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
+
+	logger.WithFields(logger.Fields{
+		"Amount":   event.Amount,
+		"ProtocolFee": event.ProtocolFee,
+		"Decimals": token.Decimals,
+	}).Infof("Adjusted amounts for token decimals")
 
 	// Get provision bucket
 	provisionBucket, isLessThanMin, err := GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
@@ -1118,6 +1142,11 @@ func validateAndPreparePaymentOrderData(
 		}
 		return nil, nil, nil, nil, nil, nil
 	}
+	
+	logger.WithFields(logger.Fields{
+		"PaymentOrderFields": paymentOrderFields,
+		"ProvisonBucket": provisionBucket,
+	}).Infof("Payment order fields")
 
 	// Validate rate
 	rateResult, rateErr := utils.ValidateRate(
@@ -1168,6 +1197,13 @@ func validateAndPreparePaymentOrderData(
 	// Handle private order checks
 	isPrivate := false
 	if paymentOrderFields.ProviderID != "" {
+		logger.WithFields(logger.Fields{
+			"ProviderID": paymentOrderFields.ProviderID,
+			"Network": token.Edges.Network.Identifier,
+			"Token": token.ID,
+			"Currency": institution.Edges.FiatCurrency.Code,
+		}).Infof("Checking private order")
+
 		orderToken, err := db.Client.ProviderOrderToken.
 			Query().
 			Where(
@@ -1208,6 +1244,11 @@ func validateAndPreparePaymentOrderData(
 			isPrivate = true
 		}
 	}
+
+	logger.WithFields(logger.Fields{
+		"IsPrivate": isPrivate,
+		"ProvisionBucket": provisionBucket,
+	}).Infof("Checking if private order")
 
 	if provisionBucket == nil && !isPrivate {
 		err := HandleCancellation(ctx, nil, paymentOrderFields, "Amount is larger than the maximum bucket", refundOrder)
