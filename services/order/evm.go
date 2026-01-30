@@ -158,6 +158,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
 			paymentorder.StatusNEQ(paymentorder.StatusSettled),
 			paymentorder.StatusNEQ(paymentorder.StatusFulfilling),
+			paymentorder.StatusNEQ(paymentorder.StatusSettling),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
