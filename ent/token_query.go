@@ -15,6 +15,7 @@ import (
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/token"
@@ -31,6 +32,7 @@ type TokenQuery struct {
 	withPaymentOrders       *PaymentOrderQuery
 	withSenderOrderTokens   *SenderOrderTokenQuery
 	withProviderOrderTokens *ProviderOrderTokenQuery
+	withProviderBalances    *ProviderBalancesQuery
 	withFKs                 bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -149,6 +151,28 @@ func (_q *TokenQuery) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
 			sqlgraph.From(token.Table, token.FieldID, selector),
 			sqlgraph.To(providerordertoken.Table, providerordertoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, token.ProviderOrderTokensTable, token.ProviderOrderTokensColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProviderBalances chains the current query on the "provider_balances" edge.
+func (_q *TokenQuery) QueryProviderBalances() *ProviderBalancesQuery {
+	query := (&ProviderBalancesClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(token.Table, token.FieldID, selector),
+			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, token.ProviderBalancesTable, token.ProviderBalancesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -352,6 +376,7 @@ func (_q *TokenQuery) Clone() *TokenQuery {
 		withPaymentOrders:       _q.withPaymentOrders.Clone(),
 		withSenderOrderTokens:   _q.withSenderOrderTokens.Clone(),
 		withProviderOrderTokens: _q.withProviderOrderTokens.Clone(),
+		withProviderBalances:    _q.withProviderBalances.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -399,6 +424,17 @@ func (_q *TokenQuery) WithProviderOrderTokens(opts ...func(*ProviderOrderTokenQu
 		opt(query)
 	}
 	_q.withProviderOrderTokens = query
+	return _q
+}
+
+// WithProviderBalances tells the query-builder to eager-load the nodes that are connected to
+// the "provider_balances" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TokenQuery) WithProviderBalances(opts ...func(*ProviderBalancesQuery)) *TokenQuery {
+	query := (&ProviderBalancesClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withProviderBalances = query
 	return _q
 }
 
@@ -481,11 +517,12 @@ func (_q *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 		nodes       = []*Token{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withNetwork != nil,
 			_q.withPaymentOrders != nil,
 			_q.withSenderOrderTokens != nil,
 			_q.withProviderOrderTokens != nil,
+			_q.withProviderBalances != nil,
 		}
 	)
 	if _q.withNetwork != nil {
@@ -538,6 +575,13 @@ func (_q *TokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Token,
 			func(n *Token, e *ProviderOrderToken) {
 				n.Edges.ProviderOrderTokens = append(n.Edges.ProviderOrderTokens, e)
 			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withProviderBalances; query != nil {
+		if err := _q.loadProviderBalances(ctx, query, nodes,
+			func(n *Token) { n.Edges.ProviderBalances = []*ProviderBalances{} },
+			func(n *Token, e *ProviderBalances) { n.Edges.ProviderBalances = append(n.Edges.ProviderBalances, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -664,6 +708,37 @@ func (_q *TokenQuery) loadProviderOrderTokens(ctx context.Context, query *Provid
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "token_provider_order_tokens" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TokenQuery) loadProviderBalances(ctx context.Context, query *ProviderBalancesQuery, nodes []*Token, init func(*Token), assign func(*Token, *ProviderBalances)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Token)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProviderBalances(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(token.ProviderBalancesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.token_provider_balances
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "token_provider_balances" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "token_provider_balances" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

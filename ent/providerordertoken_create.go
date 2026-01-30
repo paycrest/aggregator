@@ -103,16 +103,30 @@ func (_c *ProviderOrderTokenCreate) SetRateSlippage(v decimal.Decimal) *Provider
 	return _c
 }
 
-// SetAddress sets the "address" field.
-func (_c *ProviderOrderTokenCreate) SetAddress(v string) *ProviderOrderTokenCreate {
-	_c.mutation.SetAddress(v)
+// SetSettlementAddress sets the "settlement_address" field.
+func (_c *ProviderOrderTokenCreate) SetSettlementAddress(v string) *ProviderOrderTokenCreate {
+	_c.mutation.SetSettlementAddress(v)
 	return _c
 }
 
-// SetNillableAddress sets the "address" field if the given value is not nil.
-func (_c *ProviderOrderTokenCreate) SetNillableAddress(v *string) *ProviderOrderTokenCreate {
+// SetNillableSettlementAddress sets the "settlement_address" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillableSettlementAddress(v *string) *ProviderOrderTokenCreate {
 	if v != nil {
-		_c.SetAddress(*v)
+		_c.SetSettlementAddress(*v)
+	}
+	return _c
+}
+
+// SetPayoutAddress sets the "payout_address" field.
+func (_c *ProviderOrderTokenCreate) SetPayoutAddress(v string) *ProviderOrderTokenCreate {
+	_c.mutation.SetPayoutAddress(v)
+	return _c
+}
+
+// SetNillablePayoutAddress sets the "payout_address" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillablePayoutAddress(v *string) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetPayoutAddress(*v)
 	}
 	return _c
 }
@@ -317,9 +331,13 @@ func (_c *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgraph
 		_spec.SetField(providerordertoken.FieldRateSlippage, field.TypeFloat64, value)
 		_node.RateSlippage = value
 	}
-	if value, ok := _c.mutation.Address(); ok {
-		_spec.SetField(providerordertoken.FieldAddress, field.TypeString, value)
-		_node.Address = value
+	if value, ok := _c.mutation.SettlementAddress(); ok {
+		_spec.SetField(providerordertoken.FieldSettlementAddress, field.TypeString, value)
+		_node.SettlementAddress = value
+	}
+	if value, ok := _c.mutation.PayoutAddress(); ok {
+		_spec.SetField(providerordertoken.FieldPayoutAddress, field.TypeString, value)
+		_node.PayoutAddress = value
 	}
 	if value, ok := _c.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
@@ -578,21 +596,39 @@ func (u *ProviderOrderTokenUpsert) AddRateSlippage(v decimal.Decimal) *ProviderO
 	return u
 }
 
-// SetAddress sets the "address" field.
-func (u *ProviderOrderTokenUpsert) SetAddress(v string) *ProviderOrderTokenUpsert {
-	u.Set(providerordertoken.FieldAddress, v)
+// SetSettlementAddress sets the "settlement_address" field.
+func (u *ProviderOrderTokenUpsert) SetSettlementAddress(v string) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldSettlementAddress, v)
 	return u
 }
 
-// UpdateAddress sets the "address" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsert) UpdateAddress() *ProviderOrderTokenUpsert {
-	u.SetExcluded(providerordertoken.FieldAddress)
+// UpdateSettlementAddress sets the "settlement_address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateSettlementAddress() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldSettlementAddress)
 	return u
 }
 
-// ClearAddress clears the value of the "address" field.
-func (u *ProviderOrderTokenUpsert) ClearAddress() *ProviderOrderTokenUpsert {
-	u.SetNull(providerordertoken.FieldAddress)
+// ClearSettlementAddress clears the value of the "settlement_address" field.
+func (u *ProviderOrderTokenUpsert) ClearSettlementAddress() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldSettlementAddress)
+	return u
+}
+
+// SetPayoutAddress sets the "payout_address" field.
+func (u *ProviderOrderTokenUpsert) SetPayoutAddress(v string) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldPayoutAddress, v)
+	return u
+}
+
+// UpdatePayoutAddress sets the "payout_address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdatePayoutAddress() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldPayoutAddress)
+	return u
+}
+
+// ClearPayoutAddress clears the value of the "payout_address" field.
+func (u *ProviderOrderTokenUpsert) ClearPayoutAddress() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldPayoutAddress)
 	return u
 }
 
@@ -828,24 +864,45 @@ func (u *ProviderOrderTokenUpsertOne) UpdateRateSlippage() *ProviderOrderTokenUp
 	})
 }
 
-// SetAddress sets the "address" field.
-func (u *ProviderOrderTokenUpsertOne) SetAddress(v string) *ProviderOrderTokenUpsertOne {
+// SetSettlementAddress sets the "settlement_address" field.
+func (u *ProviderOrderTokenUpsertOne) SetSettlementAddress(v string) *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetAddress(v)
+		s.SetSettlementAddress(v)
 	})
 }
 
-// UpdateAddress sets the "address" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertOne) UpdateAddress() *ProviderOrderTokenUpsertOne {
+// UpdateSettlementAddress sets the "settlement_address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateSettlementAddress() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateAddress()
+		s.UpdateSettlementAddress()
 	})
 }
 
-// ClearAddress clears the value of the "address" field.
-func (u *ProviderOrderTokenUpsertOne) ClearAddress() *ProviderOrderTokenUpsertOne {
+// ClearSettlementAddress clears the value of the "settlement_address" field.
+func (u *ProviderOrderTokenUpsertOne) ClearSettlementAddress() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.ClearAddress()
+		s.ClearSettlementAddress()
+	})
+}
+
+// SetPayoutAddress sets the "payout_address" field.
+func (u *ProviderOrderTokenUpsertOne) SetPayoutAddress(v string) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetPayoutAddress(v)
+	})
+}
+
+// UpdatePayoutAddress sets the "payout_address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdatePayoutAddress() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdatePayoutAddress()
+	})
+}
+
+// ClearPayoutAddress clears the value of the "payout_address" field.
+func (u *ProviderOrderTokenUpsertOne) ClearPayoutAddress() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearPayoutAddress()
 	})
 }
 
@@ -1249,24 +1306,45 @@ func (u *ProviderOrderTokenUpsertBulk) UpdateRateSlippage() *ProviderOrderTokenU
 	})
 }
 
-// SetAddress sets the "address" field.
-func (u *ProviderOrderTokenUpsertBulk) SetAddress(v string) *ProviderOrderTokenUpsertBulk {
+// SetSettlementAddress sets the "settlement_address" field.
+func (u *ProviderOrderTokenUpsertBulk) SetSettlementAddress(v string) *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetAddress(v)
+		s.SetSettlementAddress(v)
 	})
 }
 
-// UpdateAddress sets the "address" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertBulk) UpdateAddress() *ProviderOrderTokenUpsertBulk {
+// UpdateSettlementAddress sets the "settlement_address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateSettlementAddress() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateAddress()
+		s.UpdateSettlementAddress()
 	})
 }
 
-// ClearAddress clears the value of the "address" field.
-func (u *ProviderOrderTokenUpsertBulk) ClearAddress() *ProviderOrderTokenUpsertBulk {
+// ClearSettlementAddress clears the value of the "settlement_address" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearSettlementAddress() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.ClearAddress()
+		s.ClearSettlementAddress()
+	})
+}
+
+// SetPayoutAddress sets the "payout_address" field.
+func (u *ProviderOrderTokenUpsertBulk) SetPayoutAddress(v string) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetPayoutAddress(v)
+	})
+}
+
+// UpdatePayoutAddress sets the "payout_address" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdatePayoutAddress() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdatePayoutAddress()
+	})
+}
+
+// ClearPayoutAddress clears the value of the "payout_address" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearPayoutAddress() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearPayoutAddress()
 	})
 }
 

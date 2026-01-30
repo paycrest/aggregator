@@ -8,6 +8,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
+	explorer "github.com/paycrest/aggregator/services/explorer"
 	"github.com/paycrest/aggregator/services/order"
 	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/types"
@@ -21,7 +22,7 @@ import (
 type IndexerStarknet struct {
 	priorityQueue  *services.PriorityQueueService
 	order          types.OrderService
-	voyagerService *services.VoyagerService
+	voyagerService *explorer.VoyagerService
 }
 
 // NewIndexerStarknet creates a new instance of IndexerStarknet
@@ -34,7 +35,7 @@ func NewIndexerStarknet() (types.Indexer, error) {
 	orderService := order.NewOrderStarknet(client)
 
 	// Create Voyager service for read operations (with RPC fallback)
-	voyagerService, err := services.NewVoyagerService()
+	voyagerService, err := explorer.NewVoyagerService()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Voyager service: %w", err)
 	}
@@ -84,7 +85,7 @@ func (s *IndexerStarknet) IndexReceiveAddress(ctx context.Context, token *ent.To
 			return eventCounts, fmt.Errorf("failed to get token transfers for token %s: %w", token.Symbol, err)
 		}
 		for _, transfer := range transfers {
-			transformed := services.TransformVoyagerTransferToRPCFormat(transfer)
+			transformed := explorer.TransformVoyagerTransferToRPCFormat(transfer)
 			if transformed == nil {
 				logger.WithFields(logger.Fields{
 					"Token":       token.Symbol,
@@ -446,7 +447,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			if !ok {
 				continue
 			}
-			
+
 			indexedParams, ok := eventParams["indexed_params"].(map[string]interface{})
 			if !ok || indexedParams == nil {
 				logger.Errorf("Missing or invalid 'indexed_params' in OrderRefunded event")
@@ -561,7 +562,7 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 		}
 
 		for _, event := range events {
-			transformed, err := services.TransformVoyagerEventToRPCFormat(event)
+			transformed, err := explorer.TransformVoyagerEventToRPCFormat(event)
 			if err != nil {
 				logger.Errorf("Failed to transform Gateway Voyager event to RPC format: %v", err)
 				continue
@@ -715,7 +716,7 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 		}
 
 		rebatePercent, ok := nonIndexedParams["rebate_percent"].(decimal.Decimal)
-		if !ok  {
+		if !ok {
 			continue
 		}
 

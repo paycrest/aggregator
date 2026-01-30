@@ -62,7 +62,9 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
-		WithSenderProfile().
+		WithSenderProfile(func(sq *ent.SenderProfileQuery) {
+			sq.WithAPIKey()
+		}).
 		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.fetchOrder: %w", orderIDPrefix, err)
@@ -78,6 +80,14 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	// Create createOrder data
+	if order.Metadata == nil {
+		// Use the correct map type for order.Metadata
+		order.Metadata = map[string]interface{}{}
+	}
+	if order.Edges.SenderProfile == nil || order.Edges.SenderProfile.Edges.APIKey == nil {
+		return fmt.Errorf("%s - CreateOrder.missingAPIKey: sender profile API key not found", orderIDPrefix)
+	}
+	order.Metadata["apiKey"] = order.Edges.SenderProfile.Edges.APIKey.ID.String()
 	encryptedOrderRecipient, err := cryptoUtils.EncryptOrderRecipient(order)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.encryptOrderRecipient: %w", orderIDPrefix, err)
@@ -93,7 +103,7 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	_, err = order.Update().
-		SetStatus(paymentorder.StatusInitiated).
+		SetStatus(paymentorder.StatusDeposited).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
@@ -147,7 +157,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 			paymentorder.StatusNEQ(paymentorder.StatusValidated),
 			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
 			paymentorder.StatusNEQ(paymentorder.StatusSettled),
-			paymentorder.StatusNEQ(paymentorder.StatusProcessing),
+			paymentorder.StatusNEQ(paymentorder.StatusFulfilling),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -179,6 +189,15 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	_, err = s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
+	}
+
+	// Update order status to refunding after transaction submission
+	_, err = db.Client.PaymentOrder.
+		UpdateOneID(lockOrder.ID).
+		SetStatus(paymentorder.StatusRefunding).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - RefundOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -225,6 +244,15 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.sendTransaction: %w", orderIDPrefix, err)
+	}
+
+	// Update order status to settling after transaction submission
+	_, err = db.Client.PaymentOrder.
+		UpdateOneID(order.ID).
+		SetStatus(paymentorder.StatusSettling).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - SettleOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -310,7 +338,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.PaymentOrder) 
 			providerordertoken.HasCurrencyWith(
 				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 			),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
@@ -333,7 +361,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.PaymentOrder) 
 		"settle",
 		utils.StringToByte32(splitOrderID),
 		utils.StringToByte32(string(orderID)),
-		ethcommon.HexToAddress(token.Address),
+		ethcommon.HexToAddress(token.SettlementAddress),
 		uint64(orderPercent),
 		uint64(0), // rebatePercent - default to 0 for now
 	)

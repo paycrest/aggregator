@@ -13,10 +13,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -24,6 +25,7 @@ import (
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/balance"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -294,11 +296,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			transactionlog.TxHashEQ(event.TxHash),
 		).
 		SetTxHash(event.TxHash).
-		SetMetadata(
-			map[string]interface{}{
-				"GatewayID":       event.OrderId,
-				"TransactionData": event,
-			}).
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()
@@ -326,11 +323,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 					SetTxHash(event.TxHash).
 					SetGatewayID(event.OrderId).
 					SetNetwork(network.Identifier).
-					SetMetadata(
-						map[string]interface{}{
-							"GatewayID":       event.OrderId,
-							"TransactionData": event,
-						}).
 					Save(ctx)
 				if err != nil {
 					_ = tx.Rollback()
@@ -346,11 +338,16 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		}
 	}
 
-	// Update payment order status
+	// Update payment order status - allow refunding, pending, or cancelled orders
 	paymentOrderUpdate := tx.PaymentOrder.
 		Update().
 		Where(
 			paymentorder.GatewayIDEQ(event.OrderId),
+			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusRefunding),
+				paymentorder.StatusEQ(paymentorder.StatusPending),
+				paymentorder.StatusEQ(paymentorder.StatusCancelled),
+			),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -390,13 +387,13 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
 		// Only attempt balance operations if we have the required edge data
 		// Create a new balance service instance for this transaction
-		balanceService := svc.NewBalanceManagementService()
+		balanceService := balance.New()
 
 		providerID := paymentOrder.Edges.Provider.ID
 		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
 
-		err = balanceService.ReleaseReservedBalance(ctx, providerID, currency, amount, nil)
+		err = balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, nil)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
@@ -446,10 +443,6 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			transactionlog.NetworkEQ(network.Identifier),
 		).
 		SetTxHash(event.TxHash).
-		SetMetadata(map[string]interface{}{
-			"GatewayID":   event.OrderId,
-			"BlockNumber": event.BlockNumber,
-		}).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettled.update: %v", err)
@@ -463,10 +456,6 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			SetTxHash(event.TxHash).
 			SetGatewayID(event.OrderId).
 			SetNetwork(network.Identifier).
-			SetMetadata(map[string]interface{}{
-				"GatewayID":   event.OrderId,
-				"BlockNumber": event.BlockNumber,
-			}).
 			Save(ctx)
 		if err != nil {
 			return fmt.Errorf("UpdateOrderStatusSettled.create: %v", err)
@@ -492,6 +481,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		Update().
 		Where(
 			paymentorder.IDEQ(splitOrderId),
+			paymentorder.StatusEQ(paymentorder.StatusSettling),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -532,32 +522,32 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
 		// Only attempt balance operations if we have the required edge data
 		// Create a new balance service instance for this transaction
-		balanceService := svc.NewBalanceManagementService()
+		balanceService := balance.New()
 
 		providerID := paymentOrder.Edges.Provider.ID
 		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
 
-		// Get current balance to update it appropriately
-		currentBalance, err := balanceService.GetProviderBalance(ctx, providerID, currency)
+		currentBalance, err := balanceService.GetProviderFiatBalance(ctx, providerID, currency)
 		if err == nil && currentBalance != nil {
-			// For settlement, we only reduce the reserved balance since the available balance was already reduced during assignment
 			newReservedBalance := currentBalance.ReservedBalance.Sub(amount)
-
-			// Ensure reserved balance doesn't go negative
 			if newReservedBalance.LessThan(decimal.Zero) {
 				newReservedBalance = decimal.Zero
 			}
-
-			// For settlement, we reduce the reserved balance and total balance
-			// Available balance was already reduced during assignment
-			// Total balance is reduced because the provider has actually spent money to fulfill the order
 			newTotalBalance := currentBalance.TotalBalance.Sub(amount)
 			if newTotalBalance.LessThan(decimal.Zero) {
 				newTotalBalance = decimal.Zero
 			}
-
-			err = balanceService.UpdateProviderBalance(ctx, providerID, currency, currentBalance.AvailableBalance, newTotalBalance, newReservedBalance)
+			// Ensure available doesn't exceed (total - reserved) after clamping
+			maxAvailable := newTotalBalance.Sub(newReservedBalance)
+			newAvailableBalance := currentBalance.AvailableBalance
+			if newAvailableBalance.GreaterThan(maxAvailable) {
+				newAvailableBalance = maxAvailable
+			}
+			if newAvailableBalance.LessThan(decimal.Zero) {
+				newAvailableBalance = decimal.Zero
+			}
+			err = balanceService.UpdateProviderFiatBalance(ctx, providerID, currency, newAvailableBalance, newTotalBalance, newReservedBalance)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":      fmt.Sprintf("%v", err),
@@ -914,17 +904,6 @@ func ensureTransactionLog(
 					SetTxHash(paymentOrderFields.TxHash).
 					SetNetwork(network.Identifier).
 					SetGatewayID(paymentOrderFields.GatewayID).
-					SetMetadata(
-						map[string]interface{}{
-							"Token":           paymentOrderFields.Token,
-							"GatewayID":       paymentOrderFields.GatewayID,
-							"Amount":          paymentOrderFields.Amount,
-							"Rate":            paymentOrderFields.Rate,
-							"Memo":            paymentOrderFields.Memo,
-							"Metadata":        paymentOrderFields.Metadata,
-							"ProviderID":      paymentOrderFields.ProviderID,
-							"ProvisionBucket": paymentOrderFields.ProvisionBucket,
-						}).
 					Save(ctx)
 				if err != nil {
 					return nil, fmt.Errorf("%s - failed to create transaction log: %w", paymentOrderFields.GatewayID, err)
@@ -944,17 +923,6 @@ func ensureTransactionLog(
 		SetTxHash(paymentOrderFields.TxHash).
 		SetNetwork(network.Identifier).
 		SetGatewayID(paymentOrderFields.GatewayID).
-		SetMetadata(
-			map[string]interface{}{
-				"Token":           paymentOrderFields.Token,
-				"GatewayID":       paymentOrderFields.GatewayID,
-				"Amount":          paymentOrderFields.Amount,
-				"Rate":            paymentOrderFields.Rate,
-				"Memo":            paymentOrderFields.Memo,
-				"Metadata":        paymentOrderFields.Metadata,
-				"ProviderID":      paymentOrderFields.ProviderID,
-				"ProvisionBucket": paymentOrderFields.ProvisionBucket,
-			}).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s - failed to create transaction log: %w", paymentOrderFields.GatewayID, err)
@@ -1060,6 +1028,30 @@ func validateAndPreparePaymentOrderData(
 	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
 	if err != nil {
 		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, fmt.Sprintf("Message hash decryption failed %v", err), refundOrder, existingOrder)
+	}
+
+	if recipient.Metadata != nil {
+		senderAPIKey, err := getAPIKeyFromMetadata(recipient.Metadata)
+		if err != nil {
+			// TODO: enforce sender API key presence in metadata in the future if needed
+		} else if err == nil && senderAPIKey != uuid.Nil {
+			_, err := getSenderProfileFromAPIKey(ctx, senderAPIKey)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"error":    err,
+					"order_id": event.OrderId,
+				}).Infof("Failed to retrieve sender profile from API key in metadata")
+			}
+			// TODO: Enforce KYB status checks here in the future if needed
+			// Example enforcement:
+			// if serverConf.Environment == "production" && kybStatus != user.KybVerificationStatusApproved {
+			//     return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(
+			//         ctx, event, network, token, recipient,
+			//         "Sender KYB verification not approved",
+			//         refundOrder, existingOrder,
+			//     )
+			// }
+		}
 	}
 
 	// Get institution
@@ -1182,9 +1174,9 @@ func validateAndPreparePaymentOrderData(
 				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(paymentOrderFields.ProviderID),
-					providerprofile.HasProviderCurrenciesWith(
-						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
-						providercurrencies.IsAvailableEQ(true),
+					providerprofile.HasProviderBalancesWith(
+						providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
+						providerbalances.IsAvailableEQ(true),
 					),
 					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				),
@@ -1192,7 +1184,7 @@ func validateAndPreparePaymentOrderData(
 				providerordertoken.HasCurrencyWith(
 					fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 				),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			WithProvider().
 			Only(ctx)
@@ -1318,4 +1310,53 @@ func createBasicPaymentOrderAndCancel(
 		return fmt.Errorf("failed to handle cancellation due to %s: %w", cancellationReason, err)
 	}
 	return nil
+}
+
+// getSenderProfileFromAPIKey retrieves the sender profile associated with the given API key UUID.
+func getSenderProfileFromAPIKey(ctx context.Context, apiKeyUUID uuid.UUID) (*ent.SenderProfile, error) {
+	// Query the API key and load the sender profile relationship
+	apiKey, err := db.Client.APIKey.
+		Query().
+		Where(apikey.IDEQ(apiKeyUUID)).
+		WithSenderProfile(func(spq *ent.SenderProfileQuery) {
+			spq.WithUser() // Load User edge for KYB status if needed in the future
+		}).
+		Only(ctx)
+
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("API key not found")
+		}
+		return nil, fmt.Errorf("failed to find API key: %w", err)
+	}
+
+	if apiKey.Edges.SenderProfile == nil {
+		return nil, fmt.Errorf("API key has no associated sender profile")
+	}
+
+	return apiKey.Edges.SenderProfile, nil
+}
+
+// getAPIKeyFromMetadata extracts and validates the API key UUID from the given metadata map.
+func getAPIKeyFromMetadata(metadata map[string]interface{}) (uuid.UUID, error) {
+	if metadata == nil {
+		return uuid.Nil, nil
+	}
+
+	apiKey, ok := metadata["apiKey"]
+	if !ok {
+		return uuid.Nil, nil
+	}
+
+	apiKeyStr, ok := apiKey.(string)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("invalid apiKey type (expected string)")
+	}
+
+	apiKeyUUID, err := uuid.Parse(apiKeyStr)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid apiKey format: %w", err)
+	}
+
+	return apiKeyUUID, nil
 }

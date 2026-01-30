@@ -28,11 +28,13 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/email"
+	explorer "github.com/paycrest/aggregator/services/explorer"
 	"github.com/paycrest/aggregator/services/indexer"
 	kycErrors "github.com/paycrest/aggregator/services/kyc/errors"
 	"github.com/paycrest/aggregator/services/kyc/smile"
@@ -63,6 +65,7 @@ type Controller struct {
 	kycService            types.KYCProvider
 	slackService          *svc.SlackService
 	emailService          email.EmailServiceInterface
+	apiKeyService         *svc.APIKeyService
 	cache                 map[string]bool
 	processedActions      map[string]bool
 	actionMutex           sync.RWMutex
@@ -78,6 +81,7 @@ func NewController() *Controller {
 		kycService:            smile.NewSmileIDService(),
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
 		emailService:          email.NewEmailServiceWithProviders(),
+		apiKeyService:         svc.NewAPIKeyService(),
 		cache:                 make(map[string]bool),
 		processedActions:      make(map[string]bool),
 	}
@@ -410,7 +414,7 @@ func (ctrl *Controller) GetProviderOrderStatus(ctx *gin.Context) {
 
 	status := orders[0].Status
 	if status == paymentorder.StatusCancelled {
-		status = paymentorder.StatusProcessing
+		status = paymentorder.StatusFulfilling
 	}
 
 	response := &types.ProviderOrderStatusResponse{
@@ -1177,8 +1181,42 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				logger.Errorf("Failed to update KYB Profile with rejection comment %s: %v", kybProfileID, err)
 			}
 
+			// Check if this is a partner onboarding user (has referral_id)
+			userRecord, err := storage.Client.User.
+				Query().
+				Where(user.EmailEQ(email)).
+				Only(ctx)
+
+			var additionalData map[string]interface{}
+			if err == nil && userRecord != nil && userRecord.ReferralID != "" {
+				// Delete API key if it exists (partner onboarding users should not have API key if KYB is rejected)
+				senderProfile, err := storage.Client.SenderProfile.
+					Query().
+					Where(senderprofile.HasUserWith(user.IDEQ(userRecord.ID))).
+					Only(ctx)
+				if err == nil && senderProfile != nil {
+					apiKey, err := senderProfile.QueryAPIKey().Only(ctx)
+					if err == nil && apiKey != nil {
+						err = storage.Client.APIKey.DeleteOneID(apiKey.ID).Exec(ctx)
+						if err != nil {
+							logger.Errorf("Failed to delete API key for partner onboarding user %s: %v", email, err)
+						} else {
+							logger.Infof("Deleted API key for partner onboarding user %s (KYB rejected)", email)
+						}
+					}
+				}
+
+				// This is a partner onboarding user - add partner-specific instructions
+				additionalData = map[string]interface{}{
+					"is_partner_onboarding": true,
+					"partner_instructions":  "To continue with your KYB verification, please reset your password using the email. Once logged in, you can complete your KYB submission.",
+					"dashboard_url":         "https://dashboard.paycrest.io",
+					"email":                 email,
+				}
+			}
+
 			// Send rejection email
-			resp, err := ctrl.emailService.SendKYBRejectionEmail(ctx, email, firstName, reasonForDecline)
+			resp, err := ctrl.emailService.SendKYBRejectionEmail(ctx, email, firstName, reasonForDecline, additionalData)
 			if err != nil {
 				logger.Errorf("Failed to send KYB rejection email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
 			} else {
@@ -1277,12 +1315,39 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
 			}
 
-			// Send approval email
-			resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
-			if err != nil {
-				logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
-			} else {
-				logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+			// Partner onboarding users (referral_id set) get a different email (API key id), else standard approval email.
+			emailSent := false
+			if kyb.Edges.User.ReferralID != "" {
+				senderProfile, err := storage.Client.SenderProfile.
+					Query().
+					Where(senderprofile.HasUserWith(user.IDEQ(kyb.Edges.User.ID))).
+					Only(ctx)
+				if err == nil && senderProfile != nil {
+					apiKeyResponse, err := ctrl.apiKeyService.GetAPIKey(ctx, senderProfile, nil)
+					if err == nil && apiKeyResponse != nil {
+						resp, err := ctrl.emailService.SendPartnerOnboardingSuccessEmail(ctx, email, kyb.CompanyName, apiKeyResponse.ID.String())
+						if err != nil {
+							logger.Errorf("Failed to send partner onboarding email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+						} else {
+							logger.Infof("Partner onboarding email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+							emailSent = true
+						}
+					} else {
+						logger.Errorf("Failed to fetch API key for partner onboarding email to %s: %v", email, err)
+					}
+				} else {
+					logger.Errorf("Failed to fetch sender profile for partner onboarding email to %s: %v", email, err)
+				}
+			}
+
+			// Fallback to standard approval email if partner email not sent
+			if !emailSent {
+				resp, err := ctrl.emailService.SendKYBApprovalEmail(ctx, email, firstName)
+				if err != nil {
+					logger.Errorf("Failed to send KYB approval email to %s (KYB Profile %s): %v, response: %+v", email, kybProfileID, err, resp)
+				} else {
+					logger.Infof("KYB approval email sent successfully to %s (KYB Profile %s), message ID: %s", email, kybProfileID, resp.Id)
+				}
 			}
 
 			// Send Slack feedback notification
@@ -2121,7 +2186,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 
 	// Get the second path param, which can be a tx_hash or an address
 	pathParam := ctx.Param("tx_hash_or_address")
-	
+
 	// Validate that pathParam is a valid tx_hash or address
 	if pathParam == "" || !strings.HasPrefix(pathParam, "0x") {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid path parameter. Must be a valid transaction hash or address", nil)
@@ -2186,7 +2251,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 			).
 			Only(ctx)
 	}
-	
+
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found or not supported for current environment", nil)
@@ -2549,7 +2614,7 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(request.ProviderID)),
 			providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
 			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(request.CurrencyCode)),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
@@ -2584,7 +2649,7 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 	}
 
 	// Index provider address
-	eventCounts, err := indexerInstance.IndexProviderAddress(ctx, network, providerOrderToken.Address, request.FromBlock, request.ToBlock, request.TxHash)
+	eventCounts, err := indexerInstance.IndexProviderAddress(ctx, network, providerOrderToken.SettlementAddress, request.FromBlock, request.ToBlock, request.TxHash)
 	if err != nil {
 		logger.Errorf("Failed to index provider address: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to index provider address", nil)
@@ -2601,7 +2666,7 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 // GetEtherscanQueueStats controller returns statistics about the Etherscan queue
 func (ctrl *Controller) GetEtherscanQueueStats(ctx *gin.Context) {
 	// Create Etherscan service instance
-	etherscanService, err := svc.NewEtherscanService()
+	etherscanService, err := explorer.NewEtherscanService()
 	if err != nil {
 		logger.Errorf("Error: Failed to create Etherscan service: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create Etherscan service", err.Error())

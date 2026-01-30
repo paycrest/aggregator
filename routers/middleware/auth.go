@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -24,7 +25,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/user"
-	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/crypto"
@@ -79,6 +79,7 @@ func JWTMiddleware(c *gin.Context) {
 			Query().
 			Where(senderprofile.HasUserWith(user.IDEQ(userUUID))).
 			WithOrderTokens().
+			WithAPIKey().
 			Only(c)
 		if err != nil {
 			c.Set("sender", nil)
@@ -581,17 +582,23 @@ func SlackVerificationMiddleware(c *gin.Context) {
 // TurnstileMiddleware is a middleware that verifies Turnstile tokens
 func TurnstileMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		turnstileService := services.NewTurnstileService()
+		authConf := config.AuthConfig()
+		// Skip verification if Turnstile is disabled
+		if !authConf.TurnstileEnabled {
+			c.Next()
+			return
+		}
 
-		// Get token from header, query parameter, or request body
+		// Get token from header or query parameter
 		token := c.GetHeader("X-Turnstile-Token")
 		if token == "" {
 			token = c.Query("turnstile_token")
 		}
 
-		// If no token is found, allow the request to pass through
+		// If Turnstile is enabled, token is required
 		if token == "" {
-			c.Next()
+			u.APIResponse(c, http.StatusBadRequest, "error", "Turnstile token is required", nil)
+			c.Abort()
 			return
 		}
 
@@ -602,7 +609,14 @@ func TurnstileMiddleware() gin.HandlerFunc {
 		}
 
 		// Verify the token
-		if err := turnstileService.VerifyToken(token, clientIP); err != nil {
+		if err := verifyTurnstileToken(token, clientIP, authConf.TurnstileSecretKey); err != nil {
+			// Treat configuration issues as server errors, not client errors
+			if strings.Contains(err.Error(), "not configured") {
+				u.APIResponse(c, http.StatusInternalServerError, "error", "Security check misconfigured", nil)
+				c.Abort()
+				return
+			}
+
 			u.APIResponse(c, http.StatusBadRequest, "error",
 				"Security check verification failed", nil)
 			c.Abort()
@@ -611,4 +625,70 @@ func TurnstileMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+type turnstileResponse struct {
+	Success     bool     `json:"success"`
+	ErrorCodes  []string `json:"error-codes,omitempty"`
+	ChallengeTS string   `json:"challenge_ts,omitempty"`
+	Hostname    string   `json:"hostname,omitempty"`
+}
+
+func verifyTurnstileToken(token, remoteIP, secretKey string) error {
+	if token == "" {
+		return fmt.Errorf("turnstile token is required")
+	}
+	if secretKey == "" {
+		return fmt.Errorf("turnstile secret key not configured")
+	}
+
+	// Ensure remoteIP is a valid string
+	if remoteIP == "" {
+		remoteIP = "127.0.0.1"
+	}
+
+	data := url.Values{}
+	data.Set("secret", secretKey)
+	data.Set("response", token)
+	if remoteIP != "" && remoteIP != "127.0.0.1" {
+		data.Set("remoteip", remoteIP)
+	}
+
+	encodedData := data.Encode()
+	if encodedData == "" {
+		return fmt.Errorf("failed to encode request data")
+	}
+
+	resp, err := http.Post(
+		"https://challenges.cloudflare.com/turnstile/v0/siteverify",
+		"application/x-www-form-urlencoded",
+		strings.NewReader(encodedData),
+	)
+	if err != nil {
+		logger.Errorf("Failed to verify Turnstile token: %v", err)
+		return fmt.Errorf("failed to verify security check")
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Errorf("Failed to read Turnstile response: %v", err)
+		return fmt.Errorf("failed to verify security check")
+	}
+
+	var turnstileResp turnstileResponse
+	if err := json.Unmarshal(body, &turnstileResp); err != nil {
+		logger.Errorf("Failed to parse Turnstile response: %v", err)
+		return fmt.Errorf("failed to verify security check")
+	}
+
+	if !turnstileResp.Success {
+		logger.WithFields(logger.Fields{
+			"ErrorCodes": turnstileResp.ErrorCodes,
+			"Hostname":   turnstileResp.Hostname,
+		}).Errorf("Turnstile verification failed")
+		return fmt.Errorf("security check verification failed")
+	}
+
+	return nil
 }

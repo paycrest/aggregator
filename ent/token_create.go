@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/token"
@@ -155,6 +156,21 @@ func (_c *TokenCreate) AddProviderOrderTokens(v ...*ProviderOrderToken) *TokenCr
 		ids[i] = v[i].ID
 	}
 	return _c.AddProviderOrderTokenIDs(ids...)
+}
+
+// AddProviderBalanceIDs adds the "provider_balances" edge to the ProviderBalances entity by IDs.
+func (_c *TokenCreate) AddProviderBalanceIDs(ids ...uuid.UUID) *TokenCreate {
+	_c.mutation.AddProviderBalanceIDs(ids...)
+	return _c
+}
+
+// AddProviderBalances adds the "provider_balances" edges to the ProviderBalances entity.
+func (_c *TokenCreate) AddProviderBalances(v ...*ProviderBalances) *TokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddProviderBalanceIDs(ids...)
 }
 
 // Mutation returns the TokenMutation object of the builder.
@@ -359,6 +375,22 @@ func (_c *TokenCreate) createSpec() (*Token, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerordertoken.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ProviderBalancesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   token.ProviderBalancesTable,
+			Columns: []string{token.ProviderBalancesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

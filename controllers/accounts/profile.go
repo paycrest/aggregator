@@ -11,7 +11,7 @@ import (
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/kybprofile"
 	"github.com/paycrest/aggregator/ent/network"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -78,6 +78,12 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			// Ignore ErrTxDone - transaction may already be committed
+			// This is expected when commit succeeds
+		}
+	}()
 
 	update := tx.SenderProfile.Update().Where(senderprofile.IDEQ(sender.ID))
 
@@ -201,10 +207,13 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	}
 
 	// Set activation status based on whether at least one token is configured
-	if hasConfiguredToken && !sender.IsActive {
-		update.SetIsActive(true)
-	} else if !hasConfiguredToken && sender.IsActive {
-		update.SetIsActive(false)
+	// Only update activation when Tokens field is present in the payload
+	if len(payload.Tokens) > 0 {
+		if hasConfiguredToken && !sender.IsActive {
+			update.SetIsActive(true)
+		} else if !hasConfiguredToken && sender.IsActive {
+			update.SetIsActive(false)
+		}
 	}
 
 	// Save the sender profile update within the transaction
@@ -219,6 +228,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
 	}
+	// After successful commit, deferred rollback will be a no-op
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Profile updated successfully", nil)
 }
@@ -255,15 +265,16 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	}
 
 	// Capture currency availability update intent (no writes yet)
+	// Only update availability when explicitly set (IsAvailable is *bool to detect presence)
 	var availabilityOp *struct {
 		currencyCode string
 		isAvailable  bool
 	}
-	if payload.Currency != "" {
+	if payload.Currency != "" && payload.IsAvailable != nil {
 		availabilityOp = &struct {
 			currencyCode string
 			isAvailable  bool
-		}{payload.Currency, payload.IsAvailable}
+		}{payload.Currency, *payload.IsAvailable}
 	}
 
 	// PHASE 1: Validate all tokens and prepare operations
@@ -478,8 +489,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		isUpdate := err == nil
 		if err != nil && !ent.IsNotFound(err) {
 			logger.WithFields(logger.Fields{
-				"Error":             fmt.Sprintf("%v", err),
-				"Institution":       fiatAccountPayload.Institution,
+				"Error":       fmt.Sprintf("%v", err),
+				"Institution": fiatAccountPayload.Institution,
 			}).Errorf("Failed to check for existing fiat account")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 			return
@@ -523,21 +534,23 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			return
 		}
 
-		pc, err := tx.ProviderCurrencies.Query().
-			Where(providercurrencies.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-				providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(availabilityOp.currencyCode))).
+		pb, err := tx.ProviderBalances.Query().
+			Where(
+				providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(availabilityOp.currencyCode)),
+			).
 			Only(ctx)
 		if ent.IsNotFound(err) {
-			_, err = tx.ProviderCurrencies.Create().
-				SetProvider(provider).
-				SetCurrency(curr).
+			_, err = tx.ProviderBalances.Create().
+				SetFiatCurrency(curr).
 				SetAvailableBalance(decimal.Zero).
 				SetTotalBalance(decimal.Zero).
 				SetReservedBalance(decimal.Zero).
 				SetIsAvailable(availabilityOp.isAvailable).
+				SetProviderID(provider.ID).
 				Save(ctx)
 		} else if err == nil {
-			_, err = pc.Update().SetIsAvailable(availabilityOp.isAvailable).Save(ctx)
+			_, err = pb.Update().SetIsAvailable(availabilityOp.isAvailable).Save(ctx)
 		}
 		if err != nil {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update availability", nil)
@@ -570,7 +583,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			// Update existing token using transaction-bound client
 			_, err := tx.ProviderOrderToken.
 				UpdateOneID(op.ExistingToken.ID).
-				SetAddress(op.TokenPayload.Address).
+				SetSettlementAddress(op.TokenPayload.SettlementAddress).
 				SetNetwork(op.TokenPayload.Network).
 				SetRateSlippage(op.TokenPayload.RateSlippage).
 				SetConversionRateType(op.TokenPayload.ConversionRateType).
@@ -604,7 +617,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
 				SetMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
 				SetMinOrderAmountOtc(op.TokenPayload.MinOrderAmountOTC).
-				SetAddress(op.TokenPayload.Address).
+				SetSettlementAddress(op.TokenPayload.SettlementAddress).
 				SetNetwork(op.TokenPayload.Network).
 				SetProviderID(provider.ID).
 				SetRateSlippage(op.TokenPayload.RateSlippage).
@@ -669,8 +682,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 				}
 				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"Institution":       op.Payload.Institution,
+					"Error":       fmt.Sprintf("%v", err),
+					"Institution": op.Payload.Institution,
 				}).Errorf("Failed to update fiat account")
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
@@ -689,8 +702,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
 				}
 				logger.WithFields(logger.Fields{
-					"Error":             fmt.Sprintf("%v", err),
-					"Institution":       op.Payload.Institution,
+					"Error":       fmt.Sprintf("%v", err),
+					"Institution": op.Payload.Institution,
 				}).Errorf("Failed to create fiat account")
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
@@ -709,9 +722,13 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	}
 
 	// Update provider profile with deduplicated buckets
-	if len(dedupedBuckets) > 0 {
+	// When Tokens field is present, always clear existing buckets first
+	if payload.Tokens != nil {
 		txUpdate.ClearProvisionBuckets()
-		txUpdate.AddProvisionBuckets(dedupedBuckets...)
+		// Only add buckets if there are any matches
+		if len(dedupedBuckets) > 0 {
+			txUpdate.AddProvisionBuckets(dedupedBuckets...)
+		}
 	}
 
 	// Save provider profile update within the transaction
@@ -829,9 +846,9 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	linkedProvider, err := storage.Client.ProviderProfile.
 		Query().
 		Where(providerprofile.IDEQ(sender.ProviderID)).
-		WithProviderCurrencies(
-			func(query *ent.ProviderCurrenciesQuery) {
-				query.WithCurrency()
+		WithProviderBalances(
+			func(q *ent.ProviderBalancesQuery) {
+				q.WithFiatCurrency().Where(providerbalances.HasFiatCurrency())
 			},
 		).
 		Only(ctx)
@@ -839,10 +856,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		if ent.IsNotFound(err) {
 			// do nothing
 		} else {
-			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", err),
-				"SenderID": sender.ID,
-			}).Errorf("Failed to fetch linked providerf for sender")
+			logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "SenderID": sender.ID}).Errorf("Failed to fetch linked provider for sender")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 			return
 		}
@@ -850,10 +864,11 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 
 	if linkedProvider != nil {
 		response.ProviderID = sender.ProviderID
-		// Extract currency codes from linked provider
-		currencyCodes := make([]string, len(linkedProvider.Edges.ProviderCurrencies))
-		for i, pc := range linkedProvider.Edges.ProviderCurrencies {
-			currencyCodes[i] = pc.Edges.Currency.Code
+		var currencyCodes []string
+		for _, pb := range linkedProvider.Edges.ProviderBalances {
+			if pb.Edges.FiatCurrency != nil {
+				currencyCodes = append(currencyCodes, pb.Edges.FiatCurrency.Code)
+			}
 		}
 		response.ProviderCurrencies = currencyCodes
 	}
@@ -878,28 +893,23 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 		return
 	}
 
-	// Get currencies through ProviderCurrencies
-	providerCurrencies, err := provider.QueryProviderCurrencies().
-		WithCurrency().
+	pbList, err := provider.QueryProviderBalances().
+		WithFiatCurrency().
+		Where(providerbalances.HasFiatCurrency()).
 		All(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"ProviderID": provider.ID,
-		}).Errorf("Failed to fetch currencies for provider")
+		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": provider.ID}).Errorf("Failed to fetch fiat balances for provider")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
 		return
 	}
-
-	// Provider profile should also return all the currencies associated with the provider
 	var currencyCodes []string
 	currencyAvailability := make(map[string]bool)
-	for _, pc := range providerCurrencies {
-		if !pc.Edges.Currency.IsEnabled {
+	for _, pb := range pbList {
+		if pb.Edges.FiatCurrency == nil || !pb.Edges.FiatCurrency.IsEnabled {
 			continue
 		}
-		currencyCodes = append(currencyCodes, pc.Edges.Currency.Code)
-		currencyAvailability[pc.Edges.Currency.Code] = pc.IsAvailable
+		currencyCodes = append(currencyCodes, pb.Edges.FiatCurrency.Code)
+		currencyAvailability[pb.Edges.FiatCurrency.Code] = pb.IsAvailable
 	}
 
 	// Get token settings, optionally filtering by currency query parameter
@@ -957,7 +967,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 			MaxOrderAmountOTC:      orderToken.MaxOrderAmountOtc,
 			MinOrderAmountOTC:      orderToken.MinOrderAmountOtc,
 			RateSlippage:           orderToken.RateSlippage,
-			Address:                orderToken.Address,
+			SettlementAddress:      orderToken.SettlementAddress,
 			Network:                orderToken.Network,
 		}
 		tokensPayload[i] = payload

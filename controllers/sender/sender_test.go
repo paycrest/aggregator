@@ -21,7 +21,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -125,7 +125,7 @@ func setup() error {
 		"min_order_amount":      decimal.NewFromFloat(1.0),
 		"max_order_amount_otc":  decimal.NewFromFloat(10000.0),
 		"min_order_amount_otc":  decimal.NewFromFloat(100.0),
-		"address":               "0x1234567890123456789012345678901234567890",
+		"settlement_address":    "0x1234567890123456789012345678901234567890",
 		"network":               testCtx.networkIdentifier,
 	})
 	if err != nil {
@@ -144,19 +144,17 @@ func setup() error {
 		return fmt.Errorf("CreateTestProvisionBucket.sender_test: %w", err)
 	}
 
-	// Update ProviderCurrencies to have sufficient balance for validation
-	_, err = db.Client.ProviderCurrencies.
-		Update().
+	_, err = db.Client.ProviderBalances.Update().
 		Where(
-			providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
-			providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+			providerbalances.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
+			providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
 		).
 		SetAvailableBalance(decimal.NewFromFloat(1000000.0)).
 		SetTotalBalance(decimal.NewFromFloat(1000000.0)).
 		SetIsAvailable(true).
 		Save(context.Background())
 	if err != nil {
-		return fmt.Errorf("UpdateProviderCurrencies.sender_test: %w", err)
+		return fmt.Errorf("UpdateProviderBalances.sender_test: %w", err)
 	}
 
 	// Populate Redis bucket with provider data for validateBucketRate
@@ -318,6 +316,12 @@ func TestSender(t *testing.T) {
 	router.GET("/sender/orders/:id", ctrl.GetPaymentOrderByID)
 	router.GET("/sender/orders", ctrl.GetPaymentOrders)
 	router.GET("/sender/stats", ctrl.Stats)
+
+	// V2 routes
+	v2 := router.Group("/v2/sender/")
+	v2.Use(middleware.DynamicAuthMiddleware)
+	v2.Use(middleware.OnlySenderMiddleware)
+	v2.POST("orders", ctrl.InitiatePaymentOrderV2)
 
 	var paymentOrderUUID uuid.UUID
 
@@ -603,16 +607,15 @@ func TestSender(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			_, err = db.Client.ProviderCurrencies.
-				Update().
+			_, err = db.Client.ProviderBalances.Update().
 				Where(
-					providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
-					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+					providerbalances.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 				).
 				SetAvailableBalance(decimal.NewFromFloat(100000)).
 				SetTotalBalance(decimal.NewFromFloat(100000)).
 				Save(context.Background())
-			assert.NoError(t, err, "Failed to update provider currency balance")
+			assert.NoError(t, err, "Failed to update provider fiat balance")
 
 			// Add provider order token (required for rate validation)
 			providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
@@ -627,7 +630,7 @@ func TestSender(t *testing.T) {
 				"min_order_amount":         decimal.NewFromFloat(1),
 				"max_order_amount_otc":     decimal.Zero,
 				"min_order_amount_otc":     decimal.Zero,
-				"address":                  "0x1234567890123456789012345678901234567890",
+				"settlement_address":       "0x1234567890123456789012345678901234567890",
 			})
 			if err != nil {
 				t.Logf("Failed to create provider order token: %v", err)
@@ -790,17 +793,15 @@ func TestSender(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			// Update provider currency balance to ensure sufficient liquidity for rate validation
-			_, err = db.Client.ProviderCurrencies.
-				Update().
+			_, err = db.Client.ProviderBalances.Update().
 				Where(
-					providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
-					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+					providerbalances.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 				).
 				SetAvailableBalance(decimal.NewFromFloat(100000)).
 				SetTotalBalance(decimal.NewFromFloat(100000)).
 				Save(context.Background())
-			assert.NoError(t, err, "Failed to update provider currency balance")
+			assert.NoError(t, err, "Failed to update provider fiat balance")
 
 			providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
 				"provider":                 providerProfile,
@@ -814,7 +815,7 @@ func TestSender(t *testing.T) {
 				"min_order_amount":         decimal.NewFromFloat(1),
 				"max_order_amount_otc":     decimal.Zero,
 				"min_order_amount_otc":     decimal.Zero,
-				"address":                  "0x1234567890123456789012345678901234567890",
+				"settlement_address":       "0x1234567890123456789012345678901234567890",
 			})
 			if err != nil {
 				t.Logf("Failed to create provider order token: %v", err)
@@ -973,24 +974,20 @@ func TestSender(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			// Update ProviderCurrencies balance - query first to ensure it exists
-			providerCurrency, err := db.Client.ProviderCurrencies.
-				Query().
+			pb, err := db.Client.ProviderBalances.Query().
 				Where(
-					providercurrencies.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
-					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+					providerbalances.HasProviderWith(providerprofile.IDEQ(providerProfile.ID)),
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 				).
 				Only(context.Background())
 			if err != nil {
-				t.Fatalf("ProviderCurrencies not found for provider %s and currency %s: %v", providerProfile.ID, currency.ID, err)
+				t.Fatalf("ProviderBalances not found for provider %s and currency %s: %v", providerProfile.ID, currency.ID, err)
 			}
-
-			_, err = db.Client.ProviderCurrencies.
-				UpdateOneID(providerCurrency.ID).
+			_, err = db.Client.ProviderBalances.UpdateOneID(pb.ID).
 				SetAvailableBalance(decimal.NewFromFloat(100000)).
 				SetTotalBalance(decimal.NewFromFloat(100000)).
 				Save(context.Background())
-			assert.NoError(t, err, "Failed to update provider currency balance")
+			assert.NoError(t, err, "Failed to update provider fiat balance")
 
 			providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
 				"provider":              providerProfile,
@@ -1003,7 +1000,7 @@ func TestSender(t *testing.T) {
 				"min_order_amount":      decimal.NewFromFloat(1),
 				"max_order_amount_otc":  decimal.Zero,
 				"min_order_amount_otc":  decimal.Zero,
-				"address":               "0x1234567890123456789012345678901234567890",
+				"settlement_address":    "0x1234567890123456789012345678901234567890",
 			})
 			if err != nil {
 				t.Logf("Failed to create provider order token: %v", err)
@@ -1997,6 +1994,182 @@ func TestSender(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, "No orders found in the specified date range", response.Message)
 			}
+		})
+	})
+
+	t.Run("InitiatePaymentOrderV2", func(t *testing.T) {
+		t.Run("should reject zero amount", func(t *testing.T) {
+			network, err := db.Client.Network.
+				Query().
+				Where(network.IdentifierEQ(testCtx.networkIdentifier)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			payload := map[string]interface{}{
+				"amount":   "0",
+				"amountIn": "crypto",
+				"source": map[string]interface{}{
+					"type":          "crypto",
+					"currency":      testCtx.token.Symbol,
+					"paymentRail":   network.Identifier,
+					"refundAddress": "0x1234567890123456789012345678901234567890",
+				},
+				"destination": map[string]interface{}{
+					"type":     "fiat",
+					"currency": testCtx.currency.Code,
+					"recipient": map[string]interface{}{
+						"institution":       "MOMONGPC",
+						"accountIdentifier": "1234567890",
+						"accountName":       "John Doe",
+						"memo":              "Test memo",
+					},
+				},
+			}
+
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v2/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Contains(t, response.Message, "Failed to validate payload")
+		})
+
+		t.Run("should reject both senderFee and senderFeePercent", func(t *testing.T) {
+			network, err := db.Client.Network.
+				Query().
+				Where(network.IdentifierEQ(testCtx.networkIdentifier)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			payload := map[string]interface{}{
+				"amount":           "100",
+				"amountIn":         "crypto",
+				"senderFee":        "5",
+				"senderFeePercent": "5",
+				"source": map[string]interface{}{
+					"type":          "crypto",
+					"currency":      testCtx.token.Symbol,
+					"paymentRail":   network.Identifier,
+					"refundAddress": "0x1234567890123456789012345678901234567890",
+				},
+				"destination": map[string]interface{}{
+					"type":     "fiat",
+					"currency": testCtx.currency.Code,
+					"recipient": map[string]interface{}{
+						"institution":       "MOMONGPC",
+						"accountIdentifier": "1234567890",
+						"accountName":       "John Doe",
+						"memo":              "Test memo",
+					},
+				},
+			}
+
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v2/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Contains(t, response.Message, "Failed to validate payload")
+			if errorData, ok := response.Data.(types.ErrorData); ok {
+				assert.Equal(t, "SenderFee", errorData.Field)
+				assert.Contains(t, errorData.Message, "mutually exclusive")
+			}
+		})
+
+		t.Run("should successfully create order with valid payload", func(t *testing.T) {
+			// Activate httpmock globally to intercept all HTTP calls
+			httpmock.Activate()
+			defer httpmock.DeactivateAndReset()
+
+			// Set up httpmock responders
+			setupHTTPMocks()
+
+			network, err := db.Client.Network.
+				Query().
+				Where(network.IdentifierEQ(testCtx.networkIdentifier)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			payload := map[string]interface{}{
+				"amount":   "100",
+				"amountIn": "crypto",
+				"source": map[string]interface{}{
+					"type":          "crypto",
+					"currency":      testCtx.token.Symbol,
+					"paymentRail":   network.Identifier,
+					"refundAddress": "0x1234567890123456789012345678901234567890",
+				},
+				"destination": map[string]interface{}{
+					"type":     "fiat",
+					"currency": testCtx.currency.Code,
+					"recipient": map[string]interface{}{
+						"institution":       "MOMONGPC",
+						"accountIdentifier": "1234567890",
+						"accountName":       "John Doe",
+						"memo":              "Test memo v2",
+					},
+				},
+				"reference": "v2-test-ref-001",
+			}
+
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/v2/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+
+			// Debug: Print response body if status is not 201
+			if res.Code != http.StatusCreated {
+				t.Logf("Response Status: %d", res.Code)
+				t.Logf("Response Body: %s", res.Body.String())
+				t.Logf("Request payload: %+v", payload)
+			}
+
+			// Assert the response body
+			assert.Equal(t, http.StatusCreated, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment order initiated successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
+			assert.NotNil(t, data, "response.Data is nil")
+
+			assert.Equal(t, data["amount"], payload["amount"])
+			assert.Equal(t, data["reference"], payload["reference"])
+
+			// Verify response has v2 structure
+			source, ok := data["source"].(map[string]interface{})
+			assert.True(t, ok, "source should be present")
+			assert.Equal(t, source["type"], "crypto")
+			assert.Equal(t, source["currency"], testCtx.token.Symbol)
+
+			destination, ok := data["destination"].(map[string]interface{})
+			assert.True(t, ok, "destination should be present")
+			assert.Equal(t, destination["type"], "fiat")
+			assert.Equal(t, destination["currency"], testCtx.currency.Code)
+
+			providerAccount, ok := data["providerAccount"].(map[string]interface{})
+			assert.True(t, ok, "providerAccount should be present")
+			assert.NotEmpty(t, providerAccount["receiveAddress"])
+			assert.NotEmpty(t, providerAccount["validUntil"])
 		})
 	})
 }

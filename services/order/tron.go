@@ -287,6 +287,7 @@ func (s *OrderTron) RefundOrder(ctx context.Context, network *ent.Network, order
 	// Update lock order
 	_, err = lockOrder.Update().
 		SetTxHash(txHash).
+		SetStatus(paymentorder.StatusRefunding).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - Tron.RefundOrder.updateTxHash: %w", orderIDPrefix, err)
@@ -382,6 +383,7 @@ func (s *OrderTron) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 	// Update lock order
 	_, err = order.Update().
 		SetTxHash(txHash).
+		SetStatus(paymentorder.StatusSettling).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - Tron.SettleOrder.updateTxHash: %w", orderIDPrefix, err)
@@ -565,7 +567,7 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.PaymentOrder)
 			providerordertoken.HasCurrencyWith(
 				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 			),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
@@ -573,7 +575,7 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.PaymentOrder)
 	}
 
 	var providerAddress string
-	providerAddressTron, _ := util.Base58ToAddress(token.Address)
+	providerAddressTron, _ := util.Base58ToAddress(token.SettlementAddress)
 	providerAddress = providerAddressTron.Hex()[4:]
 
 	if providerAddress == "" {

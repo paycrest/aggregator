@@ -73,7 +73,7 @@ func (s *OrderStarknet) CreateOrder(ctx context.Context, orderID uuid.UUID) erro
 	}
 
 	_, err = order.Update().
-		SetStatus(paymentorder.StatusInitiated).
+		SetStatus(paymentorder.StatusDeposited).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
@@ -162,7 +162,7 @@ func (s *OrderStarknet) RefundOrder(ctx context.Context, network *ent.Network, o
 			paymentorder.StatusNEQ(paymentorder.StatusValidated),
 			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
 			paymentorder.StatusNEQ(paymentorder.StatusSettled),
-			paymentorder.StatusNEQ(paymentorder.StatusProcessing),
+			paymentorder.StatusNEQ(paymentorder.StatusFulfilling),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierContainsFold("starknet"),
@@ -271,7 +271,7 @@ func (s *OrderStarknet) SettleOrder(ctx context.Context, orderID uuid.UUID) erro
 			providerordertoken.HasCurrencyWith(
 				fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code),
 			),
-			providerordertoken.AddressNEQ(""),
+			providerordertoken.SettlementAddressNEQ(""),
 		).
 		Only(ctx)
 	if err != nil {
@@ -305,7 +305,7 @@ func (s *OrderStarknet) SettleOrder(ctx context.Context, orderID uuid.UUID) erro
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.parseSplitOrderID: %w", orderIDPrefix, err)
 	}
-	providerContractAddressFelt, err := utils.HexToFelt(token.Address)
+	providerContractAddressFelt, err := utils.HexToFelt(token.SettlementAddress)
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.parseProviderAddress: %w", orderIDPrefix, err)
 	}

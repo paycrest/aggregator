@@ -62,12 +62,16 @@ func (m *mockEmailService) SendKYBApprovalEmail(ctx context.Context, email, firs
 	return types.SendEmailResponse{Id: "mock-kyb-approval-id"}, nil
 }
 
-func (m *mockEmailService) SendKYBRejectionEmail(ctx context.Context, email, firstName, reasonForDecline string) (types.SendEmailResponse, error) {
+func (m *mockEmailService) SendKYBRejectionEmail(ctx context.Context, email, firstName, reasonForDecline string, additionalData map[string]interface{}) (types.SendEmailResponse, error) {
 	return types.SendEmailResponse{Id: "mock-kyb-rejection-id"}, nil
 }
 
 func (m *mockEmailService) SendWebhookFailureEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error) {
 	return types.SendEmailResponse{Id: "mock-webhook-failure-id"}, nil
+}
+
+func (m *mockEmailService) SendPartnerOnboardingSuccessEmail(ctx context.Context, email, firstName, apiKey string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-partner-onboarding-id"}, nil
 }
 
 func TestAuth(t *testing.T) {

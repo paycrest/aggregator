@@ -16,7 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -360,22 +360,22 @@ func init() {
 	paymentwebhookDescID := paymentwebhookFields[0].Descriptor()
 	// paymentwebhook.DefaultID holds the default value on creation for the id field.
 	paymentwebhook.DefaultID = paymentwebhookDescID.Default.(func() uuid.UUID)
-	providercurrenciesFields := schema.ProviderCurrencies{}.Fields()
-	_ = providercurrenciesFields
-	// providercurrenciesDescIsAvailable is the schema descriptor for is_available field.
-	providercurrenciesDescIsAvailable := providercurrenciesFields[4].Descriptor()
-	// providercurrencies.DefaultIsAvailable holds the default value on creation for the is_available field.
-	providercurrencies.DefaultIsAvailable = providercurrenciesDescIsAvailable.Default.(bool)
-	// providercurrenciesDescUpdatedAt is the schema descriptor for updated_at field.
-	providercurrenciesDescUpdatedAt := providercurrenciesFields[5].Descriptor()
-	// providercurrencies.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	providercurrencies.DefaultUpdatedAt = providercurrenciesDescUpdatedAt.Default.(func() time.Time)
-	// providercurrencies.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	providercurrencies.UpdateDefaultUpdatedAt = providercurrenciesDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// providercurrenciesDescID is the schema descriptor for id field.
-	providercurrenciesDescID := providercurrenciesFields[0].Descriptor()
-	// providercurrencies.DefaultID holds the default value on creation for the id field.
-	providercurrencies.DefaultID = providercurrenciesDescID.Default.(func() uuid.UUID)
+	providerbalancesFields := schema.ProviderBalances{}.Fields()
+	_ = providerbalancesFields
+	// providerbalancesDescIsAvailable is the schema descriptor for is_available field.
+	providerbalancesDescIsAvailable := providerbalancesFields[4].Descriptor()
+	// providerbalances.DefaultIsAvailable holds the default value on creation for the is_available field.
+	providerbalances.DefaultIsAvailable = providerbalancesDescIsAvailable.Default.(bool)
+	// providerbalancesDescUpdatedAt is the schema descriptor for updated_at field.
+	providerbalancesDescUpdatedAt := providerbalancesFields[5].Descriptor()
+	// providerbalances.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	providerbalances.DefaultUpdatedAt = providerbalancesDescUpdatedAt.Default.(func() time.Time)
+	// providerbalances.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	providerbalances.UpdateDefaultUpdatedAt = providerbalancesDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// providerbalancesDescID is the schema descriptor for id field.
+	providerbalancesDescID := providerbalancesFields[0].Descriptor()
+	// providerbalances.DefaultID holds the default value on creation for the id field.
+	providerbalances.DefaultID = providerbalancesDescID.Default.(func() uuid.UUID)
 	providerfiataccountMixin := schema.ProviderFiatAccount{}.Mixin()
 	providerfiataccountMixinFields0 := providerfiataccountMixin[0].Fields()
 	_ = providerfiataccountMixinFields0
@@ -590,7 +590,7 @@ func init() {
 	transactionlogFields := schema.TransactionLog{}.Fields()
 	_ = transactionlogFields
 	// transactionlogDescCreatedAt is the schema descriptor for created_at field.
-	transactionlogDescCreatedAt := transactionlogFields[6].Descriptor()
+	transactionlogDescCreatedAt := transactionlogFields[5].Descriptor()
 	// transactionlog.DefaultCreatedAt holds the default value on creation for the created_at field.
 	transactionlog.DefaultCreatedAt = transactionlogDescCreatedAt.Default.(func() time.Time)
 	// transactionlogDescID is the schema descriptor for id field.
@@ -630,6 +630,10 @@ func init() {
 	userDescHasEarlyAccess := userFields[7].Descriptor()
 	// user.DefaultHasEarlyAccess holds the default value on creation for the has_early_access field.
 	user.DefaultHasEarlyAccess = userDescHasEarlyAccess.Default.(bool)
+	// userDescReferralID is the schema descriptor for referral_id field.
+	userDescReferralID := userFields[9].Descriptor()
+	// user.ReferralIDValidator is a validator for the "referral_id" field. It is called by the builders before save.
+	user.ReferralIDValidator = userDescReferralID.Validators[0].(func(string) error)
 	// userDescID is the schema descriptor for id field.
 	userDescID := userFields[0].Descriptor()
 	// user.DefaultID holds the default value on creation for the id field.

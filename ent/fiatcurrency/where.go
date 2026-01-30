@@ -532,21 +532,21 @@ func IsEnabledNEQ(v bool) predicate.FiatCurrency {
 	return predicate.FiatCurrency(sql.FieldNEQ(FieldIsEnabled, v))
 }
 
-// HasProviderCurrencies applies the HasEdge predicate on the "provider_currencies" edge.
-func HasProviderCurrencies() predicate.FiatCurrency {
+// HasProviderBalances applies the HasEdge predicate on the "provider_balances" edge.
+func HasProviderBalances() predicate.FiatCurrency {
 	return predicate.FiatCurrency(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ProviderCurrenciesTable, ProviderCurrenciesColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProviderBalancesTable, ProviderBalancesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasProviderCurrenciesWith applies the HasEdge predicate on the "provider_currencies" edge with a given conditions (other predicates).
-func HasProviderCurrenciesWith(preds ...predicate.ProviderCurrencies) predicate.FiatCurrency {
+// HasProviderBalancesWith applies the HasEdge predicate on the "provider_balances" edge with a given conditions (other predicates).
+func HasProviderBalancesWith(preds ...predicate.ProviderBalances) predicate.FiatCurrency {
 	return predicate.FiatCurrency(func(s *sql.Selector) {
-		step := newProviderCurrenciesStep()
+		step := newProviderBalancesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

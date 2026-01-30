@@ -288,7 +288,7 @@ func TestSendKYBRejectionEmail(t *testing.T) {
 	}
 
 	reason := "Incomplete documentation provided"
-	resp, err := service.SendKYBRejectionEmail(context.Background(), "business@fail.com", "Sarah", reason)
+	resp, err := service.SendKYBRejectionEmail(context.Background(), "business@fail.com", "Sarah", reason, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "kyb-reject-456", resp.Id)
 	assert.Equal(t, "8", primary.GetLastTemplateID()) // Brevo KYB rejection template ID
@@ -297,6 +297,62 @@ func TestSendKYBRejectionEmail(t *testing.T) {
 	assert.Equal(t, "business@fail.com", lastPayload.ToAddress)
 	assert.Equal(t, "Sarah", lastPayload.DynamicData["first_name"])
 	assert.Equal(t, reason, lastPayload.DynamicData["reason_for_decline"])
+}
+
+func TestSendPartnerOnboardingSuccessEmail(t *testing.T) {
+	primary := &mockProvider{name: "brevo", responseToReturn: types.SendEmailResponse{Id: "partner-onboarding-123"}}
+	service := &EmailService{
+		primaryProvider:  primary,
+		fallbackProvider: &mockProvider{name: "sendgrid"},
+		notificationConf: &config.NotificationConfiguration{EmailFromAddress: "onboarding@paycrest.io"},
+	}
+
+	// gitleaks:allow - test data only
+	apiKey := "test-dummy-api-key-not-real"
+	resp, err := service.SendPartnerOnboardingSuccessEmail(context.Background(), "partner@company.com", "John", apiKey)
+	assert.NoError(t, err)
+	assert.Equal(t, "partner-onboarding-123", resp.Id)
+	assert.Equal(t, "57", primary.GetLastTemplateID()) // Brevo partner onboarding success template ID
+
+	lastPayload := primary.GetLastPayload()
+	assert.Equal(t, "onboarding@paycrest.io", lastPayload.FromAddress)
+	assert.Equal(t, "partner@company.com", lastPayload.ToAddress)
+	assert.Equal(t, "John", lastPayload.DynamicData["first_name"])
+	assert.Equal(t, apiKey, lastPayload.DynamicData["api_key"])
+	assert.Equal(t, "partner@company.com", lastPayload.DynamicData["email"])
+
+	// Password should not be in the email
+	_, hasPassword := lastPayload.DynamicData["password"]
+	assert.False(t, hasPassword)
+}
+
+func TestSendPartnerOnboardingSuccessEmail_WithFallback(t *testing.T) {
+	primary := &mockProvider{name: "sendgrid", sendTemplateErr: errors.New("primary failed")}
+	fallback := &mockProvider{name: "brevo", responseToReturn: types.SendEmailResponse{Id: "fallback-partner-onboarding"}}
+	service := &EmailService{
+		primaryProvider:  primary,
+		fallbackProvider: fallback,
+		notificationConf: &config.NotificationConfiguration{EmailFromAddress: "onboarding@paycrest.io"},
+	}
+
+	// gitleaks:allow - test data only
+	apiKey := "test-dummy-fallback-key-not-real"
+	resp, err := service.SendPartnerOnboardingSuccessEmail(context.Background(), "fallback@company.com", "Jane", apiKey)
+	assert.NoError(t, err)
+	assert.Equal(t, "fallback-partner-onboarding", resp.Id)
+	assert.Equal(t, int64(1), primary.GetTemplateCallCount())
+	assert.Equal(t, int64(1), fallback.GetTemplateCallCount())
+
+	lastPayload := fallback.GetLastPayload()
+	assert.Equal(t, "onboarding@paycrest.io", lastPayload.FromAddress)
+	assert.Equal(t, "fallback@company.com", lastPayload.ToAddress)
+	assert.Equal(t, "Jane", lastPayload.DynamicData["first_name"])
+	assert.Equal(t, apiKey, lastPayload.DynamicData["api_key"])
+	assert.Equal(t, "fallback@company.com", lastPayload.DynamicData["email"])
+
+	// Password should not be in the email
+	_, hasPassword := lastPayload.DynamicData["password"]
+	assert.False(t, hasPassword)
 }
 
 func TestGetTemplateID_SendgridTemplates(t *testing.T) {
@@ -309,6 +365,7 @@ func TestGetTemplateID_SendgridTemplates(t *testing.T) {
 		{"welcome", "d-b425f024e6554c5ba2b4d03ab0a8b25d"},
 		{"kyb_approval", "d-5ebb862274214ba79eae226c09300aa7"},
 		{"kyb_rejection", "d-6917f9c32105467b8dd806a5a3dd32dc"},
+		{"partner_onboarding_success", "d-da75eee4966544ad92dcd060421d4a13"},
 	}
 
 	for _, tt := range tests {
@@ -329,6 +386,7 @@ func TestGetTemplateID_BrevoTemplates(t *testing.T) {
 		{"welcome", "4"},
 		{"kyb_approval", "7"},
 		{"kyb_rejection", "8"},
+		{"partner_onboarding_success", "57"},
 	}
 
 	for _, tt := range tests {
@@ -349,6 +407,7 @@ func TestGetTemplateID_MailgunTemplates(t *testing.T) {
 		{"welcome", "mailgun-welcome-template-id"},
 		{"kyb_approval", "mailgun-kyb-approval-template-id"},
 		{"kyb_rejection", "mailgun-kyb-rejection-template-id"},
+		{"partner_onboarding_success", "mailgun-partner-onboarding-success-template-id"},
 	}
 
 	for _, tt := range tests {
@@ -449,7 +508,7 @@ func TestEmailService_SpecializedEmailMethods_WithFallback(t *testing.T) {
 		{
 			"kyb_rejection_with_fallback",
 			func(s *EmailService) error {
-				_, err := s.SendKYBRejectionEmail(context.Background(), "user@test.com", "User", "Reason")
+				_, err := s.SendKYBRejectionEmail(context.Background(), "user@test.com", "User", "Reason", nil)
 				return err
 			},
 		},

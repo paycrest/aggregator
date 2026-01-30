@@ -9,6 +9,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
+	explorer "github.com/paycrest/aggregator/services/explorer"
 	"github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -21,8 +22,8 @@ type IndexerEVM struct {
 	priorityQueue     *services.PriorityQueueService
 	order             types.OrderService
 	engineService     *services.EngineService
-	etherscanService  *services.EtherscanService
-	blockscoutService *services.BlockscoutService
+	etherscanService  *explorer.EtherscanService
+	blockscoutService *explorer.BlockscoutService
 }
 
 // NewIndexerEVM creates a new instance of IndexerEVM.
@@ -30,11 +31,11 @@ func NewIndexerEVM() (types.Indexer, error) {
 	priorityQueue := services.NewPriorityQueueService()
 	orderService := order.NewOrderEVM()
 	engineService := services.NewEngineService()
-	etherscanService, err := services.NewEtherscanService()
+	etherscanService, err := explorer.NewEtherscanService()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EtherscanService: %w", err)
 	}
-	blockscoutService := services.NewBlockscoutService()
+	blockscoutService := explorer.NewBlockscoutService()
 
 	return &IndexerEVM{
 		priorityQueue:     priorityQueue,

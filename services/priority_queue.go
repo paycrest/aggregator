@@ -11,12 +11,13 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
+	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
@@ -30,13 +31,13 @@ var (
 )
 
 type PriorityQueueService struct {
-	balanceService *BalanceManagementService
+	balanceService *balance.Service
 }
 
 // NewPriorityQueueService creates a new instance of PriorityQueueService
 func NewPriorityQueueService() *PriorityQueueService {
 	return &PriorityQueueService{
-		balanceService: NewBalanceManagementService(),
+		balanceService: balance.New(),
 	}
 }
 
@@ -73,11 +74,10 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 				providerprofile.IsActive(true),
 				providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-				providerprofile.HasProviderCurrenciesWith(
-					providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
-					providercurrencies.AvailableBalanceGT(bucket.MinAmount),
-					providercurrencies.IsAvailableEQ(true),
-					// TODO: add check to enforce critical balance threshold in the future
+				providerprofile.HasProviderBalancesWith(
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
+					providerbalances.AvailableBalanceGT(bucket.MinAmount),
+					providerbalances.IsAvailableEQ(true),
 				),
 			).
 			All(ctx)
@@ -153,11 +153,10 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 						Where(
 							providerprofile.IDEQ(orderToken.Edges.Provider.ID),
 							providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-							providerprofile.HasProviderCurrenciesWith(
-								providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
-								providercurrencies.AvailableBalanceGT(bucket.MinAmount),
-								providercurrencies.IsAvailableEQ(true),
-								// TODO: add check to enforce critical balance threshold in the future
+							providerprofile.HasProviderBalancesWith(
+								providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
+								providerbalances.AvailableBalanceGT(bucket.MinAmount),
+								providerbalances.IsAvailableEQ(true),
 							),
 						).
 						Only(ctx)
@@ -178,6 +177,66 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 		}
 
 		bucket.Edges.ProviderProfiles = availableProviders
+
+		// If no providers are eligible for this bucket, log balance health for a small sample of
+		// candidate providers to aid ops debugging (no new endpoints).
+		if len(bucket.Edges.ProviderProfiles) == 0 {
+			logger.WithFields(logger.Fields{
+				"BucketMinAmount": bucket.MinAmount,
+				"BucketMaxAmount": bucket.MaxAmount,
+				"Currency":        bucket.Edges.Currency.Code,
+			}).Warnf("No eligible providers found for bucket")
+
+			// Sample a few providers linked to this bucket (best effort; avoid heavy DB reads).
+			candidates, candErr := bucket.QueryProviderProfiles().
+				Where(
+					providerprofile.IsActive(true),
+					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
+					providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+				).
+				Limit(3).
+				All(ctx)
+			if candErr != nil {
+				continue
+			}
+
+			for _, p := range candidates {
+				bals, balErr := s.balanceService.GetProviderBalances(ctx, p.ID)
+				if balErr != nil {
+					logger.WithFields(logger.Fields{
+						"ProviderID": p.ID,
+						"Currency":   bucket.Edges.Currency.Code,
+						"Error":      fmt.Sprintf("%v", balErr),
+					}).Warnf("Balance health check: failed to load provider balances")
+					continue
+				}
+
+				for _, b := range bals {
+					// Only inspect the relevant fiat currency for this bucket.
+					if b.Edges.FiatCurrency == nil || b.Edges.FiatCurrency.Code != bucket.Edges.Currency.Code {
+						continue
+					}
+					report := s.balanceService.CheckBalanceHealth(b)
+					if report == nil || report.Status == "HEALTHY" {
+						continue
+					}
+					logger.WithFields(logger.Fields{
+						"ProviderID":       report.ProviderID,
+						"CurrencyCode":     report.CurrencyCode,
+						"Status":           report.Status,
+						"Severity":         report.Severity,
+						"AvailableBalance": report.AvailableBalance.String(),
+						"ReservedBalance":  report.ReservedBalance.String(),
+						"TotalBalance":     report.TotalBalance.String(),
+						"IsAvailable":      b.IsAvailable,
+						"Issues":           report.Issues,
+						"Recommendations":  report.Recommendations,
+						"BucketMinAmount":  bucket.MinAmount,
+						"BucketMaxAmount":  bucket.MaxAmount,
+					}).Errorf("Bucket provider candidate has unhealthy balance")
+				}
+			}
+		}
 	}
 
 	return buckets, nil
@@ -241,23 +300,17 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
 	prevRedisKey := redisKey + "_prev"
+	tempRedisKey := redisKey + "_temp"
 
-	// Delete the previous queue
-	err := s.deleteQueue(ctx, prevRedisKey)
-	if err != nil && err != context.Canceled {
-		logger.WithFields(logger.Fields{
-			"Error": fmt.Sprintf("%v", err),
-			"Key":   prevRedisKey,
-		}).Errorf("failed to delete previous provider queue")
-	}
-
-	// Copy the current queue to the previous queue
+	// Copy the current queue to the previous queue (backup before rebuilding)
 	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 	if err != nil && err != context.Canceled {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
 			"Key":   redisKey,
 		}).Errorf("failed to fetch provider rates")
+		// If we can't read current queue, abort to prevent data loss
+		return
 	}
 
 	// Convert []string to []interface{}
@@ -266,7 +319,16 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		prevValues[i] = v
 	}
 
-	// Update the previous queue
+	// Delete the previous queue before backing up
+	err = s.deleteQueue(ctx, prevRedisKey)
+	if err != nil && err != context.Canceled {
+		logger.WithFields(logger.Fields{
+			"Error": fmt.Sprintf("%v", err),
+			"Key":   prevRedisKey,
+		}).Errorf("failed to delete previous provider queue")
+	}
+
+	// Update the previous queue with current queue data (backup)
 	if len(prevValues) > 0 {
 		err = storage.RedisClient.RPush(ctx, prevRedisKey, prevValues...).Err()
 		if err != nil && err != context.Canceled {
@@ -275,23 +337,27 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 				"Key":    prevRedisKey,
 				"Values": prevValues,
 			}).Errorf("failed to store previous provider rates")
+			// If backup fails, abort to prevent data loss
+			return
 		}
 	}
 
-	// Delete the current queue
-	err = s.deleteQueue(ctx, redisKey)
+	// Delete the temporary queue if it exists (from a previous failed build)
+	err = s.deleteQueue(ctx, tempRedisKey)
 	if err != nil && err != context.Canceled {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
-			"Key":   redisKey,
-		}).Errorf("failed to delete existing circular queue")
+			"Key":   tempRedisKey,
+		}).Errorf("failed to delete temporary provider queue")
 	}
 
 	// TODO: add also the checks for all the currencies that a provider has
 
+	// Build new queue in temporary key first
+	newQueueEntries := 0
 	for _, provider := range providers {
-		exists, err := provider.QueryProviderCurrencies().
-			Where(providercurrencies.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID))).
+		exists, err := provider.QueryProviderBalances().
+			Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID))).
 			Exist(ctx)
 		if err != nil || !exists {
 			continue
@@ -301,7 +367,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			Where(
 				providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucket.Edges.Currency.Code)),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			WithToken().
 			All(ctx)
@@ -316,12 +382,16 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			continue
 		}
 
-		tokenSymbols := []string{}
+		// Use map to deduplicate by symbol:network combination
+		// This allows same token symbol on different networks (e.g., USDT on Ethereum vs Tron)
+		tokenKeys := make(map[string]bool)
 		for _, orderToken := range orderTokens {
-			if utils.ContainsString(tokenSymbols, orderToken.Edges.Token.Symbol) {
+			// Create a unique key combining symbol and network
+			tokenKey := fmt.Sprintf("%s:%s", orderToken.Edges.Token.Symbol, orderToken.Network)
+			if tokenKeys[tokenKey] {
 				continue
 			}
-			tokenSymbols = append(tokenSymbols, orderToken.Edges.Token.Symbol)
+			tokenKeys[tokenKey] = true
 
 			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if err != nil {
@@ -343,7 +413,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			// Check provider's rate against the market rate to ensure it's not too far off
 			percentDeviation := utils.AbsPercentageDeviation(bucket.Edges.Currency.MarketRate, rate)
 
-			isLocalStablecoin := strings.Contains(orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code) && !strings.Contains(orderToken.Edges.Token.Symbol, "USD")
+			isLocalStablecoin := strings.Contains(orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if serverConf.Environment == "production" && percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) && !isLocalStablecoin {
 				// Skip this provider if the rate is too far off
 				// TODO: add a logic to notify the provider(s) to update his rate since it's stale. could be a cron job
@@ -353,16 +423,76 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			// Serialize the provider ID, token, rate, min and max order amount into a single string
 			data := fmt.Sprintf("%s:%s:%s:%s:%s", provider.ID, orderToken.Edges.Token.Symbol, rate, orderToken.MinOrderAmount, orderToken.MaxOrderAmount)
 
-			// Enqueue the serialized data into the circular queue
-			err = storage.RedisClient.RPush(ctx, redisKey, data).Err()
-			if err != nil && err != context.Canceled {
+			// Enqueue the serialized data into the temporary circular queue
+			err = storage.RedisClient.RPush(ctx, tempRedisKey, data).Err()
+			if err == nil {
+				newQueueEntries++
+			} else if err != context.Canceled {
 				logger.WithFields(logger.Fields{
 					"Error": fmt.Sprintf("%v", err),
-					"Key":   redisKey,
+					"Key":   tempRedisKey,
 					"Data":  data,
 				}).Errorf("failed to enqueue provider data to circular queue")
 			}
 		}
+	}
+
+	// Only swap queues if new queue has entries, otherwise keep the old queue
+	if newQueueEntries > 0 {
+		// Delete the current queue
+		err = s.deleteQueue(ctx, redisKey)
+		if err != nil && err != context.Canceled {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Key":   redisKey,
+			}).Errorf("failed to delete existing circular queue")
+			// Clean up temp queue if deletion failed
+			_ = s.deleteQueue(ctx, tempRedisKey)
+			return
+		}
+
+		// Rename temp queue to current queue (atomic operation)
+		// Since Redis doesn't have RENAME for lists, we copy and delete
+		tempData, err := storage.RedisClient.LRange(ctx, tempRedisKey, 0, -1).Result()
+		if err != nil && err != context.Canceled {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Key":   tempRedisKey,
+			}).Errorf("failed to read temporary queue for swap")
+			// Clean up temp queue
+			_ = s.deleteQueue(ctx, tempRedisKey)
+			return
+		}
+
+		// Copy temp queue to current queue
+		if len(tempData) > 0 {
+			tempValues := make([]interface{}, len(tempData))
+			for i, v := range tempData {
+				tempValues[i] = v
+			}
+			err = storage.RedisClient.RPush(ctx, redisKey, tempValues...).Err()
+			if err != nil && err != context.Canceled {
+				logger.WithFields(logger.Fields{
+					"Error": fmt.Sprintf("%v", err),
+					"Key":   redisKey,
+				}).Errorf("failed to copy temporary queue to current queue")
+				// Clean up temp queue
+				_ = s.deleteQueue(ctx, tempRedisKey)
+				return
+			}
+		}
+
+		// Delete temporary queue after successful swap
+		err = s.deleteQueue(ctx, tempRedisKey)
+		if err != nil && err != context.Canceled {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Key":   tempRedisKey,
+			}).Warnf("failed to delete temporary queue after swap (non-critical)")
+		}
+	} else {
+		// New queue is empty, keep the old queue and clean up temp
+		_ = s.deleteQueue(ctx, tempRedisKey)
 	}
 }
 
@@ -393,11 +523,11 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 	currentOrder, err := storage.Client.PaymentOrder.Get(ctx, order.ID)
 	if err == nil {
 		// Order exists - check if it's in a state that allows assignment
-		if currentOrder.Status != paymentorder.StatusPending && currentOrder.Status != paymentorder.StatusInitiated {
+		if currentOrder.Status != paymentorder.StatusPending {
 			logger.WithFields(logger.Fields{
 				"OrderID": order.ID.String(),
 				"Status":  currentOrder.Status,
-			}).Warnf("AssignPaymentOrder: Order is not in pending/initiated state, skipping assignment")
+			}).Warnf("AssignPaymentOrder: Order is not in pending state, skipping assignment")
 			return nil // Not an error, just skip
 		}
 
@@ -607,6 +737,7 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 
 	orderRequestData := map[string]interface{}{
 		"type": "otc",
+		"providerId": order.ProviderID,
 	}
 	err = storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err()
 	if err != nil {
@@ -719,7 +850,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	}()
 
 	// Reserve balance within the transaction
-	err = s.balanceService.ReserveBalance(ctx, order.ProviderID, currency, amount, tx)
+	err = s.balanceService.ReserveFiatBalance(ctx, order.ProviderID, currency, amount, tx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -798,6 +929,27 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 		return err
 	}
 
+	// Persist order request metadata in a separate key so we can recover provider/currency/amount
+	// after the main order_request key expires (Redis expiry events fire after deletion).
+	metaKey := fmt.Sprintf("order_request_meta_%s", order.ID)
+	metaData := map[string]interface{}{
+		"amount":     orderRequestData["amount"],
+		"currency":   orderRequestData["currency"],
+		"providerId": orderRequestData["providerId"],
+	}
+	err = storage.RedisClient.HSet(ctx, metaKey, metaData).Err()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"MetaKey":    metaKey,
+		}).Errorf("Failed to persist order request metadata in Redis")
+		// Cleanup: delete the orphaned order request key before returning
+		_ = storage.RedisClient.Del(ctx, orderKey).Err()
+		return err
+	}
+
 	// Set a TTL for the order request
 	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity)).Err()
 	if err != nil {
@@ -805,7 +957,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"Error":    fmt.Sprintf("%v", err),
 			"OrderKey": orderKey,
 		}).Errorf("Failed to set TTL for order request")
-		// Cleanup: delete the orphaned key before returning
+		// Cleanup: delete the orphaned keys before returning
 		cleanupErr := storage.RedisClient.Del(ctx, orderKey).Err()
 		if cleanupErr != nil {
 			logger.WithFields(logger.Fields{
@@ -813,6 +965,22 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 				"OrderKey": orderKey,
 			}).Errorf("Failed to cleanup orderKey after ExpireAt failure")
 		}
+		_ = storage.RedisClient.Del(ctx, metaKey).Err()
+		return err
+	}
+
+	// Set TTL for metadata key longer than the order request key to ensure it exists during expiry handling.
+	err = storage.RedisClient.ExpireAt(ctx, metaKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"MetaKey":    metaKey,
+		}).Errorf("Failed to set TTL for order request metadata key")
+		// Cleanup: delete keys before returning
+		_ = storage.RedisClient.Del(ctx, orderKey).Err()
+		_ = storage.RedisClient.Del(ctx, metaKey).Err()
 		return err
 	}
 
@@ -825,7 +993,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 		}).Errorf("Failed to notify provider")
-		// Cleanup: delete the orphaned key before returning
+		// Cleanup: delete the orphaned keys before returning
 		cleanupErr := storage.RedisClient.Del(ctx, orderKey).Err()
 		if cleanupErr != nil {
 			logger.WithFields(logger.Fields{
@@ -833,6 +1001,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 				"OrderKey": orderKey,
 			}).Errorf("Failed to cleanup orderKey after notifyProvider failure")
 		}
+		_ = storage.RedisClient.Del(ctx, metaKey).Err()
 		return err
 	}
 
@@ -844,8 +1013,9 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 		}).Errorf("Failed to commit order processing transaction")
-		// Cleanup Redis key since DB transaction failed
+		// Cleanup Redis keys since DB transaction failed
 		_ = storage.RedisClient.Del(ctx, orderKey).Err()
+		_ = storage.RedisClient.Del(ctx, metaKey).Err()
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
@@ -969,16 +1139,16 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				providerordertoken.NetworkEQ(network.Identifier),
 				providerordertoken.HasProviderWith(
 					providerprofile.IDEQ(order.ProviderID),
-					providerprofile.HasProviderCurrenciesWith(
-						providercurrencies.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
-						providercurrencies.IsAvailableEQ(true),
+					providerprofile.HasProviderBalancesWith(
+						providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+						providerbalances.IsAvailableEQ(true),
 					),
 				),
 				providerordertoken.HasTokenWith(token.IDEQ(order.Token.ID)),
 				providerordertoken.HasCurrencyWith(
 					fiatcurrency.CodeEQ(bucketCurrency.Code),
 				),
-				providerordertoken.AddressNEQ(""),
+				providerordertoken.SettlementAddressNEQ(""),
 			).
 			First(ctx)
 		if err != nil {
@@ -1033,16 +1203,14 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 				}
 				break
 			} else {
-				// Regular order (or default for any non-OTC order type) - check balance sufficiency
-				_, err := s.balanceService.CheckBalanceSufficiency(ctx, order.ProviderID, bucketCurrency.Code, order.Amount.Mul(order.Rate).RoundBank(0))
+				// Regular order - check balance sufficiency
+				bal, err := s.balanceService.GetProviderFiatBalance(ctx, order.ProviderID, bucketCurrency.Code)
 				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", err),
-						"OrderID":    order.ID.String(),
-						"ProviderID": order.ProviderID,
-						"Currency":   bucketCurrency.Code,
-						"Amount":     order.Amount.String(),
-					}).Errorf("failed to check balance sufficiency")
+					logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "OrderID": order.ID.String(), "ProviderID": order.ProviderID, "Currency": bucketCurrency.Code}).Errorf("failed to get provider fiat balance")
+					continue
+				}
+				if !s.balanceService.CheckBalanceSufficiency(bal, order.Amount.Mul(order.Rate).RoundBank(0)) {
+					logger.WithFields(logger.Fields{"OrderID": order.ID.String(), "ProviderID": order.ProviderID, "Currency": bucketCurrency.Code, "Amount": order.Amount.String()}).Errorf("insufficient balance")
 					continue
 				}
 

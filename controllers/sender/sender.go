@@ -28,6 +28,7 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 
@@ -225,6 +226,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			Query().
 			Where(
 				paymentorder.ReferenceEQ(payload.Reference),
+			).
+			Where(
+				paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
 			).
 			Exist(ctx)
 		if err != nil {
@@ -431,6 +435,38 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddressExpiry = time.Now().Add(10 * orderConf.ReceiveAddressValidity)
 	}
 
+	if serverConf.Environment == "production" || serverConf.Environment == "staging" {
+
+		if payload.Recipient.Metadata == nil {
+			payload.Recipient.Metadata = make(map[string]interface{})
+		}
+		// Always remove any user-supplied apiKey to prevent spoofing
+		delete(payload.Recipient.Metadata, "apiKey")
+
+		// Only add API key to metadata if sender has an associated API key
+		if sender.Edges.APIKey != nil {
+			payload.Recipient.Metadata["apiKey"] = sender.Edges.APIKey.ID.String()
+		}
+
+		validationErr := cryptoUtils.ValidateRecipientEncryptionSize(&payload.Recipient)
+
+		// Remove internal apiKey after validation (it should not be persisted in clear form)
+		delete(payload.Recipient.Metadata, "apiKey")
+
+		// Now check validation result
+		if validationErr != nil {
+			logger.WithFields(logger.Fields{
+				"error":       validationErr,
+				"institution": payload.Recipient.Institution,
+			}).Errorf("Recipient encryption size validation failed")
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Recipient",
+				Message: "Recipient data too large for encryption",
+			})
+			return
+		}
+	}
+
 	// Create payment order and recipient in a transaction
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
@@ -454,12 +490,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	transactionLog, err := tx.TransactionLog.
 		Create().
 		SetStatus(transactionlog.StatusOrderInitiated).
-		SetMetadata(
-			map[string]interface{}{
-				"ReceiveAddress": receiveAddress,
-				"SenderID":       sender.ID.String(),
-			},
-		).SetNetwork(token.Edges.Network.Identifier).
+		SetNetwork(token.Edges.Network.Identifier).
 		Save(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
@@ -565,6 +596,645 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			Reference:      paymentOrder.Reference,
 			OrderType:      string(orderType),
 		})
+}
+
+// InitiatePaymentOrderV2 controller creates a payment order using v2 schema
+func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
+	var payload types.V2PaymentOrderPayload
+
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			"Failed to validate payload", u.GetErrorData(err))
+		return
+	}
+
+	// Default amountIn to "crypto" if not provided
+	if payload.AmountIn == "" {
+		payload.AmountIn = "crypto"
+	}
+
+	// Validate mutually exclusive fields: senderFee and senderFeePercent cannot both be provided
+	if payload.SenderFee != "" && payload.SenderFeePercent != "" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "SenderFee",
+			Message: "Cannot provide both senderFee and senderFeePercent",
+		})
+		return
+	}
+
+	// Parse amount from string
+	amount, err := decimal.NewFromString(payload.Amount)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Amount",
+			Message: "Invalid amount format",
+		})
+		return
+	}
+
+	// Validate amount is greater than zero
+	if amount.LessThanOrEqual(decimal.Zero) {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Amount",
+			Message: "Amount must be greater than zero",
+		})
+		return
+	}
+
+	// Get sender profile from the context
+	senderCtx, ok := ctx.Get("sender")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	sender := senderCtx.(*ent.SenderProfile)
+
+	// Validate source configuration
+	token, err := storage.Client.Token.
+		Query().
+		Where(
+			tokenEnt.SymbolEQ(payload.Source.Currency),
+			tokenEnt.HasNetworkWith(network.IdentifierEQ(payload.Source.PaymentRail)),
+			tokenEnt.IsEnabledEQ(true),
+		).
+		WithNetwork().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Source",
+				Message: "Provided token or payment rail is not supported",
+			})
+		} else {
+			logger.Errorf("Failed to fetch token: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch token", nil)
+		}
+		return
+	}
+
+	// Validate refund address format
+	if strings.HasPrefix(payload.Source.PaymentRail, "tron") {
+		if !u.IsValidTronAddress(payload.Source.RefundAddress) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Source",
+				Message: "Invalid Tron refund address",
+			})
+			return
+		}
+	} else if strings.HasPrefix(payload.Source.PaymentRail, "starknet") {
+		// Starknet addresses are 65 or 66 characters (0x + 63-64 hex characters)
+		pattern := `^0x[a-fA-F0-9]{63,64}$`
+		matched, _ := regexp.MatchString(pattern, payload.Source.RefundAddress)
+		if !matched {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Source",
+				Message: "Invalid Starknet refund address",
+			})
+			return
+		}
+	} else {
+		// EVM networks (Ethereum, Base, Polygon, etc.)
+		if !u.IsValidEthereumAddress(payload.Source.RefundAddress) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Source",
+				Message: "Invalid Ethereum refund address",
+			})
+			return
+		}
+	}
+
+	// Handle sender profile overrides
+	senderOrderToken, err := storage.Client.SenderOrderToken.
+		Query().
+		Where(
+			senderordertoken.HasTokenWith(
+				tokenEnt.IDEQ(token.ID),
+			),
+			senderordertoken.HasSenderWith(
+				senderprofile.IDEQ(sender.ID),
+			),
+		).
+		Only(ctx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Source",
+			Message: "Provided token is not configured",
+		})
+		return
+	}
+
+	if senderOrderToken.FeeAddress == "" || senderOrderToken.RefundAddress == "" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Source",
+			Message: "Fee address or refund address is not configured",
+		})
+		return
+	}
+
+	feePercent := senderOrderToken.FeePercent
+	feeAddress := senderOrderToken.FeeAddress
+	returnAddress := senderOrderToken.RefundAddress
+
+	// Use refund address from payload if provided
+	returnAddress = payload.Source.RefundAddress
+
+	// Validate destination configuration
+	// Validate institution exists
+	institutionObj, err := storage.Client.Institution.
+		Query().
+		Where(
+			institution.CodeEQ(payload.Destination.Recipient.Institution),
+		).
+		WithFiatCurrency(
+			func(q *ent.FiatCurrencyQuery) {
+				q.Where(fiatcurrency.IsEnabledEQ(true))
+			},
+		).
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Destination",
+				Message: "Provided institution is not supported",
+			})
+		} else {
+			logger.Errorf("Failed to fetch institution: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate institution", nil)
+		}
+		return
+	}
+
+	// Validate destination currency matches institution currency
+	if institutionObj.Edges.FiatCurrency.Code != payload.Destination.Currency {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Destination",
+			Message: "Destination currency does not match institution currency",
+		})
+		return
+	}
+
+	currency := institutionObj.Edges.FiatCurrency
+
+	if !strings.EqualFold(token.BaseCurrency, currency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("%s can only be converted to %s", token.Symbol, token.BaseCurrency), nil)
+		return
+	}
+
+	// Validate reference if provided
+	if payload.Reference != "" {
+		if !regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`).MatchString(payload.Reference) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Reference",
+				Message: "Reference must be alphanumeric",
+			})
+			return
+		}
+
+		referenceExists, err := storage.Client.PaymentOrder.
+			Query().
+			Where(
+				paymentorder.ReferenceEQ(payload.Reference),
+			).
+			Where(
+				paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+			).
+			Exist(ctx)
+		if err != nil {
+			logger.Errorf("Reference check error: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+			return
+		}
+
+		if referenceExists {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Reference",
+				Message: "Reference already exists",
+			})
+			return
+		}
+	}
+
+	// Validate account in parallel with other validations
+	type AccountResult struct {
+		accountName string
+		err         error
+	}
+	accountChan := make(chan AccountResult, 1)
+	go func() {
+		accountName, err := u.ValidateAccount(ctx, payload.Destination.Recipient.Institution, payload.Destination.Recipient.AccountIdentifier)
+		accountChan <- AccountResult{accountName, err}
+	}()
+
+	// Handle rate logic based on amountIn
+	var cryptoAmount decimal.Decimal
+	var orderRate decimal.Decimal
+	var rateValidationResult u.RateValidationResult
+
+	amountIn := payload.AmountIn
+	switch amountIn {
+	case "fiat":
+		// For fiat amounts, convert to crypto first, then ValidateRate will validate with crypto amount
+		// For direct currency matches (e.g., cNGN->NGN), rate is always 1:1
+		isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
+		if isDirectMatch {
+			orderRate = decimal.NewFromInt(1)
+		} else {
+			// Use market rate as approximation for non-direct matches
+			orderRate = currency.MarketRate
+		}
+		cryptoAmount = amount.Div(orderRate)
+
+		// ValidateRate expects crypto units, so pass cryptoAmount
+		rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmount, payload.Destination.ProviderID, payload.Source.PaymentRail)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Rate",
+				Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
+			})
+			return
+		}
+		rateValidationResult = rateResult
+		orderRate = rateValidationResult.Rate
+		// Recalculate cryptoAmount with the validated rate
+		cryptoAmount = amount.Div(orderRate)
+	case "crypto":
+		cryptoAmount = amount
+		if payload.Rate != "" {
+			// Use provided rate
+			providedRate, err := decimal.NewFromString(payload.Rate)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: "Invalid rate format",
+				})
+				return
+			}
+			if providedRate.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: "Rate must be greater than zero",
+				})
+				return
+			}
+
+			// Validate rate is achievable
+			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmount, payload.Destination.ProviderID, payload.Source.PaymentRail)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
+				})
+				return
+			}
+			rateValidationResult = rateResult
+			achievableRate := rateValidationResult.Rate
+			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001)) // 0.1% tolerance
+			if providedRate.LessThan(achievableRate.Sub(tolerance)) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Provided rate %s is not achievable. Available rate is %s", providedRate, achievableRate),
+				})
+				return
+			}
+			orderRate = providedRate
+		} else {
+			// Fetch rate from ValidateRate
+			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmount, payload.Destination.ProviderID, payload.Source.PaymentRail)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
+				})
+				return
+			}
+			rateValidationResult = rateResult
+			orderRate = rateValidationResult.Rate
+		}
+	default:
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "AmountIn",
+			Message: "amountIn must be 'crypto' or 'fiat'",
+		})
+		return
+	}
+
+	// Get account validation result
+	accountResult := <-accountChan
+	if accountResult.err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Destination",
+			Message: fmt.Sprintf("Account validation failed: %s", accountResult.err.Error()),
+		})
+		return
+	}
+
+	// Set account name from validation
+	payload.Destination.Recipient.AccountName = accountResult.accountName
+
+	amountInUSD := u.CalculatePaymentOrderAmountInUSD(cryptoAmount, token, institutionObj)
+
+	// Use order type from ValidateRate result
+	orderType := rateValidationResult.OrderType
+
+	// Handle fee calculation (priority: senderFee > senderFeePercent > configured defaults)
+	var senderFee decimal.Decimal
+	if payload.SenderFee != "" {
+		// Use provided fixed fee
+		fixedFee, err := decimal.NewFromString(payload.SenderFee)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "SenderFee",
+				Message: "Invalid sender fee format",
+			})
+			return
+		}
+		if fixedFee.LessThanOrEqual(decimal.Zero) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "SenderFee",
+				Message: "Sender fee must be greater than zero",
+			})
+			return
+		}
+		senderFee = fixedFee
+		feePercent = decimal.Zero // Reset fee percent when using fixed fee
+	} else if payload.SenderFeePercent != "" {
+		// Calculate fee from percentage
+		feePercentValue, err := decimal.NewFromString(payload.SenderFeePercent)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "SenderFeePercent",
+				Message: "Invalid sender fee percent format",
+			})
+			return
+		}
+		if feePercentValue.LessThanOrEqual(decimal.Zero) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "SenderFeePercent",
+				Message: "Sender fee percent must be greater than zero",
+			})
+			return
+		}
+		feePercent = feePercentValue
+		calculatedFee := feePercent.Mul(cryptoAmount).Div(decimal.NewFromInt(100)).Round(4)
+		senderFee = calculatedFee
+		// Apply max fee cap if configured
+		if senderOrderToken.MaxFeeCap.GreaterThan(decimal.Zero) {
+			if calculatedFee.GreaterThan(senderOrderToken.MaxFeeCap) {
+				senderFee = senderOrderToken.MaxFeeCap
+			}
+		}
+	} else {
+		// Use configured fee percent from sender order token
+		calculatedFee := feePercent.Mul(cryptoAmount).Div(decimal.NewFromInt(100)).Round(4)
+		senderFee = calculatedFee
+		// Apply max fee cap if configured
+		if senderOrderToken.MaxFeeCap.GreaterThan(decimal.Zero) {
+			if calculatedFee.GreaterThan(senderOrderToken.MaxFeeCap) {
+				senderFee = senderOrderToken.MaxFeeCap
+			}
+		}
+	}
+
+	isLocalTransfer := strings.EqualFold(token.BaseCurrency, currency.Code)
+	if isLocalTransfer && feePercent.IsZero() && senderFee.IsZero() {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "SenderFee",
+			Message: fmt.Sprintf("Sender fee must be greater than zero for local currency order from (%s to %s)", token.Symbol, currency.Code),
+		})
+		return
+	}
+
+	// Generate receive address
+	var receiveAddress string
+	var receiveAddressSalt []byte
+	var receiveAddressExpiry time.Time
+
+	if strings.HasPrefix(payload.Source.PaymentRail, "tron") {
+		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"network": payload.Source.PaymentRail,
+			}).Errorf("Failed to create receive address")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", types.ErrorData{
+				Field:   "Source",
+				Message: "Tron currently not available",
+			})
+			return
+		}
+		receiveAddress = address
+		receiveAddressSalt = salt
+		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
+	} else if strings.HasPrefix(payload.Source.PaymentRail, "starknet") {
+		if ctrl.starknetClient == nil {
+			logger.WithFields(logger.Fields{
+				"error":   "Starknet client not initialized -- disable Starknet tokens if not in use",
+				"network": payload.Source.PaymentRail,
+			}).Errorf("Failed to create receive address")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", types.ErrorData{
+				Field:   "Source",
+				Message: "Starknet currently not available",
+			})
+			return
+		}
+		address, salt, err := ctrl.receiveAddressService.CreateStarknetAddress(ctrl.starknetClient)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"network": payload.Source.PaymentRail,
+			}).Errorf("Failed to create receive address")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", types.ErrorData{
+				Field:   "Source",
+				Message: "Starknet currently not available",
+			})
+			return
+		}
+		receiveAddress = address
+		receiveAddressSalt = salt
+		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
+	} else {
+		// Generate unique label for smart address
+		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
+		address, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, uniqueLabel)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"error":   err,
+				"network": payload.Source.PaymentRail,
+			}).Errorf("Failed to create receive address")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", types.ErrorData{
+				Field:   "Source",
+				Message: fmt.Sprintf("%s currently not available", payload.Source.PaymentRail),
+			})
+			return
+		}
+		receiveAddress = address
+		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
+	}
+
+	// Set extended expiry for private orders (10x normal validity)
+	if strings.HasPrefix(payload.Destination.Recipient.Memo, "P#P") {
+		receiveAddressExpiry = time.Now().Add(10 * orderConf.ReceiveAddressValidity)
+	}
+
+	// Create payment order in a transaction
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		return
+	}
+
+	// Create transaction log
+	transactionLog, err := tx.TransactionLog.
+		Create().
+		SetStatus(transactionlog.StatusOrderInitiated).
+		SetNetwork(token.Edges.Network.Identifier).
+		Save(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		_ = tx.Rollback()
+		return
+	}
+
+	// Build metadata with KYC and recipient metadata
+	metadata := make(map[string]interface{})
+	if payload.Destination.Recipient.Metadata != nil {
+		metadata["recipientMetadata"] = payload.Destination.Recipient.Metadata
+	}
+	if payload.KYC != nil {
+		kycData := make(map[string]interface{})
+		if payload.KYC.Recipient != nil {
+			kycData["recipient"] = payload.KYC.Recipient
+		}
+		if payload.KYC.Sender != nil {
+			kycData["sender"] = payload.KYC.Sender
+		}
+		metadata["kyc"] = kycData
+	}
+
+	// Create payment order
+	paymentOrderBuilder := tx.PaymentOrder.
+		Create().
+		SetSenderProfile(sender).
+		SetAmount(cryptoAmount).
+		SetAmountInUsd(amountInUSD).
+		SetNetworkFee(token.Edges.Network.Fee).
+		SetSenderFee(senderFee).
+		SetToken(token).
+		SetRate(orderRate).
+		SetReceiveAddress(receiveAddress).
+		SetReceiveAddressExpiry(receiveAddressExpiry).
+		SetFeePercent(feePercent).
+		SetFeeAddress(feeAddress).
+		SetReturnAddress(returnAddress).
+		SetReference(payload.Reference).
+		SetOrderType(orderType).
+		SetInstitution(payload.Destination.Recipient.Institution).
+		SetAccountIdentifier(payload.Destination.Recipient.AccountIdentifier).
+		SetAccountName(payload.Destination.Recipient.AccountName).
+		SetMemo(payload.Destination.Recipient.Memo).
+		SetMetadata(metadata).
+		AddTransactions(transactionLog)
+
+	// Set provider ID if available from rate validation result
+	if rateValidationResult.ProviderID != "" {
+		paymentOrderBuilder = paymentOrderBuilder.SetProviderID(rateValidationResult.ProviderID)
+	}
+
+	// Set salt for Tron addresses
+	if receiveAddressSalt != nil {
+		paymentOrderBuilder = paymentOrderBuilder.SetReceiveAddressSalt(receiveAddressSalt)
+	}
+
+	paymentOrder, err := paymentOrderBuilder.Save(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		_ = tx.Rollback()
+		return
+	}
+
+	// Create webhook for the smart address to monitor transfers (only for EVM networks)
+	if !strings.HasPrefix(payload.Source.PaymentRail, "tron") && !strings.HasPrefix(payload.Source.PaymentRail, "starknet") {
+		engineService := svc.NewEngineService()
+		webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
+			ctx,
+			token.Edges.Network.ChainID,
+			token.ContractAddress,
+			receiveAddress,
+			paymentOrder.ID.String(),
+		)
+		if err != nil {
+			// Check if this is BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) which is not supported by Thirdweb
+			if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
+				logger.WithFields(logger.Fields{
+					"ChainID": token.Edges.Network.ChainID,
+					"Network": token.Edges.Network.Identifier,
+					"Error":   err.Error(),
+				}).Errorf("Failed to create transfer webhook: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+				_ = tx.Rollback()
+				return
+			}
+		} else {
+			// Create PaymentWebhook record in database only if webhook was created successfully
+			_, err = tx.PaymentWebhook.
+				Create().
+				SetWebhookID(webhookID).
+				SetWebhookSecret(webhookSecret).
+				SetCallbackURL(fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)).
+				SetPaymentOrder(paymentOrder).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to save payment webhook record: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+				_ = tx.Rollback()
+				return
+			}
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		return
+	}
+
+	// Format sender fee percent for response
+	senderFeePercentStr := ""
+	if !feePercent.IsZero() {
+		senderFeePercentStr = feePercent.String()
+	}
+
+	// Build response
+	response := &types.V2PaymentOrderResponse{
+		ID:               paymentOrder.ID,
+		Status:           string(paymentOrder.Status),
+		Timestamp:        paymentOrder.CreatedAt,
+		Amount:           cryptoAmount.String(),
+		SenderFee:        senderFee.String(),
+		SenderFeePercent: senderFeePercentStr,
+		TransactionFee:   token.Edges.Network.Fee.String(),
+		Reference:        paymentOrder.Reference,
+		ProviderAccount: types.V2ProviderAccount{
+			PaymentRail:    payload.Source.PaymentRail,
+			ReceiveAddress: receiveAddress,
+			ValidUntil:     receiveAddressExpiry,
+		},
+		Source:      payload.Source,
+		Destination: payload.Destination,
+		KYC:         payload.KYC,
+	}
+
+	// Add rate to response if available
+	if !orderRate.IsZero() {
+		response.Rate = orderRate.String()
+	}
+
+	u.APIResponse(ctx, http.StatusCreated, "success", "Payment order initiated successfully", response)
 }
 
 // GetPaymentOrderByID controller fetches a payment order by ID
@@ -981,11 +1651,18 @@ func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentO
 	// Filter by status
 	statusQueryParam := ctx.Query("status")
 	statusMap := map[string]paymentorder.Status{
-		"initiated": paymentorder.StatusInitiated,
-		"pending":   paymentorder.StatusPending,
-		"expired":   paymentorder.StatusExpired,
-		"settled":   paymentorder.StatusSettled,
-		"refunded":  paymentorder.StatusRefunded,
+		"initiated":  paymentorder.StatusInitiated,
+		"expired":    paymentorder.StatusExpired,
+		"deposited":  paymentorder.StatusDeposited,
+		"pending":    paymentorder.StatusPending,
+		"cancelled":  paymentorder.StatusCancelled,
+		"fulfilling": paymentorder.StatusFulfilling,
+		"fulfilled":  paymentorder.StatusFulfilled,
+		"validated":  paymentorder.StatusValidated,
+		"settling":   paymentorder.StatusSettling,
+		"settled":    paymentorder.StatusSettled,
+		"refunding":  paymentorder.StatusRefunding,
+		"refunded":   paymentorder.StatusRefunded,
 	}
 
 	if status, ok := statusMap[statusQueryParam]; ok {
@@ -1406,10 +2083,6 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 	transactionLog, err := tx.TransactionLog.Create().
 		SetStatus(transactionlog.StatusOrderValidated).
 		SetNetwork(paymentOrder.Edges.Token.Edges.Network.Identifier).
-		SetMetadata(map[string]interface{}{
-			"TransactionID": fulfillment.TxID,
-			"PSP":           fulfillment.Psp,
-		}).
 		Save(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{

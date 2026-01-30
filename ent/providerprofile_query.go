@@ -16,7 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/paycrest/aggregator/ent/providercurrencies"
+	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -28,19 +28,19 @@ import (
 // ProviderProfileQuery is the builder for querying ProviderProfile entities.
 type ProviderProfileQuery struct {
 	config
-	ctx                    *QueryContext
-	order                  []providerprofile.OrderOption
-	inters                 []Interceptor
-	predicates             []predicate.ProviderProfile
-	withUser               *UserQuery
-	withAPIKey             *APIKeyQuery
-	withProviderCurrencies *ProviderCurrenciesQuery
-	withProvisionBuckets   *ProvisionBucketQuery
-	withOrderTokens        *ProviderOrderTokenQuery
-	withProviderRating     *ProviderRatingQuery
-	withAssignedOrders     *PaymentOrderQuery
-	withFiatAccounts       *ProviderFiatAccountQuery
-	withFKs                bool
+	ctx                  *QueryContext
+	order                []providerprofile.OrderOption
+	inters               []Interceptor
+	predicates           []predicate.ProviderProfile
+	withUser             *UserQuery
+	withAPIKey           *APIKeyQuery
+	withProviderBalances *ProviderBalancesQuery
+	withProvisionBuckets *ProvisionBucketQuery
+	withOrderTokens      *ProviderOrderTokenQuery
+	withProviderRating   *ProviderRatingQuery
+	withAssignedOrders   *PaymentOrderQuery
+	withFiatAccounts     *ProviderFiatAccountQuery
+	withFKs              bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -121,9 +121,9 @@ func (_q *ProviderProfileQuery) QueryAPIKey() *APIKeyQuery {
 	return query
 }
 
-// QueryProviderCurrencies chains the current query on the "provider_currencies" edge.
-func (_q *ProviderProfileQuery) QueryProviderCurrencies() *ProviderCurrenciesQuery {
-	query := (&ProviderCurrenciesClient{config: _q.config}).Query()
+// QueryProviderBalances chains the current query on the "provider_balances" edge.
+func (_q *ProviderProfileQuery) QueryProviderBalances() *ProviderBalancesQuery {
+	query := (&ProviderBalancesClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -134,8 +134,8 @@ func (_q *ProviderProfileQuery) QueryProviderCurrencies() *ProviderCurrenciesQue
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
-			sqlgraph.To(providercurrencies.Table, providercurrencies.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderCurrenciesTable, providerprofile.ProviderCurrenciesColumn),
+			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderBalancesTable, providerprofile.ProviderBalancesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -440,19 +440,19 @@ func (_q *ProviderProfileQuery) Clone() *ProviderProfileQuery {
 		return nil
 	}
 	return &ProviderProfileQuery{
-		config:                 _q.config,
-		ctx:                    _q.ctx.Clone(),
-		order:                  append([]providerprofile.OrderOption{}, _q.order...),
-		inters:                 append([]Interceptor{}, _q.inters...),
-		predicates:             append([]predicate.ProviderProfile{}, _q.predicates...),
-		withUser:               _q.withUser.Clone(),
-		withAPIKey:             _q.withAPIKey.Clone(),
-		withProviderCurrencies: _q.withProviderCurrencies.Clone(),
-		withProvisionBuckets:   _q.withProvisionBuckets.Clone(),
-		withOrderTokens:        _q.withOrderTokens.Clone(),
-		withProviderRating:     _q.withProviderRating.Clone(),
-		withAssignedOrders:     _q.withAssignedOrders.Clone(),
-		withFiatAccounts:       _q.withFiatAccounts.Clone(),
+		config:               _q.config,
+		ctx:                  _q.ctx.Clone(),
+		order:                append([]providerprofile.OrderOption{}, _q.order...),
+		inters:               append([]Interceptor{}, _q.inters...),
+		predicates:           append([]predicate.ProviderProfile{}, _q.predicates...),
+		withUser:             _q.withUser.Clone(),
+		withAPIKey:           _q.withAPIKey.Clone(),
+		withProviderBalances: _q.withProviderBalances.Clone(),
+		withProvisionBuckets: _q.withProvisionBuckets.Clone(),
+		withOrderTokens:      _q.withOrderTokens.Clone(),
+		withProviderRating:   _q.withProviderRating.Clone(),
+		withAssignedOrders:   _q.withAssignedOrders.Clone(),
+		withFiatAccounts:     _q.withFiatAccounts.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -481,14 +481,14 @@ func (_q *ProviderProfileQuery) WithAPIKey(opts ...func(*APIKeyQuery)) *Provider
 	return _q
 }
 
-// WithProviderCurrencies tells the query-builder to eager-load the nodes that are connected to
-// the "provider_currencies" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *ProviderProfileQuery) WithProviderCurrencies(opts ...func(*ProviderCurrenciesQuery)) *ProviderProfileQuery {
-	query := (&ProviderCurrenciesClient{config: _q.config}).Query()
+// WithProviderBalances tells the query-builder to eager-load the nodes that are connected to
+// the "provider_balances" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProviderProfileQuery) WithProviderBalances(opts ...func(*ProviderBalancesQuery)) *ProviderProfileQuery {
+	query := (&ProviderBalancesClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withProviderCurrencies = query
+	_q.withProviderBalances = query
 	return _q
 }
 
@@ -629,7 +629,7 @@ func (_q *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 		loadedTypes = [8]bool{
 			_q.withUser != nil,
 			_q.withAPIKey != nil,
-			_q.withProviderCurrencies != nil,
+			_q.withProviderBalances != nil,
 			_q.withProvisionBuckets != nil,
 			_q.withOrderTokens != nil,
 			_q.withProviderRating != nil,
@@ -673,11 +673,11 @@ func (_q *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 			return nil, err
 		}
 	}
-	if query := _q.withProviderCurrencies; query != nil {
-		if err := _q.loadProviderCurrencies(ctx, query, nodes,
-			func(n *ProviderProfile) { n.Edges.ProviderCurrencies = []*ProviderCurrencies{} },
-			func(n *ProviderProfile, e *ProviderCurrencies) {
-				n.Edges.ProviderCurrencies = append(n.Edges.ProviderCurrencies, e)
+	if query := _q.withProviderBalances; query != nil {
+		if err := _q.loadProviderBalances(ctx, query, nodes,
+			func(n *ProviderProfile) { n.Edges.ProviderBalances = []*ProviderBalances{} },
+			func(n *ProviderProfile, e *ProviderBalances) {
+				n.Edges.ProviderBalances = append(n.Edges.ProviderBalances, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -783,7 +783,7 @@ func (_q *ProviderProfileQuery) loadAPIKey(ctx context.Context, query *APIKeyQue
 	}
 	return nil
 }
-func (_q *ProviderProfileQuery) loadProviderCurrencies(ctx context.Context, query *ProviderCurrenciesQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderCurrencies)) error {
+func (_q *ProviderProfileQuery) loadProviderBalances(ctx context.Context, query *ProviderBalancesQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderBalances)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[string]*ProviderProfile)
 	for i := range nodes {
@@ -794,21 +794,21 @@ func (_q *ProviderProfileQuery) loadProviderCurrencies(ctx context.Context, quer
 		}
 	}
 	query.withFKs = true
-	query.Where(predicate.ProviderCurrencies(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(providerprofile.ProviderCurrenciesColumn), fks...))
+	query.Where(predicate.ProviderBalances(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(providerprofile.ProviderBalancesColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.provider_profile_provider_currencies
+		fk := n.provider_profile_provider_balances
 		if fk == nil {
-			return fmt.Errorf(`foreign-key "provider_profile_provider_currencies" is nil for node %v`, n.ID)
+			return fmt.Errorf(`foreign-key "provider_profile_provider_balances" is nil for node %v`, n.ID)
 		}
 		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_provider_currencies" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_provider_balances" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

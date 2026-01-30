@@ -43,5 +43,7 @@ func (Token) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("provider_order_tokens", ProviderOrderToken.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("provider_balances", ProviderBalances.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

@@ -49,9 +49,11 @@ type TokenEdges struct {
 	SenderOrderTokens []*SenderOrderToken `json:"sender_order_tokens,omitempty"`
 	// ProviderOrderTokens holds the value of the provider_order_tokens edge.
 	ProviderOrderTokens []*ProviderOrderToken `json:"provider_order_tokens,omitempty"`
+	// ProviderBalances holds the value of the provider_balances edge.
+	ProviderBalances []*ProviderBalances `json:"provider_balances,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // NetworkOrErr returns the Network value or an error if the edge
@@ -90,6 +92,15 @@ func (e TokenEdges) ProviderOrderTokensOrErr() ([]*ProviderOrderToken, error) {
 		return e.ProviderOrderTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "provider_order_tokens"}
+}
+
+// ProviderBalancesOrErr returns the ProviderBalances value or an error if the edge
+// was not loaded in eager-loading.
+func (e TokenEdges) ProviderBalancesOrErr() ([]*ProviderBalances, error) {
+	if e.loadedTypes[4] {
+		return e.ProviderBalances, nil
+	}
+	return nil, &NotLoadedError{edge: "provider_balances"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -208,6 +219,11 @@ func (_m *Token) QuerySenderOrderTokens() *SenderOrderTokenQuery {
 // QueryProviderOrderTokens queries the "provider_order_tokens" edge of the Token entity.
 func (_m *Token) QueryProviderOrderTokens() *ProviderOrderTokenQuery {
 	return NewTokenClient(_m.config).QueryProviderOrderTokens(_m)
+}
+
+// QueryProviderBalances queries the "provider_balances" edge of the Token entity.
+func (_m *Token) QueryProviderBalances() *ProviderBalancesQuery {
+	return NewTokenClient(_m.config).QueryProviderBalances(_m)
 }
 
 // Update returns a builder for updating this Token.

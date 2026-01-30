@@ -11,7 +11,6 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
-
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	userEnt "github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/ent/verificationtoken"
@@ -92,8 +91,14 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		SetPassword(payload.Password).
 		SetScope(scope)
 
-	// Checking the environment to set the user as verified and give early access
-	if serverConf.Environment != "production" && serverConf.Environment != "staging" {
+	// Set referral_id if provided (partner onboarding users)
+	if payload.ReferralID != "" {
+		userCreate = userCreate.SetReferralID(payload.ReferralID)
+	}
+
+	// Auto-verify email for partner onboarding users OR in non-production environments
+	autoVerified := payload.ReferralID != "" || (serverConf.Environment != "production" && serverConf.Environment != "staging")
+	if autoVerified {
 		userCreate = userCreate.SetIsEmailVerified(true)
 	}
 
@@ -170,16 +175,15 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			return
 		}
 
-		// Create ProviderCurrencies entries for each currency
 		for _, currency := range fiatCurrencies {
-			_, err = tx.ProviderCurrencies.
+			_, err = tx.ProviderBalances.
 				Create().
-				SetProvider(provider).
-				SetCurrency(currency).
+				SetFiatCurrency(currency).
 				SetAvailableBalance(decimal.Zero).
 				SetTotalBalance(decimal.Zero).
 				SetReservedBalance(decimal.Zero).
 				SetIsAvailable(true).
+				SetProviderID(provider.ID).
 				Save(ctx)
 			if err != nil {
 				_ = tx.Rollback()
@@ -249,18 +253,21 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Send verification email
-	verificationToken, err := db.Client.VerificationToken.
-		Create().
-		SetOwner(user).
-		SetScope(verificationtoken.ScopeEmailVerification).
-		SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
-		Save(ctx)
-	if err != nil {
-		logger.Errorf("Error: Failed to create verification token: %v", err)
+	// Send verification email (skip if user is auto-verified)
+	var verificationToken *ent.VerificationToken
+	if !autoVerified {
+		verificationToken, err = db.Client.VerificationToken.
+			Create().
+			SetOwner(user).
+			SetScope(verificationtoken.ScopeEmailVerification).
+			SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
+			Save(ctx)
+		if err != nil {
+			logger.Errorf("Error: Failed to create verification token: %v", err)
+		}
 	}
 
-	if serverConf.Environment == "production" {
+	if serverConf.Environment == "production" && !autoVerified {
 		if verificationToken != nil {
 			if _, err := ctrl.emailService.SendVerificationEmail(ctx, verificationToken.Token, user.Email, user.FirstName); err != nil {
 				logger.WithFields(logger.Fields{

@@ -101,9 +101,14 @@ func RateSlippage(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldRateSlippage, v))
 }
 
-// Address applies equality check predicate on the "address" field. It's identical to AddressEQ.
-func Address(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldEQ(FieldAddress, v))
+// SettlementAddress applies equality check predicate on the "settlement_address" field. It's identical to SettlementAddressEQ.
+func SettlementAddress(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldSettlementAddress, v))
+}
+
+// PayoutAddress applies equality check predicate on the "payout_address" field. It's identical to PayoutAddressEQ.
+func PayoutAddress(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldPayoutAddress, v))
 }
 
 // Network applies equality check predicate on the "network" field. It's identical to NetworkEQ.
@@ -491,79 +496,154 @@ func RateSlippageLTE(v decimal.Decimal) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldLTE(FieldRateSlippage, v))
 }
 
-// AddressEQ applies the EQ predicate on the "address" field.
-func AddressEQ(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldEQ(FieldAddress, v))
+// SettlementAddressEQ applies the EQ predicate on the "settlement_address" field.
+func SettlementAddressEQ(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldSettlementAddress, v))
 }
 
-// AddressNEQ applies the NEQ predicate on the "address" field.
-func AddressNEQ(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldAddress, v))
+// SettlementAddressNEQ applies the NEQ predicate on the "settlement_address" field.
+func SettlementAddressNEQ(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldSettlementAddress, v))
 }
 
-// AddressIn applies the In predicate on the "address" field.
-func AddressIn(vs ...string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldIn(FieldAddress, vs...))
+// SettlementAddressIn applies the In predicate on the "settlement_address" field.
+func SettlementAddressIn(vs ...string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldSettlementAddress, vs...))
 }
 
-// AddressNotIn applies the NotIn predicate on the "address" field.
-func AddressNotIn(vs ...string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldAddress, vs...))
+// SettlementAddressNotIn applies the NotIn predicate on the "settlement_address" field.
+func SettlementAddressNotIn(vs ...string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldSettlementAddress, vs...))
 }
 
-// AddressGT applies the GT predicate on the "address" field.
-func AddressGT(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldGT(FieldAddress, v))
+// SettlementAddressGT applies the GT predicate on the "settlement_address" field.
+func SettlementAddressGT(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldSettlementAddress, v))
 }
 
-// AddressGTE applies the GTE predicate on the "address" field.
-func AddressGTE(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldGTE(FieldAddress, v))
+// SettlementAddressGTE applies the GTE predicate on the "settlement_address" field.
+func SettlementAddressGTE(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldSettlementAddress, v))
 }
 
-// AddressLT applies the LT predicate on the "address" field.
-func AddressLT(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldLT(FieldAddress, v))
+// SettlementAddressLT applies the LT predicate on the "settlement_address" field.
+func SettlementAddressLT(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldSettlementAddress, v))
 }
 
-// AddressLTE applies the LTE predicate on the "address" field.
-func AddressLTE(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldLTE(FieldAddress, v))
+// SettlementAddressLTE applies the LTE predicate on the "settlement_address" field.
+func SettlementAddressLTE(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldSettlementAddress, v))
 }
 
-// AddressContains applies the Contains predicate on the "address" field.
-func AddressContains(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldContains(FieldAddress, v))
+// SettlementAddressContains applies the Contains predicate on the "settlement_address" field.
+func SettlementAddressContains(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldContains(FieldSettlementAddress, v))
 }
 
-// AddressHasPrefix applies the HasPrefix predicate on the "address" field.
-func AddressHasPrefix(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldHasPrefix(FieldAddress, v))
+// SettlementAddressHasPrefix applies the HasPrefix predicate on the "settlement_address" field.
+func SettlementAddressHasPrefix(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldHasPrefix(FieldSettlementAddress, v))
 }
 
-// AddressHasSuffix applies the HasSuffix predicate on the "address" field.
-func AddressHasSuffix(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldHasSuffix(FieldAddress, v))
+// SettlementAddressHasSuffix applies the HasSuffix predicate on the "settlement_address" field.
+func SettlementAddressHasSuffix(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldHasSuffix(FieldSettlementAddress, v))
 }
 
-// AddressIsNil applies the IsNil predicate on the "address" field.
-func AddressIsNil() predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldAddress))
+// SettlementAddressIsNil applies the IsNil predicate on the "settlement_address" field.
+func SettlementAddressIsNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldSettlementAddress))
 }
 
-// AddressNotNil applies the NotNil predicate on the "address" field.
-func AddressNotNil() predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldAddress))
+// SettlementAddressNotNil applies the NotNil predicate on the "settlement_address" field.
+func SettlementAddressNotNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldSettlementAddress))
 }
 
-// AddressEqualFold applies the EqualFold predicate on the "address" field.
-func AddressEqualFold(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldEqualFold(FieldAddress, v))
+// SettlementAddressEqualFold applies the EqualFold predicate on the "settlement_address" field.
+func SettlementAddressEqualFold(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEqualFold(FieldSettlementAddress, v))
 }
 
-// AddressContainsFold applies the ContainsFold predicate on the "address" field.
-func AddressContainsFold(v string) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldContainsFold(FieldAddress, v))
+// SettlementAddressContainsFold applies the ContainsFold predicate on the "settlement_address" field.
+func SettlementAddressContainsFold(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldContainsFold(FieldSettlementAddress, v))
+}
+
+// PayoutAddressEQ applies the EQ predicate on the "payout_address" field.
+func PayoutAddressEQ(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldPayoutAddress, v))
+}
+
+// PayoutAddressNEQ applies the NEQ predicate on the "payout_address" field.
+func PayoutAddressNEQ(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldPayoutAddress, v))
+}
+
+// PayoutAddressIn applies the In predicate on the "payout_address" field.
+func PayoutAddressIn(vs ...string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldPayoutAddress, vs...))
+}
+
+// PayoutAddressNotIn applies the NotIn predicate on the "payout_address" field.
+func PayoutAddressNotIn(vs ...string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldPayoutAddress, vs...))
+}
+
+// PayoutAddressGT applies the GT predicate on the "payout_address" field.
+func PayoutAddressGT(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldPayoutAddress, v))
+}
+
+// PayoutAddressGTE applies the GTE predicate on the "payout_address" field.
+func PayoutAddressGTE(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldPayoutAddress, v))
+}
+
+// PayoutAddressLT applies the LT predicate on the "payout_address" field.
+func PayoutAddressLT(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldPayoutAddress, v))
+}
+
+// PayoutAddressLTE applies the LTE predicate on the "payout_address" field.
+func PayoutAddressLTE(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldPayoutAddress, v))
+}
+
+// PayoutAddressContains applies the Contains predicate on the "payout_address" field.
+func PayoutAddressContains(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldContains(FieldPayoutAddress, v))
+}
+
+// PayoutAddressHasPrefix applies the HasPrefix predicate on the "payout_address" field.
+func PayoutAddressHasPrefix(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldHasPrefix(FieldPayoutAddress, v))
+}
+
+// PayoutAddressHasSuffix applies the HasSuffix predicate on the "payout_address" field.
+func PayoutAddressHasSuffix(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldHasSuffix(FieldPayoutAddress, v))
+}
+
+// PayoutAddressIsNil applies the IsNil predicate on the "payout_address" field.
+func PayoutAddressIsNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldPayoutAddress))
+}
+
+// PayoutAddressNotNil applies the NotNil predicate on the "payout_address" field.
+func PayoutAddressNotNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldPayoutAddress))
+}
+
+// PayoutAddressEqualFold applies the EqualFold predicate on the "payout_address" field.
+func PayoutAddressEqualFold(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEqualFold(FieldPayoutAddress, v))
+}
+
+// PayoutAddressContainsFold applies the ContainsFold predicate on the "payout_address" field.
+func PayoutAddressContainsFold(v string) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldContainsFold(FieldPayoutAddress, v))
 }
 
 // NetworkEQ applies the EQ predicate on the "network" field.

@@ -37,9 +37,9 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/bits-and-blooms/bitset v1.24.0 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
-	github.com/btcsuite/btcd v0.22.1 // indirect
+	github.com/btcsuite/btcd v0.23.4 // indirect
+	github.com/btcsuite/btcd/btcutil v1.1.3 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.2 // indirect
-	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chenzhuoyu/iasm v0.9.0 // indirect
 	github.com/consensys/gnark-crypto v0.18.0 // indirect
@@ -140,3 +140,5 @@ require (
 )
 
 replace github.com/ranjbar-dev/tron-wallet v1.0.6 => github.com/paycrest/tron-wallet v1.0.7
+
+replace github.com/miguelmota/go-ethereum-hdwallet => github.com/stephenlacy/go-ethereum-hdwallet v0.0.0-20230913225845-a4fa94429863
