@@ -71,7 +71,8 @@ var (
 		{Name: "decimals", Type: field.TypeInt, Default: 2},
 		{Name: "symbol", Type: field.TypeString},
 		{Name: "name", Type: field.TypeString},
-		{Name: "market_rate", Type: field.TypeFloat64},
+		{Name: "market_buy_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "market_sell_rate", Type: field.TypeFloat64, Nullable: true},
 		{Name: "is_enabled", Type: field.TypeBool, Default: false},
 	}
 	// FiatCurrenciesTable holds the schema information for the "fiat_currencies" table.
@@ -406,9 +407,10 @@ var (
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "fixed_conversion_rate", Type: field.TypeFloat64},
-		{Name: "floating_conversion_rate", Type: field.TypeFloat64},
-		{Name: "conversion_rate_type", Type: field.TypeEnum, Enums: []string{"fixed", "floating"}},
+		{Name: "fixed_buy_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "fixed_sell_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "floating_buy_delta", Type: field.TypeFloat64, Nullable: true},
+		{Name: "floating_sell_delta", Type: field.TypeFloat64, Nullable: true},
 		{Name: "max_order_amount", Type: field.TypeFloat64},
 		{Name: "min_order_amount", Type: field.TypeFloat64},
 		{Name: "max_order_amount_otc", Type: field.TypeFloat64},
@@ -429,19 +431,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_order_tokens_fiat_currencies_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[14]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[15]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_provider_profiles_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[15]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[16]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_tokens_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[16]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[17]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -450,7 +452,7 @@ var (
 			{
 				Name:    "providerordertoken_network_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderOrderTokensColumns[13], ProviderOrderTokensColumns[15], ProviderOrderTokensColumns[16], ProviderOrderTokensColumns[14]},
+				Columns: []*schema.Column{ProviderOrderTokensColumns[14], ProviderOrderTokensColumns[16], ProviderOrderTokensColumns[17], ProviderOrderTokensColumns[15]},
 			},
 		},
 	}
@@ -618,7 +620,7 @@ var (
 	TransactionLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "gateway_id", Type: field.TypeString, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"order_initiated", "crypto_deposited", "order_created", "order_processing", "order_fulfilled", "order_validated", "order_settled", "order_refunded", "gas_prefunded", "gateway_approved"}, Default: "order_initiated"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"order_initiated", "crypto_deposited", "order_created", "order_fulfilling", "order_fulfilled", "order_validated", "order_settled", "order_refunded", "gas_prefunded", "gateway_approved"}, Default: "order_initiated"},
 		{Name: "network", Type: field.TypeString, Nullable: true},
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},

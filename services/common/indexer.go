@@ -59,7 +59,10 @@ func ProcessTransfers(
 				return
 			}
 
-			_, err := UpdateReceiveAddressStatus(ctx, order, transferEvent, orderService.CreateOrder, priorityQueueService.GetProviderRate)
+			_, err := UpdateReceiveAddressStatus(ctx, order, transferEvent, orderService.CreateOrder, func(ctx context.Context, providerProfile *ent.ProviderProfile, tokenSymbol string, currency string) (decimal.Decimal, error) {
+				// Offramp context: use sell side rates
+				return priorityQueueService.GetProviderRate(ctx, providerProfile, tokenSymbol, currency, services.RateSideSell)
+			})
 			if err != nil {
 				if !strings.Contains(fmt.Sprintf("%v", err), "Duplicate payment order") && !strings.Contains(fmt.Sprintf("%v", err), "Receive address not found") {
 					logger.WithFields(logger.Fields{

@@ -26,12 +26,14 @@ type ProviderOrderToken struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// FixedConversionRate holds the value of the "fixed_conversion_rate" field.
-	FixedConversionRate decimal.Decimal `json:"fixed_conversion_rate,omitempty"`
-	// FloatingConversionRate holds the value of the "floating_conversion_rate" field.
-	FloatingConversionRate decimal.Decimal `json:"floating_conversion_rate,omitempty"`
-	// ConversionRateType holds the value of the "conversion_rate_type" field.
-	ConversionRateType providerordertoken.ConversionRateType `json:"conversion_rate_type,omitempty"`
+	// FixedBuyRate holds the value of the "fixed_buy_rate" field.
+	FixedBuyRate decimal.Decimal `json:"fixed_buy_rate,omitempty"`
+	// FixedSellRate holds the value of the "fixed_sell_rate" field.
+	FixedSellRate decimal.Decimal `json:"fixed_sell_rate,omitempty"`
+	// FloatingBuyDelta holds the value of the "floating_buy_delta" field.
+	FloatingBuyDelta decimal.Decimal `json:"floating_buy_delta,omitempty"`
+	// FloatingSellDelta holds the value of the "floating_sell_delta" field.
+	FloatingSellDelta decimal.Decimal `json:"floating_sell_delta,omitempty"`
 	// MaxOrderAmount holds the value of the "max_order_amount" field.
 	MaxOrderAmount decimal.Decimal `json:"max_order_amount,omitempty"`
 	// MinOrderAmount holds the value of the "min_order_amount" field.
@@ -108,11 +110,11 @@ func (*ProviderOrderToken) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerordertoken.FieldFixedConversionRate, providerordertoken.FieldFloatingConversionRate, providerordertoken.FieldMaxOrderAmount, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmountOtc, providerordertoken.FieldMinOrderAmountOtc, providerordertoken.FieldRateSlippage:
+		case providerordertoken.FieldFixedBuyRate, providerordertoken.FieldFixedSellRate, providerordertoken.FieldFloatingBuyDelta, providerordertoken.FieldFloatingSellDelta, providerordertoken.FieldMaxOrderAmount, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmountOtc, providerordertoken.FieldMinOrderAmountOtc, providerordertoken.FieldRateSlippage:
 			values[i] = new(decimal.Decimal)
 		case providerordertoken.FieldID:
 			values[i] = new(sql.NullInt64)
-		case providerordertoken.FieldConversionRateType, providerordertoken.FieldSettlementAddress, providerordertoken.FieldPayoutAddress, providerordertoken.FieldNetwork:
+		case providerordertoken.FieldSettlementAddress, providerordertoken.FieldPayoutAddress, providerordertoken.FieldNetwork:
 			values[i] = new(sql.NullString)
 		case providerordertoken.FieldCreatedAt, providerordertoken.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -155,23 +157,29 @@ func (_m *ProviderOrderToken) assignValues(columns []string, values []any) error
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
-		case providerordertoken.FieldFixedConversionRate:
+		case providerordertoken.FieldFixedBuyRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field fixed_conversion_rate", values[i])
+				return fmt.Errorf("unexpected type %T for field fixed_buy_rate", values[i])
 			} else if value != nil {
-				_m.FixedConversionRate = *value
+				_m.FixedBuyRate = *value
 			}
-		case providerordertoken.FieldFloatingConversionRate:
+		case providerordertoken.FieldFixedSellRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field floating_conversion_rate", values[i])
+				return fmt.Errorf("unexpected type %T for field fixed_sell_rate", values[i])
 			} else if value != nil {
-				_m.FloatingConversionRate = *value
+				_m.FixedSellRate = *value
 			}
-		case providerordertoken.FieldConversionRateType:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field conversion_rate_type", values[i])
-			} else if value.Valid {
-				_m.ConversionRateType = providerordertoken.ConversionRateType(value.String)
+		case providerordertoken.FieldFloatingBuyDelta:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field floating_buy_delta", values[i])
+			} else if value != nil {
+				_m.FloatingBuyDelta = *value
+			}
+		case providerordertoken.FieldFloatingSellDelta:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field floating_sell_delta", values[i])
+			} else if value != nil {
+				_m.FloatingSellDelta = *value
 			}
 		case providerordertoken.FieldMaxOrderAmount:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
@@ -299,14 +307,17 @@ func (_m *ProviderOrderToken) String() string {
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
-	builder.WriteString("fixed_conversion_rate=")
-	builder.WriteString(fmt.Sprintf("%v", _m.FixedConversionRate))
+	builder.WriteString("fixed_buy_rate=")
+	builder.WriteString(fmt.Sprintf("%v", _m.FixedBuyRate))
 	builder.WriteString(", ")
-	builder.WriteString("floating_conversion_rate=")
-	builder.WriteString(fmt.Sprintf("%v", _m.FloatingConversionRate))
+	builder.WriteString("fixed_sell_rate=")
+	builder.WriteString(fmt.Sprintf("%v", _m.FixedSellRate))
 	builder.WriteString(", ")
-	builder.WriteString("conversion_rate_type=")
-	builder.WriteString(fmt.Sprintf("%v", _m.ConversionRateType))
+	builder.WriteString("floating_buy_delta=")
+	builder.WriteString(fmt.Sprintf("%v", _m.FloatingBuyDelta))
+	builder.WriteString(", ")
+	builder.WriteString("floating_sell_delta=")
+	builder.WriteString(fmt.Sprintf("%v", _m.FloatingSellDelta))
 	builder.WriteString(", ")
 	builder.WriteString("max_order_amount=")
 	builder.WriteString(fmt.Sprintf("%v", _m.MaxOrderAmount))

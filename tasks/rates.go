@@ -18,8 +18,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// fetchExternalRate fetches the external rate for a fiat currency
-func fetchExternalRate(currency string) (decimal.Decimal, error) {
+// fetchExternalRate fetches the external rates (buy and sell) for a fiat currency
+func fetchExternalRate(currency string) (buyRate, sellRate decimal.Decimal, err error) {
 	currency = strings.ToUpper(currency)
 	supportedCurrencies := []string{"KES", "NGN", "GHS", "MWK", "TZS", "UGX", "XOF", "BRL"}
 	isSupported := false
@@ -30,7 +30,7 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 		}
 	}
 	if !isSupported {
-		return decimal.Zero, fmt.Errorf("ComputeMarketRate: currency not supported")
+		return decimal.Zero, decimal.Zero, fmt.Errorf("ComputeMarketRate: currency not supported")
 	}
 
 	// Fetch rates from noblocks rates API
@@ -40,46 +40,46 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 		Retry().Set(3, 5*time.Second).
 		Send()
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
+		return decimal.Zero, decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 	}
 
 	// Read the response body manually since we need to parse an array, not an object
 	responseBody, err := io.ReadAll(res.RawResponse.Body)
 	defer res.RawResponse.Body.Close()
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to read response body: %w", err)
+		return decimal.Zero, decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to read response body: %w", err)
 	}
 
 	var dataArray []map[string]interface{}
 	err = json.Unmarshal(responseBody, &dataArray)
 	if err != nil {
-		return decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse JSON response: %w", err)
+		return decimal.Zero, decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to parse JSON response: %w", err)
 	}
 
 	// Check if we have data
 	if len(dataArray) == 0 {
-		return decimal.Zero, fmt.Errorf("ComputeMarketRate: No data in the response")
+		return decimal.Zero, decimal.Zero, fmt.Errorf("ComputeMarketRate: No data in the response")
 	}
 
 	// Get the first rate object
 	rateData := dataArray[0]
 
 	// Extract buy and sell rates
-	buyRate, ok := rateData["buyRate"].(float64)
+	buyRateFloat, ok := rateData["buyRate"].(float64)
 	if !ok {
-		return decimal.Zero, fmt.Errorf("ComputeMarketRate: Invalid buyRate format")
+		return decimal.Zero, decimal.Zero, fmt.Errorf("ComputeMarketRate: Invalid buyRate format")
 	}
 
-	sellRate, ok := rateData["sellRate"].(float64)
+	sellRateFloat, ok := rateData["sellRate"].(float64)
 	if !ok {
-		return decimal.Zero, fmt.Errorf("ComputeMarketRate: Invalid sellRate format")
+		return decimal.Zero, decimal.Zero, fmt.Errorf("ComputeMarketRate: Invalid sellRate format")
 	}
 
-	// Calculate the average of buy and sell rates for the external rate
-	avgRate := (buyRate + sellRate) / 2
-	price := decimal.NewFromFloat(avgRate)
+	// Swap buy and sell rates to match sender perspective
+	buyRate = decimal.NewFromFloat(sellRateFloat)
+	sellRate = decimal.NewFromFloat(buyRateFloat)
 
-	return price, nil
+	return buyRate, sellRate, nil
 }
 
 // ComputeMarketRate computes the market price for fiat currencies
@@ -98,48 +98,69 @@ func ComputeMarketRate() error {
 	}
 
 	for _, currency := range currencies {
-		// Fetch external rate
-		externalRate, err := fetchExternalRate(currency.Code)
+		// Fetch external rates (buy and sell)
+		externalBuyRate, externalSellRate, err := fetchExternalRate(currency.Code)
 		if err != nil {
 			continue
 		}
 
-		// Fetch rates from token configs with fixed conversion rate
+		// Fetch rates from token configs with fixed conversion rates (both buy and sell)
 		tokenConfigs, err := storage.Client.ProviderOrderToken.
 			Query().
 			Where(
 				providerordertoken.HasTokenWith(
 					tokenent.SymbolIn("USDT", "USDC"),
 				),
-				providerordertoken.ConversionRateTypeEQ(providerordertoken.ConversionRateTypeFixed),
+				providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
 				providerordertoken.HasProviderWith(
 					providerprofile.IsActiveEQ(true),
 				),
 			).
-			Select(providerordertoken.FieldFixedConversionRate).
 			All(ctx)
 		if err != nil {
 			continue
 		}
 
-		var rates []decimal.Decimal
+		// Collect buy and sell rates separately from provider configs
+		var buyRates []decimal.Decimal
+		var sellRates []decimal.Decimal
 		for _, tokenConfig := range tokenConfigs {
-			rates = append(rates, tokenConfig.FixedConversionRate)
+			if !tokenConfig.FixedBuyRate.IsZero() {
+				buyRates = append(buyRates, tokenConfig.FixedBuyRate)
+			}
+			if !tokenConfig.FixedSellRate.IsZero() {
+				sellRates = append(sellRates, tokenConfig.FixedSellRate)
+			}
 		}
 
-		// Calculate median
-		median := utils.Median(rates)
-
-		// Check the median rate against the external rate to ensure it's not too far off
-		percentDeviation := utils.AbsPercentageDeviation(externalRate, median)
-		if percentDeviation.GreaterThan(orderConf.PercentDeviationFromExternalRate) {
-			median = externalRate
+		// Calculate medians for buy and sell
+		var medianBuyRate, medianSellRate decimal.Decimal
+		if len(buyRates) > 0 {
+			medianBuyRate = utils.Median(buyRates)
+			// Check against external buy rate
+			percentDeviation := utils.AbsPercentageDeviation(externalBuyRate, medianBuyRate)
+			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromExternalRate) {
+				medianBuyRate = externalBuyRate
+			}
+		} else {
+			medianBuyRate = externalBuyRate
 		}
 
-		// Update currency with median rate
-		_, err = storage.Client.FiatCurrency.
-			UpdateOneID(currency.ID).
-			SetMarketRate(median).
+		if len(sellRates) > 0 {
+			medianSellRate = utils.Median(sellRates)
+			// Check against external sell rate
+			percentDeviation := utils.AbsPercentageDeviation(externalSellRate, medianSellRate)
+			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromExternalRate) {
+				medianSellRate = externalSellRate
+			}
+		} else {
+			medianSellRate = externalSellRate
+		}
+
+		// Update currency with both buy and sell market rates
+		_, err = storage.Client.FiatCurrency.UpdateOneID(currency.ID).
+			SetMarketBuyRate(medianBuyRate).
+			SetMarketSellRate(medianSellRate).
 			Save(ctx)
 		if err != nil {
 			continue

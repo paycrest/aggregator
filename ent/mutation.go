@@ -1411,8 +1411,10 @@ type FiatCurrencyMutation struct {
 	adddecimals                  *int
 	symbol                       *string
 	name                         *string
-	market_rate                  *decimal.Decimal
-	addmarket_rate               *decimal.Decimal
+	market_buy_rate              *decimal.Decimal
+	addmarket_buy_rate           *decimal.Decimal
+	market_sell_rate             *decimal.Decimal
+	addmarket_sell_rate          *decimal.Decimal
 	is_enabled                   *bool
 	clearedFields                map[string]struct{}
 	provider_balances            map[uuid.UUID]struct{}
@@ -1808,60 +1810,144 @@ func (m *FiatCurrencyMutation) ResetName() {
 	m.name = nil
 }
 
-// SetMarketRate sets the "market_rate" field.
-func (m *FiatCurrencyMutation) SetMarketRate(d decimal.Decimal) {
-	m.market_rate = &d
-	m.addmarket_rate = nil
+// SetMarketBuyRate sets the "market_buy_rate" field.
+func (m *FiatCurrencyMutation) SetMarketBuyRate(d decimal.Decimal) {
+	m.market_buy_rate = &d
+	m.addmarket_buy_rate = nil
 }
 
-// MarketRate returns the value of the "market_rate" field in the mutation.
-func (m *FiatCurrencyMutation) MarketRate() (r decimal.Decimal, exists bool) {
-	v := m.market_rate
+// MarketBuyRate returns the value of the "market_buy_rate" field in the mutation.
+func (m *FiatCurrencyMutation) MarketBuyRate() (r decimal.Decimal, exists bool) {
+	v := m.market_buy_rate
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldMarketRate returns the old "market_rate" field's value of the FiatCurrency entity.
+// OldMarketBuyRate returns the old "market_buy_rate" field's value of the FiatCurrency entity.
 // If the FiatCurrency object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FiatCurrencyMutation) OldMarketRate(ctx context.Context) (v decimal.Decimal, err error) {
+func (m *FiatCurrencyMutation) OldMarketBuyRate(ctx context.Context) (v decimal.Decimal, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldMarketRate is only allowed on UpdateOne operations")
+		return v, errors.New("OldMarketBuyRate is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldMarketRate requires an ID field in the mutation")
+		return v, errors.New("OldMarketBuyRate requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldMarketRate: %w", err)
+		return v, fmt.Errorf("querying old value for OldMarketBuyRate: %w", err)
 	}
-	return oldValue.MarketRate, nil
+	return oldValue.MarketBuyRate, nil
 }
 
-// AddMarketRate adds d to the "market_rate" field.
-func (m *FiatCurrencyMutation) AddMarketRate(d decimal.Decimal) {
-	if m.addmarket_rate != nil {
-		*m.addmarket_rate = m.addmarket_rate.Add(d)
+// AddMarketBuyRate adds d to the "market_buy_rate" field.
+func (m *FiatCurrencyMutation) AddMarketBuyRate(d decimal.Decimal) {
+	if m.addmarket_buy_rate != nil {
+		*m.addmarket_buy_rate = m.addmarket_buy_rate.Add(d)
 	} else {
-		m.addmarket_rate = &d
+		m.addmarket_buy_rate = &d
 	}
 }
 
-// AddedMarketRate returns the value that was added to the "market_rate" field in this mutation.
-func (m *FiatCurrencyMutation) AddedMarketRate() (r decimal.Decimal, exists bool) {
-	v := m.addmarket_rate
+// AddedMarketBuyRate returns the value that was added to the "market_buy_rate" field in this mutation.
+func (m *FiatCurrencyMutation) AddedMarketBuyRate() (r decimal.Decimal, exists bool) {
+	v := m.addmarket_buy_rate
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// ResetMarketRate resets all changes to the "market_rate" field.
-func (m *FiatCurrencyMutation) ResetMarketRate() {
-	m.market_rate = nil
-	m.addmarket_rate = nil
+// ClearMarketBuyRate clears the value of the "market_buy_rate" field.
+func (m *FiatCurrencyMutation) ClearMarketBuyRate() {
+	m.market_buy_rate = nil
+	m.addmarket_buy_rate = nil
+	m.clearedFields[fiatcurrency.FieldMarketBuyRate] = struct{}{}
+}
+
+// MarketBuyRateCleared returns if the "market_buy_rate" field was cleared in this mutation.
+func (m *FiatCurrencyMutation) MarketBuyRateCleared() bool {
+	_, ok := m.clearedFields[fiatcurrency.FieldMarketBuyRate]
+	return ok
+}
+
+// ResetMarketBuyRate resets all changes to the "market_buy_rate" field.
+func (m *FiatCurrencyMutation) ResetMarketBuyRate() {
+	m.market_buy_rate = nil
+	m.addmarket_buy_rate = nil
+	delete(m.clearedFields, fiatcurrency.FieldMarketBuyRate)
+}
+
+// SetMarketSellRate sets the "market_sell_rate" field.
+func (m *FiatCurrencyMutation) SetMarketSellRate(d decimal.Decimal) {
+	m.market_sell_rate = &d
+	m.addmarket_sell_rate = nil
+}
+
+// MarketSellRate returns the value of the "market_sell_rate" field in the mutation.
+func (m *FiatCurrencyMutation) MarketSellRate() (r decimal.Decimal, exists bool) {
+	v := m.market_sell_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMarketSellRate returns the old "market_sell_rate" field's value of the FiatCurrency entity.
+// If the FiatCurrency object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *FiatCurrencyMutation) OldMarketSellRate(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMarketSellRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMarketSellRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMarketSellRate: %w", err)
+	}
+	return oldValue.MarketSellRate, nil
+}
+
+// AddMarketSellRate adds d to the "market_sell_rate" field.
+func (m *FiatCurrencyMutation) AddMarketSellRate(d decimal.Decimal) {
+	if m.addmarket_sell_rate != nil {
+		*m.addmarket_sell_rate = m.addmarket_sell_rate.Add(d)
+	} else {
+		m.addmarket_sell_rate = &d
+	}
+}
+
+// AddedMarketSellRate returns the value that was added to the "market_sell_rate" field in this mutation.
+func (m *FiatCurrencyMutation) AddedMarketSellRate() (r decimal.Decimal, exists bool) {
+	v := m.addmarket_sell_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearMarketSellRate clears the value of the "market_sell_rate" field.
+func (m *FiatCurrencyMutation) ClearMarketSellRate() {
+	m.market_sell_rate = nil
+	m.addmarket_sell_rate = nil
+	m.clearedFields[fiatcurrency.FieldMarketSellRate] = struct{}{}
+}
+
+// MarketSellRateCleared returns if the "market_sell_rate" field was cleared in this mutation.
+func (m *FiatCurrencyMutation) MarketSellRateCleared() bool {
+	_, ok := m.clearedFields[fiatcurrency.FieldMarketSellRate]
+	return ok
+}
+
+// ResetMarketSellRate resets all changes to the "market_sell_rate" field.
+func (m *FiatCurrencyMutation) ResetMarketSellRate() {
+	m.market_sell_rate = nil
+	m.addmarket_sell_rate = nil
+	delete(m.clearedFields, fiatcurrency.FieldMarketSellRate)
 }
 
 // SetIsEnabled sets the "is_enabled" field.
@@ -2150,7 +2236,7 @@ func (m *FiatCurrencyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *FiatCurrencyMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, fiatcurrency.FieldCreatedAt)
 	}
@@ -2172,8 +2258,11 @@ func (m *FiatCurrencyMutation) Fields() []string {
 	if m.name != nil {
 		fields = append(fields, fiatcurrency.FieldName)
 	}
-	if m.market_rate != nil {
-		fields = append(fields, fiatcurrency.FieldMarketRate)
+	if m.market_buy_rate != nil {
+		fields = append(fields, fiatcurrency.FieldMarketBuyRate)
+	}
+	if m.market_sell_rate != nil {
+		fields = append(fields, fiatcurrency.FieldMarketSellRate)
 	}
 	if m.is_enabled != nil {
 		fields = append(fields, fiatcurrency.FieldIsEnabled)
@@ -2200,8 +2289,10 @@ func (m *FiatCurrencyMutation) Field(name string) (ent.Value, bool) {
 		return m.Symbol()
 	case fiatcurrency.FieldName:
 		return m.Name()
-	case fiatcurrency.FieldMarketRate:
-		return m.MarketRate()
+	case fiatcurrency.FieldMarketBuyRate:
+		return m.MarketBuyRate()
+	case fiatcurrency.FieldMarketSellRate:
+		return m.MarketSellRate()
 	case fiatcurrency.FieldIsEnabled:
 		return m.IsEnabled()
 	}
@@ -2227,8 +2318,10 @@ func (m *FiatCurrencyMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldSymbol(ctx)
 	case fiatcurrency.FieldName:
 		return m.OldName(ctx)
-	case fiatcurrency.FieldMarketRate:
-		return m.OldMarketRate(ctx)
+	case fiatcurrency.FieldMarketBuyRate:
+		return m.OldMarketBuyRate(ctx)
+	case fiatcurrency.FieldMarketSellRate:
+		return m.OldMarketSellRate(ctx)
 	case fiatcurrency.FieldIsEnabled:
 		return m.OldIsEnabled(ctx)
 	}
@@ -2289,12 +2382,19 @@ func (m *FiatCurrencyMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetName(v)
 		return nil
-	case fiatcurrency.FieldMarketRate:
+	case fiatcurrency.FieldMarketBuyRate:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetMarketRate(v)
+		m.SetMarketBuyRate(v)
+		return nil
+	case fiatcurrency.FieldMarketSellRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMarketSellRate(v)
 		return nil
 	case fiatcurrency.FieldIsEnabled:
 		v, ok := value.(bool)
@@ -2314,8 +2414,11 @@ func (m *FiatCurrencyMutation) AddedFields() []string {
 	if m.adddecimals != nil {
 		fields = append(fields, fiatcurrency.FieldDecimals)
 	}
-	if m.addmarket_rate != nil {
-		fields = append(fields, fiatcurrency.FieldMarketRate)
+	if m.addmarket_buy_rate != nil {
+		fields = append(fields, fiatcurrency.FieldMarketBuyRate)
+	}
+	if m.addmarket_sell_rate != nil {
+		fields = append(fields, fiatcurrency.FieldMarketSellRate)
 	}
 	return fields
 }
@@ -2327,8 +2430,10 @@ func (m *FiatCurrencyMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case fiatcurrency.FieldDecimals:
 		return m.AddedDecimals()
-	case fiatcurrency.FieldMarketRate:
-		return m.AddedMarketRate()
+	case fiatcurrency.FieldMarketBuyRate:
+		return m.AddedMarketBuyRate()
+	case fiatcurrency.FieldMarketSellRate:
+		return m.AddedMarketSellRate()
 	}
 	return nil, false
 }
@@ -2345,12 +2450,19 @@ func (m *FiatCurrencyMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddDecimals(v)
 		return nil
-	case fiatcurrency.FieldMarketRate:
+	case fiatcurrency.FieldMarketBuyRate:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.AddMarketRate(v)
+		m.AddMarketBuyRate(v)
+		return nil
+	case fiatcurrency.FieldMarketSellRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMarketSellRate(v)
 		return nil
 	}
 	return fmt.Errorf("unknown FiatCurrency numeric field %s", name)
@@ -2359,7 +2471,14 @@ func (m *FiatCurrencyMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *FiatCurrencyMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(fiatcurrency.FieldMarketBuyRate) {
+		fields = append(fields, fiatcurrency.FieldMarketBuyRate)
+	}
+	if m.FieldCleared(fiatcurrency.FieldMarketSellRate) {
+		fields = append(fields, fiatcurrency.FieldMarketSellRate)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -2372,6 +2491,14 @@ func (m *FiatCurrencyMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *FiatCurrencyMutation) ClearField(name string) error {
+	switch name {
+	case fiatcurrency.FieldMarketBuyRate:
+		m.ClearMarketBuyRate()
+		return nil
+	case fiatcurrency.FieldMarketSellRate:
+		m.ClearMarketSellRate()
+		return nil
+	}
 	return fmt.Errorf("unknown FiatCurrency nullable field %s", name)
 }
 
@@ -2400,8 +2527,11 @@ func (m *FiatCurrencyMutation) ResetField(name string) error {
 	case fiatcurrency.FieldName:
 		m.ResetName()
 		return nil
-	case fiatcurrency.FieldMarketRate:
-		m.ResetMarketRate()
+	case fiatcurrency.FieldMarketBuyRate:
+		m.ResetMarketBuyRate()
+		return nil
+	case fiatcurrency.FieldMarketSellRate:
+		m.ResetMarketSellRate()
 		return nil
 	case fiatcurrency.FieldIsEnabled:
 		m.ResetIsEnabled()
@@ -12515,39 +12645,42 @@ func (m *ProviderFiatAccountMutation) ResetEdge(name string) error {
 // ProviderOrderTokenMutation represents an operation that mutates the ProviderOrderToken nodes in the graph.
 type ProviderOrderTokenMutation struct {
 	config
-	op                          Op
-	typ                         string
-	id                          *int
-	created_at                  *time.Time
-	updated_at                  *time.Time
-	fixed_conversion_rate       *decimal.Decimal
-	addfixed_conversion_rate    *decimal.Decimal
-	floating_conversion_rate    *decimal.Decimal
-	addfloating_conversion_rate *decimal.Decimal
-	conversion_rate_type        *providerordertoken.ConversionRateType
-	max_order_amount            *decimal.Decimal
-	addmax_order_amount         *decimal.Decimal
-	min_order_amount            *decimal.Decimal
-	addmin_order_amount         *decimal.Decimal
-	max_order_amount_otc        *decimal.Decimal
-	addmax_order_amount_otc     *decimal.Decimal
-	min_order_amount_otc        *decimal.Decimal
-	addmin_order_amount_otc     *decimal.Decimal
-	rate_slippage               *decimal.Decimal
-	addrate_slippage            *decimal.Decimal
-	settlement_address          *string
-	payout_address              *string
-	network                     *string
-	clearedFields               map[string]struct{}
-	provider                    *string
-	clearedprovider             bool
-	token                       *int
-	clearedtoken                bool
-	currency                    *uuid.UUID
-	clearedcurrency             bool
-	done                        bool
-	oldValue                    func(context.Context) (*ProviderOrderToken, error)
-	predicates                  []predicate.ProviderOrderToken
+	op                      Op
+	typ                     string
+	id                      *int
+	created_at              *time.Time
+	updated_at              *time.Time
+	fixed_buy_rate          *decimal.Decimal
+	addfixed_buy_rate       *decimal.Decimal
+	fixed_sell_rate         *decimal.Decimal
+	addfixed_sell_rate      *decimal.Decimal
+	floating_buy_delta      *decimal.Decimal
+	addfloating_buy_delta   *decimal.Decimal
+	floating_sell_delta     *decimal.Decimal
+	addfloating_sell_delta  *decimal.Decimal
+	max_order_amount        *decimal.Decimal
+	addmax_order_amount     *decimal.Decimal
+	min_order_amount        *decimal.Decimal
+	addmin_order_amount     *decimal.Decimal
+	max_order_amount_otc    *decimal.Decimal
+	addmax_order_amount_otc *decimal.Decimal
+	min_order_amount_otc    *decimal.Decimal
+	addmin_order_amount_otc *decimal.Decimal
+	rate_slippage           *decimal.Decimal
+	addrate_slippage        *decimal.Decimal
+	settlement_address      *string
+	payout_address          *string
+	network                 *string
+	clearedFields           map[string]struct{}
+	provider                *string
+	clearedprovider         bool
+	token                   *int
+	clearedtoken            bool
+	currency                *uuid.UUID
+	clearedcurrency         bool
+	done                    bool
+	oldValue                func(context.Context) (*ProviderOrderToken, error)
+	predicates              []predicate.ProviderOrderToken
 }
 
 var _ ent.Mutation = (*ProviderOrderTokenMutation)(nil)
@@ -12720,152 +12853,284 @@ func (m *ProviderOrderTokenMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// SetFixedConversionRate sets the "fixed_conversion_rate" field.
-func (m *ProviderOrderTokenMutation) SetFixedConversionRate(d decimal.Decimal) {
-	m.fixed_conversion_rate = &d
-	m.addfixed_conversion_rate = nil
+// SetFixedBuyRate sets the "fixed_buy_rate" field.
+func (m *ProviderOrderTokenMutation) SetFixedBuyRate(d decimal.Decimal) {
+	m.fixed_buy_rate = &d
+	m.addfixed_buy_rate = nil
 }
 
-// FixedConversionRate returns the value of the "fixed_conversion_rate" field in the mutation.
-func (m *ProviderOrderTokenMutation) FixedConversionRate() (r decimal.Decimal, exists bool) {
-	v := m.fixed_conversion_rate
+// FixedBuyRate returns the value of the "fixed_buy_rate" field in the mutation.
+func (m *ProviderOrderTokenMutation) FixedBuyRate() (r decimal.Decimal, exists bool) {
+	v := m.fixed_buy_rate
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldFixedConversionRate returns the old "fixed_conversion_rate" field's value of the ProviderOrderToken entity.
+// OldFixedBuyRate returns the old "fixed_buy_rate" field's value of the ProviderOrderToken entity.
 // If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderOrderTokenMutation) OldFixedConversionRate(ctx context.Context) (v decimal.Decimal, err error) {
+func (m *ProviderOrderTokenMutation) OldFixedBuyRate(ctx context.Context) (v decimal.Decimal, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldFixedConversionRate is only allowed on UpdateOne operations")
+		return v, errors.New("OldFixedBuyRate is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldFixedConversionRate requires an ID field in the mutation")
+		return v, errors.New("OldFixedBuyRate requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldFixedConversionRate: %w", err)
+		return v, fmt.Errorf("querying old value for OldFixedBuyRate: %w", err)
 	}
-	return oldValue.FixedConversionRate, nil
+	return oldValue.FixedBuyRate, nil
 }
 
-// AddFixedConversionRate adds d to the "fixed_conversion_rate" field.
-func (m *ProviderOrderTokenMutation) AddFixedConversionRate(d decimal.Decimal) {
-	if m.addfixed_conversion_rate != nil {
-		*m.addfixed_conversion_rate = m.addfixed_conversion_rate.Add(d)
+// AddFixedBuyRate adds d to the "fixed_buy_rate" field.
+func (m *ProviderOrderTokenMutation) AddFixedBuyRate(d decimal.Decimal) {
+	if m.addfixed_buy_rate != nil {
+		*m.addfixed_buy_rate = m.addfixed_buy_rate.Add(d)
 	} else {
-		m.addfixed_conversion_rate = &d
+		m.addfixed_buy_rate = &d
 	}
 }
 
-// AddedFixedConversionRate returns the value that was added to the "fixed_conversion_rate" field in this mutation.
-func (m *ProviderOrderTokenMutation) AddedFixedConversionRate() (r decimal.Decimal, exists bool) {
-	v := m.addfixed_conversion_rate
+// AddedFixedBuyRate returns the value that was added to the "fixed_buy_rate" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedFixedBuyRate() (r decimal.Decimal, exists bool) {
+	v := m.addfixed_buy_rate
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// ResetFixedConversionRate resets all changes to the "fixed_conversion_rate" field.
-func (m *ProviderOrderTokenMutation) ResetFixedConversionRate() {
-	m.fixed_conversion_rate = nil
-	m.addfixed_conversion_rate = nil
+// ClearFixedBuyRate clears the value of the "fixed_buy_rate" field.
+func (m *ProviderOrderTokenMutation) ClearFixedBuyRate() {
+	m.fixed_buy_rate = nil
+	m.addfixed_buy_rate = nil
+	m.clearedFields[providerordertoken.FieldFixedBuyRate] = struct{}{}
 }
 
-// SetFloatingConversionRate sets the "floating_conversion_rate" field.
-func (m *ProviderOrderTokenMutation) SetFloatingConversionRate(d decimal.Decimal) {
-	m.floating_conversion_rate = &d
-	m.addfloating_conversion_rate = nil
+// FixedBuyRateCleared returns if the "fixed_buy_rate" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) FixedBuyRateCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldFixedBuyRate]
+	return ok
 }
 
-// FloatingConversionRate returns the value of the "floating_conversion_rate" field in the mutation.
-func (m *ProviderOrderTokenMutation) FloatingConversionRate() (r decimal.Decimal, exists bool) {
-	v := m.floating_conversion_rate
+// ResetFixedBuyRate resets all changes to the "fixed_buy_rate" field.
+func (m *ProviderOrderTokenMutation) ResetFixedBuyRate() {
+	m.fixed_buy_rate = nil
+	m.addfixed_buy_rate = nil
+	delete(m.clearedFields, providerordertoken.FieldFixedBuyRate)
+}
+
+// SetFixedSellRate sets the "fixed_sell_rate" field.
+func (m *ProviderOrderTokenMutation) SetFixedSellRate(d decimal.Decimal) {
+	m.fixed_sell_rate = &d
+	m.addfixed_sell_rate = nil
+}
+
+// FixedSellRate returns the value of the "fixed_sell_rate" field in the mutation.
+func (m *ProviderOrderTokenMutation) FixedSellRate() (r decimal.Decimal, exists bool) {
+	v := m.fixed_sell_rate
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldFloatingConversionRate returns the old "floating_conversion_rate" field's value of the ProviderOrderToken entity.
+// OldFixedSellRate returns the old "fixed_sell_rate" field's value of the ProviderOrderToken entity.
 // If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderOrderTokenMutation) OldFloatingConversionRate(ctx context.Context) (v decimal.Decimal, err error) {
+func (m *ProviderOrderTokenMutation) OldFixedSellRate(ctx context.Context) (v decimal.Decimal, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldFloatingConversionRate is only allowed on UpdateOne operations")
+		return v, errors.New("OldFixedSellRate is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldFloatingConversionRate requires an ID field in the mutation")
+		return v, errors.New("OldFixedSellRate requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldFloatingConversionRate: %w", err)
+		return v, fmt.Errorf("querying old value for OldFixedSellRate: %w", err)
 	}
-	return oldValue.FloatingConversionRate, nil
+	return oldValue.FixedSellRate, nil
 }
 
-// AddFloatingConversionRate adds d to the "floating_conversion_rate" field.
-func (m *ProviderOrderTokenMutation) AddFloatingConversionRate(d decimal.Decimal) {
-	if m.addfloating_conversion_rate != nil {
-		*m.addfloating_conversion_rate = m.addfloating_conversion_rate.Add(d)
+// AddFixedSellRate adds d to the "fixed_sell_rate" field.
+func (m *ProviderOrderTokenMutation) AddFixedSellRate(d decimal.Decimal) {
+	if m.addfixed_sell_rate != nil {
+		*m.addfixed_sell_rate = m.addfixed_sell_rate.Add(d)
 	} else {
-		m.addfloating_conversion_rate = &d
+		m.addfixed_sell_rate = &d
 	}
 }
 
-// AddedFloatingConversionRate returns the value that was added to the "floating_conversion_rate" field in this mutation.
-func (m *ProviderOrderTokenMutation) AddedFloatingConversionRate() (r decimal.Decimal, exists bool) {
-	v := m.addfloating_conversion_rate
+// AddedFixedSellRate returns the value that was added to the "fixed_sell_rate" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedFixedSellRate() (r decimal.Decimal, exists bool) {
+	v := m.addfixed_sell_rate
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// ResetFloatingConversionRate resets all changes to the "floating_conversion_rate" field.
-func (m *ProviderOrderTokenMutation) ResetFloatingConversionRate() {
-	m.floating_conversion_rate = nil
-	m.addfloating_conversion_rate = nil
+// ClearFixedSellRate clears the value of the "fixed_sell_rate" field.
+func (m *ProviderOrderTokenMutation) ClearFixedSellRate() {
+	m.fixed_sell_rate = nil
+	m.addfixed_sell_rate = nil
+	m.clearedFields[providerordertoken.FieldFixedSellRate] = struct{}{}
 }
 
-// SetConversionRateType sets the "conversion_rate_type" field.
-func (m *ProviderOrderTokenMutation) SetConversionRateType(prt providerordertoken.ConversionRateType) {
-	m.conversion_rate_type = &prt
+// FixedSellRateCleared returns if the "fixed_sell_rate" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) FixedSellRateCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldFixedSellRate]
+	return ok
 }
 
-// ConversionRateType returns the value of the "conversion_rate_type" field in the mutation.
-func (m *ProviderOrderTokenMutation) ConversionRateType() (r providerordertoken.ConversionRateType, exists bool) {
-	v := m.conversion_rate_type
+// ResetFixedSellRate resets all changes to the "fixed_sell_rate" field.
+func (m *ProviderOrderTokenMutation) ResetFixedSellRate() {
+	m.fixed_sell_rate = nil
+	m.addfixed_sell_rate = nil
+	delete(m.clearedFields, providerordertoken.FieldFixedSellRate)
+}
+
+// SetFloatingBuyDelta sets the "floating_buy_delta" field.
+func (m *ProviderOrderTokenMutation) SetFloatingBuyDelta(d decimal.Decimal) {
+	m.floating_buy_delta = &d
+	m.addfloating_buy_delta = nil
+}
+
+// FloatingBuyDelta returns the value of the "floating_buy_delta" field in the mutation.
+func (m *ProviderOrderTokenMutation) FloatingBuyDelta() (r decimal.Decimal, exists bool) {
+	v := m.floating_buy_delta
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldConversionRateType returns the old "conversion_rate_type" field's value of the ProviderOrderToken entity.
+// OldFloatingBuyDelta returns the old "floating_buy_delta" field's value of the ProviderOrderToken entity.
 // If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderOrderTokenMutation) OldConversionRateType(ctx context.Context) (v providerordertoken.ConversionRateType, err error) {
+func (m *ProviderOrderTokenMutation) OldFloatingBuyDelta(ctx context.Context) (v decimal.Decimal, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldConversionRateType is only allowed on UpdateOne operations")
+		return v, errors.New("OldFloatingBuyDelta is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldConversionRateType requires an ID field in the mutation")
+		return v, errors.New("OldFloatingBuyDelta requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldConversionRateType: %w", err)
+		return v, fmt.Errorf("querying old value for OldFloatingBuyDelta: %w", err)
 	}
-	return oldValue.ConversionRateType, nil
+	return oldValue.FloatingBuyDelta, nil
 }
 
-// ResetConversionRateType resets all changes to the "conversion_rate_type" field.
-func (m *ProviderOrderTokenMutation) ResetConversionRateType() {
-	m.conversion_rate_type = nil
+// AddFloatingBuyDelta adds d to the "floating_buy_delta" field.
+func (m *ProviderOrderTokenMutation) AddFloatingBuyDelta(d decimal.Decimal) {
+	if m.addfloating_buy_delta != nil {
+		*m.addfloating_buy_delta = m.addfloating_buy_delta.Add(d)
+	} else {
+		m.addfloating_buy_delta = &d
+	}
+}
+
+// AddedFloatingBuyDelta returns the value that was added to the "floating_buy_delta" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedFloatingBuyDelta() (r decimal.Decimal, exists bool) {
+	v := m.addfloating_buy_delta
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearFloatingBuyDelta clears the value of the "floating_buy_delta" field.
+func (m *ProviderOrderTokenMutation) ClearFloatingBuyDelta() {
+	m.floating_buy_delta = nil
+	m.addfloating_buy_delta = nil
+	m.clearedFields[providerordertoken.FieldFloatingBuyDelta] = struct{}{}
+}
+
+// FloatingBuyDeltaCleared returns if the "floating_buy_delta" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) FloatingBuyDeltaCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldFloatingBuyDelta]
+	return ok
+}
+
+// ResetFloatingBuyDelta resets all changes to the "floating_buy_delta" field.
+func (m *ProviderOrderTokenMutation) ResetFloatingBuyDelta() {
+	m.floating_buy_delta = nil
+	m.addfloating_buy_delta = nil
+	delete(m.clearedFields, providerordertoken.FieldFloatingBuyDelta)
+}
+
+// SetFloatingSellDelta sets the "floating_sell_delta" field.
+func (m *ProviderOrderTokenMutation) SetFloatingSellDelta(d decimal.Decimal) {
+	m.floating_sell_delta = &d
+	m.addfloating_sell_delta = nil
+}
+
+// FloatingSellDelta returns the value of the "floating_sell_delta" field in the mutation.
+func (m *ProviderOrderTokenMutation) FloatingSellDelta() (r decimal.Decimal, exists bool) {
+	v := m.floating_sell_delta
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFloatingSellDelta returns the old "floating_sell_delta" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldFloatingSellDelta(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFloatingSellDelta is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFloatingSellDelta requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFloatingSellDelta: %w", err)
+	}
+	return oldValue.FloatingSellDelta, nil
+}
+
+// AddFloatingSellDelta adds d to the "floating_sell_delta" field.
+func (m *ProviderOrderTokenMutation) AddFloatingSellDelta(d decimal.Decimal) {
+	if m.addfloating_sell_delta != nil {
+		*m.addfloating_sell_delta = m.addfloating_sell_delta.Add(d)
+	} else {
+		m.addfloating_sell_delta = &d
+	}
+}
+
+// AddedFloatingSellDelta returns the value that was added to the "floating_sell_delta" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedFloatingSellDelta() (r decimal.Decimal, exists bool) {
+	v := m.addfloating_sell_delta
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearFloatingSellDelta clears the value of the "floating_sell_delta" field.
+func (m *ProviderOrderTokenMutation) ClearFloatingSellDelta() {
+	m.floating_sell_delta = nil
+	m.addfloating_sell_delta = nil
+	m.clearedFields[providerordertoken.FieldFloatingSellDelta] = struct{}{}
+}
+
+// FloatingSellDeltaCleared returns if the "floating_sell_delta" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) FloatingSellDeltaCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldFloatingSellDelta]
+	return ok
+}
+
+// ResetFloatingSellDelta resets all changes to the "floating_sell_delta" field.
+func (m *ProviderOrderTokenMutation) ResetFloatingSellDelta() {
+	m.floating_sell_delta = nil
+	m.addfloating_sell_delta = nil
+	delete(m.clearedFields, providerordertoken.FieldFloatingSellDelta)
 }
 
 // SetMaxOrderAmount sets the "max_order_amount" field.
@@ -13433,21 +13698,24 @@ func (m *ProviderOrderTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderOrderTokenMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
 	if m.created_at != nil {
 		fields = append(fields, providerordertoken.FieldCreatedAt)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, providerordertoken.FieldUpdatedAt)
 	}
-	if m.fixed_conversion_rate != nil {
-		fields = append(fields, providerordertoken.FieldFixedConversionRate)
+	if m.fixed_buy_rate != nil {
+		fields = append(fields, providerordertoken.FieldFixedBuyRate)
 	}
-	if m.floating_conversion_rate != nil {
-		fields = append(fields, providerordertoken.FieldFloatingConversionRate)
+	if m.fixed_sell_rate != nil {
+		fields = append(fields, providerordertoken.FieldFixedSellRate)
 	}
-	if m.conversion_rate_type != nil {
-		fields = append(fields, providerordertoken.FieldConversionRateType)
+	if m.floating_buy_delta != nil {
+		fields = append(fields, providerordertoken.FieldFloatingBuyDelta)
+	}
+	if m.floating_sell_delta != nil {
+		fields = append(fields, providerordertoken.FieldFloatingSellDelta)
 	}
 	if m.max_order_amount != nil {
 		fields = append(fields, providerordertoken.FieldMaxOrderAmount)
@@ -13485,12 +13753,14 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case providerordertoken.FieldUpdatedAt:
 		return m.UpdatedAt()
-	case providerordertoken.FieldFixedConversionRate:
-		return m.FixedConversionRate()
-	case providerordertoken.FieldFloatingConversionRate:
-		return m.FloatingConversionRate()
-	case providerordertoken.FieldConversionRateType:
-		return m.ConversionRateType()
+	case providerordertoken.FieldFixedBuyRate:
+		return m.FixedBuyRate()
+	case providerordertoken.FieldFixedSellRate:
+		return m.FixedSellRate()
+	case providerordertoken.FieldFloatingBuyDelta:
+		return m.FloatingBuyDelta()
+	case providerordertoken.FieldFloatingSellDelta:
+		return m.FloatingSellDelta()
 	case providerordertoken.FieldMaxOrderAmount:
 		return m.MaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
@@ -13520,12 +13790,14 @@ func (m *ProviderOrderTokenMutation) OldField(ctx context.Context, name string) 
 		return m.OldCreatedAt(ctx)
 	case providerordertoken.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
-	case providerordertoken.FieldFixedConversionRate:
-		return m.OldFixedConversionRate(ctx)
-	case providerordertoken.FieldFloatingConversionRate:
-		return m.OldFloatingConversionRate(ctx)
-	case providerordertoken.FieldConversionRateType:
-		return m.OldConversionRateType(ctx)
+	case providerordertoken.FieldFixedBuyRate:
+		return m.OldFixedBuyRate(ctx)
+	case providerordertoken.FieldFixedSellRate:
+		return m.OldFixedSellRate(ctx)
+	case providerordertoken.FieldFloatingBuyDelta:
+		return m.OldFloatingBuyDelta(ctx)
+	case providerordertoken.FieldFloatingSellDelta:
+		return m.OldFloatingSellDelta(ctx)
 	case providerordertoken.FieldMaxOrderAmount:
 		return m.OldMaxOrderAmount(ctx)
 	case providerordertoken.FieldMinOrderAmount:
@@ -13565,26 +13837,33 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetUpdatedAt(v)
 		return nil
-	case providerordertoken.FieldFixedConversionRate:
+	case providerordertoken.FieldFixedBuyRate:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetFixedConversionRate(v)
+		m.SetFixedBuyRate(v)
 		return nil
-	case providerordertoken.FieldFloatingConversionRate:
+	case providerordertoken.FieldFixedSellRate:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetFloatingConversionRate(v)
+		m.SetFixedSellRate(v)
 		return nil
-	case providerordertoken.FieldConversionRateType:
-		v, ok := value.(providerordertoken.ConversionRateType)
+	case providerordertoken.FieldFloatingBuyDelta:
+		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetConversionRateType(v)
+		m.SetFloatingBuyDelta(v)
+		return nil
+	case providerordertoken.FieldFloatingSellDelta:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFloatingSellDelta(v)
 		return nil
 	case providerordertoken.FieldMaxOrderAmount:
 		v, ok := value.(decimal.Decimal)
@@ -13650,11 +13929,17 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 // this mutation.
 func (m *ProviderOrderTokenMutation) AddedFields() []string {
 	var fields []string
-	if m.addfixed_conversion_rate != nil {
-		fields = append(fields, providerordertoken.FieldFixedConversionRate)
+	if m.addfixed_buy_rate != nil {
+		fields = append(fields, providerordertoken.FieldFixedBuyRate)
 	}
-	if m.addfloating_conversion_rate != nil {
-		fields = append(fields, providerordertoken.FieldFloatingConversionRate)
+	if m.addfixed_sell_rate != nil {
+		fields = append(fields, providerordertoken.FieldFixedSellRate)
+	}
+	if m.addfloating_buy_delta != nil {
+		fields = append(fields, providerordertoken.FieldFloatingBuyDelta)
+	}
+	if m.addfloating_sell_delta != nil {
+		fields = append(fields, providerordertoken.FieldFloatingSellDelta)
 	}
 	if m.addmax_order_amount != nil {
 		fields = append(fields, providerordertoken.FieldMaxOrderAmount)
@@ -13679,10 +13964,14 @@ func (m *ProviderOrderTokenMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *ProviderOrderTokenMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case providerordertoken.FieldFixedConversionRate:
-		return m.AddedFixedConversionRate()
-	case providerordertoken.FieldFloatingConversionRate:
-		return m.AddedFloatingConversionRate()
+	case providerordertoken.FieldFixedBuyRate:
+		return m.AddedFixedBuyRate()
+	case providerordertoken.FieldFixedSellRate:
+		return m.AddedFixedSellRate()
+	case providerordertoken.FieldFloatingBuyDelta:
+		return m.AddedFloatingBuyDelta()
+	case providerordertoken.FieldFloatingSellDelta:
+		return m.AddedFloatingSellDelta()
 	case providerordertoken.FieldMaxOrderAmount:
 		return m.AddedMaxOrderAmount()
 	case providerordertoken.FieldMinOrderAmount:
@@ -13702,19 +13991,33 @@ func (m *ProviderOrderTokenMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case providerordertoken.FieldFixedConversionRate:
+	case providerordertoken.FieldFixedBuyRate:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.AddFixedConversionRate(v)
+		m.AddFixedBuyRate(v)
 		return nil
-	case providerordertoken.FieldFloatingConversionRate:
+	case providerordertoken.FieldFixedSellRate:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.AddFloatingConversionRate(v)
+		m.AddFixedSellRate(v)
+		return nil
+	case providerordertoken.FieldFloatingBuyDelta:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddFloatingBuyDelta(v)
+		return nil
+	case providerordertoken.FieldFloatingSellDelta:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddFloatingSellDelta(v)
 		return nil
 	case providerordertoken.FieldMaxOrderAmount:
 		v, ok := value.(decimal.Decimal)
@@ -13759,6 +14062,18 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 // mutation.
 func (m *ProviderOrderTokenMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(providerordertoken.FieldFixedBuyRate) {
+		fields = append(fields, providerordertoken.FieldFixedBuyRate)
+	}
+	if m.FieldCleared(providerordertoken.FieldFixedSellRate) {
+		fields = append(fields, providerordertoken.FieldFixedSellRate)
+	}
+	if m.FieldCleared(providerordertoken.FieldFloatingBuyDelta) {
+		fields = append(fields, providerordertoken.FieldFloatingBuyDelta)
+	}
+	if m.FieldCleared(providerordertoken.FieldFloatingSellDelta) {
+		fields = append(fields, providerordertoken.FieldFloatingSellDelta)
+	}
 	if m.FieldCleared(providerordertoken.FieldSettlementAddress) {
 		fields = append(fields, providerordertoken.FieldSettlementAddress)
 	}
@@ -13779,6 +14094,18 @@ func (m *ProviderOrderTokenMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ProviderOrderTokenMutation) ClearField(name string) error {
 	switch name {
+	case providerordertoken.FieldFixedBuyRate:
+		m.ClearFixedBuyRate()
+		return nil
+	case providerordertoken.FieldFixedSellRate:
+		m.ClearFixedSellRate()
+		return nil
+	case providerordertoken.FieldFloatingBuyDelta:
+		m.ClearFloatingBuyDelta()
+		return nil
+	case providerordertoken.FieldFloatingSellDelta:
+		m.ClearFloatingSellDelta()
+		return nil
 	case providerordertoken.FieldSettlementAddress:
 		m.ClearSettlementAddress()
 		return nil
@@ -13799,14 +14126,17 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 	case providerordertoken.FieldUpdatedAt:
 		m.ResetUpdatedAt()
 		return nil
-	case providerordertoken.FieldFixedConversionRate:
-		m.ResetFixedConversionRate()
+	case providerordertoken.FieldFixedBuyRate:
+		m.ResetFixedBuyRate()
 		return nil
-	case providerordertoken.FieldFloatingConversionRate:
-		m.ResetFloatingConversionRate()
+	case providerordertoken.FieldFixedSellRate:
+		m.ResetFixedSellRate()
 		return nil
-	case providerordertoken.FieldConversionRateType:
-		m.ResetConversionRateType()
+	case providerordertoken.FieldFloatingBuyDelta:
+		m.ResetFloatingBuyDelta()
+		return nil
+	case providerordertoken.FieldFloatingSellDelta:
+		m.ResetFloatingSellDelta()
 		return nil
 	case providerordertoken.FieldMaxOrderAmount:
 		m.ResetMaxOrderAmount()

@@ -355,21 +355,54 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			continue
 		}
 
-		// Calculate rate from tokenPayload based on conversion type
-		var rate decimal.Decimal
-		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFixed {
-			rate = tokenPayload.FixedConversionRate
-		} else {
-			rate = currency.MarketRate.Add(tokenPayload.FloatingConversionRate)
+		// Validate buy/sell rates - at least one direction must be configured
+		hasBuyRate := !tokenPayload.FixedBuyRate.IsZero() || !tokenPayload.FloatingBuyDelta.IsZero()
+		hasSellRate := !tokenPayload.FixedSellRate.IsZero() || !tokenPayload.FloatingSellDelta.IsZero()
+		if !hasBuyRate && !hasSellRate {
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "Tokens",
+				Message: fmt.Sprintf("At least one rate (buy or sell) must be configured for %s", tokenPayload.Symbol),
+			})
+			continue
+		}
+
+		// Validate buy_rate >= sell_rate when both are configured (provider profitability)
+		var buyRate, sellRate decimal.Decimal
+		if !tokenPayload.FixedBuyRate.IsZero() {
+			buyRate = tokenPayload.FixedBuyRate
+		} else if !tokenPayload.FloatingBuyDelta.IsZero() && !currency.MarketBuyRate.IsZero() {
+			buyRate = currency.MarketBuyRate.Add(tokenPayload.FloatingBuyDelta)
+		}
+		if !tokenPayload.FixedSellRate.IsZero() {
+			sellRate = tokenPayload.FixedSellRate
+		} else if !tokenPayload.FloatingSellDelta.IsZero() && !currency.MarketSellRate.IsZero() {
+			sellRate = currency.MarketSellRate.Add(tokenPayload.FloatingSellDelta)
+		}
+		if !buyRate.IsZero() && !sellRate.IsZero() && buyRate.LessThan(sellRate) {
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "Tokens",
+				Message: fmt.Sprintf("Buy rate must be >= sell rate for profitability (%s)", tokenPayload.Symbol),
+			})
+			continue
 		}
 
 		// Validate rate deviation for floating rates
-		if tokenPayload.ConversionRateType == providerordertoken.ConversionRateTypeFloating {
-			percentDeviation := u.AbsPercentageDeviation(currency.MarketRate, rate)
+		if !tokenPayload.FloatingBuyDelta.IsZero() && !currency.MarketBuyRate.IsZero() {
+			percentDeviation := u.AbsPercentageDeviation(currency.MarketBuyRate, buyRate)
 			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
 				validationErrors = append(validationErrors, types.ErrorData{
 					Field:   "Tokens",
-					Message: fmt.Sprintf("Rate is too far from market rate for %s", tokenPayload.Symbol),
+					Message: fmt.Sprintf("Buy rate is too far from market rate for %s", tokenPayload.Symbol),
+				})
+				continue
+			}
+		}
+		if !tokenPayload.FloatingSellDelta.IsZero() && !currency.MarketSellRate.IsZero() {
+			percentDeviation := u.AbsPercentageDeviation(currency.MarketSellRate, sellRate)
+			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Tokens",
+					Message: fmt.Sprintf("Sell rate is too far from market rate for %s", tokenPayload.Symbol),
 				})
 				continue
 			}
@@ -384,12 +417,23 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				Message: fmt.Sprintf("Rate slippage cannot be less than 0.1%% for %s", tokenPayload.Symbol),
 			})
 			continue
-		} else if rate.Mul(tokenPayload.RateSlippage.Div(decimal.NewFromFloat(100))).GreaterThan(currency.MarketRate.Mul(decimal.NewFromFloat(0.05))) {
-			validationErrors = append(validationErrors, types.ErrorData{
-				Field:   "Tokens",
-				Message: fmt.Sprintf("Rate slippage is too high for %s", tokenPayload.Symbol),
-			})
-			continue
+		} else {
+			// Check slippage against market rates (use sell rate as reference for offramp)
+			marketRef := currency.MarketSellRate
+			if marketRef.IsZero() {
+				marketRef = currency.MarketBuyRate
+			}
+			rateRef := sellRate
+			if rateRef.IsZero() {
+				rateRef = buyRate
+			}
+			if !marketRef.IsZero() && !rateRef.IsZero() && rateRef.Mul(tokenPayload.RateSlippage.Div(decimal.NewFromFloat(100))).GreaterThan(marketRef.Mul(decimal.NewFromFloat(0.05))) {
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Tokens",
+					Message: fmt.Sprintf("Rate slippage is too high for %s", tokenPayload.Symbol),
+				})
+				continue
+			}
 		}
 
 		// Check if token already exists for provider
@@ -443,11 +487,20 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			tokenPayload.RateSlippage = existingToken.RateSlippage
 		}
 
+		// Choose a representative conversion rate for bucket calculations (offramp = sell side)
+		conversionRate := sellRate
+		if conversionRate.IsZero() {
+			conversionRate = buyRate
+		}
+		if conversionRate.IsZero() {
+			conversionRate = decimal.NewFromInt(1)
+		}
+
 		tokenOperations = append(tokenOperations, TokenOperation{
 			TokenPayload:  tokenPayload,
 			ProviderToken: providerToken,
 			Currency:      currency,
-			Rate:          rate,
+			Rate:          conversionRate,
 			IsUpdate:      isUpdate,
 			ExistingToken: existingToken,
 		})
@@ -586,9 +639,10 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetSettlementAddress(op.TokenPayload.SettlementAddress).
 				SetNetwork(op.TokenPayload.Network).
 				SetRateSlippage(op.TokenPayload.RateSlippage).
-				SetConversionRateType(op.TokenPayload.ConversionRateType).
-				SetFixedConversionRate(op.TokenPayload.FixedConversionRate).
-				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
+				SetFixedBuyRate(op.TokenPayload.FixedBuyRate).
+				SetFixedSellRate(op.TokenPayload.FixedSellRate).
+				SetFloatingBuyDelta(op.TokenPayload.FloatingBuyDelta).
+				SetFloatingSellDelta(op.TokenPayload.FloatingSellDelta).
 				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
 				SetMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
@@ -610,9 +664,10 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			// Create new token
 			_, err = tx.ProviderOrderToken.
 				Create().
-				SetConversionRateType(op.TokenPayload.ConversionRateType).
-				SetFixedConversionRate(op.TokenPayload.FixedConversionRate).
-				SetFloatingConversionRate(op.TokenPayload.FloatingConversionRate).
+				SetFixedBuyRate(op.TokenPayload.FixedBuyRate).
+				SetFixedSellRate(op.TokenPayload.FixedSellRate).
+				SetFloatingBuyDelta(op.TokenPayload.FloatingBuyDelta).
+				SetFloatingSellDelta(op.TokenPayload.FloatingSellDelta).
 				SetMaxOrderAmount(op.TokenPayload.MaxOrderAmount).
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
 				SetMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
@@ -958,17 +1013,18 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	tokensPayload := make([]types.ProviderOrderTokenPayload, len(orderTokens))
 	for i, orderToken := range orderTokens {
 		payload := types.ProviderOrderTokenPayload{
-			Symbol:                 orderToken.Edges.Token.Symbol,
-			ConversionRateType:     orderToken.ConversionRateType,
-			FixedConversionRate:    orderToken.FixedConversionRate,
-			FloatingConversionRate: orderToken.FloatingConversionRate,
-			MaxOrderAmount:         orderToken.MaxOrderAmount,
-			MinOrderAmount:         orderToken.MinOrderAmount,
-			MaxOrderAmountOTC:      orderToken.MaxOrderAmountOtc,
-			MinOrderAmountOTC:      orderToken.MinOrderAmountOtc,
-			RateSlippage:           orderToken.RateSlippage,
-			SettlementAddress:      orderToken.SettlementAddress,
-			Network:                orderToken.Network,
+			Symbol:            orderToken.Edges.Token.Symbol,
+			FixedBuyRate:      orderToken.FixedBuyRate,
+			FixedSellRate:     orderToken.FixedSellRate,
+			FloatingBuyDelta:  orderToken.FloatingBuyDelta,
+			FloatingSellDelta: orderToken.FloatingSellDelta,
+			MaxOrderAmount:    orderToken.MaxOrderAmount,
+			MinOrderAmount:    orderToken.MinOrderAmount,
+			MaxOrderAmountOTC: orderToken.MaxOrderAmountOtc,
+			MinOrderAmountOTC: orderToken.MinOrderAmountOtc,
+			RateSlippage:      orderToken.RateSlippage,
+			SettlementAddress: orderToken.SettlementAddress,
+			Network:           orderToken.Network,
 		}
 		tokensPayload[i] = payload
 	}

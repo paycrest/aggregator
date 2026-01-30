@@ -1127,6 +1127,7 @@ func validateAndPreparePaymentOrderData(
 		event.Amount,
 		paymentOrderFields.ProviderID,
 		token.Edges.Network.Identifier,
+		utils.RateSideSell, // This is for offramp orders
 	)
 
 	if rateResult.Rate == decimal.NewFromInt(1) && paymentOrderFields.Rate != decimal.NewFromInt(1) {

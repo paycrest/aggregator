@@ -105,12 +105,13 @@ func (ctrl *Controller) GetFiatCurrencies(ctx *gin.Context) {
 	currencies := make([]types.SupportedCurrencies, 0, len(fiatcurrencies))
 	for _, currency := range fiatcurrencies {
 		currencies = append(currencies, types.SupportedCurrencies{
-			Code:       currency.Code,
-			Name:       currency.Name,
-			ShortName:  currency.ShortName,
-			Decimals:   int8(currency.Decimals),
-			Symbol:     currency.Symbol,
-			MarketRate: currency.MarketRate,
+			Code:           currency.Code,
+			Name:           currency.Name,
+			ShortName:      currency.ShortName,
+			Decimals:       int8(currency.Decimals),
+			Symbol:         currency.Symbol,
+			MarketBuyRate:  currency.MarketBuyRate,
+			MarketSellRate: currency.MarketSellRate,
 		})
 	}
 
@@ -218,7 +219,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	}
 
 	// Validate rate using extracted logic
-	rateResult, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
+	rateResult, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter, u.RateSideSell)
 	if err != nil {
 		// Return 404 if no provider found, else 500 for other errors
 		if strings.Contains(err.Error(), "no provider available") {

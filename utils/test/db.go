@@ -496,20 +496,21 @@ func AddProvisionBucketToPaymentOrder(order *ent.PaymentOrder, bucketId int) (*e
 }
 
 func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.ProviderOrderToken, error) {
-	// Default payload
+	// Default payload using new two-sided rate fields
 	payload := map[string]interface{}{
-		"currency_id":              uuid.New(),
-		"fixed_conversion_rate":    decimal.NewFromFloat(1.0),
-		"conversion_rate_type":     "fixed",
-		"floating_conversion_rate": decimal.NewFromFloat(1.0),
-		"max_order_amount":         decimal.NewFromFloat(1.0),
-		"min_order_amount":         decimal.NewFromFloat(1.0),
-		"max_order_amount_otc":     decimal.NewFromFloat(10000.0),
-		"min_order_amount_otc":     decimal.NewFromFloat(100.0),
-		"provider":                 nil,
-		"token_id":                 0,
-		"settlement_address":       "0x1234567890123456789012345678901234567890",
-		"network":                  "localhost",
+		"currency_id":         uuid.New(),
+		"fixed_buy_rate":      decimal.NewFromFloat(1.0),
+		"fixed_sell_rate":     decimal.NewFromFloat(1.0),
+		"floating_buy_delta":  decimal.NewFromFloat(0),
+		"floating_sell_delta": decimal.NewFromFloat(0),
+		"max_order_amount":    decimal.NewFromFloat(1.0),
+		"min_order_amount":    decimal.NewFromFloat(1.0),
+		"max_order_amount_otc": decimal.NewFromFloat(10000.0),
+		"min_order_amount_otc": decimal.NewFromFloat(100.0),
+		"provider":            nil,
+		"token_id":            0,
+		"settlement_address":  "0x1234567890123456789012345678901234567890",
+		"network":             "localhost",
 	}
 
 	// Apply overrides
@@ -533,9 +534,11 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		SetMinOrderAmount(payload["min_order_amount"].(decimal.Decimal)).
 		SetMaxOrderAmountOtc(payload["max_order_amount_otc"].(decimal.Decimal)).
 		SetMinOrderAmountOtc(payload["min_order_amount_otc"].(decimal.Decimal)).
-		SetConversionRateType(providerordertoken.ConversionRateType(payload["conversion_rate_type"].(string))).
-		SetFixedConversionRate(payload["fixed_conversion_rate"].(decimal.Decimal)).
-		SetFloatingConversionRate(payload["floating_conversion_rate"].(decimal.Decimal)).
+		// Two-sided rate config for tests (defaults to symmetric 1.0 buy/sell)
+		SetFixedBuyRate(payload["fixed_buy_rate"].(decimal.Decimal)).
+		SetFixedSellRate(payload["fixed_sell_rate"].(decimal.Decimal)).
+		SetFloatingBuyDelta(payload["floating_buy_delta"].(decimal.Decimal)).
+		SetFloatingSellDelta(payload["floating_sell_delta"].(decimal.Decimal)).
 		SetSettlementAddress(payload["settlement_address"].(string)).
 		SetNetwork(payload["network"].(string)).
 		SetTokenID(payload["token_id"].(int)).
@@ -705,7 +708,9 @@ func CreateTestFiatCurrency(overrides map[string]interface{}) (*ent.FiatCurrency
 		SetDecimals(payload["decimals"].(int)).
 		SetSymbol(payload["symbol"].(string)).
 		SetName(payload["name"].(string)).
-		SetMarketRate(decimal.NewFromFloat(payload["market_rate"].(float64))).
+		// Use two-sided market rates for tests; default both to same value
+		SetMarketBuyRate(decimal.NewFromFloat(payload["market_rate"].(float64))).
+		SetMarketSellRate(decimal.NewFromFloat(payload["market_rate"].(float64))).
 		SetIsEnabled(true).
 		AddInstitutions(institutions...).
 		Save(context.Background())

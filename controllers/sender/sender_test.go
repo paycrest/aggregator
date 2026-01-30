@@ -158,12 +158,13 @@ func setup() error {
 	}
 
 	// Populate Redis bucket with provider data for validateBucketRate
+	// For tests, use fixed_sell_rate as the representative provider rate
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
 	providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 		providerProfile.ID,
 		token.Symbol,
 		providerOrderToken.Network,
-		providerOrderToken.FixedConversionRate.String(),
+		providerOrderToken.FixedSellRate.String(),
 		providerOrderToken.MinOrderAmount.String(),
 		providerOrderToken.MaxOrderAmount.String(),
 	)
@@ -650,12 +651,13 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Populate Redis bucket with provider data for validateBucketRate
+			// In floating-rate tests, approximate current provider rate using fixed_sell_rate for deterministic behavior
 			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
 			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 				providerProfile.ID,
 				testCtx.token.Symbol,
 				providerOrderToken.Network,
-				providerOrderToken.FloatingConversionRate.String(),
+				providerOrderToken.FixedSellRate.String(),
 				providerOrderToken.MinOrderAmount.String(),
 				providerOrderToken.MaxOrderAmount.String(),
 			)
@@ -841,7 +843,7 @@ func TestSender(t *testing.T) {
 				providerProfile.ID,
 				testCtx.token.Symbol,
 				providerOrderToken.Network,
-				providerOrderToken.FloatingConversionRate.String(),
+				providerOrderToken.FixedSellRate.String(),
 				providerOrderToken.MinOrderAmount.String(),
 				providerOrderToken.MaxOrderAmount.String(),
 			)
@@ -1027,7 +1029,7 @@ func TestSender(t *testing.T) {
 				providerProfile.ID,
 				testCtx.token.Symbol,
 				providerOrderToken.Network,
-				providerOrderToken.FixedConversionRate.String(),
+				providerOrderToken.FixedSellRate.String(),
 				providerOrderToken.MinOrderAmount.String(),
 				providerOrderToken.MaxOrderAmount.String(),
 			)
@@ -2015,7 +2017,7 @@ func TestSender(t *testing.T) {
 				"source": map[string]interface{}{
 					"type":          "crypto",
 					"currency":      testCtx.token.Symbol,
-					"paymentRail":   network.Identifier,
+					"network":       network.Identifier,
 					"refundAddress": "0x1234567890123456789012345678901234567890",
 				},
 				"destination": map[string]interface{}{
@@ -2060,7 +2062,7 @@ func TestSender(t *testing.T) {
 				"source": map[string]interface{}{
 					"type":          "crypto",
 					"currency":      testCtx.token.Symbol,
-					"paymentRail":   network.Identifier,
+					"network":       network.Identifier,
 					"refundAddress": "0x1234567890123456789012345678901234567890",
 				},
 				"destination": map[string]interface{}{
@@ -2114,7 +2116,7 @@ func TestSender(t *testing.T) {
 				"source": map[string]interface{}{
 					"type":          "crypto",
 					"currency":      testCtx.token.Symbol,
-					"paymentRail":   network.Identifier,
+					"network":       network.Identifier,
 					"refundAddress": "0x1234567890123456789012345678901234567890",
 				},
 				"destination": map[string]interface{}{
@@ -2172,6 +2174,7 @@ func TestSender(t *testing.T) {
 
 			providerAccount, ok := data["providerAccount"].(map[string]interface{})
 			assert.True(t, ok, "providerAccount should be present")
+			assert.NotEmpty(t, providerAccount["network"])
 			assert.NotEmpty(t, providerAccount["receiveAddress"])
 			assert.NotEmpty(t, providerAccount["validUntil"])
 		})

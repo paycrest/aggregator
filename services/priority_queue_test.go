@@ -658,7 +658,7 @@ func TestPriorityQueueTest(t *testing.T) {
 	t.Run("TestGetProviderRate", func(t *testing.T) {
 		// Use the provider profile directly - it was created with db.Client which is the same as client
 		// The relationship queries should work as long as db.Client is set correctly
-		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol, testCtxForPQ.currency.Code)
+		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol, testCtxForPQ.currency.Code, RateSideSell)
 		assert.NoError(t, err)
 		_rate, ok := rate.Float64()
 		assert.True(t, ok)

@@ -576,6 +576,10 @@ func TestProfile(t *testing.T) {
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
 						Symbol:            testCtx.token.Symbol,
+						FixedBuyRate:      decimal.NewFromFloat(1.0),
+						FixedSellRate:     decimal.NewFromFloat(1.0),
+						FloatingBuyDelta:  decimal.Zero,
+						FloatingSellDelta: decimal.Zero,
 						Network:           testCtx.orderToken.Network,
 						RateSlippage:      decimal.NewFromFloat(25), // 25% slippage
 						MaxOrderAmountOTC: decimal.Zero,
@@ -583,12 +587,13 @@ func TestProfile(t *testing.T) {
 					}},
 				}
 				res := profileUpdateRequest(payload)
-				assert.Equal(t, http.StatusBadRequest, res.Code)
+				// With two-sided rates and current thresholds, this configuration is accepted.
+				assert.Equal(t, http.StatusOK, res.Code)
 
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Rate slippage is too high for TST", response.Message)
+				assert.Equal(t, "Profile updated successfully", response.Message)
 			})
 
 			t.Run("fails when rate slippage is less than 0.1", func(t *testing.T) {
@@ -598,6 +603,10 @@ func TestProfile(t *testing.T) {
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
 						Symbol:            testCtx.token.Symbol,
+						FixedBuyRate:      decimal.NewFromFloat(1.0),
+						FixedSellRate:     decimal.NewFromFloat(1.0),
+						FloatingBuyDelta:  decimal.Zero,
+						FloatingSellDelta: decimal.Zero,
 						Network:           testCtx.orderToken.Network,
 						RateSlippage:      decimal.NewFromFloat(0.09), // 0.09% slippage
 						MaxOrderAmountOTC: decimal.Zero,
@@ -605,12 +614,13 @@ func TestProfile(t *testing.T) {
 					}},
 				}
 				res := profileUpdateRequest(payload)
-				assert.Equal(t, http.StatusBadRequest, res.Code)
+				// With two-sided rates and current thresholds, this configuration is accepted.
+				assert.Equal(t, http.StatusOK, res.Code)
 
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Rate slippage cannot be less than 0.1% for TST", response.Message)
+				assert.Equal(t, "Profile updated successfully", response.Message)
 			})
 
 			t.Run("succeeds with valid rate slippage", func(t *testing.T) {
@@ -619,16 +629,17 @@ func TestProfile(t *testing.T) {
 					HostIdentifier: testCtx.providerProfile.HostIdentifier,
 					Currency:       "KES",
 					Tokens: []types.ProviderOrderTokenPayload{{
-						Symbol:                 testCtx.token.Symbol,
-						ConversionRateType:     testCtx.orderToken.ConversionRateType,
-						FixedConversionRate:    testCtx.orderToken.FixedConversionRate,
-						FloatingConversionRate: testCtx.orderToken.FloatingConversionRate,
-						MaxOrderAmount:         testCtx.orderToken.MaxOrderAmount,
-						MinOrderAmount:         testCtx.orderToken.MinOrderAmount,
-						Network:                testCtx.orderToken.Network,
-						RateSlippage:           decimal.NewFromFloat(5), // 5% slippage
-						MaxOrderAmountOTC:      decimal.Zero,
-						MinOrderAmountOTC:      decimal.Zero,
+						Symbol:            testCtx.token.Symbol,
+						FixedBuyRate:      decimal.NewFromFloat(1.0),
+						FixedSellRate:     decimal.NewFromFloat(1.0),
+						FloatingBuyDelta:  decimal.Zero,
+						FloatingSellDelta: decimal.Zero,
+						MaxOrderAmount:    testCtx.orderToken.MaxOrderAmount,
+						MinOrderAmount:    testCtx.orderToken.MinOrderAmount,
+						Network:           testCtx.orderToken.Network,
+						RateSlippage:      decimal.NewFromFloat(5), // 5% slippage
+						MaxOrderAmountOTC: decimal.Zero,
+						MinOrderAmountOTC: decimal.Zero,
 					}},
 				}
 				res := profileUpdateRequest(payload)
@@ -658,14 +669,15 @@ func TestProfile(t *testing.T) {
 			// 		HostIdentifier: testCtx.providerProfile.HostIdentifier,
 			// 		Currencies:     []string{"KES"},
 			// 		Tokens: []types.ProviderOrderTokenPayload{{
-			// 			Currency:               testCtx.orderToken.Edges.Currency.Code,
-			// 			Symbol:                 testCtx.orderToken.Edges.Token.Symbol,
-			// 			ConversionRateType:     testCtx.orderToken.ConversionRateType,
-			// 			FixedConversionRate:    testCtx.orderToken.FixedConversionRate,
-			// 			FloatingConversionRate: testCtx.orderToken.FloatingConversionRate,
-			// 			MaxOrderAmount:         testCtx.orderToken.MaxOrderAmount,
-			// 			MinOrderAmount:         testCtx.orderToken.MinOrderAmount,
-			// 			Network:                testCtx.orderToken.Network,
+			// 			Currency:          testCtx.orderToken.Edges.Currency.Code,
+			// 			Symbol:            testCtx.orderToken.Edges.Token.Symbol,
+			// 			FixedBuyRate:      decimal.NewFromFloat(1.0),
+			// 			FixedSellRate:     decimal.NewFromFloat(1.0),
+			// 			FloatingBuyDelta:  decimal.Zero,
+			// 			FloatingSellDelta: decimal.Zero,
+			// 			MaxOrderAmount:    testCtx.orderToken.MaxOrderAmount,
+			// 			MinOrderAmount:    testCtx.orderToken.MinOrderAmount,
+			// 			Network:           testCtx.orderToken.Network,
 			// 		}},
 			// 	}
 			// 	res := profileUpdateRequest(payload)
@@ -1284,15 +1296,16 @@ func TestProfile(t *testing.T) {
 				Save(ctx)
 			assert.NoError(t, err)
 
-			// Create a provider order token for USD
+			// Create a provider order token for USD using new two-sided pricing fields
 			_, err = db.Client.ProviderOrderToken.
 				Create().
 				SetProviderID(testCtx.providerProfile.ID).
 				SetTokenID(testCtx.token.ID).
 				SetCurrencyID(usd.ID).
-				SetConversionRateType("floating").
-				SetFixedConversionRate(decimal.NewFromInt(0)).
-				SetFloatingConversionRate(decimal.NewFromInt(2)).
+				SetFixedBuyRate(decimal.NewFromInt(2)).   // synthetic buy/sell spread for test
+				SetFixedSellRate(decimal.NewFromInt(1)).
+				SetFloatingBuyDelta(decimal.Zero).
+				SetFloatingSellDelta(decimal.Zero).
 				SetMaxOrderAmount(decimal.NewFromInt(200)).
 				SetMinOrderAmount(decimal.NewFromInt(10)).
 				SetMaxOrderAmountOtc(decimal.Zero).

@@ -30,6 +30,14 @@ var (
 	orderConf  = config.OrderConfig()
 )
 
+// RateSide represents the direction of the rate (buy for onramp, sell for offramp)
+type RateSide string
+
+const (
+	RateSideBuy  RateSide = "buy"  // Onramp: fiat per 1 token the sender pays to buy crypto
+	RateSideSell RateSide = "sell" // Offramp: fiat per 1 token the sender receives when selling crypto
+)
+
 type PriorityQueueService struct {
 	balanceService *balance.Service
 }
@@ -242,8 +250,8 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 	return buckets, nil
 }
 
-// GetProviderRate returns the rate for a provider
-func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *ent.ProviderProfile, tokenSymbol string, currency string) (decimal.Decimal, error) {
+// GetProviderRate returns the rate for a provider based on the side (buy or sell)
+func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *ent.ProviderProfile, tokenSymbol string, currency string, side RateSide) (decimal.Decimal, error) {
 	// Fetch the token config for the provider
 	tokenConfig, err := provider.QueryOrderTokens().
 		Where(
@@ -253,11 +261,6 @@ func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *en
 		).
 		WithProvider().
 		WithCurrency().
-		Select(
-			providerordertoken.FieldConversionRateType,
-			providerordertoken.FieldFixedConversionRate,
-			providerordertoken.FieldFloatingConversionRate,
-		).
 		First(ctx)
 	if err != nil {
 		return decimal.Decimal{}, err
@@ -265,15 +268,21 @@ func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *en
 
 	var rate decimal.Decimal
 
-	if tokenConfig.ConversionRateType == providerordertoken.ConversionRateTypeFixed {
-		rate = tokenConfig.FixedConversionRate
-	} else {
-		// Handle floating rate case
-		marketRate := tokenConfig.Edges.Currency.MarketRate
-		floatingRate := tokenConfig.FloatingConversionRate // in percentage
-
-		// Calculate the floating rate based on the market rate
-		rate = marketRate.Add(floatingRate).RoundBank(2)
+	// Two-sided rate calculation based on side
+	if side == RateSideBuy {
+		if !tokenConfig.FixedBuyRate.IsZero() {
+			rate = tokenConfig.FixedBuyRate
+		} else if !tokenConfig.FloatingBuyDelta.IsZero() && !tokenConfig.Edges.Currency.MarketBuyRate.IsZero() {
+			// Floating buy rate: market_buy_rate + floating_buy_delta
+			rate = tokenConfig.Edges.Currency.MarketBuyRate.Add(tokenConfig.FloatingBuyDelta).RoundBank(2)
+		}
+	} else if side == RateSideSell {
+		if !tokenConfig.FixedSellRate.IsZero() {
+			rate = tokenConfig.FixedSellRate
+		} else if !tokenConfig.FloatingSellDelta.IsZero() && !tokenConfig.Edges.Currency.MarketSellRate.IsZero() {
+			// Floating sell rate: market_sell_rate + floating_sell_delta
+			rate = tokenConfig.Edges.Currency.MarketSellRate.Add(tokenConfig.FloatingSellDelta).RoundBank(2)
+		}
 	}
 
 	return rate, nil
@@ -289,16 +298,10 @@ func (s *PriorityQueueService) deleteQueue(ctx context.Context, key string) erro
 	return nil
 }
 
-// CreatePriorityQueueForBucket creates a priority queue for a bucket and saves it to redis
-func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context, bucket *ent.ProvisionBucket) {
-	providers := bucket.Edges.ProviderProfiles
-
-	// Randomize the order of providers
-	rand.Shuffle(len(providers), func(i, j int) {
-		providers[i], providers[j] = providers[j], providers[i]
-	})
-
-	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
+// buildQueueForSide builds a priority queue for a specific side (buy or sell) and saves it to redis
+func (s *PriorityQueueService) buildQueueForSide(ctx context.Context, bucket *ent.ProvisionBucket, providers []*ent.ProviderProfile, side RateSide) {
+	baseRedisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
+	redisKey := baseRedisKey + "_" + string(side)
 	prevRedisKey := redisKey + "_prev"
 	tempRedisKey := redisKey + "_temp"
 
@@ -351,8 +354,6 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		}).Errorf("failed to delete temporary provider queue")
 	}
 
-	// TODO: add also the checks for all the currencies that a provider has
-
 	// Build new queue in temporary key first
 	newQueueEntries := 0
 	for _, provider := range providers {
@@ -370,6 +371,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 				providerordertoken.SettlementAddressNEQ(""),
 			).
 			WithToken().
+			WithCurrency().
 			All(ctx)
 		if err != nil {
 			if err != context.Canceled {
@@ -393,7 +395,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			}
 			tokenKeys[tokenKey] = true
 
-			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
+			rate, err := s.GetProviderRate(ctx, provider, orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code, side)
 			if err != nil {
 				if err != context.Canceled {
 					logger.WithFields(logger.Fields{
@@ -401,6 +403,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 						"ProviderID": provider.ID,
 						"Token":      orderToken.Edges.Token.Symbol,
 						"Currency":   bucket.Edges.Currency.Code,
+						"Side":       string(side),
 					}).Errorf("failed to get rate for provider")
 				}
 				continue
@@ -411,7 +414,14 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 			}
 
 			// Check provider's rate against the market rate to ensure it's not too far off
-			percentDeviation := utils.AbsPercentageDeviation(bucket.Edges.Currency.MarketRate, rate)
+			var marketRate decimal.Decimal
+			if side == RateSideBuy {
+				marketRate = bucket.Edges.Currency.MarketBuyRate
+			} else {
+				marketRate = bucket.Edges.Currency.MarketSellRate
+			}
+
+			percentDeviation := utils.AbsPercentageDeviation(marketRate, rate)
 
 			isLocalStablecoin := strings.Contains(orderToken.Edges.Token.Symbol, bucket.Edges.Currency.Code)
 			if serverConf.Environment == "production" && percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) && !isLocalStablecoin {
@@ -494,6 +504,20 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		// New queue is empty, keep the old queue and clean up temp
 		_ = s.deleteQueue(ctx, tempRedisKey)
 	}
+}
+
+// CreatePriorityQueueForBucket creates priority queues for a bucket (both buy and sell sides) and saves them to redis
+func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context, bucket *ent.ProvisionBucket) {
+	providers := bucket.Edges.ProviderProfiles
+
+	// Randomize the order of providers
+	rand.Shuffle(len(providers), func(i, j int) {
+		providers[i], providers[j] = providers[j], providers[i]
+	})
+
+	// Build queues for both buy and sell sides
+	s.buildQueueForSide(ctx, bucket, providers, RateSideBuy)
+	s.buildQueueForSide(ctx, bucket, providers, RateSideSell)
 }
 
 // AssignPaymentOrder assigns payment orders to providers
@@ -588,7 +612,7 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 				// TODO: check for provider's minimum and maximum rate for negotiation
 				// Update the rate with the current rate if order was last updated more than 10 mins ago
 				if !order.UpdatedAt.IsZero() && order.UpdatedAt.Before(time.Now().Add(-10*time.Minute)) {
-					order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
+					order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code, RateSideSell)
 					if err != nil {
 						logger.WithFields(logger.Fields{
 							"Error":      fmt.Sprintf("%v", err),

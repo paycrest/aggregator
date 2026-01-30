@@ -117,24 +117,57 @@ func (_u *FiatCurrencyUpdate) SetNillableName(v *string) *FiatCurrencyUpdate {
 	return _u
 }
 
-// SetMarketRate sets the "market_rate" field.
-func (_u *FiatCurrencyUpdate) SetMarketRate(v decimal.Decimal) *FiatCurrencyUpdate {
-	_u.mutation.ResetMarketRate()
-	_u.mutation.SetMarketRate(v)
+// SetMarketBuyRate sets the "market_buy_rate" field.
+func (_u *FiatCurrencyUpdate) SetMarketBuyRate(v decimal.Decimal) *FiatCurrencyUpdate {
+	_u.mutation.ResetMarketBuyRate()
+	_u.mutation.SetMarketBuyRate(v)
 	return _u
 }
 
-// SetNillableMarketRate sets the "market_rate" field if the given value is not nil.
-func (_u *FiatCurrencyUpdate) SetNillableMarketRate(v *decimal.Decimal) *FiatCurrencyUpdate {
+// SetNillableMarketBuyRate sets the "market_buy_rate" field if the given value is not nil.
+func (_u *FiatCurrencyUpdate) SetNillableMarketBuyRate(v *decimal.Decimal) *FiatCurrencyUpdate {
 	if v != nil {
-		_u.SetMarketRate(*v)
+		_u.SetMarketBuyRate(*v)
 	}
 	return _u
 }
 
-// AddMarketRate adds value to the "market_rate" field.
-func (_u *FiatCurrencyUpdate) AddMarketRate(v decimal.Decimal) *FiatCurrencyUpdate {
-	_u.mutation.AddMarketRate(v)
+// AddMarketBuyRate adds value to the "market_buy_rate" field.
+func (_u *FiatCurrencyUpdate) AddMarketBuyRate(v decimal.Decimal) *FiatCurrencyUpdate {
+	_u.mutation.AddMarketBuyRate(v)
+	return _u
+}
+
+// ClearMarketBuyRate clears the value of the "market_buy_rate" field.
+func (_u *FiatCurrencyUpdate) ClearMarketBuyRate() *FiatCurrencyUpdate {
+	_u.mutation.ClearMarketBuyRate()
+	return _u
+}
+
+// SetMarketSellRate sets the "market_sell_rate" field.
+func (_u *FiatCurrencyUpdate) SetMarketSellRate(v decimal.Decimal) *FiatCurrencyUpdate {
+	_u.mutation.ResetMarketSellRate()
+	_u.mutation.SetMarketSellRate(v)
+	return _u
+}
+
+// SetNillableMarketSellRate sets the "market_sell_rate" field if the given value is not nil.
+func (_u *FiatCurrencyUpdate) SetNillableMarketSellRate(v *decimal.Decimal) *FiatCurrencyUpdate {
+	if v != nil {
+		_u.SetMarketSellRate(*v)
+	}
+	return _u
+}
+
+// AddMarketSellRate adds value to the "market_sell_rate" field.
+func (_u *FiatCurrencyUpdate) AddMarketSellRate(v decimal.Decimal) *FiatCurrencyUpdate {
+	_u.mutation.AddMarketSellRate(v)
+	return _u
+}
+
+// ClearMarketSellRate clears the value of the "market_sell_rate" field.
+func (_u *FiatCurrencyUpdate) ClearMarketSellRate() *FiatCurrencyUpdate {
+	_u.mutation.ClearMarketSellRate()
 	return _u
 }
 
@@ -367,11 +400,23 @@ func (_u *FiatCurrencyUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(fiatcurrency.FieldName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.MarketRate(); ok {
-		_spec.SetField(fiatcurrency.FieldMarketRate, field.TypeFloat64, value)
+	if value, ok := _u.mutation.MarketBuyRate(); ok {
+		_spec.SetField(fiatcurrency.FieldMarketBuyRate, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.AddedMarketRate(); ok {
-		_spec.AddField(fiatcurrency.FieldMarketRate, field.TypeFloat64, value)
+	if value, ok := _u.mutation.AddedMarketBuyRate(); ok {
+		_spec.AddField(fiatcurrency.FieldMarketBuyRate, field.TypeFloat64, value)
+	}
+	if _u.mutation.MarketBuyRateCleared() {
+		_spec.ClearField(fiatcurrency.FieldMarketBuyRate, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.MarketSellRate(); ok {
+		_spec.SetField(fiatcurrency.FieldMarketSellRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedMarketSellRate(); ok {
+		_spec.AddField(fiatcurrency.FieldMarketSellRate, field.TypeFloat64, value)
+	}
+	if _u.mutation.MarketSellRateCleared() {
+		_spec.ClearField(fiatcurrency.FieldMarketSellRate, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.IsEnabled(); ok {
 		_spec.SetField(fiatcurrency.FieldIsEnabled, field.TypeBool, value)
@@ -659,24 +704,57 @@ func (_u *FiatCurrencyUpdateOne) SetNillableName(v *string) *FiatCurrencyUpdateO
 	return _u
 }
 
-// SetMarketRate sets the "market_rate" field.
-func (_u *FiatCurrencyUpdateOne) SetMarketRate(v decimal.Decimal) *FiatCurrencyUpdateOne {
-	_u.mutation.ResetMarketRate()
-	_u.mutation.SetMarketRate(v)
+// SetMarketBuyRate sets the "market_buy_rate" field.
+func (_u *FiatCurrencyUpdateOne) SetMarketBuyRate(v decimal.Decimal) *FiatCurrencyUpdateOne {
+	_u.mutation.ResetMarketBuyRate()
+	_u.mutation.SetMarketBuyRate(v)
 	return _u
 }
 
-// SetNillableMarketRate sets the "market_rate" field if the given value is not nil.
-func (_u *FiatCurrencyUpdateOne) SetNillableMarketRate(v *decimal.Decimal) *FiatCurrencyUpdateOne {
+// SetNillableMarketBuyRate sets the "market_buy_rate" field if the given value is not nil.
+func (_u *FiatCurrencyUpdateOne) SetNillableMarketBuyRate(v *decimal.Decimal) *FiatCurrencyUpdateOne {
 	if v != nil {
-		_u.SetMarketRate(*v)
+		_u.SetMarketBuyRate(*v)
 	}
 	return _u
 }
 
-// AddMarketRate adds value to the "market_rate" field.
-func (_u *FiatCurrencyUpdateOne) AddMarketRate(v decimal.Decimal) *FiatCurrencyUpdateOne {
-	_u.mutation.AddMarketRate(v)
+// AddMarketBuyRate adds value to the "market_buy_rate" field.
+func (_u *FiatCurrencyUpdateOne) AddMarketBuyRate(v decimal.Decimal) *FiatCurrencyUpdateOne {
+	_u.mutation.AddMarketBuyRate(v)
+	return _u
+}
+
+// ClearMarketBuyRate clears the value of the "market_buy_rate" field.
+func (_u *FiatCurrencyUpdateOne) ClearMarketBuyRate() *FiatCurrencyUpdateOne {
+	_u.mutation.ClearMarketBuyRate()
+	return _u
+}
+
+// SetMarketSellRate sets the "market_sell_rate" field.
+func (_u *FiatCurrencyUpdateOne) SetMarketSellRate(v decimal.Decimal) *FiatCurrencyUpdateOne {
+	_u.mutation.ResetMarketSellRate()
+	_u.mutation.SetMarketSellRate(v)
+	return _u
+}
+
+// SetNillableMarketSellRate sets the "market_sell_rate" field if the given value is not nil.
+func (_u *FiatCurrencyUpdateOne) SetNillableMarketSellRate(v *decimal.Decimal) *FiatCurrencyUpdateOne {
+	if v != nil {
+		_u.SetMarketSellRate(*v)
+	}
+	return _u
+}
+
+// AddMarketSellRate adds value to the "market_sell_rate" field.
+func (_u *FiatCurrencyUpdateOne) AddMarketSellRate(v decimal.Decimal) *FiatCurrencyUpdateOne {
+	_u.mutation.AddMarketSellRate(v)
+	return _u
+}
+
+// ClearMarketSellRate clears the value of the "market_sell_rate" field.
+func (_u *FiatCurrencyUpdateOne) ClearMarketSellRate() *FiatCurrencyUpdateOne {
+	_u.mutation.ClearMarketSellRate()
 	return _u
 }
 
@@ -939,11 +1017,23 @@ func (_u *FiatCurrencyUpdateOne) sqlSave(ctx context.Context) (_node *FiatCurren
 	if value, ok := _u.mutation.Name(); ok {
 		_spec.SetField(fiatcurrency.FieldName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.MarketRate(); ok {
-		_spec.SetField(fiatcurrency.FieldMarketRate, field.TypeFloat64, value)
+	if value, ok := _u.mutation.MarketBuyRate(); ok {
+		_spec.SetField(fiatcurrency.FieldMarketBuyRate, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.AddedMarketRate(); ok {
-		_spec.AddField(fiatcurrency.FieldMarketRate, field.TypeFloat64, value)
+	if value, ok := _u.mutation.AddedMarketBuyRate(); ok {
+		_spec.AddField(fiatcurrency.FieldMarketBuyRate, field.TypeFloat64, value)
+	}
+	if _u.mutation.MarketBuyRateCleared() {
+		_spec.ClearField(fiatcurrency.FieldMarketBuyRate, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.MarketSellRate(); ok {
+		_spec.SetField(fiatcurrency.FieldMarketSellRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedMarketSellRate(); ok {
+		_spec.AddField(fiatcurrency.FieldMarketSellRate, field.TypeFloat64, value)
+	}
+	if _u.mutation.MarketSellRateCleared() {
+		_spec.ClearField(fiatcurrency.FieldMarketSellRate, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.IsEnabled(); ok {
 		_spec.SetField(fiatcurrency.FieldIsEnabled, field.TypeBool, value)

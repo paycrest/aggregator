@@ -229,8 +229,8 @@ func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, 
 	}
 
 	// Only multiply when the token matches the institution's fiat currency
-	if fiatCurrency != nil && token.BaseCurrency == fiatCurrency.Code && !fiatCurrency.MarketRate.IsZero() {
-		return amount.Div(fiatCurrency.MarketRate)
+	if fiatCurrency != nil && token.BaseCurrency == fiatCurrency.Code && !fiatCurrency.MarketSellRate.IsZero() {
+		return amount.Div(fiatCurrency.MarketSellRate)
 	}
 
 	return amount
@@ -765,6 +765,14 @@ func IsValidHttpsUrl(urlStr string) bool {
 	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
 }
 
+// RateSide represents the direction of the rate (buy for onramp, sell for offramp)
+type RateSide string
+
+const (
+	RateSideBuy  RateSide = "buy"  // Onramp: fiat per 1 token the sender pays to buy crypto
+	RateSideSell RateSide = "sell" // Offramp: fiat per 1 token the sender receives when selling crypto
+)
+
 // RateValidationResult contains the result of rate validation
 type RateValidationResult struct {
 	Rate       decimal.Decimal
@@ -774,16 +782,17 @@ type RateValidationResult struct {
 
 // ValidateRate validates if a provided rate is achievable for the given parameters
 // Returns the rate, provider ID (if found), and order type (regular or OTC)
-func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (RateValidationResult, error) {
+// side parameter determines whether to use buy rates (onramp) or sell rates (offramp)
+func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string, side RateSide) (RateValidationResult, error) {
 	isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
 
 	// Determine which validation function to use
 	var result RateValidationResult
 	var err error
 	if providerID != "" {
-		result, err = validateProviderRate(ctx, token, currency, amount, providerID, networkFilter)
+		result, err = validateProviderRate(ctx, token, currency, amount, providerID, networkFilter, side)
 	} else {
-		result, err = validateBucketRate(ctx, token, currency, amount, networkFilter)
+		result, err = validateBucketRate(ctx, token, currency, amount, networkFilter, side)
 	}
 
 	if err != nil {
@@ -801,7 +810,7 @@ func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurre
 }
 
 // validateProviderRate handles provider-specific rate validation
-func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (RateValidationResult, error) {
+func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string, side RateSide) (RateValidationResult, error) {
 	// Get the provider from the database
 	provider, err := storage.Client.ProviderProfile.
 		Query().
@@ -848,16 +857,24 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 
 	// Get rate first (needed for fiat conversion and OTC validation)
 	var rateResponse decimal.Decimal
-	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount, networkFilter)
+	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount, networkFilter, side)
 	if found {
 		rateResponse = redisRate
 	} else {
 		// Fallback to database rate if Redis rate not found
-		if providerOrderToken.ConversionRateType == "fixed" {
-			rateResponse = providerOrderToken.FixedConversionRate
-		} else {
-			// For floating rates, use market rate + floating adjustment
-			rateResponse = currency.MarketRate.Add(providerOrderToken.FloatingConversionRate)
+		switch side {
+		case RateSideBuy:
+			if !providerOrderToken.FixedBuyRate.IsZero() {
+				rateResponse = providerOrderToken.FixedBuyRate
+			} else if !providerOrderToken.FloatingBuyDelta.IsZero() && !currency.MarketBuyRate.IsZero() {
+				rateResponse = currency.MarketBuyRate.Add(providerOrderToken.FloatingBuyDelta).RoundBank(2)
+			}
+		case RateSideSell:
+			if !providerOrderToken.FixedSellRate.IsZero() {
+				rateResponse = providerOrderToken.FixedSellRate
+			} else if !providerOrderToken.FloatingSellDelta.IsZero() && !currency.MarketSellRate.IsZero() {
+				rateResponse = currency.MarketSellRate.Add(providerOrderToken.FloatingSellDelta).RoundBank(2)
+			}
 		}
 	}
 
@@ -903,10 +920,10 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 }
 
 // getProviderRateFromRedis retrieves the provider's current rate from Redis queue.
-// If networkFilter is non-empty, only entries where parts[2] (network) matches networkFilter are considered.
-func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal, networkFilter string) (decimal.Decimal, bool) {
-	// Get redis keys for provision buckets for this currency
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currencyCode+"_*_*", 100).Result()
+func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal, networkFilter string, side RateSide) (decimal.Decimal, bool) {
+	// Get redis keys for provision buckets for this currency and side
+	// Scan for side-specific bucket keys: bucket_{currency}_{min}_{max}_{side}
+	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currencyCode+"_*_*_"+string(side), 100).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -973,9 +990,10 @@ func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, curr
 }
 
 // validateBucketRate handles bucket-based rate validation
-func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string) (RateValidationResult, error) {
-	// Get redis keys for provision buckets
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
+func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string, side RateSide) (RateValidationResult, error) {
+	// Get redis keys for provision buckets for the specific side
+	// Scan for side-specific bucket keys: bucket_{currency}_{min}_{max}_{side}
+	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*_"+string(side), 100).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1062,10 +1080,10 @@ type BucketData struct {
 }
 
 func parseBucketKey(key string) (*BucketData, error) {
-	// Expected format: "bucket_{currency}_{minAmount}_{maxAmount}"
+	// Expected format: "bucket_{currency}_{minAmount}_{maxAmount}_{side}"
 	parts := strings.Split(key, "_")
 	if len(parts) != 4 && len(parts) != 5 {
-		return nil, fmt.Errorf("invalid bucket key format: expected 4 parts, got %d", len(parts))
+		return nil, fmt.Errorf("invalid bucket key format: expected 5 parts, got %d", len(parts))
 	}
 
 	if parts[0] != "bucket" {
@@ -1090,6 +1108,9 @@ func parseBucketKey(key string) (*BucketData, error) {
 	if minAmount.GreaterThanOrEqual(maxAmount) {
 		return nil, fmt.Errorf("min amount (%s) must be less than max amount (%s)", minAmount, maxAmount)
 	}
+
+	// If there's a 5th part, it should be "buy" or "sell" (side), but we ignore it for parsing
+	// as the side is already known from the key pattern
 
 	return &BucketData{
 		Currency:  currency,
