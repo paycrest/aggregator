@@ -481,7 +481,10 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		Update().
 		Where(
 			paymentorder.IDEQ(splitOrderId),
-			paymentorder.StatusEQ(paymentorder.StatusSettling),
+			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusValidated),
+				paymentorder.StatusEQ(paymentorder.StatusSettling),
+			),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),

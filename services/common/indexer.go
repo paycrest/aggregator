@@ -121,7 +121,10 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, orderIds []
 		Query().
 		Where(
 			paymentorder.GatewayIDIn(orderIds...),
-			paymentorder.StatusEQ(paymentorder.StatusValidated),
+			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusValidated),
+				paymentorder.StatusEQ(paymentorder.StatusSettling),
+			),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
