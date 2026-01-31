@@ -85,7 +85,7 @@ type ERC20TokenFilterer struct {
 // ERC20TokenSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
 type ERC20TokenSession struct {
-	Contract     *ERC20Token       // Generic contract binding to set the session for
+	Contract     *ERC20Token        // Generic contract binding to set the session for
 	CallOpts     bind.CallOpts     // Call options to use throughout this session
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
@@ -94,14 +94,14 @@ type ERC20TokenSession struct {
 // with pre-set call options.
 type ERC20TokenCallerSession struct {
 	Contract *ERC20TokenCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts     // Call options to use throughout this session
+	CallOpts bind.CallOpts    // Call options to use throughout this session
 }
 
 // ERC20TokenTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
 type ERC20TokenTransactorSession struct {
 	Contract     *ERC20TokenTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
+	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 }
 
 // ERC20TokenRaw is an auto generated low-level Go binding around an Ethereum contract.

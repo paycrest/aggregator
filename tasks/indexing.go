@@ -68,7 +68,10 @@ func TaskIndexBlockchainEvents() error {
 		go func(network *ent.Network) {
 			defer wg.Done()
 			// Use the provided context with timeout instead of creating a new unbounded one
-			var indexerInstance types.Indexer
+			var (
+				indexerInstance types.Indexer
+				err             error
+			)
 
 			if strings.HasPrefix(network.Identifier, "tron") {
 				indexerInstance = indexer.NewIndexerTron()

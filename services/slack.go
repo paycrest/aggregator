@@ -2,10 +2,12 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/utils"
@@ -96,13 +98,22 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 		)
 	}
 
-	// Send notification
+	// Send notification with timeout to prevent hanging on stalled Slack endpoint
 	jsonPayload, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
 
-	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.SlackWebhookURL, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := utils.GetHTTPClient().Do(req)
 	if err != nil {
 		logger.Errorf("Failed to send Slack notification: %v", err)
 		return err
@@ -157,7 +168,18 @@ func (s *SlackService) SendActionFeedbackNotification(firstName, email, submissi
 		return fmt.Errorf("failed to marshal payload: %v", err)
 	}
 
-	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	// Send notification with timeout to prevent hanging on stalled Slack endpoint
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.SlackWebhookURL, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		logger.Errorf("Failed to create Slack request: %v", err)
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := utils.GetHTTPClient().Do(req)
 	if err != nil {
 		logger.Errorf("Failed to send Slack feedback notification: %v", err)
 		return fmt.Errorf("failed to send notification: %v", err)
@@ -242,7 +264,18 @@ func (s *SlackService) SendSubmissionNotification(firstName, email, submissionID
 		return fmt.Errorf("failed to marshal payload: %v", err)
 	}
 
-	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	// Send notification with timeout to prevent hanging on stalled Slack endpoint
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.SlackWebhookURL, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		logger.Errorf("Failed to create Slack request: %v", err)
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := utils.GetHTTPClient().Do(req)
 	if err != nil {
 		logger.Errorf("Failed to send Slack notification: %v", err)
 		return fmt.Errorf("failed to send Slack notification: %v", err)
