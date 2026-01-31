@@ -848,7 +848,7 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 
 	// Get rate first (needed for fiat conversion and OTC validation)
 	var rateResponse decimal.Decimal
-	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount)
+	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount, networkFilter)
 	if found {
 		rateResponse = redisRate
 	} else {
@@ -902,8 +902,9 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 	}, nil
 }
 
-// getProviderRateFromRedis retrieves the provider's current rate from Redis queue
-func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal) (decimal.Decimal, bool) {
+// getProviderRateFromRedis retrieves the provider's current rate from Redis queue.
+// If networkFilter is non-empty, only entries where parts[2] (network) matches networkFilter are considered.
+func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal, networkFilter string) (decimal.Decimal, bool) {
 	// Get redis keys for provision buckets for this currency
 	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currencyCode+"_*_*", 100).Result()
 	if err != nil {
@@ -933,6 +934,11 @@ func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, curr
 		for _, providerData := range providers {
 			parts := strings.Split(providerData, ":")
 			if len(parts) != 6 {
+				continue
+			}
+
+			// Skip entry if network filter is set and does not match
+			if networkFilter != "" && parts[2] != networkFilter {
 				continue
 			}
 
