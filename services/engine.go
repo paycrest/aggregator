@@ -982,18 +982,18 @@ func (s *EngineService) TransferToken(ctx context.Context, chainID int64, fromAd
 	// Prepare the contract call parameters
 	contractParams := map[string]interface{}{
 		"contractAddress": tokenAddress,
-		"method":         "transfer",
-		"params":         []interface{}{toAddress, amount},
-		"abi":            transferABI,
-		"value":          "0", // No ETH value for ERC-20 transfers
+		"method":          "transfer",
+		"params":          []interface{}{toAddress, amount},
+		"abi":             transferABI,
+		"value":           "0", // No ETH value for ERC-20 transfers
 	}
 
 	// Prepare execution options
 	executionOptions := map[string]interface{}{
-		"chainId":         fmt.Sprintf("%d", chainID),
-		"idempotencyKey":  idempotencyKey,
-		"from":            fromAddress,
-		"type":            "auto",
+		"chainId":        fmt.Sprintf("%d", chainID),
+		"idempotencyKey": idempotencyKey,
+		"from":           fromAddress,
+		"type":           "auto",
 	}
 
 	// Prepare the request payload

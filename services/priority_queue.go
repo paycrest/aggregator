@@ -736,7 +736,7 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 	}
 
 	orderRequestData := map[string]interface{}{
-		"type": "otc",
+		"type":       "otc",
 		"providerId": order.ProviderID,
 	}
 	err = storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err()
