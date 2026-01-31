@@ -674,7 +674,7 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 				break
 			}
 			parts := strings.Split(providerData, ":")
-			if len(parts) != 5 {
+			if len(parts) != 6 {
 				logger.WithFields(logger.Fields{
 					"Error":        fmt.Sprintf("%v", err),
 					"ProviderData": providerData,
@@ -692,12 +692,12 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 			}
 
 			// Skip entry if order amount is not within provider's min and max order amount
-			minOrderAmount, err := decimal.NewFromString(parts[3])
+			minOrderAmount, err := decimal.NewFromString(parts[4])
 			if err != nil {
 				continue
 			}
 
-			maxOrderAmount, err := decimal.NewFromString(parts[4])
+			maxOrderAmount, err := decimal.NewFromString(parts[5])
 			if err != nil {
 				continue
 			}
@@ -707,7 +707,7 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 			}
 
 			// Get fiat equivalent of the token amount
-			rate, _ := decimal.NewFromString(parts[2])
+			rate, _ := decimal.NewFromString(parts[3])
 			fiatAmount := orderAmount.Mul(rate)
 
 			// Check if fiat amount is within the bucket range and set the rate
@@ -848,7 +848,7 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 
 	// Get rate first (needed for fiat conversion and OTC validation)
 	var rateResponse decimal.Decimal
-	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount)
+	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount, networkFilter)
 	if found {
 		rateResponse = redisRate
 	} else {
@@ -902,8 +902,9 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 	}, nil
 }
 
-// getProviderRateFromRedis retrieves the provider's current rate from Redis queue
-func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal) (decimal.Decimal, bool) {
+// getProviderRateFromRedis retrieves the provider's current rate from Redis queue.
+// If networkFilter is non-empty, only entries where parts[2] (network) matches networkFilter are considered.
+func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal, networkFilter string) (decimal.Decimal, bool) {
 	// Get redis keys for provision buckets for this currency
 	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currencyCode+"_*_*", 100).Result()
 	if err != nil {
@@ -932,25 +933,30 @@ func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, curr
 		// Look for the specific provider
 		for _, providerData := range providers {
 			parts := strings.Split(providerData, ":")
-			if len(parts) != 5 {
+			if len(parts) != 6 {
+				continue
+			}
+
+			// Skip entry if network filter is set and does not match
+			if networkFilter != "" && parts[2] != networkFilter {
 				continue
 			}
 
 			// Check if this is the provider we're looking for
 			if parts[0] == providerID && parts[1] == tokenSymbol {
 				// Parse the rate
-				rate, err := decimal.NewFromString(parts[2])
+				rate, err := decimal.NewFromString(parts[3])
 				if err != nil {
 					continue
 				}
 
 				// Parse min/max order amounts
-				minOrderAmount, err := decimal.NewFromString(parts[3])
+				minOrderAmount, err := decimal.NewFromString(parts[4])
 				if err != nil {
 					continue
 				}
 
-				maxOrderAmount, err := decimal.NewFromString(parts[4])
+				maxOrderAmount, err := decimal.NewFromString(parts[5])
 				if err != nil {
 					continue
 				}
@@ -1112,7 +1118,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 
 	for _, providerData := range providers {
 		parts := strings.Split(providerData, ":")
-		if len(parts) != 5 {
+		if len(parts) != 6 {
 			logger.WithFields(logger.Fields{
 				"ProviderData": providerData,
 				"Token":        tokenSymbol,
@@ -1128,8 +1134,12 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 			continue
 		}
 
-		// Fetch provider order token for network validation and OTC limits check
-		// TODO: Move this to redis cache. Provider's network should be in the key.
+		// Skip entry if network doesn't match (network is in the queue payload)
+		if networkIdentifier != "" && parts[2] != networkIdentifier {
+			continue
+		}
+
+		// Fetch provider order token for OTC limits check
 		var providerOrderToken *ent.ProviderOrderToken
 		if networkIdentifier != "" {
 			// Network filter provided - fetch with network constraint
@@ -1189,7 +1199,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 		}
 
 		// Parse provider order amounts
-		minOrderAmount, err := decimal.NewFromString(parts[3])
+		minOrderAmount, err := decimal.NewFromString(parts[4])
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"ProviderData": providerData,
@@ -1198,7 +1208,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 			continue
 		}
 
-		maxOrderAmount, err := decimal.NewFromString(parts[4])
+		maxOrderAmount, err := decimal.NewFromString(parts[5])
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"ProviderData": providerData,
@@ -1232,7 +1242,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 		}
 
 		// Parse rate
-		rate, err := decimal.NewFromString(parts[2])
+		rate, err := decimal.NewFromString(parts[3])
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"ProviderData": providerData,

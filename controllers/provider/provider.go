@@ -1281,9 +1281,9 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 				break
 			}
 
-			// Extract the id from the data (assuming format "providerID:token:rate:minAmount:maxAmount")
+			// Extract the id from the data (format "providerID:token:network:rate:minAmount:maxAmount")
 			parts := strings.Split(providerData, ":")
-			if len(parts) != 5 {
+			if len(parts) != 6 {
 				logger.WithFields(logger.Fields{
 					"Provider Data": providerData,
 				}).Error("Invalid provider data format")
