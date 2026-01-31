@@ -159,9 +159,10 @@ func setup() error {
 
 	// Populate Redis bucket with provider data for validateBucketRate
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
-	providerData := fmt.Sprintf("%s:%s:%s:%s:%s",
+	providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 		providerProfile.ID,
 		token.Symbol,
+		providerOrderToken.Network,
 		providerOrderToken.FixedConversionRate.String(),
 		providerOrderToken.MinOrderAmount.String(),
 		providerOrderToken.MaxOrderAmount.String(),
@@ -650,9 +651,10 @@ func TestSender(t *testing.T) {
 
 			// Populate Redis bucket with provider data for validateBucketRate
 			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
-			providerData := fmt.Sprintf("%s:%s:%s:%s:%s",
+			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 				providerProfile.ID,
 				testCtx.token.Symbol,
+				providerOrderToken.Network,
 				providerOrderToken.FloatingConversionRate.String(),
 				providerOrderToken.MinOrderAmount.String(),
 				providerOrderToken.MaxOrderAmount.String(),
@@ -835,9 +837,10 @@ func TestSender(t *testing.T) {
 
 			// Populate Redis bucket with provider data for validateBucketRate
 			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
-			providerData := fmt.Sprintf("%s:%s:%s:%s:%s",
+			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 				providerProfile.ID,
 				testCtx.token.Symbol,
+				providerOrderToken.Network,
 				providerOrderToken.FloatingConversionRate.String(),
 				providerOrderToken.MinOrderAmount.String(),
 				providerOrderToken.MaxOrderAmount.String(),
@@ -1020,9 +1023,10 @@ func TestSender(t *testing.T) {
 
 			// Populate Redis bucket with provider data for validateBucketRate
 			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
-			providerData := fmt.Sprintf("%s:%s:%s:%s:%s",
+			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 				providerProfile.ID,
 				testCtx.token.Symbol,
+				providerOrderToken.Network,
 				providerOrderToken.FixedConversionRate.String(),
 				providerOrderToken.MinOrderAmount.String(),
 				providerOrderToken.MaxOrderAmount.String(),

@@ -104,9 +104,9 @@ func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey strin
 			return err
 		}
 
-		// Extract the rate from the data (assuming it's in the format "providerID:token:rate:minAmount:maxAmount")
+		// Extract the rate from the data (format "providerID:token:network:rate:minAmount:maxAmount")
 		parts := strings.Split(providerData, ":")
-		if len(parts) != 5 {
+		if len(parts) != 6 {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
 				"OrderID":      order.ID.String(),
@@ -128,24 +128,29 @@ func (s *TestPriorityQueueService) matchRate(ctx context.Context, redisKey strin
 			continue
 		}
 
+		// Skip entry if network doesn't match
+		network := order.Token.Edges.Network
+		if network == nil {
+			var networkErr error
+			network, networkErr = order.Token.QueryNetwork().Only(ctx)
+			if networkErr != nil {
+				continue
+			}
+		}
+		if parts[2] != network.Identifier {
+			continue
+		}
+
 		// Parse rate (amount limits and OTC checks already done by ValidateRate/findSuitableProviderRate)
-		rate, err := decimal.NewFromString(parts[2])
+		rate, err := decimal.NewFromString(parts[3])
 		if err != nil {
 			continue
 		}
 
-		// Fetch ProviderOrderToken only for rate slippage check
+		// Fetch ProviderOrderToken only for rate slippage check (network already resolved above)
 		bucketCurrency := order.ProvisionBucket.Edges.Currency
 		if bucketCurrency == nil {
 			bucketCurrency, err = order.ProvisionBucket.QueryCurrency().Only(ctx)
-			if err != nil {
-				continue
-			}
-		}
-
-		network := order.Token.Edges.Network
-		if network == nil {
-			network, err = order.Token.QueryNetwork().Only(ctx)
 			if err != nil {
 				continue
 			}
