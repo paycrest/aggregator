@@ -12,8 +12,6 @@ import (
 
 // SubscribeToRedisKeyspaceEvents subscribes to redis keyspace events according to redis.conf settings
 func SubscribeToRedisKeyspaceEvents() {
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
 	ctx := context.Background()
 
 	// Handle expired or deleted order request key events
@@ -24,7 +22,15 @@ func SubscribeToRedisKeyspaceEvents() {
 	)
 	orderRequestChan := orderRequest.Channel()
 
-	go ReassignStaleOrderRequest(ctx, orderRequestChan)
+	// Start the goroutine with proper cleanup on context cancellation
+	go func() {
+		defer func() {
+			if err := orderRequest.Close(); err != nil {
+				logger.Errorf("Error closing Redis subscription: %v", err)
+			}
+		}()
+		ReassignStaleOrderRequest(ctx, orderRequestChan)
+	}()
 }
 
 // StartCronJobs starts cron jobs

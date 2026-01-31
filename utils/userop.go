@@ -192,16 +192,14 @@ func SponsorUserOperation(userOp *userop.UserOperation, mode string, token strin
 			)
 		}
 
-		httpClient := &http.Client{
-			Transport: &http.Transport{},
-		}
 		header := http.Header{}
 		header.Set("x-secret-key", engineConf.ThirdwebSecretKey)
 
+		// Use shared HTTP client to prevent connection leaks
 		client, err = rpc.DialOptions(
 			context.Background(),
 			paymasterUrl,
-			rpc.WithHTTPClient(httpClient),
+			rpc.WithHTTPClient(GetHTTPClient()),
 			rpc.WithHeaders(header),
 		)
 		if err != nil {
@@ -294,16 +292,14 @@ func SendUserOperation(userOp *userop.UserOperation, chainId int64) (string, str
 			},
 		}
 	case "thirdweb":
-		httpClient := &http.Client{
-			Transport: &http.Transport{},
-		}
 		header := http.Header{}
 		header.Set("x-secret-key", engineConf.ThirdwebSecretKey)
 
+		// Use shared HTTP client to prevent connection leaks
 		client, err = rpc.DialOptions(
 			context.Background(),
 			bundlerUrl,
-			rpc.WithHTTPClient(httpClient),
+			rpc.WithHTTPClient(GetHTTPClient()),
 			rpc.WithHeaders(header),
 		)
 		if err != nil {
@@ -374,16 +370,14 @@ func GetUserOperationByReceipt(userOpHash string, chainId int64) (map[string]int
 
 	var client *rpc.Client
 	if aaService == "thirdweb" {
-		httpClient := &http.Client{
-			Transport: &http.Transport{},
-		}
 		header := http.Header{}
 		header.Set("x-secret-key", engineConf.ThirdwebSecretKey)
 
+		// Use shared HTTP client to prevent connection leaks
 		client, err = rpc.DialOptions(
 			context.Background(),
 			bundlerUrl,
-			rpc.WithHTTPClient(httpClient),
+			rpc.WithHTTPClient(GetHTTPClient()),
 			rpc.WithHeaders(header),
 		)
 	} else {
@@ -544,16 +538,14 @@ func GetUserOperationStatus(userOpHash string, chainId int64) (bool, error) {
 
 	var client *rpc.Client
 	if aaService == "thirdweb" {
-		httpClient := &http.Client{
-			Transport: &http.Transport{},
-		}
 		header := http.Header{}
 		header.Set("x-secret-key", engineConf.ThirdwebSecretKey)
 
+		// Use shared HTTP client to prevent connection leaks
 		client, err = rpc.DialOptions(
 			context.Background(),
 			bundlerUrl,
-			rpc.WithHTTPClient(httpClient),
+			rpc.WithHTTPClient(GetHTTPClient()),
 			rpc.WithHeaders(header),
 		)
 	} else {
@@ -645,16 +637,13 @@ func getStandardGasPrices(chainId int64) (*big.Int, *big.Int, error) {
 		return nil, nil, fmt.Errorf("failed to get endpoints for chain ID %d: %w", chainId, err)
 	}
 
-	httpClient := &http.Client{
-		Transport: &http.Transport{},
-	}
 	header := http.Header{}
 	header.Set("x-secret-key", engineConf.ThirdwebSecretKey)
 
 	client, err := rpc.DialOptions(
 		context.Background(),
 		paymasterUrl,
-		rpc.WithHTTPClient(httpClient),
+		rpc.WithHTTPClient(GetHTTPClient()),
 		rpc.WithHeaders(header),
 	)
 	if err != nil {

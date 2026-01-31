@@ -23,7 +23,10 @@ import (
 
 // TaskIndexBlockchainEvents indexes transfer events for all enabled tokens
 func TaskIndexBlockchainEvents() error {
-	ctx := context.Background()
+	// Use context with timeout to ensure goroutines don't run indefinitely
+	// 10 second timeout (slightly less than cron interval of 4 seconds, giving buffer)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	// Use distributed lock to prevent concurrent execution
 	// Lock TTL: 10 seconds (2.5x cron interval + buffer for processing time)
@@ -59,10 +62,12 @@ func TaskIndexBlockchainEvents() error {
 	}
 
 	// Process each network in parallel
+	var wg sync.WaitGroup
 	for _, network := range networks {
+		wg.Add(1)
 		go func(network *ent.Network) {
-			// Create a new context for this network's operations
-			ctx := context.Background()
+			defer wg.Done()
+			// Use the provided context with timeout instead of creating a new unbounded one
 			var indexerInstance types.Indexer
 
 			if strings.HasPrefix(network.Identifier, "tron") {
@@ -182,6 +187,10 @@ func TaskIndexBlockchainEvents() error {
 			}
 		}(network)
 	}
+
+	// Wait for all network indexing to complete before returning
+	// This ensures we don't spawn unbounded goroutines
+	wg.Wait()
 	return nil
 }
 

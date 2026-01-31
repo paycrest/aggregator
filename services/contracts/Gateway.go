@@ -107,7 +107,7 @@ type GatewayFilterer struct {
 // GatewaySession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
 type GatewaySession struct {
-	Contract     *Gateway             // Generic contract binding to set the session for
+	Contract     *Gateway          // Generic contract binding to set the session for
 	CallOpts     bind.CallOpts     // Call options to use throughout this session
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
@@ -115,15 +115,15 @@ type GatewaySession struct {
 // GatewayCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
 type GatewayCallerSession struct {
-	Contract *GatewayCaller   // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts // Call options to use throughout this session
+	Contract *GatewayCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts  // Call options to use throughout this session
 }
 
 // GatewayTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
 type GatewayTransactorSession struct {
-	Contract     *GatewayTransactor   // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+	Contract     *GatewayTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
 }
 
 // GatewayRaw is an auto generated low-level Go binding around an Ethereum contract.
