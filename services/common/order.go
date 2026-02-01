@@ -285,56 +285,71 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusRefunded.dbtransaction %v", err)
 	}
 
-	// Attempt to update an existing log
 	var transactionLog *ent.TransactionLog
-	updatedLogRows, err := tx.TransactionLog.
+
+	// Update any existing order_refunding log (created when refund tx was submitted) by setting tx_hash.
+	updatedRefundingRows, err := tx.TransactionLog.
 		Update().
 		Where(
-			transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
+			transactionlog.StatusEQ(transactionlog.StatusOrderRefunding),
 			transactionlog.GatewayIDEQ(event.OrderId),
 			transactionlog.NetworkEQ(network.Identifier),
-			transactionlog.TxHashEQ(event.TxHash),
 		).
 		SetTxHash(event.TxHash).
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()
-		return fmt.Errorf("UpdateOrderStatusRefunded.update: %v", err)
+		return fmt.Errorf("UpdateOrderStatusRefunded.updateRefunding: %v", err)
 	}
 
-	// If no rows were updated, check if log already exists (race condition protection)
-	if updatedLogRows == 0 {
-		// Check if transaction log already exists to prevent duplicates
-		existingLog, err := tx.TransactionLog.
-			Query().
+	// If no order_refunding log was updated, do idempotency: match or create order_refunded log for this event
+	if updatedRefundingRows == 0 {
+		// Idempotency: try to match an existing order_refunded log for this event (same gateway_id, network, tx_hash)
+		updatedLogRows, err := tx.TransactionLog.
+			Update().
 			Where(
 				transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
 				transactionlog.GatewayIDEQ(event.OrderId),
 				transactionlog.NetworkEQ(network.Identifier),
 				transactionlog.TxHashEQ(event.TxHash),
 			).
-			Only(ctx)
+			SetTxHash(event.TxHash).
+			Save(ctx)
 		if err != nil {
-			if ent.IsNotFound(err) {
-				// Log doesn't exist, create new one
-				transactionLog, err = tx.TransactionLog.
-					Create().
-					SetStatus(transactionlog.StatusOrderRefunded).
-					SetTxHash(event.TxHash).
-					SetGatewayID(event.OrderId).
-					SetNetwork(network.Identifier).
-					Save(ctx)
-				if err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("UpdateOrderStatusRefunded.update: %v", err)
+		}
+
+		if updatedLogRows == 0 {
+			existingLog, err := tx.TransactionLog.
+				Query().
+				Where(
+					transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
+					transactionlog.GatewayIDEQ(event.OrderId),
+					transactionlog.NetworkEQ(network.Identifier),
+					transactionlog.TxHashEQ(event.TxHash),
+				).
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					transactionLog, err = tx.TransactionLog.
+						Create().
+						SetStatus(transactionlog.StatusOrderRefunded).
+						SetTxHash(event.TxHash).
+						SetGatewayID(event.OrderId).
+						SetNetwork(network.Identifier).
+						Save(ctx)
+					if err != nil {
+						_ = tx.Rollback()
+						return fmt.Errorf("UpdateOrderStatusRefunded.create: %v", err)
+					}
+				} else {
 					_ = tx.Rollback()
-					return fmt.Errorf("UpdateOrderStatusRefunded.create: %v", err)
+					return fmt.Errorf("UpdateOrderStatusRefunded.query: %v", err)
 				}
 			} else {
-				_ = tx.Rollback()
-				return fmt.Errorf("UpdateOrderStatusRefunded.query: %v", err)
+				transactionLog = existingLog
 			}
-		} else {
-			// Log already exists (created by another concurrent transaction)
-			transactionLog = existingLog
 		}
 	}
 
@@ -433,12 +448,13 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		return fmt.Errorf("UpdateOrderStatusSettled.db: %v", err)
 	}
 
-	// Attempt to update an existing log
+	// Update any existing order_settling log(s) for this event (same gateway_id, network) by setting tx_hash.
+	// Row count is used to decide whether to create a new order_settled log below.
 	var transactionLog *ent.TransactionLog
 	updatedLogRows, err := tx.TransactionLog.
 		Update().
 		Where(
-			transactionlog.StatusEQ(transactionlog.StatusOrderSettled),
+			transactionlog.StatusEQ(transactionlog.StatusOrderSettling),
 			transactionlog.GatewayIDEQ(event.OrderId),
 			transactionlog.NetworkEQ(network.Identifier),
 		).
@@ -448,7 +464,8 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		return fmt.Errorf("UpdateOrderStatusSettled.update: %v", err)
 	}
 
-	// If no rows were updated, create a new log
+	// If no existing order_settling log was updated, create a new order_settled log (e.g. legacy or indexer-first path).
+	// When updatedLogRows > 0, order already has that log linked; no need to AddTransactions again.
 	if updatedLogRows == 0 {
 		transactionLog, err = tx.TransactionLog.
 			Create().

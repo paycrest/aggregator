@@ -258,8 +258,8 @@ func UpdateReceiveAddressStatus(
 		}
 
 		paymentOrderUpdate := tx.PaymentOrder.Update().Where(paymentorder.IDEQ(paymentOrder.ID))
-		if paymentOrder.ReturnAddress == "" {
-			paymentOrderUpdate = paymentOrderUpdate.SetReturnAddress(event.From)
+		if paymentOrder.RefundOrRecipientAddress == "" {
+			paymentOrderUpdate = paymentOrderUpdate.SetRefundOrRecipientAddress(event.From)
 		}
 
 		if !transferMatchesOrderAmount {

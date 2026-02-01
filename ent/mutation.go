@@ -6396,78 +6396,79 @@ func (m *NetworkMutation) ResetEdge(name string) error {
 // PaymentOrderMutation represents an operation that mutates the PaymentOrder nodes in the graph.
 type PaymentOrderMutation struct {
 	config
-	op                         Op
-	typ                        string
-	id                         *uuid.UUID
-	created_at                 *time.Time
-	updated_at                 *time.Time
-	amount                     *decimal.Decimal
-	addamount                  *decimal.Decimal
-	rate                       *decimal.Decimal
-	addrate                    *decimal.Decimal
-	amount_in_usd              *decimal.Decimal
-	addamount_in_usd           *decimal.Decimal
-	amount_paid                *decimal.Decimal
-	addamount_paid             *decimal.Decimal
-	amount_returned            *decimal.Decimal
-	addamount_returned         *decimal.Decimal
-	percent_settled            *decimal.Decimal
-	addpercent_settled         *decimal.Decimal
-	sender_fee                 *decimal.Decimal
-	addsender_fee              *decimal.Decimal
-	network_fee                *decimal.Decimal
-	addnetwork_fee             *decimal.Decimal
-	protocol_fee               *decimal.Decimal
-	addprotocol_fee            *decimal.Decimal
-	order_percent              *decimal.Decimal
-	addorder_percent           *decimal.Decimal
-	fee_percent                *decimal.Decimal
-	addfee_percent             *decimal.Decimal
-	tx_hash                    *string
-	block_number               *int64
-	addblock_number            *int64
-	message_hash               *string
-	gateway_id                 *string
-	from_address               *string
-	return_address             *string
-	receive_address            *string
-	receive_address_salt       *[]byte
-	receive_address_expiry     *time.Time
-	fee_address                *string
-	indexer_created_at         *time.Time
-	institution                *string
-	account_identifier         *string
-	account_name               *string
-	memo                       *string
-	metadata                   *map[string]interface{}
-	sender                     *string
-	reference                  *string
-	cancellation_count         *int
-	addcancellation_count      *int
-	cancellation_reasons       *[]string
-	appendcancellation_reasons []string
-	status                     *paymentorder.Status
-	order_type                 *paymentorder.OrderType
-	clearedFields              map[string]struct{}
-	token                      *int
-	clearedtoken               bool
-	sender_profile             *uuid.UUID
-	clearedsender_profile      bool
-	payment_webhook            *uuid.UUID
-	clearedpayment_webhook     bool
-	provider                   *string
-	clearedprovider            bool
-	provision_bucket           *int
-	clearedprovision_bucket    bool
-	fulfillments               map[uuid.UUID]struct{}
-	removedfulfillments        map[uuid.UUID]struct{}
-	clearedfulfillments        bool
-	transactions               map[uuid.UUID]struct{}
-	removedtransactions        map[uuid.UUID]struct{}
-	clearedtransactions        bool
-	done                       bool
-	oldValue                   func(context.Context) (*PaymentOrder, error)
-	predicates                 []predicate.PaymentOrder
+	op                          Op
+	typ                         string
+	id                          *uuid.UUID
+	created_at                  *time.Time
+	updated_at                  *time.Time
+	amount                      *decimal.Decimal
+	addamount                   *decimal.Decimal
+	rate                        *decimal.Decimal
+	addrate                     *decimal.Decimal
+	amount_in_usd               *decimal.Decimal
+	addamount_in_usd            *decimal.Decimal
+	amount_paid                 *decimal.Decimal
+	addamount_paid              *decimal.Decimal
+	amount_returned             *decimal.Decimal
+	addamount_returned          *decimal.Decimal
+	percent_settled             *decimal.Decimal
+	addpercent_settled          *decimal.Decimal
+	sender_fee                  *decimal.Decimal
+	addsender_fee               *decimal.Decimal
+	network_fee                 *decimal.Decimal
+	addnetwork_fee              *decimal.Decimal
+	protocol_fee                *decimal.Decimal
+	addprotocol_fee             *decimal.Decimal
+	order_percent               *decimal.Decimal
+	addorder_percent            *decimal.Decimal
+	fee_percent                 *decimal.Decimal
+	addfee_percent              *decimal.Decimal
+	tx_hash                     *string
+	block_number                *int64
+	addblock_number             *int64
+	message_hash                *string
+	gateway_id                  *string
+	from_address                *string
+	refund_or_recipient_address *string
+	receive_address             *string
+	receive_address_salt        *[]byte
+	receive_address_expiry      *time.Time
+	fee_address                 *string
+	indexer_created_at          *time.Time
+	institution                 *string
+	account_identifier          *string
+	account_name                *string
+	metadata                    *map[string]interface{}
+	sender                      *string
+	reference                   *string
+	cancellation_count          *int
+	addcancellation_count       *int
+	cancellation_reasons        *[]string
+	appendcancellation_reasons  []string
+	memo                        *string
+	status                      *paymentorder.Status
+	direction                   *paymentorder.Direction
+	order_type                  *paymentorder.OrderType
+	clearedFields               map[string]struct{}
+	token                       *int
+	clearedtoken                bool
+	sender_profile              *uuid.UUID
+	clearedsender_profile       bool
+	payment_webhook             *uuid.UUID
+	clearedpayment_webhook      bool
+	provider                    *string
+	clearedprovider             bool
+	provision_bucket            *int
+	clearedprovision_bucket     bool
+	fulfillments                map[uuid.UUID]struct{}
+	removedfulfillments         map[uuid.UUID]struct{}
+	clearedfulfillments         bool
+	transactions                map[uuid.UUID]struct{}
+	removedtransactions         map[uuid.UUID]struct{}
+	clearedtransactions         bool
+	done                        bool
+	oldValue                    func(context.Context) (*PaymentOrder, error)
+	predicates                  []predicate.PaymentOrder
 }
 
 var _ ent.Mutation = (*PaymentOrderMutation)(nil)
@@ -7514,53 +7515,53 @@ func (m *PaymentOrderMutation) ResetFromAddress() {
 	delete(m.clearedFields, paymentorder.FieldFromAddress)
 }
 
-// SetReturnAddress sets the "return_address" field.
-func (m *PaymentOrderMutation) SetReturnAddress(s string) {
-	m.return_address = &s
+// SetRefundOrRecipientAddress sets the "refund_or_recipient_address" field.
+func (m *PaymentOrderMutation) SetRefundOrRecipientAddress(s string) {
+	m.refund_or_recipient_address = &s
 }
 
-// ReturnAddress returns the value of the "return_address" field in the mutation.
-func (m *PaymentOrderMutation) ReturnAddress() (r string, exists bool) {
-	v := m.return_address
+// RefundOrRecipientAddress returns the value of the "refund_or_recipient_address" field in the mutation.
+func (m *PaymentOrderMutation) RefundOrRecipientAddress() (r string, exists bool) {
+	v := m.refund_or_recipient_address
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldReturnAddress returns the old "return_address" field's value of the PaymentOrder entity.
+// OldRefundOrRecipientAddress returns the old "refund_or_recipient_address" field's value of the PaymentOrder entity.
 // If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PaymentOrderMutation) OldReturnAddress(ctx context.Context) (v string, err error) {
+func (m *PaymentOrderMutation) OldRefundOrRecipientAddress(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldReturnAddress is only allowed on UpdateOne operations")
+		return v, errors.New("OldRefundOrRecipientAddress is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldReturnAddress requires an ID field in the mutation")
+		return v, errors.New("OldRefundOrRecipientAddress requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldReturnAddress: %w", err)
+		return v, fmt.Errorf("querying old value for OldRefundOrRecipientAddress: %w", err)
 	}
-	return oldValue.ReturnAddress, nil
+	return oldValue.RefundOrRecipientAddress, nil
 }
 
-// ClearReturnAddress clears the value of the "return_address" field.
-func (m *PaymentOrderMutation) ClearReturnAddress() {
-	m.return_address = nil
-	m.clearedFields[paymentorder.FieldReturnAddress] = struct{}{}
+// ClearRefundOrRecipientAddress clears the value of the "refund_or_recipient_address" field.
+func (m *PaymentOrderMutation) ClearRefundOrRecipientAddress() {
+	m.refund_or_recipient_address = nil
+	m.clearedFields[paymentorder.FieldRefundOrRecipientAddress] = struct{}{}
 }
 
-// ReturnAddressCleared returns if the "return_address" field was cleared in this mutation.
-func (m *PaymentOrderMutation) ReturnAddressCleared() bool {
-	_, ok := m.clearedFields[paymentorder.FieldReturnAddress]
+// RefundOrRecipientAddressCleared returns if the "refund_or_recipient_address" field was cleared in this mutation.
+func (m *PaymentOrderMutation) RefundOrRecipientAddressCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldRefundOrRecipientAddress]
 	return ok
 }
 
-// ResetReturnAddress resets all changes to the "return_address" field.
-func (m *PaymentOrderMutation) ResetReturnAddress() {
-	m.return_address = nil
-	delete(m.clearedFields, paymentorder.FieldReturnAddress)
+// ResetRefundOrRecipientAddress resets all changes to the "refund_or_recipient_address" field.
+func (m *PaymentOrderMutation) ResetRefundOrRecipientAddress() {
+	m.refund_or_recipient_address = nil
+	delete(m.clearedFields, paymentorder.FieldRefundOrRecipientAddress)
 }
 
 // SetReceiveAddress sets the "receive_address" field.
@@ -7916,55 +7917,6 @@ func (m *PaymentOrderMutation) ResetAccountName() {
 	m.account_name = nil
 }
 
-// SetMemo sets the "memo" field.
-func (m *PaymentOrderMutation) SetMemo(s string) {
-	m.memo = &s
-}
-
-// Memo returns the value of the "memo" field in the mutation.
-func (m *PaymentOrderMutation) Memo() (r string, exists bool) {
-	v := m.memo
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldMemo returns the old "memo" field's value of the PaymentOrder entity.
-// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PaymentOrderMutation) OldMemo(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldMemo is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldMemo requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldMemo: %w", err)
-	}
-	return oldValue.Memo, nil
-}
-
-// ClearMemo clears the value of the "memo" field.
-func (m *PaymentOrderMutation) ClearMemo() {
-	m.memo = nil
-	m.clearedFields[paymentorder.FieldMemo] = struct{}{}
-}
-
-// MemoCleared returns if the "memo" field was cleared in this mutation.
-func (m *PaymentOrderMutation) MemoCleared() bool {
-	_, ok := m.clearedFields[paymentorder.FieldMemo]
-	return ok
-}
-
-// ResetMemo resets all changes to the "memo" field.
-func (m *PaymentOrderMutation) ResetMemo() {
-	m.memo = nil
-	delete(m.clearedFields, paymentorder.FieldMemo)
-}
-
 // SetMetadata sets the "metadata" field.
 func (m *PaymentOrderMutation) SetMetadata(value map[string]interface{}) {
 	m.metadata = &value
@@ -8247,6 +8199,55 @@ func (m *PaymentOrderMutation) ResetCancellationReasons() {
 	delete(m.clearedFields, paymentorder.FieldCancellationReasons)
 }
 
+// SetMemo sets the "memo" field.
+func (m *PaymentOrderMutation) SetMemo(s string) {
+	m.memo = &s
+}
+
+// Memo returns the value of the "memo" field in the mutation.
+func (m *PaymentOrderMutation) Memo() (r string, exists bool) {
+	v := m.memo
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMemo returns the old "memo" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldMemo(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMemo is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMemo requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMemo: %w", err)
+	}
+	return oldValue.Memo, nil
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (m *PaymentOrderMutation) ClearMemo() {
+	m.memo = nil
+	m.clearedFields[paymentorder.FieldMemo] = struct{}{}
+}
+
+// MemoCleared returns if the "memo" field was cleared in this mutation.
+func (m *PaymentOrderMutation) MemoCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldMemo]
+	return ok
+}
+
+// ResetMemo resets all changes to the "memo" field.
+func (m *PaymentOrderMutation) ResetMemo() {
+	m.memo = nil
+	delete(m.clearedFields, paymentorder.FieldMemo)
+}
+
 // SetStatus sets the "status" field.
 func (m *PaymentOrderMutation) SetStatus(pa paymentorder.Status) {
 	m.status = &pa
@@ -8281,6 +8282,42 @@ func (m *PaymentOrderMutation) OldStatus(ctx context.Context) (v paymentorder.St
 // ResetStatus resets all changes to the "status" field.
 func (m *PaymentOrderMutation) ResetStatus() {
 	m.status = nil
+}
+
+// SetDirection sets the "direction" field.
+func (m *PaymentOrderMutation) SetDirection(pa paymentorder.Direction) {
+	m.direction = &pa
+}
+
+// Direction returns the value of the "direction" field in the mutation.
+func (m *PaymentOrderMutation) Direction() (r paymentorder.Direction, exists bool) {
+	v := m.direction
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDirection returns the old "direction" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldDirection(ctx context.Context) (v paymentorder.Direction, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDirection is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDirection requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDirection: %w", err)
+	}
+	return oldValue.Direction, nil
+}
+
+// ResetDirection resets all changes to the "direction" field.
+func (m *PaymentOrderMutation) ResetDirection() {
+	m.direction = nil
 }
 
 // SetOrderType sets the "order_type" field.
@@ -8656,7 +8693,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 35)
+	fields := make([]string, 0, 36)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -8711,8 +8748,8 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.from_address != nil {
 		fields = append(fields, paymentorder.FieldFromAddress)
 	}
-	if m.return_address != nil {
-		fields = append(fields, paymentorder.FieldReturnAddress)
+	if m.refund_or_recipient_address != nil {
+		fields = append(fields, paymentorder.FieldRefundOrRecipientAddress)
 	}
 	if m.receive_address != nil {
 		fields = append(fields, paymentorder.FieldReceiveAddress)
@@ -8738,9 +8775,6 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.account_name != nil {
 		fields = append(fields, paymentorder.FieldAccountName)
 	}
-	if m.memo != nil {
-		fields = append(fields, paymentorder.FieldMemo)
-	}
 	if m.metadata != nil {
 		fields = append(fields, paymentorder.FieldMetadata)
 	}
@@ -8756,8 +8790,14 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.cancellation_reasons != nil {
 		fields = append(fields, paymentorder.FieldCancellationReasons)
 	}
+	if m.memo != nil {
+		fields = append(fields, paymentorder.FieldMemo)
+	}
 	if m.status != nil {
 		fields = append(fields, paymentorder.FieldStatus)
+	}
+	if m.direction != nil {
+		fields = append(fields, paymentorder.FieldDirection)
 	}
 	if m.order_type != nil {
 		fields = append(fields, paymentorder.FieldOrderType)
@@ -8806,8 +8846,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.GatewayID()
 	case paymentorder.FieldFromAddress:
 		return m.FromAddress()
-	case paymentorder.FieldReturnAddress:
-		return m.ReturnAddress()
+	case paymentorder.FieldRefundOrRecipientAddress:
+		return m.RefundOrRecipientAddress()
 	case paymentorder.FieldReceiveAddress:
 		return m.ReceiveAddress()
 	case paymentorder.FieldReceiveAddressSalt:
@@ -8824,8 +8864,6 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.AccountIdentifier()
 	case paymentorder.FieldAccountName:
 		return m.AccountName()
-	case paymentorder.FieldMemo:
-		return m.Memo()
 	case paymentorder.FieldMetadata:
 		return m.Metadata()
 	case paymentorder.FieldSender:
@@ -8836,8 +8874,12 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.CancellationCount()
 	case paymentorder.FieldCancellationReasons:
 		return m.CancellationReasons()
+	case paymentorder.FieldMemo:
+		return m.Memo()
 	case paymentorder.FieldStatus:
 		return m.Status()
+	case paymentorder.FieldDirection:
+		return m.Direction()
 	case paymentorder.FieldOrderType:
 		return m.OrderType()
 	}
@@ -8885,8 +8927,8 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldGatewayID(ctx)
 	case paymentorder.FieldFromAddress:
 		return m.OldFromAddress(ctx)
-	case paymentorder.FieldReturnAddress:
-		return m.OldReturnAddress(ctx)
+	case paymentorder.FieldRefundOrRecipientAddress:
+		return m.OldRefundOrRecipientAddress(ctx)
 	case paymentorder.FieldReceiveAddress:
 		return m.OldReceiveAddress(ctx)
 	case paymentorder.FieldReceiveAddressSalt:
@@ -8903,8 +8945,6 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldAccountIdentifier(ctx)
 	case paymentorder.FieldAccountName:
 		return m.OldAccountName(ctx)
-	case paymentorder.FieldMemo:
-		return m.OldMemo(ctx)
 	case paymentorder.FieldMetadata:
 		return m.OldMetadata(ctx)
 	case paymentorder.FieldSender:
@@ -8915,8 +8955,12 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldCancellationCount(ctx)
 	case paymentorder.FieldCancellationReasons:
 		return m.OldCancellationReasons(ctx)
+	case paymentorder.FieldMemo:
+		return m.OldMemo(ctx)
 	case paymentorder.FieldStatus:
 		return m.OldStatus(ctx)
+	case paymentorder.FieldDirection:
+		return m.OldDirection(ctx)
 	case paymentorder.FieldOrderType:
 		return m.OldOrderType(ctx)
 	}
@@ -9054,12 +9098,12 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetFromAddress(v)
 		return nil
-	case paymentorder.FieldReturnAddress:
+	case paymentorder.FieldRefundOrRecipientAddress:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetReturnAddress(v)
+		m.SetRefundOrRecipientAddress(v)
 		return nil
 	case paymentorder.FieldReceiveAddress:
 		v, ok := value.(string)
@@ -9117,13 +9161,6 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAccountName(v)
 		return nil
-	case paymentorder.FieldMemo:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetMemo(v)
-		return nil
 	case paymentorder.FieldMetadata:
 		v, ok := value.(map[string]interface{})
 		if !ok {
@@ -9159,12 +9196,26 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCancellationReasons(v)
 		return nil
+	case paymentorder.FieldMemo:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMemo(v)
+		return nil
 	case paymentorder.FieldStatus:
 		v, ok := value.(paymentorder.Status)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
+		return nil
+	case paymentorder.FieldDirection:
+		v, ok := value.(paymentorder.Direction)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDirection(v)
 		return nil
 	case paymentorder.FieldOrderType:
 		v, ok := value.(paymentorder.OrderType)
@@ -9374,8 +9425,8 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	if m.FieldCleared(paymentorder.FieldFromAddress) {
 		fields = append(fields, paymentorder.FieldFromAddress)
 	}
-	if m.FieldCleared(paymentorder.FieldReturnAddress) {
-		fields = append(fields, paymentorder.FieldReturnAddress)
+	if m.FieldCleared(paymentorder.FieldRefundOrRecipientAddress) {
+		fields = append(fields, paymentorder.FieldRefundOrRecipientAddress)
 	}
 	if m.FieldCleared(paymentorder.FieldReceiveAddress) {
 		fields = append(fields, paymentorder.FieldReceiveAddress)
@@ -9392,9 +9443,6 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	if m.FieldCleared(paymentorder.FieldIndexerCreatedAt) {
 		fields = append(fields, paymentorder.FieldIndexerCreatedAt)
 	}
-	if m.FieldCleared(paymentorder.FieldMemo) {
-		fields = append(fields, paymentorder.FieldMemo)
-	}
 	if m.FieldCleared(paymentorder.FieldMetadata) {
 		fields = append(fields, paymentorder.FieldMetadata)
 	}
@@ -9409,6 +9457,9 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(paymentorder.FieldCancellationReasons) {
 		fields = append(fields, paymentorder.FieldCancellationReasons)
+	}
+	if m.FieldCleared(paymentorder.FieldMemo) {
+		fields = append(fields, paymentorder.FieldMemo)
 	}
 	return fields
 }
@@ -9436,8 +9487,8 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 	case paymentorder.FieldFromAddress:
 		m.ClearFromAddress()
 		return nil
-	case paymentorder.FieldReturnAddress:
-		m.ClearReturnAddress()
+	case paymentorder.FieldRefundOrRecipientAddress:
+		m.ClearRefundOrRecipientAddress()
 		return nil
 	case paymentorder.FieldReceiveAddress:
 		m.ClearReceiveAddress()
@@ -9454,9 +9505,6 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 	case paymentorder.FieldIndexerCreatedAt:
 		m.ClearIndexerCreatedAt()
 		return nil
-	case paymentorder.FieldMemo:
-		m.ClearMemo()
-		return nil
 	case paymentorder.FieldMetadata:
 		m.ClearMetadata()
 		return nil
@@ -9471,6 +9519,9 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 		return nil
 	case paymentorder.FieldCancellationReasons:
 		m.ClearCancellationReasons()
+		return nil
+	case paymentorder.FieldMemo:
+		m.ClearMemo()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder nullable field %s", name)
@@ -9534,8 +9585,8 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 	case paymentorder.FieldFromAddress:
 		m.ResetFromAddress()
 		return nil
-	case paymentorder.FieldReturnAddress:
-		m.ResetReturnAddress()
+	case paymentorder.FieldRefundOrRecipientAddress:
+		m.ResetRefundOrRecipientAddress()
 		return nil
 	case paymentorder.FieldReceiveAddress:
 		m.ResetReceiveAddress()
@@ -9561,9 +9612,6 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 	case paymentorder.FieldAccountName:
 		m.ResetAccountName()
 		return nil
-	case paymentorder.FieldMemo:
-		m.ResetMemo()
-		return nil
 	case paymentorder.FieldMetadata:
 		m.ResetMetadata()
 		return nil
@@ -9579,8 +9627,14 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 	case paymentorder.FieldCancellationReasons:
 		m.ResetCancellationReasons()
 		return nil
+	case paymentorder.FieldMemo:
+		m.ResetMemo()
+		return nil
 	case paymentorder.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case paymentorder.FieldDirection:
+		m.ResetDirection()
 		return nil
 	case paymentorder.FieldOrderType:
 		m.ResetOrderType()

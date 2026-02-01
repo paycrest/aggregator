@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
@@ -29,6 +30,7 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/services/contracts"
 	orderService "github.com/paycrest/aggregator/services/order"
@@ -43,6 +45,7 @@ import (
 )
 
 var orderConf = config.OrderConfig()
+var cryptoConf = config.CryptoConfig()
 
 // ProviderController is a controller type for provider endpoints
 type ProviderController struct {
@@ -631,9 +634,8 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	// For payin orders, confirm it's an onramp order and check token balance reservation
 	if isPayin {
-		// Confirm order is onramp (check metadata)
-		orderDirection, _ := currentOrder.Metadata["direction"].(string)
-		if orderDirection != "payin" {
+		// Confirm order is onramp
+		if currentOrder.Direction != paymentorder.DirectionOnramp {
 			_ = tx.Rollback()
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Order is not an onramp order", nil)
 			return
@@ -672,6 +674,11 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 				"accountIdentifier": currentOrder.AccountIdentifier,
 				"accountName":       currentOrder.AccountName,
 				"institution":       currentOrder.Institution,
+			}
+			if currentOrder.Metadata != nil {
+				if m, ok := currentOrder.Metadata["refundAccountMetadata"].(map[string]interface{}); ok {
+					refundDetails["metadata"] = m
+				}
 			}
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Insufficient reserved token balance", refundDetails)
 			return
@@ -939,16 +946,6 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		return
 	}
 
-	updateLockOrder := storage.Client.PaymentOrder.
-		Update().
-		Where(
-			paymentorder.IDEQ(orderID),
-			paymentorder.Or(
-				paymentorder.StatusEQ(paymentorder.StatusFulfilling),
-				paymentorder.StatusEQ(paymentorder.StatusFulfilled),
-			),
-		)
-
 	// Query or create order fulfillment
 	fulfillment, err := storage.Client.PaymentOrderFulfillment.
 		Query().
@@ -1061,13 +1058,8 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 	}
 
-	// Check if this is a payin order
-	isPayin := false
-	if fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Metadata != nil {
-		if direction, ok := fulfillment.Edges.Order.Metadata["direction"].(string); ok && direction == "payin" {
-			isPayin = true
-		}
-	}
+	// Check if this is a payin order (onramp)
+	isPayin := fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Direction == paymentorder.DirectionOnramp
 
 	// Handle payin orders
 	if isPayin {
@@ -1075,7 +1067,21 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Offramp fulfillment (existing logic)
+	ctrl.handlePayoutFulfillment(ctx, orderID, payload, fulfillment, provider)
+}
+
+// handlePayoutFulfillment handles payout (offramp) order fulfillment by validation status.
+func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
+	updateLockOrder := storage.Client.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.IDEQ(orderID),
+			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusFulfilling),
+				paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+			),
+		)
+
 	switch payload.ValidationStatus {
 	case paymentorderfulfillment.ValidationStatusSuccess:
 		// Double-check order status (race condition protection)
@@ -1250,7 +1256,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}()
 
 	case paymentorderfulfillment.ValidationStatusFailed:
-		_, err = fulfillment.Update().
+		_, err := fulfillment.Update().
 			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
 			SetValidationError(payload.ValidationError).
 			Save(ctx)
@@ -1373,36 +1379,35 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	// Generate Gateway order ID for settleIn
-	// Format: keccak256(abi.encode(aggregatorAddress, paymentOrderID, chainID))
-	// For onramp, generate deterministically from payment order ID
-	// Use payment order ID as base and create a deterministic bytes32
-	orderIDStr := strings.ReplaceAll(orderID.String(), "-", "")
-	gatewayOrderID := "0x" + orderIDStr[:64] // Use first 64 hex chars of UUID (32 bytes)
-	if len(orderIDStr) < 64 {
-		// Pad if needed
-		gatewayOrderID = "0x" + orderIDStr + strings.Repeat("0", 64-len(orderIDStr))
+	// Generate Gateway order ID for settleIn: keccak256(abi.encode(payoutAddress, aggregatorAddress, paymentOrderID, chainID))
+	if cryptoConf.AggregatorAccountEVM == "" {
+		logger.Errorf("Aggregator EVM address not configured")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Aggregator not configured", nil)
+		return
+	}
+	gatewayOrderID, err := gatewayOrderIDFromEncode(
+		providerOrderToken.PayoutAddress,
+		cryptoConf.AggregatorAccountEVM,
+		orderID,
+		orderWithDetails.Edges.Token.Edges.Network.ChainID,
+	)
+	if err != nil {
+		logger.Errorf("Failed to generate gateway order ID: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to generate order ID", nil)
+		return
 	}
 
 	// Prepare settleIn call data
 	// settleIn(_orderId, _token, _amount, _senderFeeRecipient, _senderFee, _recipient, _rate)
-	settleInData, err := ctrl.prepareSettleInCallData(ctx, orderWithDetails, gatewayOrderID, providerOrderToken)
+	settleInData, err := ctrl.prepareSettleInCallData(ctx, orderWithDetails, gatewayOrderID)
 	if err != nil {
 		logger.Errorf("Failed to prepare settleIn call data: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to prepare settlement data", nil)
 		return
 	}
 
-	// Execute EIP-7702 transaction to transfer crypto and call settleIn
-	// This requires:
-	// 1. Using authorization to enable aggregator-initiated transfer from provider's wallet
-	// 2. Transfer amount + senderFee from provider wallet to Gateway contract
-	// 3. Call Gateway settleIn with the prepared data
-	//
-	// Note: Full EIP-7702 implementation requires go-ethereum v1.16.1+ and specific transaction construction
-	// For now, this is a placeholder that will need to be implemented with proper EIP-7702 transaction building
-	txHash, err := ctrl.executePayinSettlement(ctx, orderWithDetails, payload.Authorization, settleInData, providerOrderToken)
-	if err != nil {
+	// Execute EIP-7702 transaction
+	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, payload.Authorization, settleInData); err != nil {
 		logger.Errorf("Failed to execute payin settlement: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
 		return
@@ -1428,10 +1433,11 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	// Create transaction log
+	// Create transaction log (tx hash will be set by indexer when settlement is mined)
 	transactionLog, err := tx.TransactionLog.
 		Create().
-		SetStatus(transactionlog.StatusOrderSettled).
+		SetStatus(transactionlog.StatusOrderSettling).
+		SetGatewayID(gatewayOrderID).
 		SetNetwork(orderWithDetails.Edges.Token.Edges.Network.Identifier).
 		Save(ctx)
 	if err != nil {
@@ -1441,12 +1447,11 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	// Update order status to SETTLED
+	// Update order status to SETTLING (tx hash will be set by indexer when settlement is mined)
 	_, err = tx.PaymentOrder.
 		UpdateOneID(orderID).
-		SetStatus(paymentorder.StatusSettled).
+		SetStatus(paymentorder.StatusSettling).
 		SetGatewayID(gatewayOrderID).
-		SetTxHash(txHash).
 		AddTransactions(transactionLog).
 		Save(ctx)
 	if err != nil {
@@ -1471,17 +1476,45 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	// Send webhook notification
-	err = u.SendPaymentOrderWebhook(ctx, orderWithDetails)
-	if err != nil {
-		logger.Errorf("Failed to send webhook: %v", err)
-	}
+	u.APIResponse(ctx, http.StatusOK, "success", "Order fulfilled successfully", nil)
+}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Payin order fulfilled successfully", nil)
+// gatewayOrderIDFromEncode returns keccak256(abi.encode(payoutAddress, aggregatorAddress, paymentOrderID, chainID)) as hex.
+func gatewayOrderIDFromEncode(payoutAddress, aggregatorAddress string, paymentOrderID uuid.UUID, chainID int64) (string, error) {
+	addressType, err := abi.NewType("address", "", nil)
+	if err != nil {
+		return "", err
+	}
+	bytes32Type, err := abi.NewType("bytes32", "", nil)
+	if err != nil {
+		return "", err
+	}
+	uint256Type, err := abi.NewType("uint256", "", nil)
+	if err != nil {
+		return "", err
+	}
+	arguments := abi.Arguments{
+		{Type: addressType},
+		{Type: addressType},
+		{Type: bytes32Type},
+		{Type: uint256Type},
+	}
+	paymentOrderIDBytes32 := u.StringToByte32(paymentOrderID.String())
+	packed, err := arguments.Pack(
+		ethcommon.HexToAddress(payoutAddress),
+		ethcommon.HexToAddress(aggregatorAddress),
+		paymentOrderIDBytes32,
+		big.NewInt(chainID),
+	)
+	if err != nil {
+		return "", err
+	}
+	hash := crypto.Keccak256Hash(packed)
+	return hash.Hex(), nil
 }
 
 // prepareSettleInCallData prepares the call data for Gateway settleIn method
-func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order *ent.PaymentOrder, gatewayOrderID string, providerOrderToken *ent.ProviderOrderToken) ([]byte, error) {
+func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order *ent.PaymentOrder, gatewayOrderID string) ([]byte, error) {
 	// Use current Gateway contract bindings; plan expects regenerated bindings if ABI changes
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
 	if err != nil {
@@ -1500,16 +1533,10 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order 
 		return nil, fmt.Errorf("failed to fetch sender order token: %w", err)
 	}
 
-	// Get recipient address from order metadata (crypto destination)
-	var recipientAddress string
-	if order.Metadata != nil {
-		if addr, ok := order.Metadata["recipientAddress"].(string); ok && addr != "" {
-			recipientAddress = addr
-		} else {
-			return nil, fmt.Errorf("recipient address not found in order metadata")
-		}
-	} else {
-		return nil, fmt.Errorf("order metadata is missing")
+	// Get recipient address (onramp: crypto destination for settleIn)
+	recipientAddress := order.RefundOrRecipientAddress
+	if recipientAddress == "" {
+		return nil, fmt.Errorf("recipient address not set on order")
 	}
 
 	// Convert amounts to big.Int
@@ -1523,11 +1550,6 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order 
 	if rateBig.Cmp(big.NewInt(0)) == 0 {
 		rateBig = big.NewInt(100) // Default to 1.00 (100 basis points)
 	}
-	// Convert to uint64 (Gateway uses uint96 but we'll use uint64 for now)
-	rateUint64 := rateBig.Uint64()
-	if rateUint64 > 18446744073709551615 { // max uint64
-		return nil, fmt.Errorf("rate exceeds uint64 maximum")
-	}
 
 	// Generate Gateway order ID bytes
 	orderIDBytes, err := hex.DecodeString(strings.TrimPrefix(gatewayOrderID, "0x"))
@@ -1539,20 +1561,15 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order 
 
 	// Pack settleIn call data
 	// settleIn(bytes32 _orderId, address _token, uint256 _amount, address _senderFeeRecipient, uint96 _senderFee, address _recipient, uint96 _rate)
-	// Note: uint96 in Go is represented as uint64 for packing
-	senderFeeUint64 := senderFeeBig.Uint64()
-	if senderFeeUint64 > 18446744073709551615 {
-		return nil, fmt.Errorf("sender fee exceeds uint64 maximum")
-	}
 	data, err := gatewayABI.Pack(
 		"settleIn",
 		orderIDByte32,
 		ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
 		amountBig,
 		ethcommon.HexToAddress(senderOrderToken.FeeAddress),
-		uint64(senderFeeUint64), // uint96 in Solidity, uint64 in Go
+		senderFeeBig,
 		ethcommon.HexToAddress(recipientAddress),
-		uint64(rateUint64), // uint96 in Solidity, uint64 in Go
+		rateBig,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack settleIn ABI: %w", err)
@@ -1561,20 +1578,52 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order 
 	return data, nil
 }
 
-// executePayinSettlement executes the EIP-7702 transaction for payin settlement
-// This is a placeholder that needs full EIP-7702 implementation
-func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, authorization *types.SetCodeAuthorization, settleInData []byte, providerOrderToken *ent.ProviderOrderToken) (string, error) {
-	// TODO: Implement full EIP-7702 transaction construction and execution
-	// This requires:
-	// 1. Converting authorization to go-ethereum types.SetCodeAuthorization
-	// 2. Building EIP-7702 transaction with SetCodeTx
-	// 3. Transferring amount + senderFee from provider wallet to Gateway contract
-	// 4. Calling Gateway settleIn
-	//
-	// Reference: https://gist.github.com/onahprosper/d57857f5bf34f37af8a2236da91463f3
-	//
-	// For now, return an error indicating this needs to be implemented
-	return "", fmt.Errorf("EIP-7702 payin settlement not yet fully implemented - requires go-ethereum v1.16.1+ and SetCodeTx support")
+// executePayinSettlement executes the EIP-7702 transaction for payin settlement via Engine write/transaction with authorizationList.
+func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, authorization *types.SetCodeAuthorization, settleInData []byte) error {
+	if authorization == nil {
+		return fmt.Errorf("authorization is required")
+	}
+	if cryptoConf.AggregatorAccountEVM == "" {
+		return fmt.Errorf("aggregator EVM address not configured")
+	}
+	gatewayAddress := order.Edges.Token.Edges.Network.GatewayContractAddress
+	if gatewayAddress == "" {
+		return fmt.Errorf("gateway contract address not set for network")
+	}
+
+	// yParity: 0 or 1 (Engine expects yParity; provider sends V as 0, 1, 27, or 28)
+	yParity := int(authorization.V)
+	if authorization.V == 27 || authorization.V == 28 {
+		yParity = int(authorization.V - 27)
+	}
+
+	authEntry := map[string]interface{}{
+		"chainId": authorization.ChainID,
+		"address": authorization.Address,
+		"nonce":   authorization.Nonce,
+		"yParity": yParity,
+		"r":       authorization.R,
+		"s":       authorization.S,
+	}
+	authorizationList := []map[string]interface{}{authEntry}
+
+	params := []map[string]interface{}{
+		{"authorizationList": authorizationList},
+		{
+			"to":    gatewayAddress,
+			"data":  fmt.Sprintf("0x%x", settleInData),
+			"value": "0",
+		},
+	}
+
+	engineSvc := services.NewEngineService()
+	chainID := order.Edges.Token.Edges.Network.ChainID
+	reqCtx := ctx.Request.Context()
+	_, err := engineSvc.SendTransactionBatch(reqCtx, chainID, cryptoConf.AggregatorAccountEVM, params)
+	if err != nil {
+		return fmt.Errorf("send transaction with authorizationList: %w", err)
+	}
+	return nil
 }
 
 // CancelOrder controller cancels an order

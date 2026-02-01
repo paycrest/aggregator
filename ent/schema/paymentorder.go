@@ -68,7 +68,7 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.String("from_address").
 			MaxLen(70).
 			Optional(),
-		field.String("return_address").
+		field.String("refund_or_recipient_address").
 			MaxLen(70).
 			Optional(),
 		field.String("receive_address").
@@ -84,16 +84,13 @@ func (PaymentOrder) Fields() []ent.Field {
 			Optional(),
 		field.Time("indexer_created_at").
 			Optional(),
-		// Recipient info
+		// Recipient or Refund info
 		field.String("institution").
 			MaxLen(255),
 		field.String("account_identifier").
 			MaxLen(255),
 		field.String("account_name").
 			MaxLen(255),
-		field.String("memo").
-			MaxLen(255).
-			Optional(),
 		field.JSON("metadata", map[string]interface{}{}).
 			Optional(),
 		// Order management
@@ -109,10 +106,16 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.Strings("cancellation_reasons").
 			Default([]string{}).
 			Optional(),
+		field.String("memo").
+			MaxLen(255).
+			Optional(),
 		// Status & type
 		field.Enum("status").
 			Values("initiated", "deposited", "pending", "fulfilling", "fulfilled", "validated", "settling", "settled", "cancelled", "refunding", "refunded", "expired").
 			Default("initiated"),
+		field.Enum("direction").
+			Values("offramp", "onramp").
+			Default("offramp"),
 		field.Enum("order_type").
 			Values("otc", "regular").
 			Default("regular"),

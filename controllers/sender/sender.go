@@ -23,8 +23,8 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
-	"github.com/paycrest/aggregator/services/balance"
 	svc "github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/balance"
 	orderSvc "github.com/paycrest/aggregator/services/order"
 	"github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
@@ -515,7 +515,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		SetReceiveAddressExpiry(receiveAddressExpiry).
 		SetFeePercent(feePercent).
 		SetFeeAddress(feeAddress).
-		SetReturnAddress(returnAddress).
+		SetRefundOrRecipientAddress(returnAddress).
+		SetDirection(paymentorder.DirectionOfframp).
 		SetReference(payload.Reference).
 		SetOrderType(orderType).
 		SetInstitution(payload.Recipient.Institution).
@@ -892,30 +893,65 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	amountIn := payload.AmountIn
 	switch amountIn {
 	case "fiat":
-		// For fiat amounts, convert to crypto first, then ValidateRate will validate with crypto amount
-		// For direct currency matches (e.g., cNGN->NGN), rate is always 1:1
-		isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
-		if isDirectMatch {
-			orderRate = decimal.NewFromInt(1)
+		// Offramp + amountIn=fiat: user fixes fiat payout. Rate is optional: if provided use it (crypto = fiat/rate); else pick system rate.
+		if payload.Rate != "" {
+			providedRate, err := decimal.NewFromString(payload.Rate)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: "Invalid rate format",
+				})
+				return
+			}
+			if providedRate.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: "Rate must be greater than zero",
+				})
+				return
+			}
+			cryptoAmount = amount.Div(providedRate)
+			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmount, destination.ProviderID, source.Network, u.RateSideSell)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
+				})
+				return
+			}
+			rateValidationResult = rateResult
+			achievableRate := rateValidationResult.Rate
+			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001))
+			if providedRate.LessThan(achievableRate.Sub(tolerance)) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Provided rate %s is not achievable. Available rate is %s", providedRate, achievableRate),
+				})
+				return
+			}
+			orderRate = providedRate
+			cryptoAmount = amount.Div(orderRate)
 		} else {
-			// Use market sell rate as approximation for offramp
-			orderRate = currency.MarketSellRate
+			// No rate provided: pick valid system rate and determine crypto that yields user's fiat amount
+			isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
+			if isDirectMatch {
+				orderRate = decimal.NewFromInt(1)
+			} else {
+				orderRate = currency.MarketSellRate
+			}
+			cryptoAmount = amount.Div(orderRate)
+			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmount, destination.ProviderID, source.Network, u.RateSideSell)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
+				})
+				return
+			}
+			rateValidationResult = rateResult
+			orderRate = rateValidationResult.Rate
+			cryptoAmount = amount.Div(orderRate)
 		}
-		cryptoAmount = amount.Div(orderRate)
-
-		// ValidateRate expects crypto units, so pass cryptoAmount
-		rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmount, destination.ProviderID, source.Network, u.RateSideSell)
-		if err != nil {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-				Field:   "Rate",
-				Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
-			})
-			return
-		}
-		rateValidationResult = rateResult
-		orderRate = rateValidationResult.Rate
-		// Recalculate cryptoAmount with the validated rate
-		cryptoAmount = amount.Div(orderRate)
 	case "crypto":
 		cryptoAmount = amount
 		if payload.Rate != "" {
@@ -1183,7 +1219,8 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		SetReceiveAddressExpiry(receiveAddressExpiry).
 		SetFeePercent(feePercent).
 		SetFeeAddress(feeAddress).
-		SetReturnAddress(returnAddress).
+		SetRefundOrRecipientAddress(returnAddress).
+		SetDirection(paymentorder.DirectionOfframp).
 		SetReference(payload.Reference).
 		SetOrderType(orderType).
 		SetInstitution(destination.Recipient.Institution).
@@ -1264,12 +1301,6 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		senderFeePercentStr = feePercent.String()
 	}
 
-	// Calculate fiat amount for AmountOut (offramp: crypto -> fiat)
-	var fiatAmountOut decimal.Decimal
-	if !orderRate.IsZero() {
-		fiatAmountOut = cryptoAmount.Mul(orderRate)
-	}
-
 	// Build response
 	response := &types.V2PaymentOrderResponse{
 		ID:               paymentOrder.ID,
@@ -1277,7 +1308,6 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		Timestamp:        paymentOrder.CreatedAt,
 		Amount:           cryptoAmount.String(),
 		AmountIn:         payload.AmountIn,
-		AmountOut:        fiatAmountOut.String(),
 		SenderFee:        senderFee.String(),
 		SenderFeePercent: senderFeePercentStr,
 		TransactionFee:   token.Edges.Network.Fee.String(),
@@ -1729,8 +1759,8 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 
 	// Build metadata
 	metadata := make(map[string]interface{})
-	if destination.Recipient.Metadata != nil {
-		metadata["recipientMetadata"] = destination.Recipient.Metadata
+	if source.RefundAccount.Metadata != nil {
+		metadata["refundAccountMetadata"] = source.RefundAccount.Metadata
 	}
 	if source.KYC != nil {
 		metadata["sourceKyc"] = source.KYC
@@ -1738,11 +1768,6 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	if destination.KYC != nil {
 		metadata["destinationKyc"] = destination.KYC
 	}
-	metadata["fiatToPay"] = totalFiatToPay.String()
-	metadata["senderFeeFiat"] = senderFeeFiat.String()
-	metadata["direction"] = "payin"
-	metadata["recipientAddress"] = destination.Recipient.Address // Store recipient address for settleIn
-	metadata["recipientNetwork"] = destination.Recipient.Network
 
 	// Use order type from ValidateRate result
 	orderType := rateValidationResult.OrderType
@@ -1762,7 +1787,8 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		SetRate(orderRate).
 		SetFeePercent(feePercent).
 		SetFeeAddress(feeAddress).
-		SetReturnAddress(source.RefundAccount.AccountIdentifier). // Use refund account as return address for onramp
+		SetRefundOrRecipientAddress(destination.Recipient.Address). // Onramp: crypto recipient for settleIn
+		SetDirection(paymentorder.DirectionOnramp).
 		SetReference(payload.Reference).
 		SetOrderType(orderType).
 		SetInstitution(source.RefundAccount.Institution).
@@ -1874,7 +1900,6 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		Timestamp:        paymentOrder.CreatedAt,
 		Amount:           cryptoAmountOut.String(),
 		AmountIn:         payload.AmountIn,
-		AmountOut:        totalFiatToPay.String(), // Fiat amount to pay for onramp
 		SenderFee:        senderFeeCrypto.String(),
 		SenderFeePercent: senderFeePercentStr,
 		TransactionFee:   token.Edges.Network.Fee.String(),
@@ -1995,7 +2020,8 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 		},
 		Transactions:   transactions,
 		FromAddress:    paymentOrder.FromAddress,
-		ReturnAddress:  paymentOrder.ReturnAddress,
+		ReturnAddress:  paymentOrder.RefundOrRecipientAddress,
+		RefundAddress:  paymentOrder.RefundOrRecipientAddress,
 		ReceiveAddress: paymentOrder.ReceiveAddress,
 		FeeAddress:     paymentOrder.FeeAddress,
 		Reference:      paymentOrder.Reference,
@@ -2135,7 +2161,7 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 	searchPredicates = append(searchPredicates,
 		paymentorder.ReceiveAddressContainsFold(searchText),
 		paymentorder.FromAddressContainsFold(searchText),
-		paymentorder.ReturnAddressContainsFold(searchText),
+		paymentorder.RefundOrRecipientAddressContainsFold(searchText),
 		paymentorder.Or(
 			paymentorder.AccountIdentifierContainsFold(searchText),
 			paymentorder.AccountNameContainsFold(searchText),
@@ -2429,7 +2455,8 @@ func (ctrl *SenderController) buildPaymentOrderResponses(ctx *gin.Context, payme
 				Memo: paymentOrder.Memo,
 			},
 			FromAddress:    paymentOrder.FromAddress,
-			ReturnAddress:  paymentOrder.ReturnAddress,
+			ReturnAddress:  paymentOrder.RefundOrRecipientAddress,
+			RefundAddress:  paymentOrder.RefundOrRecipientAddress,
 			ReceiveAddress: paymentOrder.ReceiveAddress,
 			FeeAddress:     paymentOrder.FeeAddress,
 			Reference:      paymentOrder.Reference,
@@ -2546,7 +2573,7 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 			paymentOrder.AccountName,
 			paymentOrder.FromAddress,
 			paymentOrder.ReceiveAddress,
-			paymentOrder.ReturnAddress,
+			paymentOrder.RefundOrRecipientAddress,
 			paymentOrder.FeeAddress,
 			paymentOrder.TxHash,
 			paymentOrder.CreatedAt.Format("2006-01-02 15:04:05"),

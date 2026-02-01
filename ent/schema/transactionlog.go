@@ -21,7 +21,7 @@ func (TransactionLog) Fields() []ent.Field {
 			Immutable(),
 		field.String("gateway_id").Optional(),
 		field.Enum("status").
-			Values("order_initiated", "crypto_deposited", "order_created", "order_fulfilling", "order_fulfilled", "order_validated", "order_settled", "order_refunded", "gas_prefunded", "gateway_approved").
+			Values("order_initiated", "crypto_deposited", "order_created", "order_fulfilling", "order_fulfilled", "order_validated", "order_settling", "order_settled", "order_refunding", "order_refunded", "gas_prefunded", "gateway_approved").
 			Default("order_initiated").
 			Immutable(),
 		field.String("network").Optional(),

@@ -30,6 +30,7 @@ import (
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
@@ -284,13 +285,34 @@ func (s *OrderTron) RefundOrder(ctx context.Context, network *ent.Network, order
 		return fmt.Errorf("%s - Tron.RefundOrder.sendTransaction: %w", orderIDPrefix, err)
 	}
 
-	// Update lock order
-	_, err = lockOrder.Update().
+	// Create order_refunding log (indexer will update to order_refunded when event is indexed)
+	tx, err := db.Client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - Tron.RefundOrder.tx: %w", orderIDPrefix, err)
+	}
+	transactionLog, err := tx.TransactionLog.
+		Create().
+		SetStatus(transactionlog.StatusOrderRefunding).
+		SetGatewayID(lockOrder.GatewayID).
 		SetTxHash(txHash).
-		SetStatus(paymentorder.StatusRefunding).
+		SetNetwork(lockOrder.Edges.Token.Edges.Network.Identifier).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("%s - Tron.RefundOrder.updateTxHash: %w", orderIDPrefix, err)
+		_ = tx.Rollback()
+		return fmt.Errorf("%s - Tron.RefundOrder.createLog: %w", orderIDPrefix, err)
+	}
+	_, err = tx.PaymentOrder.
+		UpdateOneID(lockOrder.ID).
+		SetTxHash(txHash).
+		SetStatus(paymentorder.StatusRefunding).
+		AddTransactions(transactionLog).
+		Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("%s - Tron.RefundOrder.updateStatus: %w", orderIDPrefix, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("%s - Tron.RefundOrder.commit: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -417,7 +439,7 @@ func (s *OrderTron) createOrderCallData(order *ent.PaymentOrder) ([]byte, error)
 		return nil, fmt.Errorf("failed to encrypt recipient details: %w", err)
 	}
 
-	refundAddressTron, _ := util.Base58ToAddress(order.ReturnAddress)
+	refundAddressTron, _ := util.Base58ToAddress(order.RefundOrRecipientAddress)
 	refundAddress := refundAddressTron.Hex()[4:]
 	tokenContractAddressTron, _ := util.Base58ToAddress(order.Edges.Token.ContractAddress)
 	senderFeeRecipientTron, _ := util.Base58ToAddress(order.FeeAddress)

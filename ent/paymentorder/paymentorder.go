@@ -53,8 +53,8 @@ const (
 	FieldGatewayID = "gateway_id"
 	// FieldFromAddress holds the string denoting the from_address field in the database.
 	FieldFromAddress = "from_address"
-	// FieldReturnAddress holds the string denoting the return_address field in the database.
-	FieldReturnAddress = "return_address"
+	// FieldRefundOrRecipientAddress holds the string denoting the refund_or_recipient_address field in the database.
+	FieldRefundOrRecipientAddress = "refund_or_recipient_address"
 	// FieldReceiveAddress holds the string denoting the receive_address field in the database.
 	FieldReceiveAddress = "receive_address"
 	// FieldReceiveAddressSalt holds the string denoting the receive_address_salt field in the database.
@@ -71,8 +71,6 @@ const (
 	FieldAccountIdentifier = "account_identifier"
 	// FieldAccountName holds the string denoting the account_name field in the database.
 	FieldAccountName = "account_name"
-	// FieldMemo holds the string denoting the memo field in the database.
-	FieldMemo = "memo"
 	// FieldMetadata holds the string denoting the metadata field in the database.
 	FieldMetadata = "metadata"
 	// FieldSender holds the string denoting the sender field in the database.
@@ -83,8 +81,12 @@ const (
 	FieldCancellationCount = "cancellation_count"
 	// FieldCancellationReasons holds the string denoting the cancellation_reasons field in the database.
 	FieldCancellationReasons = "cancellation_reasons"
+	// FieldMemo holds the string denoting the memo field in the database.
+	FieldMemo = "memo"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldDirection holds the string denoting the direction field in the database.
+	FieldDirection = "direction"
 	// FieldOrderType holds the string denoting the order_type field in the database.
 	FieldOrderType = "order_type"
 	// EdgeToken holds the string denoting the token edge name in mutations.
@@ -175,7 +177,7 @@ var Columns = []string{
 	FieldMessageHash,
 	FieldGatewayID,
 	FieldFromAddress,
-	FieldReturnAddress,
+	FieldRefundOrRecipientAddress,
 	FieldReceiveAddress,
 	FieldReceiveAddressSalt,
 	FieldReceiveAddressExpiry,
@@ -184,13 +186,14 @@ var Columns = []string{
 	FieldInstitution,
 	FieldAccountIdentifier,
 	FieldAccountName,
-	FieldMemo,
 	FieldMetadata,
 	FieldSender,
 	FieldReference,
 	FieldCancellationCount,
 	FieldCancellationReasons,
+	FieldMemo,
 	FieldStatus,
+	FieldDirection,
 	FieldOrderType,
 }
 
@@ -250,8 +253,8 @@ var (
 	GatewayIDValidator func(string) error
 	// FromAddressValidator is a validator for the "from_address" field. It is called by the builders before save.
 	FromAddressValidator func(string) error
-	// ReturnAddressValidator is a validator for the "return_address" field. It is called by the builders before save.
-	ReturnAddressValidator func(string) error
+	// RefundOrRecipientAddressValidator is a validator for the "refund_or_recipient_address" field. It is called by the builders before save.
+	RefundOrRecipientAddressValidator func(string) error
 	// ReceiveAddressValidator is a validator for the "receive_address" field. It is called by the builders before save.
 	ReceiveAddressValidator func(string) error
 	// FeeAddressValidator is a validator for the "fee_address" field. It is called by the builders before save.
@@ -262,8 +265,6 @@ var (
 	AccountIdentifierValidator func(string) error
 	// AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
 	AccountNameValidator func(string) error
-	// MemoValidator is a validator for the "memo" field. It is called by the builders before save.
-	MemoValidator func(string) error
 	// SenderValidator is a validator for the "sender" field. It is called by the builders before save.
 	SenderValidator func(string) error
 	// ReferenceValidator is a validator for the "reference" field. It is called by the builders before save.
@@ -272,6 +273,8 @@ var (
 	DefaultCancellationCount int
 	// DefaultCancellationReasons holds the default value on creation for the "cancellation_reasons" field.
 	DefaultCancellationReasons []string
+	// MemoValidator is a validator for the "memo" field. It is called by the builders before save.
+	MemoValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -309,6 +312,32 @@ func StatusValidator(s Status) error {
 		return nil
 	default:
 		return fmt.Errorf("paymentorder: invalid enum value for status field: %q", s)
+	}
+}
+
+// Direction defines the type for the "direction" enum field.
+type Direction string
+
+// DirectionOfframp is the default value of the Direction enum.
+const DefaultDirection = DirectionOfframp
+
+// Direction values.
+const (
+	DirectionOfframp Direction = "offramp"
+	DirectionOnramp  Direction = "onramp"
+)
+
+func (d Direction) String() string {
+	return string(d)
+}
+
+// DirectionValidator is a validator for the "direction" field enum values. It is called by the builders before save.
+func DirectionValidator(d Direction) error {
+	switch d {
+	case DirectionOfframp, DirectionOnramp:
+		return nil
+	default:
+		return fmt.Errorf("paymentorder: invalid enum value for direction field: %q", d)
 	}
 }
 
@@ -436,9 +465,9 @@ func ByFromAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFromAddress, opts...).ToFunc()
 }
 
-// ByReturnAddress orders the results by the return_address field.
-func ByReturnAddress(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldReturnAddress, opts...).ToFunc()
+// ByRefundOrRecipientAddress orders the results by the refund_or_recipient_address field.
+func ByRefundOrRecipientAddress(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRefundOrRecipientAddress, opts...).ToFunc()
 }
 
 // ByReceiveAddress orders the results by the receive_address field.
@@ -476,11 +505,6 @@ func ByAccountName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAccountName, opts...).ToFunc()
 }
 
-// ByMemo orders the results by the memo field.
-func ByMemo(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldMemo, opts...).ToFunc()
-}
-
 // BySender orders the results by the sender field.
 func BySender(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSender, opts...).ToFunc()
@@ -496,9 +520,19 @@ func ByCancellationCount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCancellationCount, opts...).ToFunc()
 }
 
+// ByMemo orders the results by the memo field.
+func ByMemo(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMemo, opts...).ToFunc()
+}
+
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByDirection orders the results by the direction field.
+func ByDirection(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDirection, opts...).ToFunc()
 }
 
 // ByOrderType orders the results by the order_type field.

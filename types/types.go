@@ -478,7 +478,7 @@ type NewPaymentOrderPayload struct {
 	Network       string                `json:"network" binding:"required"`
 	Recipient     PaymentOrderRecipient `json:"recipient" binding:"required"`
 	Reference     string                `json:"reference"`
-	ReturnAddress string                `json:"returnAddress"`
+	ReturnAddress string                `json:"returnAddress"` // v1 API: kept for backward compatibility; maps to refund_or_recipient_address
 	FeePercent    decimal.Decimal       `json:"feePercent"`
 	FeeAddress    string                `json:"feeAddress"`
 }
@@ -512,7 +512,8 @@ type SenderOrderResponse struct {
 	GatewayID      string                 `json:"gatewayId"`
 	Recipient      PaymentOrderRecipient  `json:"recipient"`
 	FromAddress    string                 `json:"fromAddress"`
-	ReturnAddress  string                 `json:"returnAddress"`
+	ReturnAddress  string                 `json:"returnAddress"` // deprecated: use refundAddress; kept for backward compatibility
+	RefundAddress  string                 `json:"refundAddress"` // preferred; same value as returnAddress
 	ReceiveAddress string                 `json:"receiveAddress"`
 	FeeAddress     string                 `json:"feeAddress"`
 	Reference      string                 `json:"reference"`
@@ -540,7 +541,8 @@ type PaymentOrderWebhookData struct {
 	SenderID       uuid.UUID             `json:"senderId"`
 	Recipient      PaymentOrderRecipient `json:"recipient"`
 	FromAddress    string                `json:"fromAddress"`
-	ReturnAddress  string                `json:"returnAddress"`
+	ReturnAddress  string                `json:"returnAddress"` // deprecated: use refundAddress; kept for backward compatibility
+	RefundAddress  string                `json:"refundAddress"` // preferred; same value as returnAddress
 	Reference      string                `json:"reference"`
 	UpdatedAt      time.Time             `json:"updatedAt"`
 	CreatedAt      time.Time             `json:"createdAt"`
@@ -727,9 +729,8 @@ type V2PaymentOrderResponse struct {
 	ID               uuid.UUID `json:"id"`
 	Status           string    `json:"status"`
 	Timestamp        time.Time `json:"timestamp"`
-	Amount           string    `json:"amount"`    // Crypto amount (token units) - consistent for both flows
-	AmountIn         string    `json:"amountIn"`  // Echo/normalize the input amount
-	AmountOut        string    `json:"amountOut"` // Computed amount for opposite side (fiat for onramp, crypto for offramp)
+	Amount           string    `json:"amount"`   // Crypto amount (token units) - consistent for both flows
+	AmountIn         string    `json:"amountIn"` // Echo/normalize the input amount (crypto | fiat)
 	Rate             string    `json:"rate,omitempty"`
 	SenderFee        string    `json:"senderFee"` // Crypto amount (token units) - consistent for both flows
 	SenderFeePercent string    `json:"senderFeePercent"`
@@ -915,7 +916,8 @@ type LinkedAddressTransaction struct {
 	GatewayID     string                            `json:"gatewayId"`
 	Recipient     LinkedAddressTransactionRecipient `json:"recipient"`
 	FromAddress   string                            `json:"fromAddress"`
-	ReturnAddress string                            `json:"returnAddress"`
+	ReturnAddress string                            `json:"returnAddress"` // deprecated: use refundAddress; kept for backward compatibility
+	RefundAddress string                            `json:"refundAddress"` // preferred; same value as returnAddress
 	CreatedAt     time.Time                         `json:"createdAt"`
 	UpdatedAt     time.Time                         `json:"updatedAt"`
 	TxHash        string                            `json:"txHash"`

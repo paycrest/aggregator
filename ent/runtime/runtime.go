@@ -220,10 +220,10 @@ func init() {
 	paymentorderDescFromAddress := paymentorderFields[16].Descriptor()
 	// paymentorder.FromAddressValidator is a validator for the "from_address" field. It is called by the builders before save.
 	paymentorder.FromAddressValidator = paymentorderDescFromAddress.Validators[0].(func(string) error)
-	// paymentorderDescReturnAddress is the schema descriptor for return_address field.
-	paymentorderDescReturnAddress := paymentorderFields[17].Descriptor()
-	// paymentorder.ReturnAddressValidator is a validator for the "return_address" field. It is called by the builders before save.
-	paymentorder.ReturnAddressValidator = paymentorderDescReturnAddress.Validators[0].(func(string) error)
+	// paymentorderDescRefundOrRecipientAddress is the schema descriptor for refund_or_recipient_address field.
+	paymentorderDescRefundOrRecipientAddress := paymentorderFields[17].Descriptor()
+	// paymentorder.RefundOrRecipientAddressValidator is a validator for the "refund_or_recipient_address" field. It is called by the builders before save.
+	paymentorder.RefundOrRecipientAddressValidator = paymentorderDescRefundOrRecipientAddress.Validators[0].(func(string) error)
 	// paymentorderDescReceiveAddress is the schema descriptor for receive_address field.
 	paymentorderDescReceiveAddress := paymentorderFields[18].Descriptor()
 	// paymentorder.ReceiveAddressValidator is a validator for the "receive_address" field. It is called by the builders before save.
@@ -244,26 +244,26 @@ func init() {
 	paymentorderDescAccountName := paymentorderFields[25].Descriptor()
 	// paymentorder.AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
 	paymentorder.AccountNameValidator = paymentorderDescAccountName.Validators[0].(func(string) error)
-	// paymentorderDescMemo is the schema descriptor for memo field.
-	paymentorderDescMemo := paymentorderFields[26].Descriptor()
-	// paymentorder.MemoValidator is a validator for the "memo" field. It is called by the builders before save.
-	paymentorder.MemoValidator = paymentorderDescMemo.Validators[0].(func(string) error)
 	// paymentorderDescSender is the schema descriptor for sender field.
-	paymentorderDescSender := paymentorderFields[28].Descriptor()
+	paymentorderDescSender := paymentorderFields[27].Descriptor()
 	// paymentorder.SenderValidator is a validator for the "sender" field. It is called by the builders before save.
 	paymentorder.SenderValidator = paymentorderDescSender.Validators[0].(func(string) error)
 	// paymentorderDescReference is the schema descriptor for reference field.
-	paymentorderDescReference := paymentorderFields[29].Descriptor()
+	paymentorderDescReference := paymentorderFields[28].Descriptor()
 	// paymentorder.ReferenceValidator is a validator for the "reference" field. It is called by the builders before save.
 	paymentorder.ReferenceValidator = paymentorderDescReference.Validators[0].(func(string) error)
 	// paymentorderDescCancellationCount is the schema descriptor for cancellation_count field.
-	paymentorderDescCancellationCount := paymentorderFields[30].Descriptor()
+	paymentorderDescCancellationCount := paymentorderFields[29].Descriptor()
 	// paymentorder.DefaultCancellationCount holds the default value on creation for the cancellation_count field.
 	paymentorder.DefaultCancellationCount = paymentorderDescCancellationCount.Default.(int)
 	// paymentorderDescCancellationReasons is the schema descriptor for cancellation_reasons field.
-	paymentorderDescCancellationReasons := paymentorderFields[31].Descriptor()
+	paymentorderDescCancellationReasons := paymentorderFields[30].Descriptor()
 	// paymentorder.DefaultCancellationReasons holds the default value on creation for the cancellation_reasons field.
 	paymentorder.DefaultCancellationReasons = paymentorderDescCancellationReasons.Default.([]string)
+	// paymentorderDescMemo is the schema descriptor for memo field.
+	paymentorderDescMemo := paymentorderFields[31].Descriptor()
+	// paymentorder.MemoValidator is a validator for the "memo" field. It is called by the builders before save.
+	paymentorder.MemoValidator = paymentorderDescMemo.Validators[0].(func(string) error)
 	// paymentorderDescID is the schema descriptor for id field.
 	paymentorderDescID := paymentorderFields[0].Descriptor()
 	// paymentorder.DefaultID holds the default value on creation for the id field.

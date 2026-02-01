@@ -225,7 +225,7 @@ func setup() error {
 			SetReceiveAddressExpiry(expiry).
 			SetFeePercent(decimal.NewFromFloat(0)).
 			SetFeeAddress("0x1234567890123456789012345678901234567890").
-			SetReturnAddress("0x0987654321098765432109876543210987654321").
+			SetRefundOrRecipientAddress("0x0987654321098765432109876543210987654321").
 			SetInstitution("MOMONGPC").
 			SetAccountIdentifier("1234567890").
 			SetAccountName("OK").
@@ -1529,7 +1529,7 @@ func TestSender(t *testing.T) {
 				SetReceiveAddressExpiry(expiry).
 				SetFeePercent(decimal.NewFromFloat(5.0)).
 				SetFeeAddress("0x1234567890123456789012345678901234567890").
-				SetReturnAddress("0x0987654321098765432109876543210987654321").
+				SetRefundOrRecipientAddress("0x0987654321098765432109876543210987654321").
 				SetInstitution("MOMONGPC").
 				SetAccountIdentifier("1234567890").
 				SetAccountName("OK").
@@ -1720,7 +1720,7 @@ func TestSender(t *testing.T) {
 				SetReceiveAddressExpiry(expiry2).
 				SetFeePercent(decimal.NewFromFloat(0)).
 				SetFeeAddress("0x1234567890123456789012345678901234567890").
-				SetReturnAddress("0x0987654321098765432109876543210987654321").
+				SetRefundOrRecipientAddress("0x0987654321098765432109876543210987654321").
 				SetReference("unique_ref_second_sender").
 				SetInstitution("MOMONGPC").
 				SetAccountIdentifier("9876543210").

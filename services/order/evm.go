@@ -21,6 +21,7 @@ import (
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
@@ -192,13 +193,32 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
 	}
 
-	// Update order status to refunding after transaction submission
-	_, err = db.Client.PaymentOrder.
-		UpdateOneID(lockOrder.ID).
-		SetStatus(paymentorder.StatusRefunding).
+	// Create order_refunding log (indexer will update to order_refunded when event is indexed)
+	tx, err := db.Client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - RefundOrder.tx: %w", orderIDPrefix, err)
+	}
+	transactionLog, err := tx.TransactionLog.
+		Create().
+		SetStatus(transactionlog.StatusOrderRefunding).
+		SetGatewayID(lockOrder.GatewayID).
+		SetNetwork(lockOrder.Edges.Token.Edges.Network.Identifier).
 		Save(ctx)
 	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("%s - RefundOrder.createLog: %w", orderIDPrefix, err)
+	}
+	_, err = tx.PaymentOrder.
+		UpdateOneID(lockOrder.ID).
+		SetStatus(paymentorder.StatusRefunding).
+		AddTransactions(transactionLog).
+		Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
 		return fmt.Errorf("%s - RefundOrder.updateStatus: %w", orderIDPrefix, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("%s - RefundOrder.commit: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -285,7 +305,7 @@ func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder, encryptedOrderRe
 		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
 		SenderFeeRecipient: ethcommon.HexToAddress(order.FeeAddress),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),
-		RefundAddress:      ethcommon.HexToAddress(order.ReturnAddress),
+		RefundAddress:      ethcommon.HexToAddress(order.RefundOrRecipientAddress),
 		MessageHash:        encryptedOrderRecipient,
 	}
 

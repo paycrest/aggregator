@@ -113,7 +113,7 @@ func ProcessExpiredOrdersRefunds() error {
 			chainID := network.ChainID
 
 			// Skip if no return address (nowhere to refund to)
-			if order.ReturnAddress == "" {
+			if order.RefundOrRecipientAddress == "" {
 				return
 			}
 
@@ -137,7 +137,7 @@ func ProcessExpiredOrdersRefunds() error {
 			// Prepare transfer method call
 			method := "function transfer(address recipient, uint256 amount) public returns (bool)"
 			params := []interface{}{
-				order.ReturnAddress, // recipient address
+				order.RefundOrRecipientAddress, // recipient address
 				balance.String(),    // amount to transfer
 			}
 
@@ -155,7 +155,7 @@ func ProcessExpiredOrdersRefunds() error {
 					"Error":             err.Error(),
 					"OrderID":           order.ID.String(),
 					"ReceiveAddress":    receiveAddress,
-					"ReturnAddress":     order.ReturnAddress,
+					"RefundOrRecipientAddress": order.RefundOrRecipientAddress,
 					"Balance":           balance.String(),
 					"TokenContract":     tokenContract,
 					"NetworkIdentifier": network.Identifier,

@@ -376,23 +376,23 @@ func (_u *PaymentOrderUpdate) ClearFromAddress() *PaymentOrderUpdate {
 	return _u
 }
 
-// SetReturnAddress sets the "return_address" field.
-func (_u *PaymentOrderUpdate) SetReturnAddress(v string) *PaymentOrderUpdate {
-	_u.mutation.SetReturnAddress(v)
+// SetRefundOrRecipientAddress sets the "refund_or_recipient_address" field.
+func (_u *PaymentOrderUpdate) SetRefundOrRecipientAddress(v string) *PaymentOrderUpdate {
+	_u.mutation.SetRefundOrRecipientAddress(v)
 	return _u
 }
 
-// SetNillableReturnAddress sets the "return_address" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableReturnAddress(v *string) *PaymentOrderUpdate {
+// SetNillableRefundOrRecipientAddress sets the "refund_or_recipient_address" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableRefundOrRecipientAddress(v *string) *PaymentOrderUpdate {
 	if v != nil {
-		_u.SetReturnAddress(*v)
+		_u.SetRefundOrRecipientAddress(*v)
 	}
 	return _u
 }
 
-// ClearReturnAddress clears the value of the "return_address" field.
-func (_u *PaymentOrderUpdate) ClearReturnAddress() *PaymentOrderUpdate {
-	_u.mutation.ClearReturnAddress()
+// ClearRefundOrRecipientAddress clears the value of the "refund_or_recipient_address" field.
+func (_u *PaymentOrderUpdate) ClearRefundOrRecipientAddress() *PaymentOrderUpdate {
+	_u.mutation.ClearRefundOrRecipientAddress()
 	return _u
 }
 
@@ -530,26 +530,6 @@ func (_u *PaymentOrderUpdate) SetNillableAccountName(v *string) *PaymentOrderUpd
 	return _u
 }
 
-// SetMemo sets the "memo" field.
-func (_u *PaymentOrderUpdate) SetMemo(v string) *PaymentOrderUpdate {
-	_u.mutation.SetMemo(v)
-	return _u
-}
-
-// SetNillableMemo sets the "memo" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableMemo(v *string) *PaymentOrderUpdate {
-	if v != nil {
-		_u.SetMemo(*v)
-	}
-	return _u
-}
-
-// ClearMemo clears the value of the "memo" field.
-func (_u *PaymentOrderUpdate) ClearMemo() *PaymentOrderUpdate {
-	_u.mutation.ClearMemo()
-	return _u
-}
-
 // SetMetadata sets the "metadata" field.
 func (_u *PaymentOrderUpdate) SetMetadata(v map[string]interface{}) *PaymentOrderUpdate {
 	_u.mutation.SetMetadata(v)
@@ -647,6 +627,26 @@ func (_u *PaymentOrderUpdate) ClearCancellationReasons() *PaymentOrderUpdate {
 	return _u
 }
 
+// SetMemo sets the "memo" field.
+func (_u *PaymentOrderUpdate) SetMemo(v string) *PaymentOrderUpdate {
+	_u.mutation.SetMemo(v)
+	return _u
+}
+
+// SetNillableMemo sets the "memo" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableMemo(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetMemo(*v)
+	}
+	return _u
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (_u *PaymentOrderUpdate) ClearMemo() *PaymentOrderUpdate {
+	_u.mutation.ClearMemo()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *PaymentOrderUpdate) SetStatus(v paymentorder.Status) *PaymentOrderUpdate {
 	_u.mutation.SetStatus(v)
@@ -657,6 +657,20 @@ func (_u *PaymentOrderUpdate) SetStatus(v paymentorder.Status) *PaymentOrderUpda
 func (_u *PaymentOrderUpdate) SetNillableStatus(v *paymentorder.Status) *PaymentOrderUpdate {
 	if v != nil {
 		_u.SetStatus(*v)
+	}
+	return _u
+}
+
+// SetDirection sets the "direction" field.
+func (_u *PaymentOrderUpdate) SetDirection(v paymentorder.Direction) *PaymentOrderUpdate {
+	_u.mutation.SetDirection(v)
+	return _u
+}
+
+// SetNillableDirection sets the "direction" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableDirection(v *paymentorder.Direction) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetDirection(*v)
 	}
 	return _u
 }
@@ -922,9 +936,9 @@ func (_u *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.from_address": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.ReturnAddress(); ok {
-		if err := paymentorder.ReturnAddressValidator(v); err != nil {
-			return &ValidationError{Name: "return_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.return_address": %w`, err)}
+	if v, ok := _u.mutation.RefundOrRecipientAddress(); ok {
+		if err := paymentorder.RefundOrRecipientAddressValidator(v); err != nil {
+			return &ValidationError{Name: "refund_or_recipient_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.refund_or_recipient_address": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.ReceiveAddress(); ok {
@@ -952,11 +966,6 @@ func (_u *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_name": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Memo(); ok {
-		if err := paymentorder.MemoValidator(v); err != nil {
-			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Sender(); ok {
 		if err := paymentorder.SenderValidator(v); err != nil {
 			return &ValidationError{Name: "sender", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.sender": %w`, err)}
@@ -967,9 +976,19 @@ func (_u *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Memo(); ok {
+		if err := paymentorder.MemoValidator(v); err != nil {
+			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := paymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Direction(); ok {
+		if err := paymentorder.DirectionValidator(v); err != nil {
+			return &ValidationError{Name: "direction", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.direction": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.OrderType(); ok {
@@ -1094,11 +1113,11 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.FromAddressCleared() {
 		_spec.ClearField(paymentorder.FieldFromAddress, field.TypeString)
 	}
-	if value, ok := _u.mutation.ReturnAddress(); ok {
-		_spec.SetField(paymentorder.FieldReturnAddress, field.TypeString, value)
+	if value, ok := _u.mutation.RefundOrRecipientAddress(); ok {
+		_spec.SetField(paymentorder.FieldRefundOrRecipientAddress, field.TypeString, value)
 	}
-	if _u.mutation.ReturnAddressCleared() {
-		_spec.ClearField(paymentorder.FieldReturnAddress, field.TypeString)
+	if _u.mutation.RefundOrRecipientAddressCleared() {
+		_spec.ClearField(paymentorder.FieldRefundOrRecipientAddress, field.TypeString)
 	}
 	if value, ok := _u.mutation.ReceiveAddress(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddress, field.TypeString, value)
@@ -1139,12 +1158,6 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(paymentorder.FieldAccountName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Memo(); ok {
-		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
-	}
-	if _u.mutation.MemoCleared() {
-		_spec.ClearField(paymentorder.FieldMemo, field.TypeString)
-	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(paymentorder.FieldMetadata, field.TypeJSON, value)
 	}
@@ -1183,8 +1196,17 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.CancellationReasonsCleared() {
 		_spec.ClearField(paymentorder.FieldCancellationReasons, field.TypeJSON)
 	}
+	if value, ok := _u.mutation.Memo(); ok {
+		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
+	}
+	if _u.mutation.MemoCleared() {
+		_spec.ClearField(paymentorder.FieldMemo, field.TypeString)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Direction(); ok {
+		_spec.SetField(paymentorder.FieldDirection, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
@@ -1782,23 +1804,23 @@ func (_u *PaymentOrderUpdateOne) ClearFromAddress() *PaymentOrderUpdateOne {
 	return _u
 }
 
-// SetReturnAddress sets the "return_address" field.
-func (_u *PaymentOrderUpdateOne) SetReturnAddress(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetReturnAddress(v)
+// SetRefundOrRecipientAddress sets the "refund_or_recipient_address" field.
+func (_u *PaymentOrderUpdateOne) SetRefundOrRecipientAddress(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetRefundOrRecipientAddress(v)
 	return _u
 }
 
-// SetNillableReturnAddress sets the "return_address" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableReturnAddress(v *string) *PaymentOrderUpdateOne {
+// SetNillableRefundOrRecipientAddress sets the "refund_or_recipient_address" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableRefundOrRecipientAddress(v *string) *PaymentOrderUpdateOne {
 	if v != nil {
-		_u.SetReturnAddress(*v)
+		_u.SetRefundOrRecipientAddress(*v)
 	}
 	return _u
 }
 
-// ClearReturnAddress clears the value of the "return_address" field.
-func (_u *PaymentOrderUpdateOne) ClearReturnAddress() *PaymentOrderUpdateOne {
-	_u.mutation.ClearReturnAddress()
+// ClearRefundOrRecipientAddress clears the value of the "refund_or_recipient_address" field.
+func (_u *PaymentOrderUpdateOne) ClearRefundOrRecipientAddress() *PaymentOrderUpdateOne {
+	_u.mutation.ClearRefundOrRecipientAddress()
 	return _u
 }
 
@@ -1936,26 +1958,6 @@ func (_u *PaymentOrderUpdateOne) SetNillableAccountName(v *string) *PaymentOrder
 	return _u
 }
 
-// SetMemo sets the "memo" field.
-func (_u *PaymentOrderUpdateOne) SetMemo(v string) *PaymentOrderUpdateOne {
-	_u.mutation.SetMemo(v)
-	return _u
-}
-
-// SetNillableMemo sets the "memo" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableMemo(v *string) *PaymentOrderUpdateOne {
-	if v != nil {
-		_u.SetMemo(*v)
-	}
-	return _u
-}
-
-// ClearMemo clears the value of the "memo" field.
-func (_u *PaymentOrderUpdateOne) ClearMemo() *PaymentOrderUpdateOne {
-	_u.mutation.ClearMemo()
-	return _u
-}
-
 // SetMetadata sets the "metadata" field.
 func (_u *PaymentOrderUpdateOne) SetMetadata(v map[string]interface{}) *PaymentOrderUpdateOne {
 	_u.mutation.SetMetadata(v)
@@ -2053,6 +2055,26 @@ func (_u *PaymentOrderUpdateOne) ClearCancellationReasons() *PaymentOrderUpdateO
 	return _u
 }
 
+// SetMemo sets the "memo" field.
+func (_u *PaymentOrderUpdateOne) SetMemo(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetMemo(v)
+	return _u
+}
+
+// SetNillableMemo sets the "memo" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableMemo(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetMemo(*v)
+	}
+	return _u
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (_u *PaymentOrderUpdateOne) ClearMemo() *PaymentOrderUpdateOne {
+	_u.mutation.ClearMemo()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *PaymentOrderUpdateOne) SetStatus(v paymentorder.Status) *PaymentOrderUpdateOne {
 	_u.mutation.SetStatus(v)
@@ -2063,6 +2085,20 @@ func (_u *PaymentOrderUpdateOne) SetStatus(v paymentorder.Status) *PaymentOrderU
 func (_u *PaymentOrderUpdateOne) SetNillableStatus(v *paymentorder.Status) *PaymentOrderUpdateOne {
 	if v != nil {
 		_u.SetStatus(*v)
+	}
+	return _u
+}
+
+// SetDirection sets the "direction" field.
+func (_u *PaymentOrderUpdateOne) SetDirection(v paymentorder.Direction) *PaymentOrderUpdateOne {
+	_u.mutation.SetDirection(v)
+	return _u
+}
+
+// SetNillableDirection sets the "direction" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableDirection(v *paymentorder.Direction) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetDirection(*v)
 	}
 	return _u
 }
@@ -2341,9 +2377,9 @@ func (_u *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.from_address": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.ReturnAddress(); ok {
-		if err := paymentorder.ReturnAddressValidator(v); err != nil {
-			return &ValidationError{Name: "return_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.return_address": %w`, err)}
+	if v, ok := _u.mutation.RefundOrRecipientAddress(); ok {
+		if err := paymentorder.RefundOrRecipientAddressValidator(v); err != nil {
+			return &ValidationError{Name: "refund_or_recipient_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.refund_or_recipient_address": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.ReceiveAddress(); ok {
@@ -2371,11 +2407,6 @@ func (_u *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_name": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Memo(); ok {
-		if err := paymentorder.MemoValidator(v); err != nil {
-			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
-		}
-	}
 	if v, ok := _u.mutation.Sender(); ok {
 		if err := paymentorder.SenderValidator(v); err != nil {
 			return &ValidationError{Name: "sender", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.sender": %w`, err)}
@@ -2386,9 +2417,19 @@ func (_u *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Memo(); ok {
+		if err := paymentorder.MemoValidator(v); err != nil {
+			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := paymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Direction(); ok {
+		if err := paymentorder.DirectionValidator(v); err != nil {
+			return &ValidationError{Name: "direction", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.direction": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.OrderType(); ok {
@@ -2530,11 +2571,11 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if _u.mutation.FromAddressCleared() {
 		_spec.ClearField(paymentorder.FieldFromAddress, field.TypeString)
 	}
-	if value, ok := _u.mutation.ReturnAddress(); ok {
-		_spec.SetField(paymentorder.FieldReturnAddress, field.TypeString, value)
+	if value, ok := _u.mutation.RefundOrRecipientAddress(); ok {
+		_spec.SetField(paymentorder.FieldRefundOrRecipientAddress, field.TypeString, value)
 	}
-	if _u.mutation.ReturnAddressCleared() {
-		_spec.ClearField(paymentorder.FieldReturnAddress, field.TypeString)
+	if _u.mutation.RefundOrRecipientAddressCleared() {
+		_spec.ClearField(paymentorder.FieldRefundOrRecipientAddress, field.TypeString)
 	}
 	if value, ok := _u.mutation.ReceiveAddress(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddress, field.TypeString, value)
@@ -2575,12 +2616,6 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(paymentorder.FieldAccountName, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Memo(); ok {
-		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
-	}
-	if _u.mutation.MemoCleared() {
-		_spec.ClearField(paymentorder.FieldMemo, field.TypeString)
-	}
 	if value, ok := _u.mutation.Metadata(); ok {
 		_spec.SetField(paymentorder.FieldMetadata, field.TypeJSON, value)
 	}
@@ -2619,8 +2654,17 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if _u.mutation.CancellationReasonsCleared() {
 		_spec.ClearField(paymentorder.FieldCancellationReasons, field.TypeJSON)
 	}
+	if value, ok := _u.mutation.Memo(); ok {
+		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
+	}
+	if _u.mutation.MemoCleared() {
+		_spec.ClearField(paymentorder.FieldMemo, field.TypeString)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Direction(); ok {
+		_spec.SetField(paymentorder.FieldDirection, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)

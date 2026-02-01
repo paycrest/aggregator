@@ -212,7 +212,7 @@ func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) 
 	if hasSender {
 		payload["fee_percent"] = 0.0
 		payload["fee_address"] = "0x1234567890123456789012345678901234567890"
-		payload["return_address"] = "0x0987654321098765432109876543210987654321"
+		payload["refund_or_recipient_address"] = "0x0987654321098765432109876543210987654321"
 	}
 
 	// Apply overrides
@@ -303,7 +303,7 @@ func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) 
 			SetReceiveAddressExpiry(expiry).
 			SetFeePercent(decimal.NewFromFloat(payload["fee_percent"].(float64))).
 			SetFeeAddress(payload["fee_address"].(string)).
-			SetReturnAddress(payload["return_address"].(string)).
+			SetRefundOrRecipientAddress(payload["refund_or_recipient_address"].(string)).
 			SetMemo(payload["memo"].(string))
 	}
 
