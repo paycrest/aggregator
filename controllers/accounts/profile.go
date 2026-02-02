@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -705,6 +706,82 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					"Error":       fmt.Sprintf("%v", err),
 					"Institution": op.Payload.Institution,
 				}).Errorf("Failed to create fiat account")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		}
+	}
+
+	// Delete fiat accounts not in the payload
+	if payload.FiatAccounts != nil {
+		type fiatAccountKey struct {
+			Institution       string
+			AccountIdentifier string
+		}
+
+		keptKeys := make(map[fiatAccountKey]struct{}, len(payload.FiatAccounts))
+
+		for _, p := range payload.FiatAccounts {
+			if p.Institution == "" || p.AccountIdentifier == "" {
+				logger.WithFields(logger.Fields{
+					"Institution":       p.Institution,
+					"AccountIdentifier": p.AccountIdentifier,
+				}).Warn("Skipping fiat account with missing institution or account identifier")
+				continue
+			}
+
+			keptKeys[fiatAccountKey{
+				Institution:       p.Institution,
+				AccountIdentifier: p.AccountIdentifier,
+			}] = struct{}{}
+		}
+
+		existingFiatAccounts, err := tx.ProviderFiatAccount.
+			Query().
+			Where(providerfiataccount.HasProviderWith(providerprofile.IDEQ(provider.ID))).
+			All(ctx)
+		if err != nil {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+			}
+
+			logger.WithFields(logger.Fields{
+				"Error":      err,
+				"ProviderID": provider.ID,
+			}).Error("Failed to list fiat accounts for delete")
+
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+
+		var idsToDelete []uuid.UUID
+
+		for _, acc := range existingFiatAccounts {
+			key := fiatAccountKey{
+				Institution:       acc.Institution,
+				AccountIdentifier: acc.AccountIdentifier,
+			}
+
+			if _, kept := keptKeys[key]; !kept {
+				idsToDelete = append(idsToDelete, acc.ID)
+			}
+		}
+
+		if len(idsToDelete) > 0 {
+			if _, err := tx.ProviderFiatAccount.
+				Delete().
+				Where(providerfiataccount.IDIn(idsToDelete...)).
+				Exec(ctx); err != nil {
+
+				if rollbackErr := tx.Rollback(); rollbackErr != nil {
+					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
+				}
+
+				logger.WithFields(logger.Fields{
+					"Error":     err,
+					"AccountID": idsToDelete,
+				}).Error("Failed to delete fiat accounts")
+
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
 			}
