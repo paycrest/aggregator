@@ -62,9 +62,6 @@ func RegisterRoutes(route *gin.Engine) {
 	// Reindex transaction endpoint
 	v1.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
 
-	// Index provider address endpoint
-	v1.POST("index-provider-address", ctrl.IndexProviderAddress)
-
 	// Etherscan queue monitoring endpoint
 	v1.GET("etherscan/stats", ctrl.GetEtherscanQueueStats)
 

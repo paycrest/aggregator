@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/services"
@@ -155,7 +156,7 @@ func (s *IndexerTron) indexReceiveAddressByUserAddressInRange(ctx context.Contex
 	return nil
 }
 
-// IndexGateway indexes all Gateway contract events (OrderCreated, OrderSettled, OrderRefunded) in a single call
+// IndexGateway indexes all Gateway contract events (OrderCreated, SettleOut, SettleIn, OrderRefunded) in a single call
 func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 	if txHash != "" {
@@ -178,7 +179,8 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 
 		// Process all events from this transaction
 		orderCreatedEvents := []*types.OrderCreatedEvent{}
-		orderSettledEvents := []*types.OrderSettledEvent{}
+		settleOutEvents := []*types.SettleOutEvent{}
+		settleInEvents := []*types.SettleInEvent{}
 		orderRefundedEvents := []*types.OrderRefundedEvent{}
 
 		for _, event := range data["log"].([]interface{}) {
@@ -216,14 +218,14 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 				}
 				orderCreatedEvents = append(orderCreatedEvents, createdEvent)
 
-			case "57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37": // OrderSettled
-				unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderSettled")
+			case "1e4a1a8ad772d3f0dbb387879bc5e8faadf16e0513bf77d50620741ab92b4c45": // SettleOut (offramp)
+				unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "SettleOut")
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":   fmt.Sprintf("%v", err),
 						"TxHash":  data["id"].(string),
 						"Network": network.Identifier,
-					}).Errorf("Failed to unpack OrderSettled event data for %s", network.Identifier)
+					}).Errorf("Failed to unpack SettleOut event data for %s", network.Identifier)
 					continue
 				}
 
@@ -233,7 +235,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 				eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
 				liquidityProvider := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
 
-				settledEvent := &types.OrderSettledEvent{
+				settledEvent := &types.SettleOutEvent{
 					BlockNumber:       int64(data["blockNumber"].(float64)),
 					TxHash:            data["id"].(string),
 					SplitOrderId:      splitOrderId,
@@ -242,7 +244,44 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 					SettlePercent:     utils.FromSubunit(settlePercent, 0),
 					RebatePercent:     utils.FromSubunit(rebatePercent, 0),
 				}
-				orderSettledEvents = append(orderSettledEvents, settledEvent)
+				settleOutEvents = append(settleOutEvents, settledEvent)
+
+			case "44de25d68888fdbe51bc67bbc990724fb5fa28119062e5f4ca623aefcaa70ecb": // SettleIn (onramp)
+				unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "SettleIn")
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"TxHash":  data["id"].(string),
+						"Network": network.Identifier,
+					}).Errorf("Failed to unpack SettleIn event data for %s", network.Identifier)
+					continue
+				}
+				// SettleIn: indexed orderId, amount, recipient; data: token, aggregatorFee, rate
+				eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
+				amountTopic := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[2])
+				amountBig := new(big.Int).SetBytes(amountTopic[:])
+				recipientStr := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[3].(string))
+				tokenVal := unpackedEventData[0]
+				tokenStr := ""
+				if addr, ok := tokenVal.(ethcommon.Address); ok {
+					tokenStr = addr.Hex()
+				} else if addr, ok := tokenVal.([]byte); ok && len(addr) >= 20 {
+					tokenStr = "0x" + hex.EncodeToString(addr[len(addr)-20:])
+				}
+				aggregatorFee := unpackedEventData[1].(*big.Int)
+				rate := unpackedEventData[2].(*big.Int)
+				orderIdStr := fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:]))
+				settleInEvent := &types.SettleInEvent{
+					BlockNumber:   int64(data["blockNumber"].(float64)),
+					TxHash:        data["id"].(string),
+					OrderId:       orderIdStr,
+					Amount:        utils.FromSubunit(amountBig, 0),
+					Recipient:     recipientStr,
+					Token:         tokenStr,
+					AggregatorFee: utils.FromSubunit(aggregatorFee, 0),
+					Rate:          utils.FromSubunit(rate, 0),
+				}
+				settleInEvents = append(settleInEvents, settleInEvent)
 
 			case "0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e": // OrderRefunded
 				unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderRefunded")
@@ -284,18 +323,33 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 			}
 		}
 
-		if len(orderSettledEvents) > 0 {
-			txHashes := []string{}
-			hashToEvent := make(map[string]*types.OrderSettledEvent)
-			for _, event := range orderSettledEvents {
-				txHashes = append(txHashes, event.TxHash)
-				hashToEvent[event.TxHash] = event
+		if len(settleOutEvents) > 0 {
+			orderIds := []string{}
+			orderIdToEvent := make(map[string]*types.SettleOutEvent)
+			for _, event := range settleOutEvents {
+				orderIds = append(orderIds, event.OrderId)
+				orderIdToEvent[event.OrderId] = event
 			}
-			err = common.ProcessSettledOrders(ctx, network, txHashes, hashToEvent)
+			err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvent)
 			if err != nil {
-				logger.Errorf("Failed to process OrderSettled events: %v", err)
+				logger.Errorf("Failed to process SettleOut events: %v", err)
 			} else {
-				logger.Infof("Successfully processed %d OrderSettled events", len(orderSettledEvents))
+				logger.Infof("Successfully processed %d SettleOut events", len(settleOutEvents))
+			}
+		}
+
+		if len(settleInEvents) > 0 {
+			orderIds := []string{}
+			orderIdToEvent := make(map[string]*types.SettleInEvent)
+			for _, event := range settleInEvents {
+				orderIds = append(orderIds, event.OrderId)
+				orderIdToEvent[event.OrderId] = event
+			}
+			err = common.ProcessSettleInOrders(ctx, network, orderIds, orderIdToEvent)
+			if err != nil {
+				logger.Errorf("Failed to process SettleIn events: %v", err)
+			} else {
+				logger.Infof("Successfully processed %d SettleIn events", len(settleInEvents))
 			}
 		}
 
@@ -332,15 +386,15 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 		}).Errorf("Failed to index OrderCreated events")
 	}
 
-	// Index OrderSettled events
-	if err := s.indexOrderSettledByBlockRange(ctx, network, fromBlock, toBlock); err != nil {
+	// Index SettleOut events
+	if err := s.indexSettleOutByBlockRange(ctx, network, fromBlock, toBlock); err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":        fmt.Sprintf("%v", err),
 			"NetworkParam": network.Identifier,
 			"FromBlock":    fromBlock,
 			"ToBlock":      toBlock,
-			"EventType":    "OrderSettled",
-		}).Errorf("Failed to index OrderSettled events")
+			"EventType":    "SettleOut",
+		}).Errorf("Failed to index SettleOut events")
 	}
 
 	// Index OrderRefunded events
@@ -357,8 +411,8 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 	return eventCounts, nil
 }
 
-// IndexProviderAddress indexes OrderSettled events for a provider address
-func (s *IndexerTron) IndexProviderAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
+// IndexProviderSettlementAddress indexes SettleOut events for a provider address
+func (s *IndexerTron) IndexProviderSettlementAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
 	// For Tron, we need to implement a different approach since we don't have provider address transaction history
@@ -439,8 +493,8 @@ func (s *IndexerTron) indexOrderCreatedByBlockRange(ctx context.Context, network
 	return nil
 }
 
-// indexOrderSettledByBlockRange indexes OrderSettled events for a block range
-func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
+// indexSettleOutByBlockRange indexes SettleOut events for a block range
+func (s *IndexerTron) indexSettleOutByBlockRange(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
 	res, err := fastshot.NewClient(network.RPCEndpoint).
 		Config().SetTimeout(15 * time.Second).
 		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
@@ -452,32 +506,32 @@ func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network
 	}).
 		Send()
 	if err != nil {
-		return fmt.Errorf("indexOrderSettledByBlockRange.getEvents: %w", err)
+		return fmt.Errorf("indexSettleOutByBlockRange.getEvents: %w", err)
 	}
 	data, err := utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
-		return fmt.Errorf("indexOrderSettledByBlockRange.parseJSONResponse: %w", err)
+		return fmt.Errorf("indexSettleOutByBlockRange.parseJSONResponse: %w", err)
 	}
-	txHashes := []string{}
-	hashToEvent := make(map[string]*types.OrderSettledEvent)
+	orderIds := []string{}
+	orderIdToEvent := make(map[string]*types.SettleOutEvent)
 	for _, r := range data["data"].([]interface{}) {
-		if r.(map[string]interface{})["event_name"].(string) == "OrderSettled" {
+		if r.(map[string]interface{})["event_name"].(string) == "SettleOut" {
 			res, err := fastshot.NewClient(network.RPCEndpoint).
 				Config().SetTimeout(15 * time.Second).
 				Build().POST("/wallet/gettransactioninfobyid").
 				Body().AsJSON(map[string]interface{}{"value": r.(map[string]interface{})["transaction_id"].(string)}).
 				Send()
 			if err != nil {
-				return fmt.Errorf("indexOrderSettledByBlockRange.getTransaction: %w", err)
+				return fmt.Errorf("indexSettleOutByBlockRange.getTransaction: %w", err)
 			}
 			data, err := utils.ParseJSONResponse(res.RawResponse)
 			if err != nil {
-				return fmt.Errorf("indexOrderSettledByBlockRange.parseJSONResponse: %w", err)
+				return fmt.Errorf("indexSettleOutByBlockRange.parseJSONResponse: %w", err)
 			}
 			for _, event := range data["log"].([]interface{}) {
 				eventData := event.(map[string]interface{})
-				if eventData["topics"].([]interface{})[0] == "57c683de2e7c8263c7f57fd108416b9bdaa7a6e7f2e4e7102c3b6f9e37f1cc37" {
-					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "OrderSettled")
+				if eventData["topics"].([]interface{})[0] == "1e4a1a8ad772d3f0dbb387879bc5e8faadf16e0513bf77d50620741ab92b4c45" {
+					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "SettleOut")
 					if err != nil {
 						continue
 					}
@@ -486,7 +540,7 @@ func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network
 					rebatePercent := unpackedEventData[2].(*big.Int)
 					eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
 					liquidityProvider := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
-					settledEvent := &types.OrderSettledEvent{
+					settledEvent := &types.SettleOutEvent{
 						BlockNumber:       int64(data["blockNumber"].(float64)),
 						TxHash:            data["id"].(string),
 						SplitOrderId:      splitOrderId,
@@ -495,19 +549,19 @@ func (s *IndexerTron) indexOrderSettledByBlockRange(ctx context.Context, network
 						SettlePercent:     utils.FromSubunit(settlePercent, 0),
 						RebatePercent:     utils.FromSubunit(rebatePercent, 0),
 					}
-					txHashes = append(txHashes, settledEvent.TxHash)
-					hashToEvent[settledEvent.TxHash] = settledEvent
+					orderIds = append(orderIds, settledEvent.OrderId)
+					orderIdToEvent[settledEvent.OrderId] = settledEvent
 					break
 				}
 			}
 		}
 	}
-	if len(txHashes) == 0 {
+	if len(orderIds) == 0 {
 		return nil
 	}
-	err = common.ProcessSettledOrders(ctx, network, txHashes, hashToEvent)
+	err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvent)
 	if err != nil {
-		return fmt.Errorf("indexOrderSettledByBlockRange.processSettledOrders: %w", err)
+		return fmt.Errorf("indexSettleOutByBlockRange.processSettleOutOrders: %w", err)
 	}
 	return nil
 }

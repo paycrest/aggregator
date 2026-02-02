@@ -498,7 +498,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			orderIDs = append(orderIDs, event.OrderId)
 			orderIDToEvent[event.OrderId] = event
 		}
-		err := common.ProcessSettledOrders(ctx, network, orderIDs, orderIDToEvent)
+		err := common.ProcessOrderSettledOrders(ctx, network, orderIDs, orderIDToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
 		} else {
@@ -584,8 +584,8 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 	return eventCounts, nil
 }
 
-// IndexProviderAddress indexes settlement events from providers
-func (s *IndexerStarknet) IndexProviderAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
+// IndexProviderSettlementAddress indexes settlement events from providers
+func (s *IndexerStarknet) IndexProviderSettlementAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 	var transactionHashReceipt []map[string]interface{}
 
@@ -750,7 +750,7 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err := common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
+		err := common.ProcessOrderSettledOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
 		} else {

@@ -441,11 +441,11 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 	return nil
 }
 
-// UpdateOrderStatusSettled updates the status of a payment order to settled
-func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *types.OrderSettledEvent, messageHash string) error {
+// UpdateOrderStatusSettleOut updates the status of a payment order to settled (offramp / SettleOut).
+func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event *types.SettleOutEvent, messageHash string) error {
 	tx, err := db.Client.Tx(ctx)
 	if err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.db: %v", err)
+		return fmt.Errorf("UpdateOrderStatusSettleOut.db: %v", err)
 	}
 
 	// Update any existing order_settling log(s) for this event (same gateway_id, network) by setting tx_hash.
@@ -461,7 +461,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		SetTxHash(event.TxHash).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.update: %v", err)
+		return fmt.Errorf("UpdateOrderStatusSettleOut.update: %v", err)
 	}
 
 	// If no existing order_settling log was updated, create a new order_settled log (e.g. legacy or indexer-first path).
@@ -475,7 +475,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 			SetNetwork(network.Identifier).
 			Save(ctx)
 		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettled.create: %v", err)
+			return fmt.Errorf("UpdateOrderStatusSettleOut.create: %v", err)
 		}
 	}
 
@@ -485,12 +485,12 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	if strings.HasPrefix(network.Identifier, "starknet") {
 		splitOrderId, err = uuid.Parse(strings.ReplaceAll(event.SplitOrderId, "0x", ""))
 		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettled.splitOrderId: %v", err)
+			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: %v", err)
 		}
 	} else {
 		splitOrderId, err = uuid.Parse(string(ethcommon.FromHex(event.SplitOrderId)))
 		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettled.splitOrderId: %v", err)
+			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: %v", err)
 		}
 	}
 
@@ -516,7 +516,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 
 	_, err = paymentOrderUpdate.Save(ctx)
 	if err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.aggregator: %v", err)
+		return fmt.Errorf("UpdateOrderStatusSettleOut.aggregator: %v", err)
 	}
 
 	// Update provider balance for settled orders
@@ -580,7 +580,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.sender %v", err)
+		return fmt.Errorf("UpdateOrderStatusSettleOut.sender %v", err)
 	}
 
 	// Clean up order exclude list from Redis (best effort, don't fail if it errors)
@@ -592,9 +592,113 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	// Send webhook notification to sender
 	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
 	if err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.webhook: %v", err)
+		return fmt.Errorf("UpdateOrderStatusSettleOut.webhook: %v", err)
 	}
 
+	return nil
+}
+
+// UpdateOrderStatusSettleIn updates a payin (onramp) order to settled when a SettleIn event is indexed.
+func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event *types.SettleInEvent) error {
+	tx, err := db.Client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusSettleIn.db: %v", err)
+	}
+
+	// Update any existing order_settling log(s) for this gateway order by setting tx_hash
+	var transactionLog *ent.TransactionLog
+	updatedLogRows, err := tx.TransactionLog.
+		Update().
+		Where(
+			transactionlog.StatusEQ(transactionlog.StatusOrderSettling),
+			transactionlog.GatewayIDEQ(event.OrderId),
+			transactionlog.NetworkEQ(network.Identifier),
+		).
+		SetTxHash(event.TxHash).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusSettleIn.update: %v", err)
+	}
+
+	if updatedLogRows == 0 {
+		transactionLog, err = tx.TransactionLog.
+			Create().
+			SetStatus(transactionlog.StatusOrderSettled).
+			SetTxHash(event.TxHash).
+			SetGatewayID(event.OrderId).
+			SetNetwork(network.Identifier).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("UpdateOrderStatusSettleIn.create: %v", err)
+		}
+	}
+
+	// Find payin order by gateway ID and status settling (normalize orderId to 0x-prefixed hex for comparison)
+	gatewayID := event.OrderId
+	if !strings.HasPrefix(gatewayID, "0x") {
+		gatewayID = "0x" + gatewayID
+	}
+
+	paymentOrderUpdate := tx.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.GatewayIDEQ(gatewayID),
+			paymentorder.StatusEQ(paymentorder.StatusSettling),
+			paymentorder.DirectionEQ(paymentorder.DirectionOnramp),
+			paymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		SetBlockNumber(event.BlockNumber).
+		SetTxHash(event.TxHash).
+		SetStatus(paymentorder.StatusSettled)
+
+	if transactionLog != nil {
+		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
+	}
+
+	updatedOrderRows, err := paymentOrderUpdate.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusSettleIn.aggregator: %v", err)
+	}
+
+	if updatedOrderRows == 0 {
+		_ = tx.Rollback()
+		return nil // No matching payin order in settling (e.g. already settled or wrong network)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("UpdateOrderStatusSettleIn.commit: %v", err)
+	}
+
+	// Reload payment order for webhook
+	paymentOrder, err := db.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.GatewayIDEQ(gatewayID),
+			paymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		WithSenderProfile().
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		Only(ctx)
+	if err != nil {
+		return nil // Order updated; webhook best-effort
+	}
+
+	if err := utils.SendPaymentOrderWebhook(ctx, paymentOrder); err != nil {
+		logger.WithFields(logger.Fields{
+			"OrderID": gatewayID,
+			"Error":   err.Error(),
+		}).Errorf("UpdateOrderStatusSettleIn.webhook: failed to send webhook")
+	}
 	return nil
 }
 
@@ -1051,7 +1155,7 @@ func validateAndPreparePaymentOrderData(
 		senderAPIKey, err := getAPIKeyFromMetadata(recipient.Metadata)
 		if err != nil {
 			// TODO: enforce sender API key presence in metadata in the future if needed
-		} else if err == nil && senderAPIKey != uuid.Nil {
+		} else if senderAPIKey != uuid.Nil {
 			_, err := getSenderProfileFromAPIKey(ctx, senderAPIKey)
 			if err != nil {
 				logger.WithFields(logger.Fields{

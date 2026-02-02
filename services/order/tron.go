@@ -563,7 +563,7 @@ func (s *OrderTron) getOrderInfo(gatewayContractAddress util.Address, gatewayId 
 	}, nil
 }
 
-// settleCallData creates the data for the settle method in the gateway contract
+// settleCallData creates the data for the settleOut method in the gateway contract
 func (s *OrderTron) settleCallData(ctx context.Context, order *ent.PaymentOrder) ([]byte, error) {
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
 	if err != nil {
@@ -615,9 +615,9 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.PaymentOrder)
 
 	splitOrderID := strings.ReplaceAll(order.ID.String(), "-", "")
 
-	// Generate calldata for settlement
+	// Generate calldata for settlement (Gateway.settleOut)
 	data, err := gatewayABI.Pack(
-		"settle",
+		"settleOut",
 		utils.StringToByte32(splitOrderID),
 		utils.StringToByte32(string(orderID)),
 		common.HexToAddress(providerAddress),
@@ -625,7 +625,7 @@ func (s *OrderTron) settleCallData(ctx context.Context, order *ent.PaymentOrder)
 		uint64(0), // rebatePercent - default to 0 for now
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to pack settle ABI: %w", err)
+		return nil, fmt.Errorf("failed to pack settleOut ABI: %w", err)
 	}
 
 	return data, nil

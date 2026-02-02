@@ -80,7 +80,18 @@ type OrderCreatedEvent struct {
 	Sender      string
 }
 
-// OrderSettledEvent represents a order settled event.
+// SettleOutEvent represents an offramp settlement event (Gateway SettleOut).
+type SettleOutEvent struct {
+	BlockNumber       int64
+	TxHash            string
+	SplitOrderId      string
+	OrderId           string
+	LiquidityProvider string
+	SettlePercent     decimal.Decimal
+	RebatePercent     decimal.Decimal
+}
+
+// OrderSettledEvent represents an order settled event. Only used for Starknet.
 type OrderSettledEvent struct {
 	BlockNumber       int64
 	TxHash            string
@@ -89,6 +100,18 @@ type OrderSettledEvent struct {
 	LiquidityProvider string
 	SettlePercent     decimal.Decimal
 	RebatePercent     decimal.Decimal
+}
+
+// SettleInEvent represents an onramp settlement event (Gateway SettleIn).
+type SettleInEvent struct {
+	BlockNumber   int64
+	TxHash        string
+	OrderId       string
+	Amount        decimal.Decimal
+	Recipient     string
+	Token         string
+	AggregatorFee decimal.Decimal
+	Rate          decimal.Decimal
 }
 
 // OrderRefundedEvent represents a order refunded event.
@@ -108,14 +131,14 @@ type OrderService interface {
 
 // Indexer provides an interface for indexing blockchain data to the database.
 type Indexer interface {
-	// Index all gateway events (OrderCreated, OrderSettled, OrderRefunded) in one efficient call
+	// Index all gateway events (OrderCreated, SettleOut, SettleIn, OrderRefunded) in one efficient call
 	IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
 
 	// Index receive address events
 	IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
 
-	// Index provider address events (OrderSettled)
-	IndexProviderAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
+	// Index provider address events (SettleOut)
+	IndexProviderSettlementAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
 }
 
 // KYCProvider defines the interface for KYC verification providers
@@ -992,12 +1015,7 @@ type IndexTransactionRequest struct {
 
 // IndexTransactionResponse represents the response for the index transaction endpoint
 type IndexTransactionResponse struct {
-	Events struct {
-		Transfer      int `json:"Transfer"`
-		OrderCreated  int `json:"OrderCreated"`
-		OrderSettled  int `json:"OrderSettled"`
-		OrderRefunded int `json:"OrderRefunded"`
-	} `json:"events"`
+	Events EventCounts `json:"events"`
 }
 
 // EventCounts represents the count of different event types found during indexing
@@ -1005,6 +1023,8 @@ type EventCounts struct {
 	Transfer      int `json:"Transfer"`
 	OrderCreated  int `json:"OrderCreated"`
 	OrderSettled  int `json:"OrderSettled"`
+	SettleOut     int `json:"SettleOut"`     // SettleOut (offramp)
+	SettleIn      int `json:"SettleIn"`      // SettleIn (onramp)
 	OrderRefunded int `json:"OrderRefunded"`
 }
 
