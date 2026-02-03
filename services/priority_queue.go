@@ -213,7 +213,7 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 
 				for _, b := range bals {
 					// Only inspect the relevant fiat currency for this bucket.
-					if b.Edges.FiatCurrency == nil || b.Edges.FiatCurrency.Code != bucket.Edges.Currency.Code {
+					if b.Edges.FiatCurrency == nil || !b.IsAvailable || b.Edges.FiatCurrency.Code != bucket.Edges.Currency.Code {
 						continue
 					}
 					report := s.balanceService.CheckBalanceHealth(b)
@@ -420,8 +420,8 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 				continue
 			}
 
-			// Serialize the provider ID, token, network, rate, min and max order amount into a single string
-			data := fmt.Sprintf("%s:%s:%s:%s:%s:%s", provider.ID, orderToken.Edges.Token.Symbol, orderToken.Network, rate, orderToken.MinOrderAmount, orderToken.MaxOrderAmount)
+			// Serialize the provider ID, token, rate, min and max order amount into a single string
+			data := fmt.Sprintf("%s:%s:%s:%s:%s", provider.ID, orderToken.Edges.Token.Symbol, rate, orderToken.MinOrderAmount, orderToken.MaxOrderAmount)
 
 			// Enqueue the serialized data into the temporary circular queue
 			err = storage.RedisClient.RPush(ctx, tempRedisKey, data).Err()
@@ -1077,9 +1077,9 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		// 	providerData = partnerProviders[randomIndex]
 		// }
 
-		// Extract the rate from the data (format "providerID:token:network:rate:minAmount:maxAmount")
+		// Extract the rate from the data (assuming it's in the format "providerID:token:rate:minAmount:maxAmount")
 		parts := strings.Split(providerData, ":")
-		if len(parts) != 6 {
+		if len(parts) != 5 {
 			logger.WithFields(logger.Fields{
 				"Error":        fmt.Sprintf("%v", err),
 				"OrderID":      order.ID.String(),
@@ -1110,20 +1110,8 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			continue
 		}
 
-		// Skip entry if network doesn't match
-		network := order.Token.Edges.Network
-		if network == nil {
-			network, err = order.Token.QueryNetwork().Only(ctx)
-			if err != nil {
-				continue
-			}
-		}
-		if parts[2] != network.Identifier {
-			continue
-		}
-
 		// Parse rate (amount limits and OTC checks already done by ValidateRate/findSuitableProviderRate)
-		rate, err := decimal.NewFromString(parts[3])
+		rate, err := decimal.NewFromString(parts[2])
 		if err != nil {
 			continue
 		}
@@ -1132,6 +1120,14 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		bucketCurrency := order.ProvisionBucket.Edges.Currency
 		if bucketCurrency == nil {
 			bucketCurrency, err = order.ProvisionBucket.QueryCurrency().Only(ctx)
+			if err != nil {
+				continue
+			}
+		}
+
+		network := order.Token.Edges.Network
+		if network == nil {
+			network, err = order.Token.QueryNetwork().Only(ctx)
 			if err != nil {
 				continue
 			}
