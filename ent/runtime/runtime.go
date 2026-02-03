@@ -534,20 +534,24 @@ func init() {
 	senderordertoken.RefundAddressValidator = senderordertokenDescRefundAddress.Validators[0].(func(string) error)
 	senderprofileFields := schema.SenderProfile{}.Fields()
 	_ = senderprofileFields
+	// senderprofileDescWebhookVersion is the schema descriptor for webhook_version field.
+	senderprofileDescWebhookVersion := senderprofileFields[2].Descriptor()
+	// senderprofile.DefaultWebhookVersion holds the default value on creation for the webhook_version field.
+	senderprofile.DefaultWebhookVersion = senderprofileDescWebhookVersion.Default.(string)
 	// senderprofileDescDomainWhitelist is the schema descriptor for domain_whitelist field.
-	senderprofileDescDomainWhitelist := senderprofileFields[2].Descriptor()
+	senderprofileDescDomainWhitelist := senderprofileFields[3].Descriptor()
 	// senderprofile.DefaultDomainWhitelist holds the default value on creation for the domain_whitelist field.
 	senderprofile.DefaultDomainWhitelist = senderprofileDescDomainWhitelist.Default.([]string)
 	// senderprofileDescIsPartner is the schema descriptor for is_partner field.
-	senderprofileDescIsPartner := senderprofileFields[4].Descriptor()
+	senderprofileDescIsPartner := senderprofileFields[5].Descriptor()
 	// senderprofile.DefaultIsPartner holds the default value on creation for the is_partner field.
 	senderprofile.DefaultIsPartner = senderprofileDescIsPartner.Default.(bool)
 	// senderprofileDescIsActive is the schema descriptor for is_active field.
-	senderprofileDescIsActive := senderprofileFields[5].Descriptor()
+	senderprofileDescIsActive := senderprofileFields[6].Descriptor()
 	// senderprofile.DefaultIsActive holds the default value on creation for the is_active field.
 	senderprofile.DefaultIsActive = senderprofileDescIsActive.Default.(bool)
 	// senderprofileDescUpdatedAt is the schema descriptor for updated_at field.
-	senderprofileDescUpdatedAt := senderprofileFields[6].Descriptor()
+	senderprofileDescUpdatedAt := senderprofileFields[7].Descriptor()
 	// senderprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	senderprofile.DefaultUpdatedAt = senderprofileDescUpdatedAt.Default.(func() time.Time)
 	// senderprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

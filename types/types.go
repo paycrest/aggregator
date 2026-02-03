@@ -283,6 +283,7 @@ type SenderOrderTokenPayload struct {
 // SenderProfilePayload is the payload for the sender profile endpoint
 type SenderProfilePayload struct {
 	WebhookURL      string                    `json:"webhookUrl"`
+	WebhookVersion  string                    `json:"webhookVersion" binding:"omitempty,oneof=1 2"`
 	DomainWhitelist []string                  `json:"domainWhitelist"`
 	Tokens          []SenderOrderTokenPayload `json:"tokens"`
 }
@@ -367,6 +368,7 @@ type SenderProfileResponse struct {
 	LastName              string                     `json:"lastName"`
 	Email                 string                     `json:"email"`
 	WebhookURL            string                     `json:"webhookUrl"`
+	WebhookVersion        string                     `json:"webhookVersion"`
 	DomainWhitelist       []string                   `json:"domainWhitelist"`
 	Tokens                []SenderOrderTokenResponse `json:"tokens"`
 	APIKey                APIKeyResponse             `json:"apiKey"`
@@ -576,8 +578,62 @@ type PaymentOrderWebhookData struct {
 
 // PaymentOrderWebhookPayload is the request type for a payment order webhook
 type PaymentOrderWebhookPayload struct {
-	Event string                  `json:"event"`
-	Data  PaymentOrderWebhookData `json:"data"`
+	Event          string                  `json:"event"`
+	WebhookVersion string                  `json:"webhookVersion"` // "1" or "2"
+	Data           PaymentOrderWebhookData `json:"data"`
+}
+
+// V2PaymentOrderWebhookRecipient is the recipient in v2 webhook payload (no KYC).
+type V2PaymentOrderWebhookRecipient struct {
+	Institution       string                 `json:"institution"`
+	AccountIdentifier string                 `json:"accountIdentifier"`
+	AccountName       string                 `json:"accountName"`
+	Memo              string                 `json:"memo"`
+	ProviderID        string                 `json:"providerId,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	Currency          string                 `json:"currency,omitempty"`
+}
+
+// V2PaymentOrderWebhookRefundAccount is the refund account in v2 webhook payload (onramp; no KYC).
+type V2PaymentOrderWebhookRefundAccount struct {
+	Institution       string                 `json:"institution"`
+	AccountIdentifier string                 `json:"accountIdentifier"`
+	AccountName       string                 `json:"accountName"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// V2PaymentOrderWebhookData is the v2 webhook data: direction "offramp"|"onramp", recipient/refundAccount with metadata, no KYC.
+type V2PaymentOrderWebhookData struct {
+	ID             uuid.UUID                           `json:"id"`
+	Direction      string                              `json:"direction"` // "offramp" or "onramp"
+	Amount         decimal.Decimal                     `json:"amount"`
+	AmountInUSD    decimal.Decimal                     `json:"amountInUsd"`
+	AmountPaid     decimal.Decimal                     `json:"amountPaid"`
+	AmountReturned decimal.Decimal                     `json:"amountReturned"`
+	PercentSettled decimal.Decimal                     `json:"percentSettled"`
+	SenderFee      decimal.Decimal                     `json:"senderFee"`
+	NetworkFee     decimal.Decimal                     `json:"networkFee"`
+	Rate           decimal.Decimal                     `json:"rate"`
+	Network        string                              `json:"network"`
+	GatewayID      string                              `json:"gatewayId"`
+	SenderID       uuid.UUID                           `json:"senderId"`
+	Recipient      V2PaymentOrderWebhookRecipient      `json:"recipient"`
+	RefundAccount  *V2PaymentOrderWebhookRefundAccount `json:"refundAccount,omitempty"`
+	FromAddress    string                              `json:"fromAddress"`
+	ReturnAddress  string                              `json:"returnAddress"`
+	RefundAddress  string                              `json:"refundAddress"`
+	Reference      string                              `json:"reference"`
+	UpdatedAt      time.Time                           `json:"updatedAt"`
+	CreatedAt      time.Time                           `json:"createdAt"`
+	TxHash         string                              `json:"txHash"`
+	Status         paymentorder.Status                 `json:"status"`
+}
+
+// V2PaymentOrderWebhookPayload is the v2 payment order webhook payload.
+type V2PaymentOrderWebhookPayload struct {
+	Event          string                    `json:"event"`
+	WebhookVersion string                    `json:"webhookVersion"`
+	Data           V2PaymentOrderWebhookData `json:"data"`
 }
 
 // V2CryptoSource represents the crypto source configuration for offramp v2 payment orders

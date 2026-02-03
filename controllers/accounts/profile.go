@@ -64,6 +64,14 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		return
 	}
 
+	if payload.WebhookVersion != "" && payload.WebhookVersion != "1" && payload.WebhookVersion != "2" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", []types.ErrorData{{
+			Field:   "WebhookVersion",
+			Message: "Must be \"1\" or \"2\"",
+		}})
+		return
+	}
+
 	// Get sender profile from the context
 	senderCtx, ok := ctx.Get("sender")
 	if !ok {
@@ -89,6 +97,10 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 
 	if payload.WebhookURL != "" && payload.WebhookURL != sender.WebhookURL {
 		update.SetWebhookURL(payload.WebhookURL)
+	}
+
+	if payload.WebhookVersion != "" && payload.WebhookVersion != sender.WebhookVersion {
+		update.SetWebhookVersion(payload.WebhookVersion)
 	}
 
 	if payload.DomainWhitelist != nil {
@@ -884,12 +896,17 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		kybRejectionComment = kybProfile.KybRejectionComment
 	}
 
+	webhookVersion := sender.WebhookVersion
+	if webhookVersion == "" {
+		webhookVersion = "1"
+	}
 	response := &types.SenderProfileResponse{
 		ID:                    sender.ID,
 		FirstName:             user.FirstName,
 		LastName:              user.LastName,
 		Email:                 user.Email,
 		WebhookURL:            sender.WebhookURL,
+		WebhookVersion:        webhookVersion,
 		DomainWhitelist:       sender.DomainWhitelist,
 		Tokens:                tokensPayload,
 		APIKey:                *apiKey,

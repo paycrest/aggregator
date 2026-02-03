@@ -17702,6 +17702,7 @@ type SenderProfileMutation struct {
 	typ                    string
 	id                     *uuid.UUID
 	webhook_url            *string
+	webhook_version        *string
 	domain_whitelist       *[]string
 	appenddomain_whitelist []string
 	provider_id            *string
@@ -17875,6 +17876,55 @@ func (m *SenderProfileMutation) WebhookURLCleared() bool {
 func (m *SenderProfileMutation) ResetWebhookURL() {
 	m.webhook_url = nil
 	delete(m.clearedFields, senderprofile.FieldWebhookURL)
+}
+
+// SetWebhookVersion sets the "webhook_version" field.
+func (m *SenderProfileMutation) SetWebhookVersion(s string) {
+	m.webhook_version = &s
+}
+
+// WebhookVersion returns the value of the "webhook_version" field in the mutation.
+func (m *SenderProfileMutation) WebhookVersion() (r string, exists bool) {
+	v := m.webhook_version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWebhookVersion returns the old "webhook_version" field's value of the SenderProfile entity.
+// If the SenderProfile object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderProfileMutation) OldWebhookVersion(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWebhookVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWebhookVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWebhookVersion: %w", err)
+	}
+	return oldValue.WebhookVersion, nil
+}
+
+// ClearWebhookVersion clears the value of the "webhook_version" field.
+func (m *SenderProfileMutation) ClearWebhookVersion() {
+	m.webhook_version = nil
+	m.clearedFields[senderprofile.FieldWebhookVersion] = struct{}{}
+}
+
+// WebhookVersionCleared returns if the "webhook_version" field was cleared in this mutation.
+func (m *SenderProfileMutation) WebhookVersionCleared() bool {
+	_, ok := m.clearedFields[senderprofile.FieldWebhookVersion]
+	return ok
+}
+
+// ResetWebhookVersion resets all changes to the "webhook_version" field.
+func (m *SenderProfileMutation) ResetWebhookVersion() {
+	m.webhook_version = nil
+	delete(m.clearedFields, senderprofile.FieldWebhookVersion)
 }
 
 // SetDomainWhitelist sets the "domain_whitelist" field.
@@ -18305,9 +18355,12 @@ func (m *SenderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SenderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
 	if m.webhook_url != nil {
 		fields = append(fields, senderprofile.FieldWebhookURL)
+	}
+	if m.webhook_version != nil {
+		fields = append(fields, senderprofile.FieldWebhookVersion)
 	}
 	if m.domain_whitelist != nil {
 		fields = append(fields, senderprofile.FieldDomainWhitelist)
@@ -18334,6 +18387,8 @@ func (m *SenderProfileMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case senderprofile.FieldWebhookURL:
 		return m.WebhookURL()
+	case senderprofile.FieldWebhookVersion:
+		return m.WebhookVersion()
 	case senderprofile.FieldDomainWhitelist:
 		return m.DomainWhitelist()
 	case senderprofile.FieldProviderID:
@@ -18355,6 +18410,8 @@ func (m *SenderProfileMutation) OldField(ctx context.Context, name string) (ent.
 	switch name {
 	case senderprofile.FieldWebhookURL:
 		return m.OldWebhookURL(ctx)
+	case senderprofile.FieldWebhookVersion:
+		return m.OldWebhookVersion(ctx)
 	case senderprofile.FieldDomainWhitelist:
 		return m.OldDomainWhitelist(ctx)
 	case senderprofile.FieldProviderID:
@@ -18380,6 +18437,13 @@ func (m *SenderProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetWebhookURL(v)
+		return nil
+	case senderprofile.FieldWebhookVersion:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWebhookVersion(v)
 		return nil
 	case senderprofile.FieldDomainWhitelist:
 		v, ok := value.([]string)
@@ -18449,6 +18513,9 @@ func (m *SenderProfileMutation) ClearedFields() []string {
 	if m.FieldCleared(senderprofile.FieldWebhookURL) {
 		fields = append(fields, senderprofile.FieldWebhookURL)
 	}
+	if m.FieldCleared(senderprofile.FieldWebhookVersion) {
+		fields = append(fields, senderprofile.FieldWebhookVersion)
+	}
 	if m.FieldCleared(senderprofile.FieldProviderID) {
 		fields = append(fields, senderprofile.FieldProviderID)
 	}
@@ -18469,6 +18536,9 @@ func (m *SenderProfileMutation) ClearField(name string) error {
 	case senderprofile.FieldWebhookURL:
 		m.ClearWebhookURL()
 		return nil
+	case senderprofile.FieldWebhookVersion:
+		m.ClearWebhookVersion()
+		return nil
 	case senderprofile.FieldProviderID:
 		m.ClearProviderID()
 		return nil
@@ -18482,6 +18552,9 @@ func (m *SenderProfileMutation) ResetField(name string) error {
 	switch name {
 	case senderprofile.FieldWebhookURL:
 		m.ResetWebhookURL()
+		return nil
+	case senderprofile.FieldWebhookVersion:
+		m.ResetWebhookVersion()
 		return nil
 	case senderprofile.FieldDomainWhitelist:
 		m.ResetDomainWhitelist()

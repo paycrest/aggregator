@@ -17,6 +17,8 @@ const (
 	FieldID = "id"
 	// FieldWebhookURL holds the string denoting the webhook_url field in the database.
 	FieldWebhookURL = "webhook_url"
+	// FieldWebhookVersion holds the string denoting the webhook_version field in the database.
+	FieldWebhookVersion = "webhook_version"
 	// FieldDomainWhitelist holds the string denoting the domain_whitelist field in the database.
 	FieldDomainWhitelist = "domain_whitelist"
 	// FieldProviderID holds the string denoting the provider_id field in the database.
@@ -71,6 +73,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldWebhookURL,
+	FieldWebhookVersion,
 	FieldDomainWhitelist,
 	FieldProviderID,
 	FieldIsPartner,
@@ -100,6 +103,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultWebhookVersion holds the default value on creation for the "webhook_version" field.
+	DefaultWebhookVersion string
 	// DefaultDomainWhitelist holds the default value on creation for the "domain_whitelist" field.
 	DefaultDomainWhitelist []string
 	// DefaultIsPartner holds the default value on creation for the "is_partner" field.
@@ -125,6 +130,11 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByWebhookURL orders the results by the webhook_url field.
 func ByWebhookURL(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWebhookURL, opts...).ToFunc()
+}
+
+// ByWebhookVersion orders the results by the webhook_version field.
+func ByWebhookVersion(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWebhookVersion, opts...).ToFunc()
 }
 
 // ByProviderID orders the results by the provider_id field.

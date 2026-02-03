@@ -244,6 +244,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 		Query().
 		Where(paymentorder.IDEQ(paymentOrder.ID)).
 		WithSenderProfile().
+		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -295,45 +296,104 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 		return err
 	}
 
-	// Create the payload
 	var providerID string
 	if paymentOrder.Edges.Provider != nil {
 		providerID = paymentOrder.Edges.Provider.ID
 	}
-	payloadStruct := types.PaymentOrderWebhookPayload{
-		Event: event,
-		Data: types.PaymentOrderWebhookData{
-			ID:             paymentOrder.ID,
-			Amount:         paymentOrder.Amount,
-			AmountPaid:     paymentOrder.AmountPaid,
-			AmountReturned: paymentOrder.AmountReturned,
-			PercentSettled: paymentOrder.PercentSettled,
-			SenderFee:      paymentOrder.SenderFee,
-			NetworkFee:     paymentOrder.NetworkFee,
-			Rate:           paymentOrder.Rate,
-			Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
-			GatewayID:      paymentOrder.GatewayID,
-			SenderID:       profile.ID,
-			Recipient: types.PaymentOrderRecipient{
-				Currency:          institution.Edges.FiatCurrency.Code,
+
+	webhookVersion := profile.WebhookVersion
+	if webhookVersion == "" {
+		webhookVersion = "1"
+	}
+
+	var payload map[string]interface{}
+	if webhookVersion == "2" {
+		// V2: direction "offramp"|"onramp", recipient/refundAccount with metadata
+		recipient := types.V2PaymentOrderWebhookRecipient{
+			Institution:       paymentOrder.Institution,
+			AccountIdentifier: paymentOrder.AccountIdentifier,
+			AccountName:       paymentOrder.AccountName,
+			Memo:              paymentOrder.Memo,
+			ProviderID:        providerID,
+			Currency:          institution.Edges.FiatCurrency.Code,
+			Metadata:          paymentOrder.Metadata,
+		}
+		var refundAccount *types.V2PaymentOrderWebhookRefundAccount
+		if paymentOrder.Direction == paymentorder.DirectionOnramp {
+			refundAccount = &types.V2PaymentOrderWebhookRefundAccount{
 				Institution:       paymentOrder.Institution,
 				AccountIdentifier: paymentOrder.AccountIdentifier,
 				AccountName:       paymentOrder.AccountName,
-				ProviderID:        providerID,
-				Memo:              paymentOrder.Memo,
+				Metadata:          paymentOrder.Metadata,
+			}
+		}
+		payloadStructV2 := types.V2PaymentOrderWebhookPayload{
+			Event:          event,
+			WebhookVersion: webhookVersion,
+			Data: types.V2PaymentOrderWebhookData{
+				ID:             paymentOrder.ID,
+				Direction:      string(paymentOrder.Direction),
+				Amount:         paymentOrder.Amount,
+				AmountInUSD:    paymentOrder.AmountInUsd,
+				AmountPaid:     paymentOrder.AmountPaid,
+				AmountReturned: paymentOrder.AmountReturned,
+				PercentSettled: paymentOrder.PercentSettled,
+				SenderFee:      paymentOrder.SenderFee,
+				NetworkFee:     paymentOrder.NetworkFee,
+				Rate:           paymentOrder.Rate,
+				Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
+				GatewayID:      paymentOrder.GatewayID,
+				SenderID:       profile.ID,
+				Recipient:      recipient,
+				RefundAccount:  refundAccount,
+				FromAddress:    paymentOrder.FromAddress,
+				ReturnAddress:  paymentOrder.RefundOrRecipientAddress,
+				RefundAddress:  paymentOrder.RefundOrRecipientAddress,
+				Reference:      paymentOrder.Reference,
+				UpdatedAt:      paymentOrder.UpdatedAt,
+				CreatedAt:      paymentOrder.CreatedAt,
+				TxHash:         paymentOrder.TxHash,
+				Status:         paymentOrder.Status,
 			},
-			FromAddress:   paymentOrder.FromAddress,
-			ReturnAddress: paymentOrder.RefundOrRecipientAddress,
-			RefundAddress: paymentOrder.RefundOrRecipientAddress,
-			Reference:     paymentOrder.Reference,
-			UpdatedAt:     paymentOrder.UpdatedAt,
-			CreatedAt:     paymentOrder.CreatedAt,
-			TxHash:        paymentOrder.TxHash,
-			Status:        paymentOrder.Status,
-		},
+		}
+		payload = StructToMap(payloadStructV2)
+	} else {
+		// V1: current payload (backward compatible)
+		payloadStruct := types.PaymentOrderWebhookPayload{
+			Event:          event,
+			WebhookVersion: webhookVersion,
+			Data: types.PaymentOrderWebhookData{
+				ID:             paymentOrder.ID,
+				Amount:         paymentOrder.Amount,
+				AmountPaid:     paymentOrder.AmountPaid,
+				AmountReturned: paymentOrder.AmountReturned,
+				PercentSettled: paymentOrder.PercentSettled,
+				SenderFee:      paymentOrder.SenderFee,
+				NetworkFee:     paymentOrder.NetworkFee,
+				Rate:           paymentOrder.Rate,
+				Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
+				GatewayID:      paymentOrder.GatewayID,
+				SenderID:       profile.ID,
+				Recipient: types.PaymentOrderRecipient{
+					Currency:          institution.Edges.FiatCurrency.Code,
+					Institution:       paymentOrder.Institution,
+					AccountIdentifier: paymentOrder.AccountIdentifier,
+					AccountName:       paymentOrder.AccountName,
+					ProviderID:        providerID,
+					Memo:              paymentOrder.Memo,
+				},
+				FromAddress:   paymentOrder.FromAddress,
+				ReturnAddress: paymentOrder.RefundOrRecipientAddress,
+				RefundAddress: paymentOrder.RefundOrRecipientAddress,
+				Reference:     paymentOrder.Reference,
+				UpdatedAt:     paymentOrder.UpdatedAt,
+				CreatedAt:     paymentOrder.CreatedAt,
+				TxHash:        paymentOrder.TxHash,
+				Status:        paymentOrder.Status,
+			},
+		}
+		payload = StructToMap(payloadStruct)
 	}
-
-	payload := StructToMap(payloadStruct)
 
 	// Compute HMAC signature
 	apiKey, err := profile.QueryAPIKey().Only(ctx)

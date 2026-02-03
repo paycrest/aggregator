@@ -570,6 +570,7 @@ var (
 	SenderProfilesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "webhook_url", Type: field.TypeString, Nullable: true},
+		{Name: "webhook_version", Type: field.TypeString, Nullable: true, Default: "1"},
 		{Name: "domain_whitelist", Type: field.TypeJSON},
 		{Name: "provider_id", Type: field.TypeString, Nullable: true},
 		{Name: "is_partner", Type: field.TypeBool, Default: false},
@@ -585,7 +586,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sender_profiles_users_sender_profile",
-				Columns:    []*schema.Column{SenderProfilesColumns[7]},
+				Columns:    []*schema.Column{SenderProfilesColumns[8]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
