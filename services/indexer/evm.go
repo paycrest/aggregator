@@ -779,16 +779,17 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			if !ok || orderIdStr == "" {
 				continue
 			}
-			amountStr, ok := indexedParams["amount"].(string)
+			liquidityProviderStr, _ := indexedParams["liquidityProvider"].(string)
+			recipientStr, ok := indexedParams["recipient"].(string)
+			if !ok || recipientStr == "" {
+				continue
+			}
+			amountStr, ok := nonIndexedParams["amount"].(string)
 			if !ok || amountStr == "" {
 				continue
 			}
 			amount, err := decimal.NewFromString(amountStr)
 			if err != nil {
-				continue
-			}
-			recipientStr, ok := indexedParams["recipient"].(string)
-			if !ok || recipientStr == "" {
 				continue
 			}
 			tokenStr, ok := nonIndexedParams["token"].(string)
@@ -806,14 +807,15 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 				rate, _ = decimal.NewFromString(rateStr)
 			}
 			settleInEvent := &types.SettleInEvent{
-				BlockNumber:   blockNumber,
-				TxHash:        txHashFromEvent,
-				OrderId:       orderIdStr,
-				Amount:        amount,
-				Recipient:     ethcommon.HexToAddress(recipientStr).Hex(),
-				Token:         ethcommon.HexToAddress(tokenStr).Hex(),
-				AggregatorFee: aggregatorFee,
-				Rate:          rate,
+				BlockNumber:       blockNumber,
+				TxHash:            txHashFromEvent,
+				OrderId:           orderIdStr,
+				LiquidityProvider: ethcommon.HexToAddress(liquidityProviderStr).Hex(),
+				Amount:            amount,
+				Recipient:         ethcommon.HexToAddress(recipientStr).Hex(),
+				Token:             ethcommon.HexToAddress(tokenStr).Hex(),
+				AggregatorFee:     aggregatorFee,
+				Rate:              rate,
 			}
 			settleInEvents = append(settleInEvents, settleInEvent)
 

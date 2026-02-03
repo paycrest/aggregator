@@ -18,7 +18,7 @@ const (
 	SettleOutEventSignature = "0x1e4a1a8ad772d3f0dbb387879bc5e8faadf16e0513bf77d50620741ab92b4c45"
 
 	// SettleIn (onramp): Gateway emits SettleIn(bytes32 indexed orderId, uint256 indexed amount, address indexed recipient, address token, uint256 aggregatorFee, uint96 rate)
-	SettleInEventSignature = "0x44de25d68888fdbe51bc67bbc990724fb5fa28119062e5f4ca623aefcaa70ecb"
+	SettleInEventSignature        = "0x44de25d68888fdbe51bc67bbc990724fb5fa28119062e5f4ca623aefcaa70ecb"
 	OrderCreatedStarknetSelector  = "0x3427759bfd3b941f14e687e129519da3c9b0046c5b9aaa290bb1dede63753b3"
 	OrderSettledStarknetSelector  = "0x2f4d375c16c9a465e9396e640dcf9032795bee57646a3117d94b9304be0868c"
 	OrderRefundedStarknetSelector = "0x2b1527a936433fc64df27b599aa49d8cbaac3a88b1b3888cf4384b9e8bea9cd"
@@ -155,33 +155,35 @@ func DecodeSettleOutEvent(log types.Log) (map[string]interface{}, error) {
 
 // DecodeSettleInEvent decodes a SettleIn event from RPC log (onramp settlement)
 func DecodeSettleInEvent(log types.Log) (map[string]interface{}, error) {
-	// SettleIn event: SettleIn(bytes32 indexed orderId, uint256 indexed amount, address indexed recipient, address token, uint256 aggregatorFee, uint96 rate)
-	// Topics: [eventSignature, orderId, amount, recipient]
-	// Data: [token (32 bytes padded), aggregatorFee (32 bytes), rate (32 bytes)]
+	// SettleIn event: SettleIn(bytes32 indexed orderId, address indexed liquidityProvider, address indexed recipient, uint256 amount, address token, uint256 aggregatorFee, uint96 rate)
+	// Topics: [eventSignature, orderId, liquidityProvider, recipient]
+	// Data: [amount (32), token (32), aggregatorFee (32), rate (32)]
 
 	if len(log.Topics) != 4 {
 		return nil, fmt.Errorf("invalid SettleIn event: expected 4 topics, got %d", len(log.Topics))
 	}
 
 	orderId := common.BytesToHash(log.Topics[1].Bytes())
-	amount := new(big.Int).SetBytes(log.Topics[2].Bytes())
+	liquidityProvider := common.HexToAddress(log.Topics[2].Hex())
 	recipient := common.HexToAddress(log.Topics[3].Hex())
 
-	if len(log.Data) < 96 {
+	if len(log.Data) < 128 {
 		return nil, fmt.Errorf("invalid SettleIn event data: too short")
 	}
 
-	token := common.BytesToAddress(log.Data[:32])
-	aggregatorFee := new(big.Int).SetBytes(log.Data[32:64])
-	rate := new(big.Int).SetBytes(log.Data[64:96])
+	amount := new(big.Int).SetBytes(log.Data[:32])
+	token := common.BytesToAddress(log.Data[32:64])
+	aggregatorFee := new(big.Int).SetBytes(log.Data[64:96])
+	rate := new(big.Int).SetBytes(log.Data[96:128])
 
 	return map[string]interface{}{
 		"indexed_params": map[string]interface{}{
-			"orderId":   orderId.Hex(),
-			"amount":    amount.String(),
-			"recipient": recipient.Hex(),
+			"orderId":           orderId.Hex(),
+			"liquidityProvider": liquidityProvider.Hex(),
+			"recipient":         recipient.Hex(),
 		},
 		"non_indexed_params": map[string]interface{}{
+			"amount":        amount.String(),
 			"token":         token.Hex(),
 			"aggregatorFee": aggregatorFee.String(),
 			"rate":          rate.String(),

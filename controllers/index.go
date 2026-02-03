@@ -2140,12 +2140,13 @@ func (ctrl *Controller) handleSettleInEvent(ctx *gin.Context, event types.Thirdw
 	nonIndexedParams := event.Data.Decoded.NonIndexedParams
 
 	orderId, _ := indexedParams["orderId"].(string)
-	amountStr, _ := indexedParams["amount"].(string)
+	liquidityProvider, _ := indexedParams["liquidityProvider"].(string)
+	recipient, _ := indexedParams["recipient"].(string)
+	amountStr, _ := nonIndexedParams["amount"].(string)
 	amount := decimal.Zero
 	if amountStr != "" {
 		amount, _ = decimal.NewFromString(amountStr)
 	}
-	recipient, _ := indexedParams["recipient"].(string)
 	tokenStr, _ := nonIndexedParams["token"].(string)
 	aggregatorFeeStr, _ := nonIndexedParams["aggregatorFee"].(string)
 	aggregatorFee := decimal.Zero
@@ -2159,14 +2160,15 @@ func (ctrl *Controller) handleSettleInEvent(ctx *gin.Context, event types.Thirdw
 	}
 
 	settleInEvent := &types.SettleInEvent{
-		BlockNumber:   event.Data.BlockNumber,
-		TxHash:        event.Data.TransactionHash,
-		OrderId:       orderId,
-		Amount:        amount,
-		Recipient:     ethcommon.HexToAddress(recipient).Hex(),
-		Token:         ethcommon.HexToAddress(tokenStr).Hex(),
-		AggregatorFee: aggregatorFee,
-		Rate:          rate,
+		BlockNumber:       event.Data.BlockNumber,
+		TxHash:            event.Data.TransactionHash,
+		OrderId:           orderId,
+		LiquidityProvider: ethcommon.HexToAddress(liquidityProvider).Hex(),
+		Amount:            amount,
+		Recipient:         ethcommon.HexToAddress(recipient).Hex(),
+		Token:             ethcommon.HexToAddress(tokenStr).Hex(),
+		AggregatorFee:     aggregatorFee,
+		Rate:              rate,
 	}
 	return common.UpdateOrderStatusSettleIn(ctx, network, settleInEvent)
 }

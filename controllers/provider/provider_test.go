@@ -959,7 +959,6 @@ func TestProvider(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "Rate fetched successfully", response.Message)
-			// Offramp view: use sell-side rate as primary
 			assert.Equal(t, "950.0", response.Data.MarketSellRate.StringFixed(1))
 		})
 	})

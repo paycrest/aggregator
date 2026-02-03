@@ -256,30 +256,34 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 					}).Errorf("Failed to unpack SettleIn event data for %s", network.Identifier)
 					continue
 				}
-				// SettleIn: indexed orderId, amount, recipient; data: token, aggregatorFee, rate
+				// SettleIn: indexed orderId, liquidityProvider, recipient; data: amount, token, aggregatorFee, rate
 				eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
-				amountTopic := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[2])
-				amountBig := new(big.Int).SetBytes(amountTopic[:])
+				liquidityProviderStr := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
 				recipientStr := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[3].(string))
-				tokenVal := unpackedEventData[0]
+				amountBig, _ := unpackedEventData[0].(*big.Int)
+				if amountBig == nil {
+					amountBig = new(big.Int)
+				}
+				tokenVal := unpackedEventData[1]
 				tokenStr := ""
 				if addr, ok := tokenVal.(ethcommon.Address); ok {
 					tokenStr = addr.Hex()
 				} else if addr, ok := tokenVal.([]byte); ok && len(addr) >= 20 {
 					tokenStr = "0x" + hex.EncodeToString(addr[len(addr)-20:])
 				}
-				aggregatorFee := unpackedEventData[1].(*big.Int)
-				rate := unpackedEventData[2].(*big.Int)
+				aggregatorFee := unpackedEventData[2].(*big.Int)
+				rate := unpackedEventData[3].(*big.Int)
 				orderIdStr := fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:]))
 				settleInEvent := &types.SettleInEvent{
-					BlockNumber:   int64(data["blockNumber"].(float64)),
-					TxHash:        data["id"].(string),
-					OrderId:       orderIdStr,
-					Amount:        utils.FromSubunit(amountBig, 0),
-					Recipient:     recipientStr,
-					Token:         tokenStr,
-					AggregatorFee: utils.FromSubunit(aggregatorFee, 0),
-					Rate:          utils.FromSubunit(rate, 0),
+					BlockNumber:       int64(data["blockNumber"].(float64)),
+					TxHash:            data["id"].(string),
+					OrderId:           orderIdStr,
+					LiquidityProvider: liquidityProviderStr,
+					Amount:            utils.FromSubunit(amountBig, 0),
+					Recipient:         recipientStr,
+					Token:             tokenStr,
+					AggregatorFee:     utils.FromSubunit(aggregatorFee, 0),
+					Rate:              utils.FromSubunit(rate, 0),
 				}
 				settleInEvents = append(settleInEvents, settleInEvent)
 

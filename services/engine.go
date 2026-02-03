@@ -511,7 +511,7 @@ func (s *EngineService) CreateGatewayWebhook() error {
 		},
 		{
 			"sig_hash": "0x44de25d68888fdbe51bc67bbc990724fb5fa28119062e5f4ca623aefcaa70ecb", // SettleIn (onramp) event signature
-			"abi":      "{\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"orderId\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"aggregatorFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint96\",\"name\":\"rate\",\"type\":\"uint96\"}],\"name\":\"SettleIn\",\"type\":\"event\"}",
+			"abi":      "{\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"orderId\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"liquidityProvider\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"aggregatorFee\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint96\",\"name\":\"rate\",\"type\":\"uint96\"}],\"name\":\"SettleIn\",\"type\":\"event\"}",
 		},
 		{
 			"sig_hash": "0x0736fe428e1747ca8d387c2e6fa1a31a0cde62d3a167c40a46ade59a3cdc828e", // OrderRefunded event signature
@@ -987,18 +987,18 @@ func (s *EngineService) TransferToken(ctx context.Context, chainID int64, fromAd
 	// Prepare the contract call parameters
 	contractParams := map[string]interface{}{
 		"contractAddress": tokenAddress,
-		"method":         "transfer",
-		"params":         []interface{}{toAddress, amount},
-		"abi":            transferABI,
-		"value":          "0", // No ETH value for ERC-20 transfers
+		"method":          "transfer",
+		"params":          []interface{}{toAddress, amount},
+		"abi":             transferABI,
+		"value":           "0", // No ETH value for ERC-20 transfers
 	}
 
 	// Prepare execution options
 	executionOptions := map[string]interface{}{
-		"chainId":         fmt.Sprintf("%d", chainID),
-		"idempotencyKey":  idempotencyKey,
-		"from":            fromAddress,
-		"type":            "auto",
+		"chainId":        fmt.Sprintf("%d", chainID),
+		"idempotencyKey": idempotencyKey,
+		"from":           fromAddress,
+		"type":           "auto",
 	}
 
 	// Prepare the request payload

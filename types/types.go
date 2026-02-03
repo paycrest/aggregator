@@ -104,14 +104,15 @@ type OrderSettledEvent struct {
 
 // SettleInEvent represents an onramp settlement event (Gateway SettleIn).
 type SettleInEvent struct {
-	BlockNumber   int64
-	TxHash        string
-	OrderId       string
-	Amount        decimal.Decimal
-	Recipient     string
-	Token         string
-	AggregatorFee decimal.Decimal
-	Rate          decimal.Decimal
+	BlockNumber       int64
+	TxHash            string
+	OrderId           string
+	LiquidityProvider string
+	Amount            decimal.Decimal
+	Recipient         string
+	Token             string
+	AggregatorFee     decimal.Decimal
+	Rate              decimal.Decimal
 }
 
 // OrderRefundedEvent represents a order refunded event.
@@ -1023,8 +1024,8 @@ type EventCounts struct {
 	Transfer      int `json:"Transfer"`
 	OrderCreated  int `json:"OrderCreated"`
 	OrderSettled  int `json:"OrderSettled"`
-	SettleOut     int `json:"SettleOut"`     // SettleOut (offramp)
-	SettleIn      int `json:"SettleIn"`      // SettleIn (onramp)
+	SettleOut     int `json:"SettleOut"` // SettleOut (offramp)
+	SettleIn      int `json:"SettleIn"`  // SettleIn (onramp)
 	OrderRefunded int `json:"OrderRefunded"`
 }
 
