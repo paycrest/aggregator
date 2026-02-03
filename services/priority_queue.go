@@ -213,7 +213,7 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 
 				for _, b := range bals {
 					// Only inspect the relevant fiat currency for this bucket.
-					if b.Edges.FiatCurrency == nil || b.Edges.FiatCurrency.Code != bucket.Edges.Currency.Code {
+					if b.Edges.FiatCurrency == nil || !b.IsAvailable || b.Edges.FiatCurrency.Code != bucket.Edges.Currency.Code {
 						continue
 					}
 					report := s.balanceService.CheckBalanceHealth(b)
