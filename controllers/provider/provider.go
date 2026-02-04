@@ -1395,6 +1395,35 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
+	// Only proceed to settlement when validation succeeded; reject failed/pending like handlePayoutFulfillment
+	switch payload.ValidationStatus {
+	case paymentorderfulfillment.ValidationStatusFailed:
+		_, err := fulfillment.Update().
+			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+			SetValidationError(payload.ValidationError).
+			Save(ctx)
+		if err != nil {
+			logger.Errorf("Failed to update payin fulfillment to failed: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+		// Release reserved token balance (provider reserved when they accepted)
+		if fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Edges.Token != nil && fulfillment.Edges.Order.Edges.Provider != nil {
+			totalCryptoReserved := fulfillment.Edges.Order.Amount.Add(fulfillment.Edges.Order.SenderFee)
+			if relErr := ctrl.balanceService.ReleaseTokenBalance(ctx, fulfillment.Edges.Order.Edges.Provider.ID, fulfillment.Edges.Order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+				logger.Errorf("Failed to release token balance for payin validation failure (order %s): %v", orderID, relErr)
+			}
+		}
+		u.APIResponse(ctx, http.StatusOK, "success", "Fulfillment validation failed", nil)
+		return
+	case paymentorderfulfillment.ValidationStatusSuccess:
+		// Proceed to settlement below
+	default:
+		// Pending or unknown: do not attempt settlement
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Fulfillment must have validation status success to settle payin order", nil)
+		return
+	}
+
 	// Fetch order with token, network, provider, and sender profile (prepareSettleInCallData needs SenderProfile.ID)
 	orderWithDetails, err := storage.Client.PaymentOrder.
 		Query().
