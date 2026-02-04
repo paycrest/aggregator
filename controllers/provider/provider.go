@@ -1365,13 +1365,28 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	// Get provider payout address (settlement address for the token)
+	// Derive currency from order's institution (provider can have same token for multiple fiat currencies)
+	institution, err := u.GetInstitutionByCode(ctx, orderWithDetails.Institution, true)
+	if err != nil {
+		logger.Errorf("Failed to fetch institution for payin settlement: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order institution", nil)
+		return
+	}
+	if institution == nil || institution.Edges.FiatCurrency == nil {
+		logger.Errorf("Order institution or fiat currency not found: %s", orderWithDetails.Institution)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order institution not configured", nil)
+		return
+	}
+	currencyCode := institution.Edges.FiatCurrency.Code
+
+	// Get provider payout address
 	providerOrderToken, err := storage.Client.ProviderOrderToken.
 		Query().
 		Where(
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 			providerordertoken.HasTokenWith(token.IDEQ(orderWithDetails.Edges.Token.ID)),
 			providerordertoken.NetworkEQ(orderWithDetails.Edges.Token.Edges.Network.Identifier),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
 		).
 		Only(ctx)
 	if err != nil {
