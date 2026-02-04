@@ -370,15 +370,14 @@ func setupForPQ() error {
 	testCtxForPQ.publicProviderProfileAPIKey = apiKey
 	_, err = test.AddProviderOrderTokenToProvider(
 		map[string]interface{}{
-			"fixed_conversion_rate":    decimal.NewFromFloat(100),
-			"conversion_rate_type":     "fixed",
-			"floating_conversion_rate": decimal.NewFromFloat(1.0),
-			"max_order_amount":         decimal.NewFromFloat(1000),
-			"min_order_amount":         decimal.NewFromFloat(1.0),
-			"provider":                 publicProviderProfile,
-			"currency_id":              currency.ID,
-			"network":                  token.Edges.Network.Identifier,
-			"token_id":                 token.ID,
+			"fixed_buy_rate":   decimal.NewFromFloat(100),
+			"fixed_sell_rate":  decimal.NewFromFloat(100),
+			"max_order_amount": decimal.NewFromFloat(1000),
+			"min_order_amount": decimal.NewFromFloat(1.0),
+			"provider":         publicProviderProfile,
+			"currency_id":      currency.ID,
+			"network":          token.Edges.Network.Identifier,
+			"token_id":         token.ID,
 		},
 	)
 	if err != nil {

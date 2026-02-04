@@ -614,13 +614,12 @@ func TestProfile(t *testing.T) {
 					}},
 				}
 				res := profileUpdateRequest(payload)
-				// With two-sided rates and current thresholds, this configuration is accepted.
-				assert.Equal(t, http.StatusOK, res.Code)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
 
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Profile updated successfully", response.Message)
+				assert.Contains(t, response.Message, "Rate slippage cannot be less than 0.1%")
 			})
 
 			t.Run("succeeds with valid rate slippage", func(t *testing.T) {
@@ -1302,7 +1301,7 @@ func TestProfile(t *testing.T) {
 				SetProviderID(testCtx.providerProfile.ID).
 				SetTokenID(testCtx.token.ID).
 				SetCurrencyID(usd.ID).
-				SetFixedBuyRate(decimal.NewFromInt(2)).   // synthetic buy/sell spread for test
+				SetFixedBuyRate(decimal.NewFromInt(2)). // synthetic buy/sell spread for test
 				SetFixedSellRate(decimal.NewFromInt(1)).
 				SetFloatingBuyDelta(decimal.Zero).
 				SetFloatingSellDelta(decimal.Zero).

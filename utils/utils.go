@@ -428,6 +428,31 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	return nil
 }
 
+// parseValidUntilFromMetadata extracts a time from metadata validUntil (string RFC3339 or numeric Unix seconds).
+func parseValidUntilFromMetadata(v interface{}) (time.Time, bool) {
+	if v == nil {
+		return time.Time{}, false
+	}
+	switch x := v.(type) {
+	case string:
+		t, err := time.Parse(time.RFC3339, x)
+		if err != nil {
+			return time.Time{}, false
+		}
+		return t, true
+	case float64:
+		return time.Unix(int64(x), 0), true
+	case int:
+		return time.Unix(int64(x), 0), true
+	case int64:
+		return time.Unix(x, 0), true
+	case int32:
+		return time.Unix(int64(x), 0), true
+	default:
+		return time.Time{}, false
+	}
+}
+
 // BuildV2OrderSourceDestinationProviderAccount builds source, destination, and providerAccount for v2 API/get responses.
 // paymentOrder must have Token and Token.Edges.Network loaded. institution is required for fiat (currency); use nil only if unavailable (then currency/institution display may be empty).
 func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder, institution *ent.Institution) (source, destination, providerAccount any) {
@@ -462,11 +487,15 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 				if v, ok := pa["accountName"].(string); ok {
 					acctName = v
 				}
+				var validUntil time.Time
+				if t, ok := parseValidUntilFromMetadata(pa["validUntil"]); ok {
+					validUntil = t
+				}
 				providerAccount = &types.V2FiatProviderAccount{
 					Institution:       inst,
 					AccountIdentifier: acctID,
 					AccountName:       acctName,
-					ValidUntil:        time.Time{},
+					ValidUntil:        validUntil,
 				}
 			}
 		}

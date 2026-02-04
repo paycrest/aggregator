@@ -1855,7 +1855,11 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 
 	var validUntil time.Time
 	if validUntilStr, ok := providerResponse["validUntil"].(string); ok {
-		validUntil, _ = time.Parse(time.RFC3339, validUntilStr)
+		var err error
+		validUntil, err = time.Parse(time.RFC3339, validUntilStr)
+		if err != nil {
+			validUntil = time.Now().Add(orderConf.OrderFulfillmentValidity)
+		}
 	} else {
 		validUntil = time.Now().Add(orderConf.OrderFulfillmentValidity) // Default validity
 	}

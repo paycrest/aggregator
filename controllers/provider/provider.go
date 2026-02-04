@@ -172,6 +172,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 	statusMap := map[string]paymentorder.Status{
 		"pending":    paymentorder.StatusPending,
 		"validated":  paymentorder.StatusValidated,
+		"processing": paymentorder.StatusFulfilling, // for backwards compatibility
 		"fulfilling": paymentorder.StatusFulfilling,
 		"fulfilled":  paymentorder.StatusFulfilled,
 		"cancelled":  paymentorder.StatusCancelled,
@@ -1473,6 +1474,36 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 	// Execute EIP-7702 transaction (after marker is persisted so retries are idempotent)
 	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, payload.Authorization, settleInData); err != nil {
 		logger.Errorf("Failed to execute payin settlement: %v", err)
+		// Compensating update: revert order status and remove settlement log so provider can retry
+		txCompensate, txErr := storage.Client.Tx(ctx)
+		if txErr != nil {
+			logger.Errorf("Failed to start compensating transaction: %v", txErr)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+			return
+		}
+		_, txErr = txCompensate.PaymentOrder.
+			UpdateOneID(orderID).
+			SetStatus(paymentorder.StatusValidated).
+			RemoveTransactions(transactionLog).
+			Save(ctx)
+		if txErr != nil {
+			_ = txCompensate.Rollback()
+			logger.Errorf("Failed to revert order status on settlement error: %v", txErr)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+			return
+		}
+		txErr = txCompensate.TransactionLog.DeleteOneID(transactionLog.ID).Exec(ctx)
+		if txErr != nil {
+			_ = txCompensate.Rollback()
+			logger.Errorf("Failed to remove settlement log on settlement error: %v", txErr)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+			return
+		}
+		if commitErr := txCompensate.Commit(); commitErr != nil {
+			logger.Errorf("Failed to commit compensating transaction: %v", commitErr)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+			return
+		}
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
 		return
 	}
@@ -1546,6 +1577,13 @@ func gatewayOrderIDFromEncode(payoutAddress, aggregatorAddress string, paymentOr
 
 // prepareSettleInCallData prepares the call data for Gateway settleIn method
 func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order *ent.PaymentOrder, gatewayOrderID string) ([]byte, error) {
+	if order.Edges.SenderProfile == nil {
+		return nil, fmt.Errorf("order has no sender profile")
+	}
+	if order.Edges.Token == nil {
+		return nil, fmt.Errorf("order has no token")
+	}
+
 	// Use current Gateway contract bindings; plan expects regenerated bindings if ABI changes
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
 	if err != nil {
