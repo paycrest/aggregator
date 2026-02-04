@@ -105,7 +105,7 @@ func RetryStaleUserOperations() error {
 		}
 	}(ctx)
 
-	// Settle order process: validated orders (5–15 min old) or orders stuck in settling (> 5 min)
+	// Settle order process: validated orders or orders stuck in settling (> 10 min)
 	lockOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
