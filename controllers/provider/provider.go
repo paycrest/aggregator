@@ -1344,7 +1344,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	// Fetch order with token and network
+	// Fetch order with token, network, provider, and sender profile (prepareSettleInCallData needs SenderProfile.ID)
 	orderWithDetails, err := storage.Client.PaymentOrder.
 		Query().
 		Where(paymentorder.IDEQ(orderID)).
@@ -1352,6 +1352,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 			tq.WithNetwork()
 		}).
 		WithProvider().
+		WithSenderProfile().
 		Only(ctx)
 	if err != nil {
 		logger.Errorf("Failed to fetch order details: %v", err)
@@ -1476,7 +1477,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Order fulfilled successfully", nil)
+	u.APIResponse(ctx, http.StatusOK, "success", "Order submitted for settlement", nil)
 }
 
 // gatewayOrderIDFromEncode returns keccak256(abi.encode(payoutAddress, aggregatorAddress, paymentOrderID, chainID)) as hex.
@@ -1589,6 +1590,10 @@ func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *
 	gatewayAddress := order.Edges.Token.Edges.Network.GatewayContractAddress
 	if gatewayAddress == "" {
 		return fmt.Errorf("gateway contract address not set for network")
+	}
+	orderChainID := order.Edges.Token.Edges.Network.ChainID
+	if fmt.Sprintf("%d", orderChainID) != authorization.ChainID {
+		return fmt.Errorf("authorization chain ID does not match order network")
 	}
 
 	// yParity: 0 or 1 (Engine expects yParity; provider sends V as 0, 1, 27, or 28)

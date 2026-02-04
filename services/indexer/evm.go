@@ -797,14 +797,38 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 				tokenStr = ""
 			}
 			aggregatorFeeStr, _ := nonIndexedParams["aggregatorFee"].(string)
-			aggregatorFee := decimal.Zero
-			if aggregatorFeeStr != "" {
-				aggregatorFee, _ = decimal.NewFromString(aggregatorFeeStr)
+			var aggregatorFee decimal.Decimal
+			if aggregatorFeeStr == "" {
+				aggregatorFee = decimal.Zero
+			} else {
+				var parseErr error
+				aggregatorFee, parseErr = decimal.NewFromString(aggregatorFeeStr)
+				if parseErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":         fmt.Sprintf("%v", parseErr),
+						"aggregatorFee": aggregatorFeeStr,
+						"orderId":       orderIdStr,
+						"txHash":        txHashFromEvent,
+					}).Warnf("SettleIn: failed to parse aggregatorFee, skipping event")
+					continue
+				}
 			}
 			rateStr, _ := nonIndexedParams["rate"].(string)
-			rate := decimal.Zero
-			if rateStr != "" {
-				rate, _ = decimal.NewFromString(rateStr)
+			var rate decimal.Decimal
+			if rateStr == "" {
+				rate = decimal.Zero
+			} else {
+				var parseErr error
+				rate, parseErr = decimal.NewFromString(rateStr)
+				if parseErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", parseErr),
+						"rate":    rateStr,
+						"orderId": orderIdStr,
+						"txHash":  txHashFromEvent,
+					}).Warnf("SettleIn: failed to parse rate, skipping event")
+					continue
+				}
 			}
 			settleInEvent := &types.SettleInEvent{
 				BlockNumber:       blockNumber,

@@ -666,10 +666,22 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 		}
 	}
 
-	// Get the first provider from the circular queue
-	redisKey := fmt.Sprintf("bucket_%s_%s_%s", order.ProvisionBucket.Edges.Currency.Code, order.ProvisionBucket.MinAmount, order.ProvisionBucket.MaxAmount)
-
-	// partnerProviders := []string{}
+	// Use same side-suffixed key as buildQueueForSide so reads/writes use identical keys
+	baseRedisKey := fmt.Sprintf("bucket_%s_%s_%s", order.ProvisionBucket.Edges.Currency.Code, order.ProvisionBucket.MinAmount, order.ProvisionBucket.MaxAmount)
+	var side RateSide
+	if currentOrder != nil {
+		switch currentOrder.Direction {
+		case paymentorder.DirectionOnramp:
+			side = RateSideBuy
+		case paymentorder.DirectionOfframp:
+			side = RateSideSell
+		default:
+			side = RateSideBuy
+		}
+	} else {
+		side = RateSideBuy // default when order not yet in DB (e.g. new order)
+	}
+	redisKey := baseRedisKey + "_" + string(side)
 
 	err = s.matchRate(ctx, redisKey, orderIDPrefix, order, excludeList)
 	if err != nil {
@@ -760,7 +772,7 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 	}
 
 	orderRequestData := map[string]interface{}{
-		"type": "otc",
+		"type":       "otc",
 		"providerId": order.ProviderID,
 	}
 	err = storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err()

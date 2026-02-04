@@ -602,31 +602,28 @@ type V2PaymentOrderWebhookRefundAccount struct {
 	Metadata          map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// V2PaymentOrderWebhookData is the v2 webhook data: direction "offramp"|"onramp", recipient/refundAccount with metadata, no KYC.
+// V2PaymentOrderWebhookData is the v2 webhook data, aligned with API schema: providerAccount, source, destination (same types as V2PaymentOrderResponse).
 type V2PaymentOrderWebhookData struct {
-	ID             uuid.UUID                           `json:"id"`
-	Direction      string                              `json:"direction"` // "offramp" or "onramp"
-	Amount         decimal.Decimal                     `json:"amount"`
-	AmountInUSD    decimal.Decimal                     `json:"amountInUsd"`
-	AmountPaid     decimal.Decimal                     `json:"amountPaid"`
-	AmountReturned decimal.Decimal                     `json:"amountReturned"`
-	PercentSettled decimal.Decimal                     `json:"percentSettled"`
-	SenderFee      decimal.Decimal                     `json:"senderFee"`
-	NetworkFee     decimal.Decimal                     `json:"networkFee"`
-	Rate           decimal.Decimal                     `json:"rate"`
-	Network        string                              `json:"network"`
-	GatewayID      string                              `json:"gatewayId"`
-	SenderID       uuid.UUID                           `json:"senderId"`
-	Recipient      V2PaymentOrderWebhookRecipient      `json:"recipient"`
-	RefundAccount  *V2PaymentOrderWebhookRefundAccount `json:"refundAccount,omitempty"`
-	FromAddress    string                              `json:"fromAddress"`
-	ReturnAddress  string                              `json:"returnAddress"`
-	RefundAddress  string                              `json:"refundAddress"`
-	Reference      string                              `json:"reference"`
-	UpdatedAt      time.Time                           `json:"updatedAt"`
-	CreatedAt      time.Time                           `json:"createdAt"`
-	TxHash         string                              `json:"txHash"`
-	Status         paymentorder.Status                 `json:"status"`
+	ID              uuid.UUID           `json:"id"`
+	Direction       string              `json:"direction"` // "offramp" or "onramp"
+	Amount          decimal.Decimal     `json:"amount"`
+	AmountInUSD     decimal.Decimal     `json:"amountInUsd"`
+	AmountPaid      decimal.Decimal     `json:"amountPaid"`
+	AmountReturned  decimal.Decimal     `json:"amountReturned"`
+	PercentSettled  decimal.Decimal     `json:"percentSettled"`
+	SenderFee       decimal.Decimal     `json:"senderFee"`
+	TransactionFee  decimal.Decimal     `json:"transactionFee"` // network fee + protocol fee
+	Rate            decimal.Decimal     `json:"rate"`
+	GatewayID       string              `json:"gatewayId"`
+	SenderID        uuid.UUID           `json:"senderId"`
+	ProviderAccount any                 `json:"providerAccount,omitempty"` // V2CryptoProviderAccount (offramp) or V2FiatProviderAccount (onramp)
+	Source          any                 `json:"source,omitempty"`          // V2CryptoSource (offramp) or V2FiatSource (onramp)
+	Destination     any                 `json:"destination,omitempty"`     // V2FiatDestination (offramp) or V2CryptoDestination (onramp)
+	FromAddress     string              `json:"fromAddress"`
+	Reference       string              `json:"reference"`
+	Timestamp       time.Time           `json:"timestamp"` // when this webhook event was sent (for ordering/idempotency)
+	TxHash          string              `json:"txHash"`
+	Status          paymentorder.Status `json:"status"`
 }
 
 // V2PaymentOrderWebhookPayload is the v2 payment order webhook payload.

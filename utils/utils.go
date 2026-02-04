@@ -308,52 +308,129 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 
 	var payload map[string]interface{}
 	if webhookVersion == "2" {
-		// V2: direction "offramp"|"onramp", recipient/refundAccount with metadata
-		recipient := types.V2PaymentOrderWebhookRecipient{
-			Institution:       paymentOrder.Institution,
-			AccountIdentifier: paymentOrder.AccountIdentifier,
-			AccountName:       paymentOrder.AccountName,
-			Memo:              paymentOrder.Memo,
-			ProviderID:        providerID,
-			Currency:          institution.Edges.FiatCurrency.Code,
-			Metadata:          paymentOrder.Metadata,
-		}
-		var refundAccount *types.V2PaymentOrderWebhookRefundAccount
-		if paymentOrder.Direction == paymentorder.DirectionOnramp {
-			refundAccount = &types.V2PaymentOrderWebhookRefundAccount{
-				Institution:       paymentOrder.Institution,
-				AccountIdentifier: paymentOrder.AccountIdentifier,
-				AccountName:       paymentOrder.AccountName,
-				Metadata:          paymentOrder.Metadata,
+		// V2: aligned with API schema — providerAccount, source, destination (same types as V2PaymentOrderResponse).
+		isOnramp := paymentOrder.Direction == paymentorder.DirectionOnramp
+		networkID := paymentOrder.Edges.Token.Edges.Network.Identifier
+		currencyCode := institution.Edges.FiatCurrency.Code
+		tokenSymbol := paymentOrder.Edges.Token.Symbol
+
+		var providerAccount, source, destination any
+		if isOnramp {
+			// Onramp: providerAccount = fiat (where to pay); source = fiat + refundAccount; destination = crypto recipient.
+			if paymentOrder.Metadata != nil {
+				if pa, ok := paymentOrder.Metadata["providerAccount"].(map[string]interface{}); ok {
+					var inst, acctID, acctName string
+					if v, ok := pa["institution"].(string); ok {
+						inst = v
+					}
+					if v, ok := pa["accountIdentifier"].(string); ok {
+						acctID = v
+					}
+					if v, ok := pa["accountName"].(string); ok {
+						acctName = v
+					}
+					providerAccount = &types.V2FiatProviderAccount{
+						Institution:       inst,
+						AccountIdentifier: acctID,
+						AccountName:       acctName,
+						ValidUntil:        time.Time{},
+					}
+				}
+			}
+			refundAccountMetadata := (map[string]interface{})(nil)
+			if paymentOrder.Metadata != nil {
+				if m, ok := paymentOrder.Metadata["refundAccountMetadata"].(map[string]interface{}); ok {
+					refundAccountMetadata = m
+				}
+			}
+			country := ""
+			if paymentOrder.Metadata != nil {
+				if c, ok := paymentOrder.Metadata["country"].(string); ok {
+					country = c
+				}
+			}
+			source = &types.V2FiatSource{
+				Type:     "fiat",
+				Currency: currencyCode,
+				Country:  country,
+				RefundAccount: types.V2FiatRefundAccount{
+					Institution:       paymentOrder.Institution,
+					AccountIdentifier: paymentOrder.AccountIdentifier,
+					AccountName:       paymentOrder.AccountName,
+					Metadata:          refundAccountMetadata,
+				},
+			}
+			destination = &types.V2CryptoDestination{
+				Type:       "crypto",
+				Currency:   tokenSymbol,
+				Network:    networkID,
+				ProviderID: providerID,
+				Recipient: types.V2CryptoRecipient{
+					Address:  paymentOrder.RefundOrRecipientAddress,
+					Network:  networkID,
+					Metadata: nil,
+				},
+			}
+		} else {
+			// Offramp: providerAccount = crypto (where to pay); source = crypto + refundAddress; destination = fiat recipient.
+			if paymentOrder.ReceiveAddress != "" {
+				providerAccount = &types.V2CryptoProviderAccount{
+					Network:        networkID,
+					ReceiveAddress: paymentOrder.ReceiveAddress,
+					ValidUntil:     paymentOrder.ReceiveAddressExpiry,
+				}
+			}
+			source = &types.V2CryptoSource{
+				Type:          "crypto",
+				Currency:      tokenSymbol,
+				Network:       networkID,
+				RefundAddress: paymentOrder.RefundOrRecipientAddress,
+			}
+			destCountry := ""
+			if paymentOrder.Metadata != nil {
+				if c, ok := paymentOrder.Metadata["country"].(string); ok {
+					destCountry = c
+				}
+			}
+			destination = &types.V2FiatDestination{
+				Type:       "fiat",
+				Currency:   currencyCode,
+				Country:    destCountry,
+				ProviderID: providerID,
+				Recipient: types.V2FiatRecipient{
+					Institution:       paymentOrder.Institution,
+					AccountIdentifier: paymentOrder.AccountIdentifier,
+					AccountName:       paymentOrder.AccountName,
+					Memo:              paymentOrder.Memo,
+					Metadata:          paymentOrder.Metadata,
+				},
 			}
 		}
+
 		payloadStructV2 := types.V2PaymentOrderWebhookPayload{
 			Event:          event,
 			WebhookVersion: webhookVersion,
 			Data: types.V2PaymentOrderWebhookData{
-				ID:             paymentOrder.ID,
-				Direction:      string(paymentOrder.Direction),
-				Amount:         paymentOrder.Amount,
-				AmountInUSD:    paymentOrder.AmountInUsd,
-				AmountPaid:     paymentOrder.AmountPaid,
-				AmountReturned: paymentOrder.AmountReturned,
-				PercentSettled: paymentOrder.PercentSettled,
-				SenderFee:      paymentOrder.SenderFee,
-				NetworkFee:     paymentOrder.NetworkFee,
-				Rate:           paymentOrder.Rate,
-				Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
-				GatewayID:      paymentOrder.GatewayID,
-				SenderID:       profile.ID,
-				Recipient:      recipient,
-				RefundAccount:  refundAccount,
-				FromAddress:    paymentOrder.FromAddress,
-				ReturnAddress:  paymentOrder.RefundOrRecipientAddress,
-				RefundAddress:  paymentOrder.RefundOrRecipientAddress,
-				Reference:      paymentOrder.Reference,
-				UpdatedAt:      paymentOrder.UpdatedAt,
-				CreatedAt:      paymentOrder.CreatedAt,
-				TxHash:         paymentOrder.TxHash,
-				Status:         paymentOrder.Status,
+				ID:              paymentOrder.ID,
+				Direction:       string(paymentOrder.Direction),
+				Amount:          paymentOrder.Amount,
+				AmountInUSD:     paymentOrder.AmountInUsd,
+				AmountPaid:      paymentOrder.AmountPaid,
+				AmountReturned:  paymentOrder.AmountReturned,
+				PercentSettled:  paymentOrder.PercentSettled,
+				SenderFee:       paymentOrder.SenderFee,
+				TransactionFee:  paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee),
+				Rate:            paymentOrder.Rate,
+				GatewayID:       paymentOrder.GatewayID,
+				SenderID:        profile.ID,
+				ProviderAccount: providerAccount,
+				Source:          source,
+				Destination:     destination,
+				FromAddress:     paymentOrder.FromAddress,
+				Reference:       paymentOrder.Reference,
+				Timestamp:       time.Now().UTC(),
+				TxHash:          paymentOrder.TxHash,
+				Status:          paymentOrder.Status,
 			},
 		}
 		payload = StructToMap(payloadStructV2)
@@ -939,6 +1016,10 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		}
 	}
 
+	if rateResponse.IsZero() {
+		return RateValidationResult{}, fmt.Errorf("provider rate not configured for this token/currency/side (set fixed or floating rate)")
+	}
+
 	// Validate amount limits: if exceeds regular max, check OTC limits
 	// OTC limits are denominated in token amounts (same as regular limits)
 	if amount.GreaterThan(providerOrderToken.MaxOrderAmount) {
@@ -1144,7 +1225,7 @@ func parseBucketKey(key string) (*BucketData, error) {
 	// Expected format: "bucket_{currency}_{minAmount}_{maxAmount}_{side}"
 	parts := strings.Split(key, "_")
 	if len(parts) != 4 && len(parts) != 5 {
-		return nil, fmt.Errorf("invalid bucket key format: expected 5 parts, got %d", len(parts))
+		return nil, fmt.Errorf("invalid bucket key format: expected 4 or 5 parts, got %d", len(parts))
 	}
 
 	if parts[0] != "bucket" {

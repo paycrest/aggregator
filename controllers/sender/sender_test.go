@@ -114,19 +114,19 @@ func setup() error {
 		return fmt.Errorf("CreateTestProviderProfile.sender_test: %w", err)
 	}
 
-	// Create ProviderOrderToken for rate validation
+	// Create ProviderOrderToken for rate validation (two-sided rates; match test payload rate 750)
 	providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
-		"provider":              providerProfile,
-		"token_id":              int(tokenId),
-		"currency_id":           currency.ID,
-		"fixed_conversion_rate": decimal.NewFromFloat(750.0), // Match test payload rate
-		"conversion_rate_type":  "fixed",
-		"max_order_amount":      decimal.NewFromFloat(10000.0),
-		"min_order_amount":      decimal.NewFromFloat(1.0),
-		"max_order_amount_otc":  decimal.NewFromFloat(10000.0),
-		"min_order_amount_otc":  decimal.NewFromFloat(100.0),
-		"settlement_address":    "0x1234567890123456789012345678901234567890",
-		"network":               testCtx.networkIdentifier,
+		"provider":             providerProfile,
+		"token_id":             int(tokenId),
+		"currency_id":          currency.ID,
+		"fixed_buy_rate":       decimal.NewFromFloat(750.0),
+		"fixed_sell_rate":      decimal.NewFromFloat(750.0),
+		"max_order_amount":     decimal.NewFromFloat(10000.0),
+		"min_order_amount":     decimal.NewFromFloat(1.0),
+		"max_order_amount_otc": decimal.NewFromFloat(10000.0),
+		"min_order_amount_otc": decimal.NewFromFloat(100.0),
+		"settlement_address":   "0x1234567890123456789012345678901234567890",
+		"network":              testCtx.networkIdentifier,
 	})
 	if err != nil {
 		return fmt.Errorf("AddProviderOrderTokenToProvider.sender_test: %w", err)
@@ -158,8 +158,7 @@ func setup() error {
 	}
 
 	// Populate Redis bucket with provider data for validateBucketRate
-	// For tests, use fixed_sell_rate as the representative provider rate
-	redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+	redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, bucket.MinAmount, bucket.MaxAmount)
 	providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 		providerProfile.ID,
 		token.Symbol,
@@ -619,20 +618,21 @@ func TestSender(t *testing.T) {
 				Save(context.Background())
 			assert.NoError(t, err, "Failed to update provider fiat balance")
 
-			// Add provider order token (required for rate validation)
+			// Add provider order token (required for rate validation; two-sided rates, 750 for Redis bucket)
 			providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
-				"provider":                 providerProfile,
-				"token_id":                 int(testCtx.token.ID), // Ensure int type
-				"currency_id":              currency.ID,
-				"network":                  testCtx.networkIdentifier,
-				"conversion_rate_type":     "floating",
-				"fixed_conversion_rate":    decimal.Zero,
-				"floating_conversion_rate": decimal.NewFromFloat(750),
-				"max_order_amount":         decimal.NewFromFloat(10000),
-				"min_order_amount":         decimal.NewFromFloat(1),
-				"max_order_amount_otc":     decimal.Zero,
-				"min_order_amount_otc":     decimal.Zero,
-				"settlement_address":       "0x1234567890123456789012345678901234567890",
+				"provider":             providerProfile,
+				"token_id":             int(testCtx.token.ID),
+				"currency_id":          currency.ID,
+				"network":              testCtx.networkIdentifier,
+				"fixed_buy_rate":       decimal.NewFromFloat(750),
+				"fixed_sell_rate":      decimal.NewFromFloat(750),
+				"floating_buy_delta":   decimal.Zero,
+				"floating_sell_delta":  decimal.Zero,
+				"max_order_amount":     decimal.NewFromFloat(10000),
+				"min_order_amount":     decimal.NewFromFloat(1),
+				"max_order_amount_otc": decimal.Zero,
+				"min_order_amount_otc": decimal.Zero,
+				"settlement_address":   "0x1234567890123456789012345678901234567890",
 			})
 			if err != nil {
 				t.Logf("Failed to create provider order token: %v", err)
@@ -652,7 +652,7 @@ func TestSender(t *testing.T) {
 
 			// Populate Redis bucket with provider data for validateBucketRate
 			// In floating-rate tests, approximate current provider rate using fixed_sell_rate for deterministic behavior
-			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, bucket.MinAmount, bucket.MaxAmount)
 			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 				providerProfile.ID,
 				testCtx.token.Symbol,
@@ -838,7 +838,7 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Populate Redis bucket with provider data for validateBucketRate
-			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, bucket.MinAmount, bucket.MaxAmount)
 			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 				providerProfile.ID,
 				testCtx.token.Symbol,
@@ -1024,7 +1024,7 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 
 			// Populate Redis bucket with provider data for validateBucketRate
-			redisKey := fmt.Sprintf("bucket_%s_%s_%s", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, bucket.MinAmount, bucket.MaxAmount)
 			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 				providerProfile.ID,
 				testCtx.token.Symbol,

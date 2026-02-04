@@ -565,7 +565,7 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		service.CreatePriorityQueueForBucket(ctx, _bucket)
 
-		redisKey := fmt.Sprintf("bucket_%s_%s_%s", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
 
 		data, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 		assert.NoError(t, err)
@@ -582,7 +582,7 @@ func TestPriorityQueueTest(t *testing.T) {
 		err = service.ProcessBucketQueues()
 		assert.NoError(t, err)
 
-		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
 
 		// ProcessBucketQueues launches goroutines; wait until the queue is populated.
 		assert.Eventually(t, func() bool {

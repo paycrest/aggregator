@@ -1204,6 +1204,9 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	if destination.KYC != nil {
 		metadata["destinationKyc"] = destination.KYC
 	}
+	if destination.Country != "" {
+		metadata["country"] = destination.Country
+	}
 
 	// Create payment order
 	paymentOrderBuilder := tx.PaymentOrder.
@@ -1302,6 +1305,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	}
 
 	// Build response
+	transactionFee := paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee)
 	response := &types.V2PaymentOrderResponse{
 		ID:               paymentOrder.ID,
 		Status:           string(paymentOrder.Status),
@@ -1310,7 +1314,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		AmountIn:         payload.AmountIn,
 		SenderFee:        senderFee.String(),
 		SenderFeePercent: senderFeePercentStr,
-		TransactionFee:   token.Edges.Network.Fee.String(),
+		TransactionFee:   transactionFee.String(),
 		Reference:        paymentOrder.Reference,
 		ProviderAccount: types.V2CryptoProviderAccount{
 			Network:        source.Network,
@@ -1768,6 +1772,9 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	if destination.KYC != nil {
 		metadata["destinationKyc"] = destination.KYC
 	}
+	if source.Country != "" {
+		metadata["country"] = source.Country
+	}
 
 	// Use order type from ValidateRate result
 	orderType := rateValidationResult.OrderType
@@ -1841,7 +1848,6 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Invalid provider response", nil)
 		return
 	}
-
 	accountName, _ := providerResponse["accountName"].(string)
 	institutionName, _ := providerResponse["institutionName"].(string)
 
@@ -1852,16 +1858,21 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		validUntil = time.Now().Add(orderConf.OrderFulfillmentValidity) // Default validity
 	}
 
-	// Update payment order with virtual account details
-	_, err = paymentOrder.Update().
-		SetAccountIdentifier(accountIdentifier).
-		SetAccountName(accountName).
-		SetInstitution(institutionName).
-		Save(ctx)
-	if err != nil {
-		logger.Errorf("Failed to update payment order with virtual account: %v", err)
+	// Update payment order with virtual account details (use tx so update participates in transaction)
+	orderMetadata := paymentOrder.Metadata
+	if orderMetadata == nil {
+		orderMetadata = make(map[string]interface{})
+	}
+	orderMetadata["providerAccount"] = map[string]interface{}{
+		"institution":       institutionName,
+		"accountIdentifier": accountIdentifier,
+		"accountName":       accountName,
+		"validUntil":        validUntil.Format(time.RFC3339),
+	}
+	if _, err := tx.PaymentOrder.UpdateOneID(paymentOrder.ID).SetMetadata(orderMetadata).Save(ctx); err != nil {
+		logger.Errorf("Failed to save provider account to order metadata: %v", err)
 		_ = tx.Rollback()
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update payment order", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
 
@@ -1894,6 +1905,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 
 	// Build response
+	transactionFee := paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee)
 	response := &types.V2PaymentOrderResponse{
 		ID:               paymentOrder.ID,
 		Status:           string(paymentOrder.Status),
@@ -1902,7 +1914,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		AmountIn:         payload.AmountIn,
 		SenderFee:        senderFeeCrypto.String(),
 		SenderFeePercent: senderFeePercentStr,
-		TransactionFee:   token.Edges.Network.Fee.String(),
+		TransactionFee:   transactionFee.String(),
 		Reference:        paymentOrder.Reference,
 		ProviderAccount: types.V2FiatProviderAccount{
 			Institution:       institutionName,
@@ -2002,7 +2014,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 		AmountReturned: paymentOrder.AmountReturned,
 		Token:          paymentOrder.Edges.Token.Symbol,
 		SenderFee:      paymentOrder.SenderFee,
-		TransactionFee: paymentOrder.NetworkFee,
+		TransactionFee: paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee),
 		Rate:           paymentOrder.Rate,
 		Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
 		Recipient: types.PaymentOrderRecipient{
@@ -2438,7 +2450,7 @@ func (ctrl *SenderController) buildPaymentOrderResponses(ctx *gin.Context, payme
 			AmountReturned: paymentOrder.AmountReturned,
 			Token:          paymentOrder.Edges.Token.Symbol,
 			SenderFee:      paymentOrder.SenderFee,
-			TransactionFee: paymentOrder.NetworkFee,
+			TransactionFee: paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee),
 			Rate:           paymentOrder.Rate,
 			Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
 			Recipient: types.PaymentOrderRecipient{

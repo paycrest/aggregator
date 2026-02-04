@@ -401,6 +401,17 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 		}).Errorf("Failed to index SettleOut events")
 	}
 
+	// Index SettleIn events
+	if err := s.indexSettleInByBlockRange(ctx, network, fromBlock, toBlock); err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":        fmt.Sprintf("%v", err),
+			"NetworkParam": network.Identifier,
+			"FromBlock":    fromBlock,
+			"ToBlock":      toBlock,
+			"EventType":    "SettleIn",
+		}).Errorf("Failed to index SettleIn events")
+	}
+
 	// Index OrderRefunded events
 	if err := s.indexOrderRefundedByBlockRange(ctx, network, fromBlock, toBlock); err != nil {
 		logger.WithFields(logger.Fields{
@@ -566,6 +577,93 @@ func (s *IndexerTron) indexSettleOutByBlockRange(ctx context.Context, network *e
 	err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvent)
 	if err != nil {
 		return fmt.Errorf("indexSettleOutByBlockRange.processSettleOutOrders: %w", err)
+	}
+	return nil
+}
+
+// indexSettleInByBlockRange indexes SettleIn events for a block range
+func (s *IndexerTron) indexSettleInByBlockRange(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
+	res, err := fastshot.NewClient(network.RPCEndpoint).
+		Config().SetTimeout(15 * time.Second).
+		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
+		Query().AddParams(map[string]string{
+		"min_block_timestamp": strconv.FormatInt(fromBlock, 10),
+		"max_block_timestamp": strconv.FormatInt(toBlock, 10),
+		"order_by":            "block_timestamp,asc",
+		"limit":               "200",
+	}).
+		Send()
+	if err != nil {
+		return fmt.Errorf("indexSettleInByBlockRange.getEvents: %w", err)
+	}
+	data, err := utils.ParseJSONResponse(res.RawResponse)
+	if err != nil {
+		return fmt.Errorf("indexSettleInByBlockRange.parseJSONResponse: %w", err)
+	}
+	orderIds := []string{}
+	orderIdToEvent := make(map[string]*types.SettleInEvent)
+	for _, r := range data["data"].([]interface{}) {
+		if r.(map[string]interface{})["event_name"].(string) == "SettleIn" {
+			res, err := fastshot.NewClient(network.RPCEndpoint).
+				Config().SetTimeout(15 * time.Second).
+				Build().POST("/wallet/gettransactioninfobyid").
+				Body().AsJSON(map[string]interface{}{"value": r.(map[string]interface{})["transaction_id"].(string)}).
+				Send()
+			if err != nil {
+				return fmt.Errorf("indexSettleInByBlockRange.getTransaction: %w", err)
+			}
+			data, err := utils.ParseJSONResponse(res.RawResponse)
+			if err != nil {
+				return fmt.Errorf("indexSettleInByBlockRange.parseJSONResponse: %w", err)
+			}
+			for _, event := range data["log"].([]interface{}) {
+				eventData := event.(map[string]interface{})
+				if eventData["topics"].([]interface{})[0] == "44de25d68888fdbe51bc67bbc990724fb5fa28119062e5f4ca623aefcaa70ecb" {
+					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "SettleIn")
+					if err != nil {
+						continue
+					}
+					eventOrderId := utils.ParseTopicToByte32Flexible(eventData["topics"].([]interface{})[1])
+					liquidityProviderStr := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[2].(string))
+					recipientStr := utils.ParseTopicToTronAddress(eventData["topics"].([]interface{})[3].(string))
+					amountBig, _ := unpackedEventData[0].(*big.Int)
+					if amountBig == nil {
+						amountBig = new(big.Int)
+					}
+					tokenVal := unpackedEventData[1]
+					tokenStr := ""
+					if addr, ok := tokenVal.(ethcommon.Address); ok {
+						tokenStr = addr.Hex()
+					} else if addr, ok := tokenVal.([]byte); ok && len(addr) >= 20 {
+						tokenStr = "0x" + hex.EncodeToString(addr[len(addr)-20:])
+					}
+					aggregatorFee := unpackedEventData[2].(*big.Int)
+					rate := unpackedEventData[3].(*big.Int)
+					orderIdStr := fmt.Sprintf("0x%v", hex.EncodeToString(eventOrderId[:]))
+					settleInEvent := &types.SettleInEvent{
+						BlockNumber:       int64(data["blockNumber"].(float64)),
+						TxHash:            data["id"].(string),
+						OrderId:           orderIdStr,
+						LiquidityProvider: liquidityProviderStr,
+						Amount:            utils.FromSubunit(amountBig, 0),
+						Recipient:         recipientStr,
+						Token:             tokenStr,
+						AggregatorFee:     utils.FromSubunit(aggregatorFee, 0),
+						Rate:              utils.FromSubunit(rate, 0),
+					}
+					orderIds = append(orderIds, settleInEvent.OrderId)
+					orderIdToEvent[settleInEvent.OrderId] = settleInEvent
+					break
+				}
+			}
+		}
+	}
+	if len(orderIds) == 0 {
+		return nil
+	}
+	err = common.ProcessSettleInOrders(ctx, network, orderIds, orderIdToEvent)
+	if err != nil {
+		return fmt.Errorf("indexSettleInByBlockRange.processSettleInOrders: %w", err)
 	}
 	return nil
 }
