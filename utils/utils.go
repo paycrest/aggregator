@@ -309,103 +309,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	var payload map[string]interface{}
 	if webhookVersion == "2" {
 		// V2: aligned with API schema — providerAccount, source, destination (same types as V2PaymentOrderResponse).
-		isOnramp := paymentOrder.Direction == paymentorder.DirectionOnramp
-		networkID := paymentOrder.Edges.Token.Edges.Network.Identifier
-		currencyCode := institution.Edges.FiatCurrency.Code
-		tokenSymbol := paymentOrder.Edges.Token.Symbol
-
-		var providerAccount, source, destination any
-		if isOnramp {
-			// Onramp: providerAccount = fiat (where to pay); source = fiat + refundAccount; destination = crypto recipient.
-			if paymentOrder.Metadata != nil {
-				if pa, ok := paymentOrder.Metadata["providerAccount"].(map[string]interface{}); ok {
-					var inst, acctID, acctName string
-					if v, ok := pa["institution"].(string); ok {
-						inst = v
-					}
-					if v, ok := pa["accountIdentifier"].(string); ok {
-						acctID = v
-					}
-					if v, ok := pa["accountName"].(string); ok {
-						acctName = v
-					}
-					providerAccount = &types.V2FiatProviderAccount{
-						Institution:       inst,
-						AccountIdentifier: acctID,
-						AccountName:       acctName,
-						ValidUntil:        time.Time{},
-					}
-				}
-			}
-			refundAccountMetadata := (map[string]interface{})(nil)
-			if paymentOrder.Metadata != nil {
-				if m, ok := paymentOrder.Metadata["refundAccountMetadata"].(map[string]interface{}); ok {
-					refundAccountMetadata = m
-				}
-			}
-			country := ""
-			if paymentOrder.Metadata != nil {
-				if c, ok := paymentOrder.Metadata["country"].(string); ok {
-					country = c
-				}
-			}
-			source = &types.V2FiatSource{
-				Type:     "fiat",
-				Currency: currencyCode,
-				Country:  country,
-				RefundAccount: types.V2FiatRefundAccount{
-					Institution:       paymentOrder.Institution,
-					AccountIdentifier: paymentOrder.AccountIdentifier,
-					AccountName:       paymentOrder.AccountName,
-					Metadata:          refundAccountMetadata,
-				},
-			}
-			destination = &types.V2CryptoDestination{
-				Type:       "crypto",
-				Currency:   tokenSymbol,
-				Network:    networkID,
-				ProviderID: providerID,
-				Recipient: types.V2CryptoRecipient{
-					Address:  paymentOrder.RefundOrRecipientAddress,
-					Network:  networkID,
-					Metadata: nil,
-				},
-			}
-		} else {
-			// Offramp: providerAccount = crypto (where to pay); source = crypto + refundAddress; destination = fiat recipient.
-			if paymentOrder.ReceiveAddress != "" {
-				providerAccount = &types.V2CryptoProviderAccount{
-					Network:        networkID,
-					ReceiveAddress: paymentOrder.ReceiveAddress,
-					ValidUntil:     paymentOrder.ReceiveAddressExpiry,
-				}
-			}
-			source = &types.V2CryptoSource{
-				Type:          "crypto",
-				Currency:      tokenSymbol,
-				Network:       networkID,
-				RefundAddress: paymentOrder.RefundOrRecipientAddress,
-			}
-			destCountry := ""
-			if paymentOrder.Metadata != nil {
-				if c, ok := paymentOrder.Metadata["country"].(string); ok {
-					destCountry = c
-				}
-			}
-			destination = &types.V2FiatDestination{
-				Type:       "fiat",
-				Currency:   currencyCode,
-				Country:    destCountry,
-				ProviderID: providerID,
-				Recipient: types.V2FiatRecipient{
-					Institution:       paymentOrder.Institution,
-					AccountIdentifier: paymentOrder.AccountIdentifier,
-					AccountName:       paymentOrder.AccountName,
-					Memo:              paymentOrder.Memo,
-					Metadata:          paymentOrder.Metadata,
-				},
-			}
-		}
+		source, destination, providerAccount := BuildV2OrderSourceDestinationProviderAccount(paymentOrder, institution)
 
 		payloadStructV2 := types.V2PaymentOrderWebhookPayload{
 			Event:          event,
@@ -513,6 +417,168 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	}
 
 	return nil
+}
+
+// BuildV2OrderSourceDestinationProviderAccount builds source, destination, and providerAccount for v2 API/get responses.
+// paymentOrder must have Token and Token.Edges.Network loaded. institution is required for fiat (currency); use nil only if unavailable (then currency/institution display may be empty).
+func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder, institution *ent.Institution) (source, destination, providerAccount any) {
+	networkID := ""
+	if paymentOrder.Edges.Token != nil && paymentOrder.Edges.Token.Edges.Network != nil {
+		networkID = paymentOrder.Edges.Token.Edges.Network.Identifier
+	}
+	tokenSymbol := ""
+	if paymentOrder.Edges.Token != nil {
+		tokenSymbol = paymentOrder.Edges.Token.Symbol
+	}
+	currencyCode := ""
+	if institution != nil && institution.Edges.FiatCurrency != nil {
+		currencyCode = institution.Edges.FiatCurrency.Code
+	}
+	providerID := ""
+	if paymentOrder.Edges.Provider != nil {
+		providerID = paymentOrder.Edges.Provider.ID
+	}
+
+	isOnramp := paymentOrder.Direction == paymentorder.DirectionOnramp
+	if isOnramp {
+		if paymentOrder.Metadata != nil {
+			if pa, ok := paymentOrder.Metadata["providerAccount"].(map[string]interface{}); ok {
+				var inst, acctID, acctName string
+				if v, ok := pa["institution"].(string); ok {
+					inst = v
+				}
+				if v, ok := pa["accountIdentifier"].(string); ok {
+					acctID = v
+				}
+				if v, ok := pa["accountName"].(string); ok {
+					acctName = v
+				}
+				providerAccount = &types.V2FiatProviderAccount{
+					Institution:       inst,
+					AccountIdentifier: acctID,
+					AccountName:       acctName,
+					ValidUntil:        time.Time{},
+				}
+			}
+		}
+		refundAccountMetadata := (map[string]interface{})(nil)
+		if paymentOrder.Metadata != nil {
+			if m, ok := paymentOrder.Metadata["refundAccountMetadata"].(map[string]interface{}); ok {
+				refundAccountMetadata = m
+			}
+		}
+		country := ""
+		if paymentOrder.Metadata != nil {
+			if c, ok := paymentOrder.Metadata["country"].(string); ok {
+				country = c
+			}
+		}
+		source = &types.V2FiatSource{
+			Type:     "fiat",
+			Currency: currencyCode,
+			Country:  country,
+			RefundAccount: types.V2FiatRefundAccount{
+				Institution:       paymentOrder.Institution,
+				AccountIdentifier: paymentOrder.AccountIdentifier,
+				AccountName:       paymentOrder.AccountName,
+				Metadata:          refundAccountMetadata,
+			},
+		}
+		destination = &types.V2CryptoDestination{
+			Type:       "crypto",
+			Currency:   tokenSymbol,
+			Network:    networkID,
+			ProviderID: providerID,
+			Recipient: types.V2CryptoRecipient{
+				Address:  paymentOrder.RefundOrRecipientAddress,
+				Network:  networkID,
+				Metadata: nil,
+			},
+		}
+	} else {
+		if paymentOrder.ReceiveAddress != "" {
+			providerAccount = &types.V2CryptoProviderAccount{
+				Network:        networkID,
+				ReceiveAddress: paymentOrder.ReceiveAddress,
+				ValidUntil:     paymentOrder.ReceiveAddressExpiry,
+			}
+		}
+		source = &types.V2CryptoSource{
+			Type:          "crypto",
+			Currency:      tokenSymbol,
+			Network:       networkID,
+			RefundAddress: paymentOrder.RefundOrRecipientAddress,
+		}
+		destCountry := ""
+		if paymentOrder.Metadata != nil {
+			if c, ok := paymentOrder.Metadata["country"].(string); ok {
+				destCountry = c
+			}
+		}
+		destination = &types.V2FiatDestination{
+			Type:       "fiat",
+			Currency:   currencyCode,
+			Country:    destCountry,
+			ProviderID: providerID,
+			Recipient: types.V2FiatRecipient{
+				Institution:       paymentOrder.Institution,
+				AccountIdentifier: paymentOrder.AccountIdentifier,
+				AccountName:       paymentOrder.AccountName,
+				Memo:              paymentOrder.Memo,
+				Metadata:          paymentOrder.Metadata,
+			},
+		}
+	}
+	return source, destination, providerAccount
+}
+
+// BuildV2PaymentOrderGetResponse builds a full V2PaymentOrderGetResponse from payment order and optional provider fields.
+func BuildV2PaymentOrderGetResponse(
+	paymentOrder *ent.PaymentOrder,
+	institution *ent.Institution,
+	transactionLogs []types.TransactionLog,
+	cancellationReasons []string,
+	otcExpiry *time.Time,
+) *types.V2PaymentOrderGetResponse {
+	source, destination, providerAccount := BuildV2OrderSourceDestinationProviderAccount(paymentOrder, institution)
+	txFee := paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee)
+	senderFeePercentStr := ""
+	if !paymentOrder.Amount.IsZero() {
+		senderFeePercentStr = paymentOrder.SenderFee.Div(paymentOrder.Amount).Mul(decimal.NewFromInt(100)).String()
+	}
+	resp := &types.V2PaymentOrderGetResponse{
+		ID:                  paymentOrder.ID,
+		Status:              string(paymentOrder.Status),
+		Direction:           string(paymentOrder.Direction),
+		CreatedAt:           paymentOrder.CreatedAt,
+		UpdatedAt:           paymentOrder.UpdatedAt,
+		Amount:              paymentOrder.Amount.String(),
+		AmountInUsd:         paymentOrder.AmountInUsd.String(),
+		AmountPaid:          paymentOrder.AmountPaid.String(),
+		AmountReturned:      paymentOrder.AmountReturned.String(),
+		PercentSettled:      paymentOrder.PercentSettled.String(),
+		Rate:                paymentOrder.Rate.String(),
+		SenderFee:           paymentOrder.SenderFee.String(),
+		SenderFeePercent:    senderFeePercentStr,
+		TransactionFee:      txFee.String(),
+		Reference:           paymentOrder.Reference,
+		ProviderAccount:     providerAccount,
+		Source:              source,
+		Destination:         destination,
+		TxHash:              paymentOrder.TxHash,
+		TransactionLogs:     transactionLogs,
+		CancellationReasons: cancellationReasons,
+		OTCExpiry:           otcExpiry,
+	}
+	if paymentOrder.Metadata != nil {
+		if amountIn, ok := paymentOrder.Metadata["amountIn"].(string); ok {
+			resp.AmountIn = amountIn
+		}
+	}
+	if resp.AmountIn == "" {
+		resp.AmountIn = paymentOrder.Amount.String()
+	}
+	return resp
 }
 
 // StructToMap converts a struct to a map[string]interface{}

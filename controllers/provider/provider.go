@@ -172,10 +172,13 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 	statusMap := map[string]paymentorder.Status{
 		"pending":    paymentorder.StatusPending,
 		"validated":  paymentorder.StatusValidated,
+		"fulfilling": paymentorder.StatusFulfilling,
 		"fulfilled":  paymentorder.StatusFulfilled,
 		"cancelled":  paymentorder.StatusCancelled,
-		"processing": paymentorder.StatusFulfilling, // Backward compatibility
+		"settling":   paymentorder.StatusSettling,
 		"settled":    paymentorder.StatusSettled,
+		"refunding":  paymentorder.StatusRefunding,
+		"refunded":   paymentorder.StatusRefunded,
 	}
 
 	statusQueryParam := ctx.Query("status")
@@ -2258,6 +2261,228 @@ func (ctrl *ProviderController) GetPaymentOrderByID(ctx *gin.Context) {
 		CancellationReasons: paymentOrder.CancellationReasons,
 		OrderType:           paymentOrder.OrderType,
 	})
+}
+
+// GetPaymentOrderByIDV2 returns a single payment order in v2 API schema (providerAccount, source, destination).
+func (ctrl *ProviderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
+	orderID := ctx.Param("id")
+	id, err := uuid.Parse(orderID)
+	if err != nil {
+		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "Order ID": orderID}).Errorf("Failed to parse order ID: %v", err)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid order ID", nil)
+		return
+	}
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+
+	paymentOrder, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.IDEQ(id),
+			paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+		).
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+		WithTransactions().
+		Only(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "Order ID": orderID}).Errorf("Failed to fetch payment order: %v", err)
+		u.APIResponse(ctx, http.StatusNotFound, "error", "Payment order not found", nil)
+		return
+	}
+
+	institution, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeEQ(paymentOrder.Institution)).
+		WithFiatCurrency().
+		Only(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch institution: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment order", nil)
+		return
+	}
+
+	var transactionLogs []types.TransactionLog
+	for _, tx := range paymentOrder.Edges.Transactions {
+		transactionLogs = append(transactionLogs, types.TransactionLog{
+			ID:        tx.ID,
+			GatewayId: tx.GatewayID,
+			Status:    tx.Status,
+			TxHash:    tx.TxHash,
+			CreatedAt: tx.CreatedAt,
+		})
+	}
+	var otcExpiry *time.Time
+	if paymentOrder.OrderType == paymentorder.OrderTypeOtc {
+		switch paymentOrder.Status {
+		case paymentorder.StatusPending:
+			exp := paymentOrder.UpdatedAt.Add(orderConf.OrderRequestValidityOtc)
+			otcExpiry = &exp
+		case paymentorder.StatusFulfilling:
+			exp := paymentOrder.UpdatedAt.Add(orderConf.OrderFulfillmentValidityOtc)
+			otcExpiry = &exp
+		}
+	}
+	resp := u.BuildV2PaymentOrderGetResponse(paymentOrder, institution, transactionLogs, paymentOrder.CancellationReasons, otcExpiry)
+	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", resp)
+}
+
+// GetPaymentOrdersV2 returns a list of payment orders in v2 API schema (list only; currency required like v1).
+func (ctrl *ProviderController) GetPaymentOrdersV2(ctx *gin.Context) {
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+	ctrl.handleListPaymentOrdersV2(ctx, provider)
+}
+
+// handleListPaymentOrdersV2 handles v2 payment order listing with pagination and v2 response shape (currency required).
+func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, provider *ent.ProviderProfile) {
+	page, offset, pageSize := u.Paginate(ctx)
+	ordering := ctx.Query("ordering")
+	order := ent.Desc(paymentorder.FieldCreatedAt)
+	if ordering == "asc" {
+		order = ent.Asc(paymentorder.FieldCreatedAt)
+	}
+
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+	)
+
+	currency := ctx.Query("currency")
+	if currency == "" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency is required", nil)
+		return
+	}
+	currencyExists, err := provider.QueryProviderBalances().
+		Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency))).
+		Exist(ctx)
+	if err != nil {
+		logger.Errorf("error checking provider currency: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check currency", nil)
+		return
+	}
+	if !currencyExists {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not found", nil)
+		return
+	}
+	institutionCodes, err := storage.Client.Institution.
+		Query().
+		Where(institution.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency))).
+		Select(institution.FieldCode).
+		Strings(ctx)
+	if err != nil {
+		logger.Errorf("error fetching institution codes: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
+		return
+	}
+	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.InstitutionIn(institutionCodes...))
+
+	statusMap := map[string]paymentorder.Status{
+		"pending":    paymentorder.StatusPending,
+		"validated":  paymentorder.StatusValidated,
+		"fulfilling": paymentorder.StatusFulfilling,
+		"fulfilled":  paymentorder.StatusFulfilled,
+		"cancelled":  paymentorder.StatusCancelled,
+		"settling":   paymentorder.StatusSettling,
+		"settled":    paymentorder.StatusSettled,
+		"refunding":  paymentorder.StatusRefunding,
+		"refunded":   paymentorder.StatusRefunded,
+	}
+	if status, ok := statusMap[ctx.Query("status")]; ok {
+		paymentOrderQuery = paymentOrderQuery.Where(paymentorder.StatusEQ(status))
+	}
+
+	count, err := paymentOrderQuery.Count(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
+		return
+	}
+
+	paymentOrders, err := paymentOrderQuery.
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+		WithTransactions().
+		Limit(pageSize).
+		Offset(offset).
+		Order(order).
+		All(ctx)
+	if err != nil {
+		logger.Errorf("error fetching orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
+		return
+	}
+
+	orders, err := ctrl.buildV2ProviderOrderGetResponses(ctx, paymentOrders)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.V2PaymentOrderListResponse{
+		Page:         page,
+		PageSize:     pageSize,
+		TotalRecords: count,
+		Orders:       orders,
+	})
+}
+
+// buildV2ProviderOrderGetResponses converts payment orders to v2 get response list with OTC expiry and cancellation reasons.
+func (ctrl *ProviderController) buildV2ProviderOrderGetResponses(ctx *gin.Context, paymentOrders []*ent.PaymentOrder) ([]types.V2PaymentOrderGetResponse, error) {
+	if len(paymentOrders) == 0 {
+		return nil, nil
+	}
+	codes := make(map[string]bool)
+	for _, po := range paymentOrders {
+		codes[po.Institution] = true
+	}
+	codeSlice := make([]string, 0, len(codes))
+	for c := range codes {
+		codeSlice = append(codeSlice, c)
+	}
+	institutions, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeIn(codeSlice...)).
+		WithFiatCurrency().
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	instMap := make(map[string]*ent.Institution)
+	for _, inst := range institutions {
+		instMap[inst.Code] = inst
+	}
+
+	out := make([]types.V2PaymentOrderGetResponse, 0, len(paymentOrders))
+	for _, po := range paymentOrders {
+		inst, _ := instMap[po.Institution]
+		var txLogs []types.TransactionLog
+		for _, tx := range po.Edges.Transactions {
+			txLogs = append(txLogs, types.TransactionLog{ID: tx.ID, GatewayId: tx.GatewayID, Status: tx.Status, TxHash: tx.TxHash, CreatedAt: tx.CreatedAt})
+		}
+		var otcExpiry *time.Time
+		if po.OrderType == paymentorder.OrderTypeOtc {
+			switch po.Status {
+			case paymentorder.StatusPending:
+				exp := po.UpdatedAt.Add(orderConf.OrderRequestValidityOtc)
+				otcExpiry = &exp
+			case paymentorder.StatusFulfilling:
+				exp := po.UpdatedAt.Add(orderConf.OrderFulfillmentValidityOtc)
+				otcExpiry = &exp
+			}
+		}
+		resp := u.BuildV2PaymentOrderGetResponse(po, inst, txLogs, po.CancellationReasons, otcExpiry)
+		out = append(out, *resp)
+	}
+	return out, nil
 }
 
 // UpdateProviderBalance handles the update of provider balance

@@ -818,6 +818,41 @@ type V2PaymentOrderResponse struct {
 	Destination      any       `json:"destination"`     // V2FiatDestination for offramp, V2CryptoDestination for onramp
 }
 
+// V2PaymentOrderGetResponse is the v2 response for GET payment order (single or list item). Aligned with v2 API schema.
+type V2PaymentOrderGetResponse struct {
+	ID                  uuid.UUID        `json:"id"`
+	Status              string           `json:"status"`
+	Direction           string           `json:"direction"` // "offramp" or "onramp"
+	CreatedAt           time.Time        `json:"createdAt"`
+	UpdatedAt           time.Time        `json:"updatedAt"`
+	Amount              string           `json:"amount"`
+	AmountIn            string           `json:"amountIn"`
+	AmountInUsd         string           `json:"amountInUsd,omitempty"`
+	AmountPaid          string           `json:"amountPaid,omitempty"`
+	AmountReturned      string           `json:"amountReturned,omitempty"`
+	PercentSettled      string           `json:"percentSettled,omitempty"`
+	Rate                string           `json:"rate,omitempty"`
+	SenderFee           string           `json:"senderFee"`
+	SenderFeePercent    string           `json:"senderFeePercent"`
+	TransactionFee      string           `json:"transactionFee"`
+	Reference           string           `json:"reference"`
+	ProviderAccount     any              `json:"providerAccount"`
+	Source              any              `json:"source"`
+	Destination         any              `json:"destination"`
+	TxHash              string           `json:"txHash,omitempty"`
+	TransactionLogs     []TransactionLog `json:"transactionLogs,omitempty"`
+	CancellationReasons []string         `json:"cancellationReasons,omitempty"` // provider view
+	OTCExpiry           *time.Time       `json:"otcExpiry,omitempty"`           // provider view
+}
+
+// V2PaymentOrderListResponse is the v2 response for GET payment orders list.
+type V2PaymentOrderListResponse struct {
+	TotalRecords int                         `json:"total"`
+	Page         int                         `json:"page"`
+	PageSize     int                         `json:"pageSize"`
+	Orders       []V2PaymentOrderGetResponse `json:"orders"`
+}
+
 // ConfirmEmailPayload is the payload for the confirmEmail endpoint
 type ConfirmEmailPayload struct {
 	Token string `json:"token" binding:"required"`

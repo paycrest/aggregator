@@ -2046,6 +2046,167 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 	})
 }
 
+// GetPaymentOrderByIDV2 returns a single payment order in v2 API schema (providerAccount, source, destination).
+func (ctrl *SenderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
+	orderID := ctx.Param("id")
+	isUUID := true
+	id, err := uuid.Parse(orderID)
+	if err != nil {
+		isUUID = false
+	}
+	senderCtx, ok := ctx.Get("sender")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	sender := senderCtx.(*ent.SenderProfile)
+
+	paymentOrderQuery := storage.Client.PaymentOrder.Query()
+	if isUUID {
+		paymentOrderQuery = paymentOrderQuery.Where(paymentorder.IDEQ(id))
+	} else {
+		paymentOrderQuery = paymentOrderQuery.Where(paymentorder.ReferenceEQ(orderID))
+	}
+	paymentOrder, err := paymentOrderQuery.
+		Where(paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID))).
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+		WithTransactions().
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Payment order not found", nil)
+		} else {
+			logger.Errorf("error: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment order", nil)
+		}
+		return
+	}
+
+	institution, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeEQ(paymentOrder.Institution)).
+		WithFiatCurrency().
+		Only(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment order", nil)
+		return
+	}
+
+	var transactionLogs []types.TransactionLog
+	for _, tx := range paymentOrder.Edges.Transactions {
+		transactionLogs = append(transactionLogs, types.TransactionLog{
+			ID:        tx.ID,
+			GatewayId: tx.GatewayID,
+			Status:    tx.Status,
+			TxHash:    tx.TxHash,
+			CreatedAt: tx.CreatedAt,
+		})
+	}
+	resp := u.BuildV2PaymentOrderGetResponse(paymentOrder, institution, transactionLogs, nil, nil)
+	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", resp)
+}
+
+// GetPaymentOrdersV2 returns a list of payment orders in v2 API schema (no search/export; list only).
+func (ctrl *SenderController) GetPaymentOrdersV2(ctx *gin.Context) {
+	senderCtx, ok := ctx.Get("sender")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	sender := senderCtx.(*ent.SenderProfile)
+	ctrl.handleListPaymentOrdersV2(ctx, sender)
+}
+
+// handleListPaymentOrdersV2 handles v2 payment order listing with pagination and v2 response shape.
+func (ctrl *SenderController) handleListPaymentOrdersV2(ctx *gin.Context, sender *ent.SenderProfile) {
+	ordering := ctx.Query("ordering")
+	order := ent.Desc(paymentorder.FieldCreatedAt)
+	if ordering == "asc" {
+		order = ent.Asc(paymentorder.FieldCreatedAt)
+	}
+	page, offset, pageSize := u.Paginate(ctx)
+
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().
+		Where(paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)))
+	paymentOrderQuery = ctrl.applyFilters(ctx, paymentOrderQuery)
+
+	count, err := paymentOrderQuery.Count(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment orders", nil)
+		return
+	}
+
+	paymentOrders, err := paymentOrderQuery.
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+		WithTransactions().
+		Limit(pageSize).
+		Offset(offset).
+		Order(order).
+		All(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment orders", nil)
+		return
+	}
+
+	orders, err := ctrl.buildV2PaymentOrderGetResponses(ctx, paymentOrders)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment orders", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Payment orders retrieved successfully", types.V2PaymentOrderListResponse{
+		Page:         page,
+		PageSize:     pageSize,
+		TotalRecords: count,
+		Orders:       orders,
+	})
+}
+
+// buildV2PaymentOrderGetResponses converts payment orders to v2 get response list (batch-fetches institutions).
+func (ctrl *SenderController) buildV2PaymentOrderGetResponses(ctx *gin.Context, paymentOrders []*ent.PaymentOrder) ([]types.V2PaymentOrderGetResponse, error) {
+	if len(paymentOrders) == 0 {
+		return nil, nil
+	}
+	codes := make(map[string]bool)
+	for _, po := range paymentOrders {
+		codes[po.Institution] = true
+	}
+	codeSlice := make([]string, 0, len(codes))
+	for c := range codes {
+		codeSlice = append(codeSlice, c)
+	}
+	institutions, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeIn(codeSlice...)).
+		WithFiatCurrency().
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	instMap := make(map[string]*ent.Institution)
+	for _, inst := range institutions {
+		instMap[inst.Code] = inst
+	}
+
+	out := make([]types.V2PaymentOrderGetResponse, 0, len(paymentOrders))
+	for _, po := range paymentOrders {
+		inst, _ := instMap[po.Institution]
+		var txLogs []types.TransactionLog
+		for _, tx := range po.Edges.Transactions {
+			txLogs = append(txLogs, types.TransactionLog{ID: tx.ID, GatewayId: tx.GatewayID, Status: tx.Status, TxHash: tx.TxHash, CreatedAt: tx.CreatedAt})
+		}
+		resp := u.BuildV2PaymentOrderGetResponse(po, inst, txLogs, nil, nil)
+		out = append(out, *resp)
+	}
+	return out, nil
+}
+
 // GetPaymentOrders controller fetches all payment orders with support for search and export
 func (ctrl *SenderController) GetPaymentOrders(ctx *gin.Context) {
 	// Get sender profile from the context
