@@ -162,10 +162,11 @@ func RetryStaleUserOperations() error {
 				}
 				// Re-fetch so SettleOrder's query (StatusValidated) will find the order; avoids race
 				// where we call SettleOrder before the update is visible.
+				orderID := order.ID
 				order, err = storage.Client.PaymentOrder.
 					Query().
 					Where(
-						paymentorder.IDEQ(order.ID),
+						paymentorder.IDEQ(orderID),
 						paymentorder.StatusEQ(paymentorder.StatusValidated),
 					).
 					WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
@@ -174,7 +175,7 @@ func RetryStaleUserOperations() error {
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":   fmt.Sprintf("%v", err),
-						"OrderID": order.ID.String(),
+						"OrderID": orderID.String(),
 					}).Errorf("RetryStaleUserOperations.SettleOrder.refetchAfterReset")
 					continue
 				}
