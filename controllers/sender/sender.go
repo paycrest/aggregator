@@ -2223,7 +2223,10 @@ func (ctrl *SenderController) buildV2PaymentOrderGetResponses(ctx *gin.Context, 
 
 	out := make([]types.V2PaymentOrderGetResponse, 0, len(paymentOrders))
 	for _, po := range paymentOrders {
-		inst, _ := instMap[po.Institution]
+		inst, ok := instMap[po.Institution]
+		if !ok {
+			inst = nil // institution code not in map; builder handles nil
+		}
 		var txLogs []types.TransactionLog
 		for _, tx := range po.Edges.Transactions {
 			txLogs = append(txLogs, types.TransactionLog{ID: tx.ID, GatewayId: tx.GatewayID, Status: tx.Status, TxHash: tx.TxHash, CreatedAt: tx.CreatedAt})

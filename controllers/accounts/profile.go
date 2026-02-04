@@ -390,6 +390,20 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		} else if !tokenPayload.FloatingSellDelta.IsZero() && !currency.MarketSellRate.IsZero() {
 			sellRate = currency.MarketSellRate.Add(tokenPayload.FloatingSellDelta)
 		}
+		if !buyRate.IsZero() && buyRate.LessThanOrEqual(decimal.Zero) {
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "Tokens",
+				Message: fmt.Sprintf("Buy rate must be positive for %s", tokenPayload.Symbol),
+			})
+			continue
+		}
+		if !sellRate.IsZero() && sellRate.LessThanOrEqual(decimal.Zero) {
+			validationErrors = append(validationErrors, types.ErrorData{
+				Field:   "Tokens",
+				Message: fmt.Sprintf("Sell rate must be positive for %s", tokenPayload.Symbol),
+			})
+			continue
+		}
 		if !buyRate.IsZero() && !sellRate.IsZero() && buyRate.LessThan(sellRate) {
 			validationErrors = append(validationErrors, types.ErrorData{
 				Field:   "Tokens",
@@ -398,8 +412,8 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			continue
 		}
 
-		// Validate rate deviation for floating rates
-		if !tokenPayload.FloatingBuyDelta.IsZero() && !currency.MarketBuyRate.IsZero() {
+		// Validate rate deviation only when rate was derived from floating (market + delta), not when using fixed rate
+		if tokenPayload.FixedBuyRate.IsZero() && !tokenPayload.FloatingBuyDelta.IsZero() && !currency.MarketBuyRate.IsZero() {
 			percentDeviation := u.AbsPercentageDeviation(currency.MarketBuyRate, buyRate)
 			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
 				validationErrors = append(validationErrors, types.ErrorData{
@@ -409,7 +423,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				continue
 			}
 		}
-		if !tokenPayload.FloatingSellDelta.IsZero() && !currency.MarketSellRate.IsZero() {
+		if tokenPayload.FixedSellRate.IsZero() && !tokenPayload.FloatingSellDelta.IsZero() && !currency.MarketSellRate.IsZero() {
 			percentDeviation := u.AbsPercentageDeviation(currency.MarketSellRate, sellRate)
 			if percentDeviation.GreaterThan(orderConf.PercentDeviationFromMarketRate) {
 				validationErrors = append(validationErrors, types.ErrorData{

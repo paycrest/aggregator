@@ -38,6 +38,7 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testCtxForPQ = struct {
@@ -605,7 +606,8 @@ func TestPriorityQueueTest(t *testing.T) {
 			"max_amount":  testCtxForPQ.maxAmount,
 			"currency_id": testCtxForPQ.currency.ID,
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, bucket, "CreateTestProvisionBucket returned nil")
 
 		_bucket, err := db.Client.ProvisionBucket.
 			Query().
@@ -613,7 +615,8 @@ func TestPriorityQueueTest(t *testing.T) {
 			WithCurrency().
 			WithProviderProfiles().
 			Only(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, _bucket)
 
 		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 			"provider":   testCtxForPQ.publicProviderProfile,
@@ -621,9 +624,11 @@ func TestPriorityQueueTest(t *testing.T) {
 			"token_id":   testCtxForPQ.token.ID,
 			"gateway_id": "order-1",
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, _order)
+
 		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		order, err := db.Client.PaymentOrder.
 			Query().
@@ -633,8 +638,8 @@ func TestPriorityQueueTest(t *testing.T) {
 			}).
 			WithToken().
 			Only(ctx)
-
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, order)
 
 		service.CreatePriorityQueueForBucket(ctx, _bucket)
 
