@@ -105,16 +105,22 @@ func RetryStaleUserOperations() error {
 		}
 	}(ctx)
 
-	// Settle order process
+	// Settle order process: validated orders (5–15 min old) or orders stuck in settling (> 5 min)
 	lockOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.StatusEQ(paymentorder.StatusValidated),
 			paymentorder.HasFulfillmentsWith(
 				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess),
 			),
-			paymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
-			paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
+			paymentorder.Or(
+				paymentorder.And(
+					paymentorder.StatusEQ(paymentorder.StatusValidated),
+				),
+				paymentorder.And(
+					paymentorder.StatusEQ(paymentorder.StatusSettling),
+					paymentorder.UpdatedAtLT(time.Now().Add(-10*time.Minute)),
+				),
+			),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -128,6 +134,38 @@ func RetryStaleUserOperations() error {
 	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range lockOrders {
+			// SettleOrder only accepts StatusValidated; reset stuck settling so it can be retried
+			if order.Status == paymentorder.StatusSettling {
+				_, err := storage.Client.PaymentOrder.
+					UpdateOneID(order.ID).
+					SetStatus(paymentorder.StatusValidated).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.SettleOrder.resetSettlingStatus")
+					continue
+				}
+				// Re-fetch so SettleOrder's query (StatusValidated) will find the order; avoids race
+				// where we call SettleOrder before the update is visible.
+				order, err = storage.Client.PaymentOrder.
+					Query().
+					Where(
+						paymentorder.IDEQ(order.ID),
+						paymentorder.StatusEQ(paymentorder.StatusValidated),
+					).
+					WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+					WithProvider().
+					Only(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.SettleOrder.refetchAfterReset")
+					continue
+				}
+			}
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				service = orderService.NewOrderTron()
