@@ -1034,6 +1034,15 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 			continue
 		}
 
+		rebatePercentStr, ok := nonIndexedParams["rebatePercent"].(string)
+		if !ok || rebatePercentStr == "" {
+			continue
+		}
+		rebatePercent, err := decimal.NewFromString(rebatePercentStr)
+		if err != nil {
+			continue
+		}
+
 		splitOrderId, ok := nonIndexedParams["splitOrderId"].(string)
 		if !ok || splitOrderId == "" {
 			continue
@@ -1051,6 +1060,7 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 			OrderId:           orderId,
 			LiquidityProvider: liquidityProvider,
 			SettlePercent:     settlePercent,
+			RebatePercent:     rebatePercent,
 		}
 		settleOutEvents = append(settleOutEvents, settledEvent)
 	}

@@ -613,10 +613,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		return
 	}
 
-	// Default amountIn to "crypto" if not provided
-	if payload.AmountIn == "" {
-		payload.AmountIn = "crypto"
-	}
+	// amountIn defaulting is done in flow-specific helpers (offramp -> "crypto", onramp -> "fiat")
 
 	// Detect flow type from source and destination
 	var sourceType, destType struct {
@@ -824,8 +821,8 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		return
 	}
 
-	// Validate destination currency matches institution currency
-	if institutionObj.Edges.FiatCurrency.Code != destination.Currency {
+	// Validate destination currency matches institution currency (case-insensitive)
+	if !strings.EqualFold(institutionObj.Edges.FiatCurrency.Code, destination.Currency) {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 			Field:   "Destination",
 			Message: "Destination currency does not match institution currency",
@@ -884,6 +881,11 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		accountName, err := u.ValidateAccount(ctx, destination.Recipient.Institution, destination.Recipient.AccountIdentifier)
 		accountChan <- AccountResult{accountName, err}
 	}()
+
+	// Default amountIn to "crypto" for offramp if not provided
+	if payload.AmountIn == "" {
+		payload.AmountIn = "crypto"
+	}
 
 	// Handle rate logic based on amountIn
 	var cryptoAmount decimal.Decimal

@@ -21,10 +21,10 @@ import (
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
-	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
@@ -157,6 +157,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 			paymentorder.GatewayIDEQ(orderID),
 			paymentorder.StatusNEQ(paymentorder.StatusValidated),
 			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
+			paymentorder.StatusNEQ(paymentorder.StatusRefunding),
 			paymentorder.StatusNEQ(paymentorder.StatusSettled),
 			paymentorder.StatusNEQ(paymentorder.StatusFulfilling),
 			paymentorder.StatusNEQ(paymentorder.StatusSettling),

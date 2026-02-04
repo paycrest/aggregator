@@ -707,7 +707,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// For payin: if order is already Fulfilling and same provider, return 201 + lock payload (idempotent retry after settlement failure)
-	if isPayin && currentOrder.Status == paymentorder.StatusFulfilling && currentOrder.Edges.Provider != nil && currentOrder.Edges.Provider.ID == provider.ID {
+	if isPayin && currentOrder.Direction == paymentorder.DirectionOnramp && currentOrder.Status == paymentorder.StatusFulfilling && currentOrder.Edges.Provider != nil && currentOrder.Edges.Provider.ID == provider.ID {
 		_ = tx.Rollback()
 		response := types.AcceptOrderResponse{
 			ID:                orderID.String(),
@@ -1067,19 +1067,27 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				}).
 				Only(ctx)
 			if err != nil {
+				networkID := ""
+				if fulfillment != nil && fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Edges.Token != nil && fulfillment.Edges.Order.Edges.Token.Edges.Network != nil {
+					networkID = fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier
+				}
 				logger.WithFields(logger.Fields{
 					"Error":   fmt.Sprintf("%v", err),
 					"Trx Id":  payload.TxID,
-					"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+					"Network": networkID,
 				}).Errorf("Failed to fetch order fulfillment: %v", err)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 				return
 			}
 		} else {
+			networkID := ""
+			if fulfillment != nil && fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Edges.Token != nil && fulfillment.Edges.Order.Edges.Token.Edges.Network != nil {
+				networkID = fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier
+			}
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
 				"Trx Id":  payload.TxID,
-				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Network": networkID,
 			}).Errorf("Failed to fetch order fulfillment when order is found: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
