@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -570,7 +572,11 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	// Parse request body for direction and amount (for payin orders)
 	var acceptRequest types.AcceptOrderRequest
 	if err := ctx.ShouldBindJSON(&acceptRequest); err != nil {
-		// For backward compatibility, if no body is provided, default to payout
+		if !errors.Is(err, io.EOF) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Invalid request body"})
+			return
+		}
+		// Empty body: backward compatibility, default to payout
 		acceptRequest.Direction = "payout"
 	}
 
@@ -615,6 +621,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		currentOrder, err = tx.PaymentOrder.
 			Query().
 			Where(paymentorder.IDEQ(orderID)).
+			WithProvider().
 			WithToken(func(tq *ent.TokenQuery) {
 				tq.WithNetwork()
 			}).
@@ -666,12 +673,22 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 		// Check if reserved balance is sufficient
 		if providerBalance.ReservedBalance.LessThan(totalCryptoNeeded) {
-			_ = tx.Rollback()
-			// Set order to REFUNDING status
-			_, _ = storage.Client.PaymentOrder.
+			// Set order to REFUNDING status under the same transaction, then commit
+			_, err = tx.PaymentOrder.
 				UpdateOneID(orderID).
 				SetStatus(paymentorder.StatusRefunding).
 				Save(ctx)
+			if err != nil {
+				_ = tx.Rollback()
+				logger.Errorf("Failed to set order status to refunding: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+				return
+			}
+			if err = tx.Commit(); err != nil {
+				logger.Errorf("Failed to commit transaction: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+				return
+			}
 
 			// Return 4XX with refund details
 			refundDetails := map[string]interface{}{
@@ -687,6 +704,35 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Insufficient reserved token balance", refundDetails)
 			return
 		}
+	}
+
+	// For payin: if order is already Fulfilling and same provider, return 201 + lock payload (idempotent retry after settlement failure)
+	if isPayin && currentOrder.Status == paymentorder.StatusFulfilling && currentOrder.Edges.Provider != nil && currentOrder.Edges.Provider.ID == provider.ID {
+		_ = tx.Rollback()
+		response := types.AcceptOrderResponse{
+			ID:                orderID.String(),
+			Institution:       currentOrder.Institution,
+			AccountIdentifier: currentOrder.AccountIdentifier,
+			AccountName:       currentOrder.AccountName,
+			Memo:              currentOrder.Memo,
+			Metadata:          currentOrder.Metadata,
+		}
+		response.Direction = "payin"
+		response.Amount = currentOrder.Amount.Add(currentOrder.SenderFee).Mul(currentOrder.Rate).RoundBank(0)
+		if currentOrder.Edges.Token != nil && currentOrder.Edges.Token.Edges.Network != nil {
+			network := currentOrder.Edges.Token.Edges.Network
+			response.ChainId = fmt.Sprintf("%d", network.ChainID)
+			response.RpcUrl = network.RPCEndpoint
+			response.DelegationAddress = network.GatewayContractAddress
+		}
+		if currentOrder.OrderType == paymentorder.OrderTypeOtc {
+			if response.Metadata == nil {
+				response.Metadata = make(map[string]interface{})
+			}
+			response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
+		}
+		u.APIResponse(ctx, http.StatusCreated, "success", "Order accepted", response)
+		return
 	}
 
 	// Check if order is already in a finalized state
@@ -1498,7 +1544,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		}
 		_, txErr = txCompensate.PaymentOrder.
 			UpdateOneID(orderID).
-			SetStatus(paymentorder.StatusValidated).
+			SetStatus(paymentorder.StatusFulfilling).
 			RemoveTransactions(transactionLog).
 			Save(ctx)
 		if txErr != nil {

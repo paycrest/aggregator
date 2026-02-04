@@ -937,6 +937,13 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 			if isDirectMatch {
 				orderRate = decimal.NewFromInt(1)
 			} else {
+				if currency.MarketSellRate.IsZero() {
+					u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+						Field:   "Rate",
+						Message: "Rate not available for this currency",
+					})
+					return
+				}
 				orderRate = currency.MarketSellRate
 			}
 			cryptoAmount = amount.Div(orderRate)
@@ -1519,6 +1526,13 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		if isDirectMatch {
 			orderRate = decimal.NewFromInt(1)
 		} else {
+			if currency.MarketBuyRate.IsZero() {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: "Rate not available for this currency",
+				})
+				return
+			}
 			// Use market buy rate as approximation for onramp
 			orderRate = currency.MarketBuyRate
 		}
@@ -2821,18 +2835,29 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 	var localStablecoinSum decimal.Decimal
 	var localStablecoinSenderFee decimal.Decimal
 
-	// Convert local stablecoin volume to USD
+	// Convert local stablecoin volume to USD (direction-aware: onramp use buy rate, offramp use sell rate)
 	for _, paymentOrder := range paymentOrders {
-		institution, err := u.GetInstitutionByCode(ctx, paymentOrder.Institution, false)
+		institution, err := u.GetInstitutionByCode(ctx, paymentOrder.Institution, true)
 		if err != nil {
 			logger.Errorf("error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
 			return
 		}
-
-		paymentOrder.Amount = paymentOrder.Amount.Div(institution.Edges.FiatCurrency.MarketSellRate)
+		if institution == nil || institution.Edges.FiatCurrency == nil {
+			continue
+		}
+		fiatCurrency := institution.Edges.FiatCurrency
+		var rate decimal.Decimal
+		if paymentOrder.Direction == paymentorder.DirectionOnramp && !fiatCurrency.MarketBuyRate.IsZero() {
+			rate = fiatCurrency.MarketBuyRate
+		} else if !fiatCurrency.MarketSellRate.IsZero() {
+			rate = fiatCurrency.MarketSellRate
+		} else {
+			continue
+		}
+		paymentOrder.Amount = paymentOrder.Amount.Div(rate)
 		if paymentOrder.SenderFee.GreaterThan(decimal.Zero) {
-			paymentOrder.SenderFee = paymentOrder.SenderFee.Div(institution.Edges.FiatCurrency.MarketSellRate)
+			paymentOrder.SenderFee = paymentOrder.SenderFee.Div(rate)
 		}
 
 		localStablecoinSum = localStablecoinSum.Add(paymentOrder.Amount)
