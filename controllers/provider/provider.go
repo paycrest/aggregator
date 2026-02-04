@@ -1473,29 +1473,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	// Idempotency guard: skip if order already settling/settled or settlement already submitted
-	if orderWithDetails.Status == paymentorder.StatusSettling || orderWithDetails.Status == paymentorder.StatusSettled {
-		u.APIResponse(ctx, http.StatusOK, "success", "Settlement already submitted or completed", nil)
-		return
-	}
-	existingLog, err := storage.Client.TransactionLog.
-		Query().
-		Where(
-			transactionlog.GatewayIDEQ(gatewayOrderID),
-			transactionlog.StatusEQ(transactionlog.StatusOrderSettling),
-		).
-		Exist(ctx)
-	if err != nil {
-		logger.Errorf("Failed to check existing settlement log: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check settlement status", nil)
-		return
-	}
-	if existingLog {
-		u.APIResponse(ctx, http.StatusOK, "success", "Settlement already submitted", nil)
-		return
-	}
-
-	// Persist durable "settlement submitted" marker before calling executePayinSettlement so retries won't re-submit
+	// Atomic settlement submission: create marker and transition to Settling in a single conditional transaction
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
 		logger.Errorf("Failed to start transaction: %v", err)
@@ -1514,8 +1492,13 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
 	}
-	_, err = tx.PaymentOrder.
-		UpdateOneID(orderID).
+	// Conditional update: only transition if order is still Fulfilling (atomic guard)
+	updatedCount, err := tx.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.IDEQ(orderID),
+			paymentorder.StatusEQ(paymentorder.StatusFulfilling),
+		).
 		SetStatus(paymentorder.StatusSettling).
 		SetGatewayID(gatewayOrderID).
 		AddTransactions(transactionLog).
@@ -1524,6 +1507,11 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		_ = tx.Rollback()
 		logger.Errorf("Failed to update order status: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+	if updatedCount == 0 {
+		_ = tx.Rollback()
+		u.APIResponse(ctx, http.StatusOK, "success", "Settlement already submitted or completed", nil)
 		return
 	}
 	if err := tx.Commit(); err != nil {

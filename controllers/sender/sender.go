@@ -1912,6 +1912,14 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		"orderId", paymentOrder.ID.String(),
 	).Err(); err != nil {
 		logger.Errorf("Failed to set order_request for payin: %v", err)
+		// Compensate: release reserved token and cancel order so we don't leave reserved-but-unservable state
+		totalCryptoReserved := paymentOrder.Amount.Add(paymentOrder.SenderFee)
+		if relErr := balanceService.ReleaseTokenBalance(ctx, providerID, token.ID, totalCryptoReserved, nil); relErr != nil {
+			logger.Errorf("Failed to release token balance after Redis HSet failure (order %s): %v", paymentOrder.ID, relErr)
+		}
+		if _, updErr := storage.Client.PaymentOrder.UpdateOneID(paymentOrder.ID).SetStatus(paymentorder.StatusCancelled).Save(ctx); updErr != nil {
+			logger.Errorf("Failed to cancel order after Redis HSet failure (order %s): %v", paymentOrder.ID, updErr)
+		}
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
