@@ -1222,6 +1222,7 @@ func validateAndPreparePaymentOrderData(
 	}
 
 	// Create payment order fields (normalize gateway ID for case-insensitive DB storage/lookup)
+	// Chain-created orders from OrderCreatedEvent are offramp (SettleOut flow)
 	paymentOrderFields := &types.PaymentOrderFields{
 		Token:             token,
 		Network:           network,
@@ -1229,7 +1230,7 @@ func validateAndPreparePaymentOrderData(
 		Amount:            event.Amount,
 		Rate:              event.Rate,
 		ProtocolFee:       event.ProtocolFee,
-		AmountInUSD:       utils.CalculatePaymentOrderAmountInUSD(event.Amount, token, institution),
+		AmountInUSD:       utils.CalculatePaymentOrderAmountInUSD(event.Amount, token, institution, paymentorder.DirectionOfframp),
 		BlockNumber:       int64(event.BlockNumber),
 		TxHash:            event.TxHash,
 		Institution:       recipient.Institution,
@@ -1422,7 +1423,7 @@ func createBasicPaymentOrderAndCancel(
 			if err != nil {
 				return decimal.Zero
 			}
-			return utils.CalculatePaymentOrderAmountInUSD(adjustedAmount, token, institution)
+			return utils.CalculatePaymentOrderAmountInUSD(adjustedAmount, token, institution, paymentorder.DirectionOfframp)
 		}(),
 		BlockNumber: int64(event.BlockNumber),
 		TxHash:      event.TxHash,

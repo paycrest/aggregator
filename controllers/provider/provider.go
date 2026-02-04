@@ -1529,7 +1529,8 @@ func gatewayOrderIDFromEncode(payoutAddress, aggregatorAddress string, paymentOr
 		{Type: bytes32Type},
 		{Type: uint256Type},
 	}
-	paymentOrderIDBytes32 := u.StringToByte32(paymentOrderID.String())
+	var paymentOrderIDBytes32 [32]byte
+	copy(paymentOrderIDBytes32[:], paymentOrderID[:]) // 16 UUID bytes, zero-padded to 32
 	packed, err := arguments.Pack(
 		ethcommon.HexToAddress(payoutAddress),
 		ethcommon.HexToAddress(aggregatorAddress),

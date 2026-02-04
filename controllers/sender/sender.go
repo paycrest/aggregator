@@ -358,7 +358,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	amountInUSD := u.CalculatePaymentOrderAmountInUSD(payload.Amount, token, institutionObj)
+	amountInUSD := u.CalculatePaymentOrderAmountInUSD(payload.Amount, token, institutionObj, paymentorder.DirectionOfframp)
 
 	// Use order type from ValidateRate result (already determined based on OTC limits)
 	orderType := rateValidationResult.OrderType
@@ -1026,7 +1026,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	// Set account name from validation
 	destination.Recipient.AccountName = accountResult.accountName
 
-	amountInUSD := u.CalculatePaymentOrderAmountInUSD(cryptoAmount, token, institutionObj)
+	amountInUSD := u.CalculatePaymentOrderAmountInUSD(cryptoAmount, token, institutionObj, paymentorder.DirectionOfframp)
 
 	// Use order type from ValidateRate result
 	orderType := rateValidationResult.OrderType
@@ -1781,8 +1781,8 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	// Use order type from ValidateRate result
 	orderType := rateValidationResult.OrderType
 
-	// Calculate amount in USD
-	amountInUSD := u.CalculatePaymentOrderAmountInUSD(cryptoAmountOut, token, refundInstitution)
+	// Calculate amount in USD (onramp: use buy rate when available)
+	amountInUSD := u.CalculatePaymentOrderAmountInUSD(cryptoAmountOut, token, refundInstitution, paymentorder.DirectionOnramp)
 
 	// Create payment order
 	paymentOrderBuilder := tx.PaymentOrder.

@@ -210,8 +210,9 @@ func AbsPercentageDeviation(trueValue, measuredValue decimal.Decimal) decimal.De
 	return deviation.Abs()
 }
 
-// CalculatePaymentOrderAmountInUSD calculates the amount in USD for a payment order
-func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, institution *ent.Institution) decimal.Decimal {
+// CalculatePaymentOrderAmountInUSD calculates the amount in USD for a payment order.
+// It uses MarketBuyRate for onramp (when non-zero) and MarketSellRate for offramp or when buy rate is zero.
+func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, institution *ent.Institution, direction paymentorder.Direction) decimal.Decimal {
 	// Guard against nil inputs
 	if token == nil || institution == nil {
 		return amount
@@ -228,12 +229,20 @@ func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, 
 		fiatCurrency = institutionCurrency
 	}
 
-	// Only multiply when the token matches the institution's fiat currency
-	if fiatCurrency != nil && token.BaseCurrency == fiatCurrency.Code && !fiatCurrency.MarketSellRate.IsZero() {
-		return amount.Div(fiatCurrency.MarketSellRate)
+	if fiatCurrency == nil || token.BaseCurrency != fiatCurrency.Code {
+		return amount
 	}
 
-	return amount
+	// Onramp: use buy rate (crypto bought with fiat); offramp or zero buy rate: use sell rate
+	var rate decimal.Decimal
+	if direction == paymentorder.DirectionOnramp && !fiatCurrency.MarketBuyRate.IsZero() {
+		rate = fiatCurrency.MarketBuyRate
+	} else if !fiatCurrency.MarketSellRate.IsZero() {
+		rate = fiatCurrency.MarketSellRate
+	} else {
+		return amount
+	}
+	return amount.Div(rate)
 }
 
 // SendPaymentOrderWebhook notifies a sender when the status of a payment order changes
