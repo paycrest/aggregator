@@ -490,9 +490,8 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 			Network:    networkID,
 			ProviderID: providerID,
 			Recipient: types.V2CryptoRecipient{
-				Address:  paymentOrder.RefundOrRecipientAddress,
-				Network:  networkID,
-				Metadata: nil,
+				Address: paymentOrder.RefundOrRecipientAddress,
+				Network: networkID,
 			},
 		}
 	} else {

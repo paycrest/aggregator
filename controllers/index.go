@@ -2140,23 +2140,38 @@ func (ctrl *Controller) handleSettleInEvent(ctx *gin.Context, event types.Thirdw
 	nonIndexedParams := event.Data.Decoded.NonIndexedParams
 
 	orderId, _ := indexedParams["orderId"].(string)
+	if orderId == "" {
+		return fmt.Errorf("SettleIn: missing or empty orderId in indexed params")
+	}
 	liquidityProvider, _ := indexedParams["liquidityProvider"].(string)
 	recipient, _ := indexedParams["recipient"].(string)
-	amountStr, _ := nonIndexedParams["amount"].(string)
-	amount := decimal.Zero
-	if amountStr != "" {
-		amount, _ = decimal.NewFromString(amountStr)
-	}
 	tokenStr, _ := nonIndexedParams["token"].(string)
-	aggregatorFeeStr, _ := nonIndexedParams["aggregatorFee"].(string)
-	aggregatorFee := decimal.Zero
-	if aggregatorFeeStr != "" {
-		aggregatorFee, _ = decimal.NewFromString(aggregatorFeeStr)
+
+	amountStr, ok := nonIndexedParams["amount"].(string)
+	if !ok || amountStr == "" {
+		return fmt.Errorf("SettleIn: missing or empty amount in non-indexed params")
 	}
-	rateStr, _ := nonIndexedParams["rate"].(string)
-	rate := decimal.Zero
-	if rateStr != "" {
-		rate, _ = decimal.NewFromString(rateStr)
+	amount, err := decimal.NewFromString(amountStr)
+	if err != nil {
+		return fmt.Errorf("SettleIn: invalid amount %q: %w", amountStr, err)
+	}
+
+	rateStr, ok := nonIndexedParams["rate"].(string)
+	if !ok || rateStr == "" {
+		return fmt.Errorf("SettleIn: missing or empty rate in non-indexed params")
+	}
+	rate, err := decimal.NewFromString(rateStr)
+	if err != nil {
+		return fmt.Errorf("SettleIn: invalid rate %q: %w", rateStr, err)
+	}
+
+	aggregatorFee := decimal.Zero
+	if aggregatorFeeStr, ok := nonIndexedParams["aggregatorFee"].(string); ok && aggregatorFeeStr != "" {
+		var parseErr error
+		aggregatorFee, parseErr = decimal.NewFromString(aggregatorFeeStr)
+		if parseErr != nil {
+			return fmt.Errorf("SettleIn: invalid aggregatorFee %q: %w", aggregatorFeeStr, parseErr)
+		}
 	}
 
 	settleInEvent := &types.SettleInEvent{

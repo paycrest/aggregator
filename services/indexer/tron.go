@@ -267,9 +267,9 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 				tokenVal := unpackedEventData[1]
 				tokenStr := ""
 				if addr, ok := tokenVal.(ethcommon.Address); ok {
-					tokenStr = addr.Hex()
-				} else if addr, ok := tokenVal.([]byte); ok && len(addr) >= 20 {
-					tokenStr = "0x" + hex.EncodeToString(addr[len(addr)-20:])
+					tokenStr = utils.ParseTopicToTronAddress(strings.TrimPrefix(addr.Hex(), "0x"))
+				} else if b, ok := tokenVal.([]byte); ok && len(b) >= 20 {
+					tokenStr = utils.ParseTopicToTronAddress(hex.EncodeToString(b[len(b)-20:]))
 				}
 				aggregatorFee := unpackedEventData[2].(*big.Int)
 				rate := unpackedEventData[3].(*big.Int)
@@ -633,9 +633,9 @@ func (s *IndexerTron) indexSettleInByBlockRange(ctx context.Context, network *en
 					tokenVal := unpackedEventData[1]
 					tokenStr := ""
 					if addr, ok := tokenVal.(ethcommon.Address); ok {
-						tokenStr = addr.Hex()
-					} else if addr, ok := tokenVal.([]byte); ok && len(addr) >= 20 {
-						tokenStr = "0x" + hex.EncodeToString(addr[len(addr)-20:])
+						tokenStr = utils.ParseTopicToTronAddress(strings.TrimPrefix(addr.Hex(), "0x"))
+					} else if b, ok := tokenVal.([]byte); ok && len(b) >= 20 {
+						tokenStr = utils.ParseTopicToTronAddress(hex.EncodeToString(b[len(b)-20:]))
 					}
 					aggregatorFee := unpackedEventData[2].(*big.Int)
 					rate := unpackedEventData[3].(*big.Int)

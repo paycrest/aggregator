@@ -714,17 +714,18 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		if !ent.IsNotFound(err) {
+			_ = tx.Rollback()
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
-		} else {
-			transactionLog, err = tx.TransactionLog.
-				Create().
-				SetStatus(transactionlog.StatusOrderFulfilling).
-				Save(ctx)
-			if err != nil {
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
-				return
-			}
+		}
+		transactionLog, err = tx.TransactionLog.
+			Create().
+			SetStatus(transactionlog.StatusOrderFulfilling).
+			Save(ctx)
+		if err != nil {
+			_ = tx.Rollback()
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
 		}
 	}
 
@@ -1410,34 +1411,35 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	// Execute EIP-7702 transaction
-	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, payload.Authorization, settleInData); err != nil {
-		logger.Errorf("Failed to execute payin settlement: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+	// Idempotency guard: skip if order already settling/settled or settlement already submitted
+	if orderWithDetails.Status == paymentorder.StatusSettling || orderWithDetails.Status == paymentorder.StatusSettled {
+		u.APIResponse(ctx, http.StatusOK, "success", "Settlement already submitted or completed", nil)
+		return
+	}
+	existingLog, err := storage.Client.TransactionLog.
+		Query().
+		Where(
+			transactionlog.GatewayIDEQ(gatewayOrderID),
+			transactionlog.StatusEQ(transactionlog.StatusOrderSettling),
+		).
+		Exist(ctx)
+	if err != nil {
+		logger.Errorf("Failed to check existing settlement log: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check settlement status", nil)
+		return
+	}
+	if existingLog {
+		u.APIResponse(ctx, http.StatusOK, "success", "Settlement already submitted", nil)
 		return
 	}
 
-	// Start transaction for database updates
+	// Persist durable "settlement submitted" marker before calling executePayinSettlement so retries won't re-submit
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
 		logger.Errorf("Failed to start transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
 	}
-
-	// Update fulfillment status
-	_, err = tx.PaymentOrderFulfillment.
-		UpdateOneID(fulfillment.ID).
-		SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
-		Save(ctx)
-	if err != nil {
-		_ = tx.Rollback()
-		logger.Errorf("Failed to update fulfillment status: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
-		return
-	}
-
-	// Create transaction log (tx hash will be set by indexer when settlement is mined)
 	transactionLog, err := tx.TransactionLog.
 		Create().
 		SetStatus(transactionlog.StatusOrderSettling).
@@ -1450,8 +1452,6 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
 	}
-
-	// Update order status to SETTLING (tx hash will be set by indexer when settlement is mined)
 	_, err = tx.PaymentOrder.
 		UpdateOneID(orderID).
 		SetStatus(paymentorder.StatusSettling).
@@ -1464,20 +1464,46 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
 	}
-
-	// Release reserved token balance
-	totalCryptoReserved := orderWithDetails.Amount.Add(orderWithDetails.SenderFee)
-	err = ctrl.balanceService.ReleaseTokenBalance(ctx, provider.ID, orderWithDetails.Edges.Token.ID, totalCryptoReserved, tx)
-	if err != nil {
-		logger.Errorf("Failed to release token balance: %v", err)
-		// Don't fail the entire operation if balance release fails - log and continue
-	}
-
-	// Commit transaction
 	if err := tx.Commit(); err != nil {
 		logger.Errorf("Failed to commit transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
+	}
+
+	// Execute EIP-7702 transaction (after marker is persisted so retries are idempotent)
+	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, payload.Authorization, settleInData); err != nil {
+		logger.Errorf("Failed to execute payin settlement: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+		return
+	}
+
+	// Update fulfillment status and release reserved token balance
+	tx2, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.Errorf("Failed to start transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+	_, err = tx2.PaymentOrderFulfillment.
+		UpdateOneID(fulfillment.ID).
+		SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
+		Save(ctx)
+	if err != nil {
+		_ = tx2.Rollback()
+		logger.Errorf("Failed to update fulfillment status: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+	if err := tx2.Commit(); err != nil {
+		logger.Errorf("Failed to commit transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+	totalCryptoReserved := orderWithDetails.Amount.Add(orderWithDetails.SenderFee)
+	err = ctrl.balanceService.ReleaseTokenBalance(ctx, provider.ID, orderWithDetails.Edges.Token.ID, totalCryptoReserved, nil)
+	if err != nil {
+		logger.Errorf("Failed to release token balance: %v", err)
+		// Don't fail the entire operation if balance release fails - log and continue
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Order submitted for settlement", nil)
@@ -1599,10 +1625,19 @@ func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *
 		return fmt.Errorf("authorization chain ID does not match order network")
 	}
 
-	// yParity: 0 or 1 (Engine expects yParity; provider sends V as 0, 1, 27, or 28)
-	yParity := int(authorization.V)
-	if authorization.V == 27 || authorization.V == 28 {
-		yParity = int(authorization.V - 27)
+	// Validate V and derive yParity: only 0, 1, 27, 28 are accepted (EIP-155 and legacy)
+	var yParity int
+	switch authorization.V {
+	case 0:
+		yParity = 0
+	case 1:
+		yParity = 1
+	case 27:
+		yParity = 0
+	case 28:
+		yParity = 1
+	default:
+		return fmt.Errorf("authorization V must be 0, 1, 27, or 28; got %d", authorization.V)
 	}
 
 	authEntry := map[string]interface{}{

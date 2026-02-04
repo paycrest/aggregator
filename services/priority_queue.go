@@ -584,6 +584,21 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 		return err
 	}
 
+	// Compute rate side once from order direction (currentOrder if in DB, else default buy) for rate refresh and queue key
+	var rateSide RateSide
+	if currentOrder != nil {
+		switch currentOrder.Direction {
+		case paymentorder.DirectionOnramp:
+			rateSide = RateSideBuy
+		case paymentorder.DirectionOfframp:
+			rateSide = RateSideSell
+		default:
+			rateSide = RateSideBuy
+		}
+	} else {
+		rateSide = RateSideBuy // default when order not yet in DB (e.g. new order)
+	}
+
 	// Sends order directly to the specified provider in order.
 	// Incase of failure, do nothing. The order will eventually refund
 	// For OTC orders: skip if provider appears in exclude list at all
@@ -612,7 +627,7 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 				// TODO: check for provider's minimum and maximum rate for negotiation
 				// Update the rate with the current rate if order was last updated more than 10 mins ago
 				if !order.UpdatedAt.IsZero() && order.UpdatedAt.Before(time.Now().Add(-10*time.Minute)) {
-					order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code, RateSideSell)
+					order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code, rateSide)
 					if err != nil {
 						logger.WithFields(logger.Fields{
 							"Error":      fmt.Sprintf("%v", err),
@@ -666,22 +681,9 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 		}
 	}
 
-	// Use same side-suffixed key as buildQueueForSide so reads/writes use identical keys
+	// Use same side-suffixed key as buildQueueForSide so reads/writes use identical keys (rateSide computed above)
 	baseRedisKey := fmt.Sprintf("bucket_%s_%s_%s", order.ProvisionBucket.Edges.Currency.Code, order.ProvisionBucket.MinAmount, order.ProvisionBucket.MaxAmount)
-	var side RateSide
-	if currentOrder != nil {
-		switch currentOrder.Direction {
-		case paymentorder.DirectionOnramp:
-			side = RateSideBuy
-		case paymentorder.DirectionOfframp:
-			side = RateSideSell
-		default:
-			side = RateSideBuy
-		}
-	} else {
-		side = RateSideBuy // default when order not yet in DB (e.g. new order)
-	}
-	redisKey := baseRedisKey + "_" + string(side)
+	redisKey := baseRedisKey + "_" + string(rateSide)
 
 	err = s.matchRate(ctx, redisKey, orderIDPrefix, order, excludeList)
 	if err != nil {

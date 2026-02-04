@@ -1681,8 +1681,10 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	// Calculate fiat amounts
 	// senderFeeFiat = senderFeeCrypto * buyRate
 	senderFeeFiat := senderFeeCrypto.Mul(orderRate).RoundBank(int32(currency.Decimals))
+	// fiatOrderAmount: when amountIn=crypto, amount is crypto so convert with rate; when amountIn=fiat, amount is fiat so cryptoAmountOut.Mul(rate) gives fiat
+	fiatOrderAmount := cryptoAmountOut.Mul(orderRate).RoundBank(int32(currency.Decimals))
 	// totalFiatToPay = fiatOrderAmount + senderFeeFiat
-	totalFiatToPay := amount.Add(senderFeeFiat).RoundBank(int32(currency.Decimals))
+	totalFiatToPay := fiatOrderAmount.Add(senderFeeFiat).RoundBank(int32(currency.Decimals))
 
 	// Validate reference if provided
 	if payload.Reference != "" {
@@ -1876,6 +1878,13 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		return
 	}
 
+	// Commit the transaction before setting Redis key so we never leave an orphaned key if commit fails
+	if err := tx.Commit(); err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		return
+	}
+
 	// Seed order_request_%s (same key as offramp) so payin AcceptOrder can validate provider
 	orderRequestKey := fmt.Sprintf("order_request_%s", paymentOrder.ID.String())
 	if err := storage.RedisClient.HSet(ctx, orderRequestKey,
@@ -1885,18 +1894,10 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		"orderId", paymentOrder.ID.String(),
 	).Err(); err != nil {
 		logger.Errorf("Failed to set order_request for payin: %v", err)
-		_ = tx.Rollback()
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
 	_ = storage.RedisClient.Expire(ctx, orderRequestKey, 24*time.Hour).Err()
-
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-		return
-	}
 
 	// Format sender fee percent for response
 	senderFeePercentStr := ""

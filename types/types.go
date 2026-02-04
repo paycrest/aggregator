@@ -690,9 +690,8 @@ type V2CryptoDestination struct {
 
 // V2CryptoRecipient represents the crypto recipient configuration for onramp v2 payment orders
 type V2CryptoRecipient struct {
-	Address  string                 `json:"address" binding:"required"`
-	Network  string                 `json:"network" binding:"required"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Address string `json:"address" binding:"required"`
+	Network string `json:"network" binding:"required"`
 }
 
 // EntityType represents the type of entity
