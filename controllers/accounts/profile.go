@@ -430,6 +430,15 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			})
 			continue
 		} else {
+			// Cap slippage percentage so fixed rates (e.g. rateRef=1) cannot bypass validation
+			const maxSlippagePercent = 5.0
+			if tokenPayload.RateSlippage.GreaterThan(decimal.NewFromFloat(maxSlippagePercent)) {
+				validationErrors = append(validationErrors, types.ErrorData{
+					Field:   "Tokens",
+					Message: fmt.Sprintf("Rate slippage is too high for %s (max %.1f%%)", tokenPayload.Symbol, maxSlippagePercent),
+				})
+				continue
+			}
 			// Check slippage against market rates (use sell rate as reference for offramp)
 			marketRef := currency.MarketSellRate
 			if marketRef.IsZero() {

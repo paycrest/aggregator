@@ -587,13 +587,12 @@ func TestProfile(t *testing.T) {
 					}},
 				}
 				res := profileUpdateRequest(payload)
-				// With two-sided rates and current thresholds, this configuration is accepted.
-				assert.Equal(t, http.StatusOK, res.Code)
+				assert.Equal(t, http.StatusBadRequest, res.Code)
 
 				var response types.Response
 				err = json.Unmarshal(res.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, "Profile updated successfully", response.Message)
+				assert.Contains(t, response.Message, "Rate slippage is too high")
 			})
 
 			t.Run("fails when rate slippage is less than 0.1", func(t *testing.T) {
