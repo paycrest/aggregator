@@ -332,10 +332,7 @@ func RetryStaleUserOperations() error {
 			if len(order.CancellationReasons) == 0 {
 				_, err := storage.Client.PaymentOrder.
 					Update().
-					Where(
-						paymentorder.IDEQ(order.ID),
-						paymentorder.CancellationReasonsIsNil(),
-					).
+					Where(paymentorder.IDEQ(order.ID)).
 					SetCancellationReasons([]string{"Order timed out"}).
 					Save(ctx)
 				if err != nil {
