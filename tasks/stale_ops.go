@@ -331,15 +331,19 @@ func RetryStaleUserOperations() error {
 			}
 			if len(order.CancellationReasons) == 0 {
 				_, err := storage.Client.PaymentOrder.
-					UpdateOneID(order.ID).
+					Update().
+					Where(
+						paymentorder.IDEQ(order.ID),
+						paymentorder.CancellationReasonsIsNil(),
+					).
 					SetCancellationReasons([]string{"Order timed out"}).
 					Save(ctx)
 				if err != nil {
+					// The refund should still happen, so we log the error and continue
 					logger.WithFields(logger.Fields{
 						"Error":   fmt.Sprintf("%v", err),
 						"OrderID": order.ID.String(),
 					}).Errorf("RetryStaleUserOperations.RefundOrder.SetCancellationReasons")
-					continue
 				}
 			}
 			err := service.RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
