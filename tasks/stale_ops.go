@@ -329,6 +329,19 @@ func RetryStaleUserOperations() error {
 			} else {
 				service = orderService.NewOrderEVM()
 			}
+			if len(order.CancellationReasons) == 0 {
+				_, err := storage.Client.PaymentOrder.
+					UpdateOneID(order.ID).
+					SetCancellationReasons([]string{"Order timed out"}).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.RefundOrder.SetCancellationReasons")
+					continue
+				}
+			}
 			err := service.RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
 			if err != nil {
 				logger.WithFields(logger.Fields{
