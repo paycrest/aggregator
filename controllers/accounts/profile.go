@@ -723,10 +723,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 
 		for _, p := range payload.FiatAccounts {
 			if p.Institution == "" || p.AccountIdentifier == "" {
-				logger.WithFields(logger.Fields{
-					"Institution":       p.Institution,
-					"AccountIdentifier": p.AccountIdentifier,
-				}).Warn("Skipping fiat account with missing institution or account identifier")
 				continue
 			}
 
