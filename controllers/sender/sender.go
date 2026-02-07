@@ -1868,6 +1868,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 	accountName, _ := providerResponse["accountName"].(string)
 	institutionName, _ := providerResponse["institutionName"].(string)
+	reference, _ := providerResponse["reference"].(string)
 
 	var validUntil time.Time
 	if validUntilStr, ok := providerResponse["validUntil"].(string); ok {
@@ -1885,12 +1886,16 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	if orderMetadata == nil {
 		orderMetadata = make(map[string]interface{})
 	}
-	orderMetadata["providerAccount"] = map[string]interface{}{
+	providerAccountMap := map[string]interface{}{
 		"institution":       institutionName,
 		"accountIdentifier": accountIdentifier,
 		"accountName":       accountName,
 		"validUntil":        validUntil.Format(time.RFC3339),
 	}
+	if reference != "" {
+		providerAccountMap["reference"] = reference
+	}
+	orderMetadata["providerAccount"] = providerAccountMap
 	if _, err := tx.PaymentOrder.UpdateOneID(paymentOrder.ID).SetMetadata(orderMetadata).Save(ctx); err != nil {
 		logger.Errorf("Failed to save provider account to order metadata: %v", err)
 		_ = tx.Rollback()

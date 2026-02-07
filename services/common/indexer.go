@@ -438,8 +438,8 @@ func UpdateReceiveAddressStatus(
 	return false, nil
 }
 
-// GetProviderAddresses gets provider addresses for a given token, network, and currency
-func GetProviderAddresses(ctx context.Context, token *ent.Token, currencyCode string) ([]string, error) {
+// GetProviderSettlementAddresses returns provider settlement addresses for a given token and currency.
+func GetProviderSettlementAddresses(ctx context.Context, token *ent.Token, currencyCode string) ([]string, error) {
 	providerOrderTokens, err := storage.Client.ProviderOrderToken.
 		Query().
 		Where(

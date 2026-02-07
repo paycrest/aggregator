@@ -673,10 +673,26 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 		// Check if reserved balance is sufficient
 		if providerBalance.ReservedBalance.LessThan(totalCryptoNeeded) {
-			// Set order to REFUNDING status under the same transaction, then commit
+			// Create order_refunding transaction log and set order to REFUNDING under the same transaction
+			networkID := ""
+			if currentOrder.Edges.Token != nil && currentOrder.Edges.Token.Edges.Network != nil {
+				networkID = currentOrder.Edges.Token.Edges.Network.Identifier
+			}
+			transactionLog, err := tx.TransactionLog.Create().
+				SetStatus(transactionlog.StatusOrderRefunding).
+				SetGatewayID(orderID.String()).
+				SetNetwork(networkID).
+				Save(ctx)
+			if err != nil {
+				_ = tx.Rollback()
+				logger.Errorf("Failed to create order_refunding transaction log: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+				return
+			}
 			_, err = tx.PaymentOrder.
 				UpdateOneID(orderID).
 				SetStatus(paymentorder.StatusRefunding).
+				AddTransactions(transactionLog).
 				Save(ctx)
 			if err != nil {
 				_ = tx.Rollback()
@@ -856,10 +872,12 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	if isPayin {
 		response.Direction = "payin"
 		response.Amount = order.Amount.Add(order.SenderFee).Mul(order.Rate).RoundBank(0)
-		network := order.Edges.Token.Edges.Network
-		response.ChainId = fmt.Sprintf("%d", network.ChainID)
-		response.RpcUrl = network.RPCEndpoint
-		response.DelegationAddress = network.GatewayContractAddress
+		if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+			network := order.Edges.Token.Edges.Network
+			response.ChainId = fmt.Sprintf("%d", network.ChainID)
+			response.RpcUrl = network.RPCEndpoint
+			response.DelegationAddress = network.GatewayContractAddress
+		}
 	} else {
 		response.Direction = "payout"
 		response.Amount = order.Amount.Mul(order.Rate).RoundBank(0)
@@ -1115,6 +1133,14 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Order already %s", orderStatus), nil)
 			return
 		}
+	}
+
+	// Handle refund outcome when order is Refunding (payin insufficient-balance refund path)
+	if fulfillment.Edges.Order != nil &&
+		fulfillment.Edges.Order.Status == paymentorder.StatusRefunding &&
+		fulfillment.Edges.Order.Direction == paymentorder.DirectionOnramp {
+		ctrl.handleRefundOutcomeFulfillment(ctx, orderID, payload, fulfillment, provider)
+		return
 	}
 
 	// Check if this is a payin order (onramp)
@@ -1392,6 +1418,110 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 	u.APIResponse(ctx, http.StatusOK, "success", "Order fulfilled successfully", nil)
 }
 
+// handleRefundOutcomeFulfillment handles FulfillOrder when order is Refunding (payin insufficient-balance refund path).
+// It interprets payload.ValidationStatus as refund outcome: refunded, pending, or failed.
+func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
+	order := fulfillment.Edges.Order
+	if order == nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Order not found", nil)
+		return
+	}
+
+	switch payload.ValidationStatus {
+	case paymentorderfulfillment.ValidationStatusRefunded:
+		// Update fulfillment to Refunded (and TxID, PSP if present)
+		fulfillmentUpdate := fulfillment.Update().
+			SetValidationStatus(paymentorderfulfillment.ValidationStatusRefunded).
+			SetValidationError(payload.ValidationError)
+		if payload.TxID != "" {
+			fulfillmentUpdate = fulfillmentUpdate.SetTxID(payload.TxID)
+		}
+		if payload.PSP != "" {
+			fulfillmentUpdate = fulfillmentUpdate.SetPsp(payload.PSP)
+		}
+		_, err := fulfillmentUpdate.Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to update refund fulfillment to refunded")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+
+		// Note: TransactionLog status is immutable in schema; order_refunding log remains. Order status Refunded is the source of truth.
+		// Set order status to Refunded
+		_, err = storage.Client.PaymentOrder.UpdateOneID(order.ID).SetStatus(paymentorder.StatusRefunded).Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to update order status to refunded")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+
+		// Release reserved token balance
+		if order.Edges.Token != nil && order.Edges.Provider != nil {
+			totalCryptoReserved := order.Amount.Add(order.SenderFee)
+			if relErr := ctrl.balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+				logger.Errorf("Failed to release token balance for refunded order (order %s): %v", orderID, relErr)
+			}
+		}
+		u.APIResponse(ctx, http.StatusOK, "success", "Refund completed", nil)
+		return
+	case paymentorderfulfillment.ValidationStatusFailed:
+		_, err := fulfillment.Update().
+			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+			SetValidationError(payload.ValidationError).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to update refund fulfillment to failed")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+		// Set order to Fulfilled (terminal state) and release reserved token balance (consistent with handlePayinFulfillment and aggregator refund-failure handling)
+		_, err = storage.Client.PaymentOrder.UpdateOneID(order.ID).SetStatus(paymentorder.StatusFulfilled).Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to update order status for refund failure")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+		if order.Edges.Token != nil && order.Edges.Provider != nil {
+			totalCryptoReserved := order.Amount.Add(order.SenderFee)
+			if relErr := ctrl.balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+				logger.Errorf("Failed to release token balance for refund-failed order (order %s): %v", orderID, relErr)
+			}
+		}
+		u.APIResponse(ctx, http.StatusOK, "success", "Refund failed", nil)
+		return
+	case paymentorderfulfillment.ValidationStatusPending:
+		_, err := fulfillment.Update().
+			SetValidationStatus(paymentorderfulfillment.ValidationStatusPending).
+			SetValidationError(payload.ValidationError).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to update refund fulfillment to pending")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+		u.APIResponse(ctx, http.StatusOK, "success", "Refund pending", nil)
+		return
+	default:
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid validation status for refund outcome", nil)
+		return
+	}
+}
+
 // handlePayinFulfillment handles payin (onramp) order fulfillment
 func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
 	// Validate authorization is provided for payin orders
@@ -1414,6 +1544,15 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 			logger.Errorf("Failed to update payin fulfillment to failed: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
+		}
+		// Set order status to Fulfilled so state is consistent with released balance (match payout flow)
+		if fulfillment.Edges.Order != nil {
+			_, err = storage.Client.PaymentOrder.UpdateOneID(fulfillment.Edges.Order.ID).SetStatus(paymentorder.StatusFulfilled).Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to update order status for payin validation failure (order %s): %v", orderID, err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+				return
+			}
 		}
 		// Release reserved token balance (provider reserved when they accepted)
 		if fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Edges.Token != nil && fulfillment.Edges.Order.Edges.Provider != nil {

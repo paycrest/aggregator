@@ -1142,16 +1142,31 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		// Amount is within regular limits - proceed normally
 	}
 
-	_, err = storage.Client.ProviderBalances.Query().
-		Where(
-			providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-			providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
-			providerbalances.AvailableBalanceGT(amount.Mul(rateResponse)),
-			providerbalances.IsAvailableEQ(true),
-		).
-		Only(ctx)
+	// Onramp (buy): check provider has sufficient token balance. Offramp (sell): check fiat balance.
+	if side == RateSideBuy {
+		_, err = storage.Client.ProviderBalances.Query().
+			Where(
+				providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+				providerbalances.AvailableBalanceGT(amount),
+				providerbalances.IsAvailableEQ(true),
+			).
+			Only(ctx)
+	} else {
+		_, err = storage.Client.ProviderBalances.Query().
+			Where(
+				providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+				providerbalances.AvailableBalanceGT(amount.Mul(rateResponse)),
+				providerbalances.IsAvailableEQ(true),
+			).
+			Only(ctx)
+	}
 	if err != nil {
 		if ent.IsNotFound(err) {
+			if side == RateSideBuy {
+				return RateValidationResult{}, fmt.Errorf("provider has insufficient %s balance", token.Symbol)
+			}
 			return RateValidationResult{}, fmt.Errorf("provider has insufficient liquidity for %s", currency.Code)
 		}
 		return RateValidationResult{}, fmt.Errorf("internal server error")
@@ -1276,7 +1291,7 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 		}
 
 		// Find the first provider at the top of the queue that matches our criteria
-		result := findSuitableProviderRate(ctx, providers, token.Symbol, networkIdentifier, amount, bucketData)
+		result := findSuitableProviderRate(ctx, providers, token, networkIdentifier, amount, bucketData, side)
 		if result.Found {
 			foundExactMatch = true
 			bestRate = result.Rate
@@ -1374,8 +1389,10 @@ type ProviderRateResult struct {
 
 // findSuitableProviderRate finds the first suitable provider rate from the provider list
 // Returns the rate, provider ID, order type, and a boolean indicating if an exact match was found
-// An exact match means: amount within limits, within bucket range, and provider has sufficient balance
-func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) ProviderRateResult {
+// An exact match means: amount within limits, within bucket range, and provider has sufficient balance.
+// For onramp (RateSideBuy) balance is token; for offramp (RateSideSell) balance is fiat.
+func findSuitableProviderRate(ctx context.Context, providers []string, token *ent.Token, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData, side RateSide) ProviderRateResult {
+	tokenSymbol := token.Symbol
 	var bestRate decimal.Decimal
 	var foundExactMatch bool
 
@@ -1409,13 +1426,12 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 		var providerOrderToken *ent.ProviderOrderToken
 		if networkIdentifier != "" {
 			// Network filter provided - fetch with network constraint
-			pot, err := storage.Client.ProviderOrderToken.
+			potQuery := storage.Client.ProviderOrderToken.
 				Query().
 				Where(
 					providerordertoken.HasProviderWith(
 						providerprofile.IDEQ(parts[0]),
 						providerprofile.HasProviderBalancesWith(
-							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 							providerbalances.IsAvailableEQ(true),
 						),
 					),
@@ -1423,7 +1439,27 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 					providerordertoken.NetworkEQ(networkIdentifier),
 					providerordertoken.SettlementAddressNEQ(""),
-				).Only(ctx)
+				)
+			if side == RateSideBuy {
+				potQuery = potQuery.Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+							providerbalances.IsAvailableEQ(true),
+						),
+					),
+				)
+			} else {
+				potQuery = potQuery.Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providerbalances.IsAvailableEQ(true),
+						),
+					),
+				)
+			}
+			pot, err := potQuery.Only(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
 					continue
@@ -1437,20 +1473,39 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 			providerOrderToken = pot
 		} else {
 			// No network filter - fetch first matching entry
-			pot, err := storage.Client.ProviderOrderToken.
+			potQuery := storage.Client.ProviderOrderToken.
 				Query().
 				Where(
 					providerordertoken.HasProviderWith(
 						providerprofile.IDEQ(parts[0]),
 						providerprofile.HasProviderBalancesWith(
-							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 							providerbalances.IsAvailableEQ(true),
 						),
 					),
 					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 					providerordertoken.SettlementAddressNEQ(""),
-				).First(ctx)
+				)
+			if side == RateSideBuy {
+				potQuery = potQuery.Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+							providerbalances.IsAvailableEQ(true),
+						),
+					),
+				)
+			} else {
+				potQuery = potQuery.Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providerbalances.IsAvailableEQ(true),
+						),
+					),
+				)
+			}
+			pot, err := potQuery.First(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
 					continue
@@ -1529,17 +1584,33 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 
 		// Check if fiat amount is within the bucket range
 		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
-			_, err := storage.Client.ProviderBalances.Query().
-				Where(
-					providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
-					providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-					providerbalances.AvailableBalanceGT(fiatAmount),
-					providerbalances.IsAvailableEQ(true),
-				).
-				Only(ctx)
+			// Onramp: check token balance; offramp: check fiat balance
+			if side == RateSideBuy {
+				_, err = storage.Client.ProviderBalances.Query().
+					Where(
+						providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
+						providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+						providerbalances.AvailableBalanceGT(tokenAmount),
+						providerbalances.IsAvailableEQ(true),
+					).
+					Only(ctx)
+			} else {
+				_, err = storage.Client.ProviderBalances.Query().
+					Where(
+						providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
+						providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+						providerbalances.AvailableBalanceGT(fiatAmount),
+						providerbalances.IsAvailableEQ(true),
+					).
+					Only(ctx)
+			}
 			if err != nil {
 				if ent.IsNotFound(err) {
-					skipReasons = append(skipReasons, fmt.Sprintf("provider %s has insufficient balance (need %s %s)", providerID, fiatAmount, bucketData.Currency))
+					if side == RateSideBuy {
+						skipReasons = append(skipReasons, fmt.Sprintf("provider %s has insufficient %s balance (need %s)", providerID, tokenSymbol, tokenAmount))
+					} else {
+						skipReasons = append(skipReasons, fmt.Sprintf("provider %s has insufficient balance (need %s %s)", providerID, fiatAmount, bucketData.Currency))
+					}
 					continue
 				}
 				return ProviderRateResult{Found: false}

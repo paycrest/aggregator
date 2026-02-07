@@ -273,7 +273,7 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "tx_id", Type: field.TypeString, Nullable: true},
 		{Name: "psp", Type: field.TypeString, Nullable: true},
-		{Name: "validation_status", Type: field.TypeEnum, Enums: []string{"pending", "success", "failed"}, Default: "pending"},
+		{Name: "validation_status", Type: field.TypeEnum, Enums: []string{"pending", "success", "failed", "refunded"}, Default: "pending"},
 		{Name: "validation_error", Type: field.TypeString, Nullable: true},
 		{Name: "payment_order_fulfillments", Type: field.TypeUUID},
 	}
