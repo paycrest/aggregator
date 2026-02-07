@@ -11,6 +11,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/services"
 	orderService "github.com/paycrest/aggregator/services/order"
 	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
@@ -298,6 +299,10 @@ func RetryStaleUserOperations() error {
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
+		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+			pbq.WithCurrency()
+		}).
+		WithProvider().
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("RetryStaleUserOperations: %w", err)
@@ -307,6 +312,105 @@ func RetryStaleUserOperations() error {
 	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range lockOrders {
+			// 1) Check fallback_tried FIRST: if we already tried fallback, skip reassignment entirely and refund.
+			tryFallback := orderConf.FallbackProviderID != ""
+			fallbackAlreadyTried := false
+			if tryFallback {
+				fallbackTriedKey := fmt.Sprintf("fallback_tried_%s", order.ID.String())
+				alreadyTried, _ := storage.RedisClient.Exists(ctx, fallbackTriedKey).Result()
+				if alreadyTried > 0 || (order.Edges.Provider != nil && order.Edges.Provider.ID == orderConf.FallbackProviderID) {
+					tryFallback = false
+					fallbackAlreadyTried = true
+				}
+			}
+
+			pq := services.NewPriorityQueueService()
+
+			// If the order could still be reassigned to another public provider (per order_requests logic),
+			if order.CancellationCount < orderConf.RefundCancellationCount {
+				// 2) Check if we already tried full-queue reassignment (don't retry every run).
+				// Skip full-queue if we already tried fallback (don't retry reassignment after fallback).
+				reassignmentTriedKey := fmt.Sprintf("reassignment_tried_%s", order.ID.String())
+				reassignmentTried, _ := storage.RedisClient.Exists(ctx, reassignmentTriedKey).Result()
+				tryFullQueue := reassignmentTried == 0 && !fallbackAlreadyTried
+
+				// Safeguard: only reassign via full-queue when order was NOT already sent to a provider (no order_request in Redis).
+				// When order_request_* exists, sendOrderRequest already stored it; skip full-queue and go through fallback to avoid double-send.
+				orderRequestKey := fmt.Sprintf("order_request_%s", order.ID.String())
+				orderRequestExists, _ := storage.RedisClient.Exists(ctx, orderRequestKey).Result()
+				tryFullQueue = tryFullQueue && (orderRequestExists == 0)
+
+				// No provider or public provider: can try full-queue (reassign to public). Private provider: skip full-queue.
+				canTryFullQueue := order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil &&
+					(order.Edges.Provider == nil || order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate)
+
+				if tryFullQueue && canTryFullQueue {
+					// AssignPaymentOrder expects StatusPending; if Cancelled (e.g. from HandleCancellation), set to Pending first.
+					if order.Status == paymentorder.StatusCancelled {
+						_, _ = storage.Client.PaymentOrder.
+							Update().
+							Where(paymentorder.IDEQ(order.ID)).
+							ClearProvider().
+							SetStatus(paymentorder.StatusPending).
+							Save(ctx)
+					}
+
+					orderFields := types.PaymentOrderFields{
+						ID:                order.ID,
+						OrderType:         order.OrderType.String(),
+						Token:             order.Edges.Token,
+						GatewayID:         order.GatewayID,
+						Amount:            order.Amount,
+						Rate:              order.Rate,
+						Institution:       order.Institution,
+						AccountIdentifier: order.AccountIdentifier,
+						AccountName:       order.AccountName,
+						ProviderID:        "",
+						ProvisionBucket:   order.Edges.ProvisionBucket,
+						MessageHash:       order.MessageHash,
+						Memo:              order.Memo,
+						UpdatedAt:         order.UpdatedAt,
+						CreatedAt:         order.CreatedAt,
+					}
+					if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+						orderFields.Network = order.Edges.Token.Edges.Network
+					}
+
+					err := pq.AssignPaymentOrder(ctx, orderFields)
+					if err == nil {
+						logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Infof("order assigned to provider during refund process; skipping refund")
+						continue
+					}
+					// We tried public reassignment and it failed; set cancellation count to threshold immediately so we can refund.
+					_, _ = storage.Client.PaymentOrder.
+						Update().
+						Where(paymentorder.IDEQ(order.ID)).
+						SetCancellationCount(orderConf.RefundCancellationCount).
+						Save(ctx)
+				}
+			}
+
+			// 3) Full queue skipped or failed; try fallback (only if configured and not already tried).
+			if tryFallback {
+				if err := pq.TryFallbackAssignment(ctx, order); err == nil {
+					continue
+				}
+				if order.CancellationCount < orderConf.RefundCancellationCount {
+					_, updateErr := storage.Client.PaymentOrder.
+						Update().
+						Where(paymentorder.IDEQ(order.ID)).
+						SetCancellationCount(orderConf.RefundCancellationCount).
+						Save(ctx)
+					if updateErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":   fmt.Sprintf("%v", updateErr),
+							"OrderID": order.ID.String(),
+						}).Errorf("RetryStaleUserOperations: failed to update cancellation count; skipping refund this run")
+						continue
+					}
+				}
+			}				
+
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				service = orderService.NewOrderTron()

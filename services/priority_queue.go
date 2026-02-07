@@ -380,6 +380,9 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	// Build new queue in temporary key first
 	newQueueEntries := 0
 	for _, provider := range providers {
+		if orderConf.FallbackProviderID != "" && provider.ID == orderConf.FallbackProviderID {
+			continue
+		}
 		exists, err := provider.QueryProviderBalances().
 			Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID))).
 			Exist(ctx)
@@ -683,6 +686,166 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 	return nil
 }
 
+// TryFallbackAssignment attempts to assign the order to the configured fallback provider using only rate and balance checks.
+// It accepts *ent.PaymentOrder and converts to the internal assignment type; callers do not need to build PaymentOrderFields.
+// Slippage is taken from the fallback provider's ProviderOrderToken (rate_slippage). Returns a clear error if fallback
+// was attempted but order rate is outside the fallback provider's acceptable slippage.
+func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order *ent.PaymentOrder) error {
+	fallbackID := orderConf.FallbackProviderID
+	if fallbackID == "" {
+		return fmt.Errorf("fallback provider not configured")
+	}
+
+	// Convert ent order to PaymentOrderFields for the rest of the fallback logic
+	fields := types.PaymentOrderFields{
+		ID:                order.ID,
+		OrderType:         order.OrderType.String(),
+		Token:             order.Edges.Token,
+		Network:           nil,
+		GatewayID:         order.GatewayID,
+		Amount:            order.Amount,
+		Rate:              order.Rate,
+		Institution:       order.Institution,
+		AccountIdentifier: order.AccountIdentifier,
+		AccountName:       order.AccountName,
+		ProviderID:        "",
+		ProvisionBucket:   order.Edges.ProvisionBucket,
+		MessageHash:       order.MessageHash,
+		Memo:              order.Memo,
+		UpdatedAt:         order.UpdatedAt,
+		CreatedAt:         order.CreatedAt,
+	}
+	if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+		fields.Network = order.Edges.Token.Edges.Network
+	}
+	if fields.Token == nil {
+		return fmt.Errorf("fallback: order %s has no token", order.ID.String())
+	}
+
+	// When ProvisionBucket is nil (e.g. from refund path), try to load it from the order
+	if fields.ProvisionBucket == nil {
+		po, err := storage.Client.PaymentOrder.Get(ctx, fields.ID)
+		if err != nil {
+			return fmt.Errorf("fallback: failed to load order: %w", err)
+		}
+		fields.ProvisionBucket, err = po.QueryProvisionBucket().WithCurrency().Only(ctx)
+		if err != nil || fields.ProvisionBucket == nil {
+			return fmt.Errorf("fallback: provision bucket missing for order %s: %w", fields.ID.String(), err)
+		}
+	}
+
+	bucketCurrency := fields.ProvisionBucket.Edges.Currency
+	if bucketCurrency == nil {
+		var cErr error
+		bucketCurrency, cErr = fields.ProvisionBucket.QueryCurrency().Only(ctx)
+		if cErr != nil {
+			return fmt.Errorf("fallback: provision bucket missing currency: %w", cErr)
+		}
+	}
+
+	// Resolve fallback provider
+	provider, err := storage.Client.ProviderProfile.Get(ctx, fallbackID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return fmt.Errorf("fallback provider %s not found", fallbackID)
+		}
+		return fmt.Errorf("failed to get fallback provider: %w", err)
+	}
+
+	network := fields.Token.Edges.Network
+	if network == nil {
+		var nErr error
+		network, nErr = fields.Token.QueryNetwork().Only(ctx)
+		if nErr != nil {
+			return fmt.Errorf("fallback: token missing network: %w", nErr)
+		}
+	}
+
+	// ProviderOrderToken for fallback (token, network, currency) – same pattern as matchRate, carries provider-configured rate_slippage
+	providerToken, err := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.NetworkEQ(network.Identifier),
+			providerordertoken.HasProviderWith(
+				providerprofile.IDEQ(fallbackID),
+				providerprofile.HasProviderBalancesWith(
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+					providerbalances.IsAvailableEQ(true),
+				),
+			),
+			providerordertoken.HasTokenWith(token.IDEQ(fields.Token.ID)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+			providerordertoken.SettlementAddressNEQ(""),
+		).
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return fmt.Errorf("fallback provider %s has no order token for %s/%s/%s", fallbackID, fields.Token.Symbol, network.Identifier, bucketCurrency.Code)
+		}
+		return fmt.Errorf("fallback: failed to get provider order token: %w", err)
+	}
+
+	// Rate check: must match what fallback provider can take (use token's rate_slippage)
+	providerRate, err := s.GetProviderRate(ctx, provider, fields.Token.Symbol, bucketCurrency.Code)
+	if err != nil {
+		return fmt.Errorf("fallback: failed to get provider rate: %w", err)
+	}
+	allowedDeviation := fields.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
+	if providerRate.Sub(fields.Rate).Abs().GreaterThan(allowedDeviation) {
+		logger.WithFields(logger.Fields{
+			"OrderID":      fields.ID.String(),
+			"FallbackID":   fallbackID,
+			"OrderRate":    fields.Rate.String(),
+			"ProviderRate": providerRate.String(),
+			"SlippagePct":  providerToken.RateSlippage.String(),
+		}).Warnf("[FALLBACK_ASSIGNMENT] fallback assignment attempted but order rate is too far from what fallback node can fulfill")
+		return fmt.Errorf("fallback assignment attempted for order %s but order rate is too far from what fallback provider %s can fulfill (provider rate %s, order rate %s, allowed slippage %s%%)",
+			fields.ID.String(), fallbackID, providerRate.String(), fields.Rate.String(), providerToken.RateSlippage.String())
+	}
+
+	// Balance check (same as matchRate)
+	bal, err := s.balanceService.GetProviderFiatBalance(ctx, fallbackID, bucketCurrency.Code)
+	if err != nil {
+		return fmt.Errorf("fallback: failed to get provider balance: %w", err)
+	}
+	if !s.balanceService.CheckBalanceSufficiency(bal, fields.Amount.Mul(fields.Rate).RoundBank(0)) {
+		return fmt.Errorf("fallback provider %s has insufficient balance for order %s", fallbackID, fields.ID.String())
+	}
+
+	// Assign to fallback
+	fields.ProviderID = fallbackID
+
+	setFallbackTriedKey := func() {
+		fallbackTriedKey := fmt.Sprintf("fallback_tried_%s", fields.ID.String())
+		ttl := orderConf.OrderRefundTimeout
+		if fields.OrderType == "otc" {
+			ttl = orderConf.OrderRefundTimeoutOtc
+		}
+		if setErr := storage.RedisClient.Set(ctx, fallbackTriedKey, "1", ttl).Err(); setErr != nil {
+			logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": setErr}).Warnf("failed to set fallback_tried key")
+		}
+	}
+
+	if fields.OrderType == "otc" {
+		if err := s.assignOtcOrder(ctx, fields); err != nil {
+			return fmt.Errorf("fallback: assign OTC order: %w", err)
+		}
+		setFallbackTriedKey()
+		if alertErr := NewSlackService(serverConf.SlackWebhookURL).SendFallbackAssignmentAlert(fields.ID.String(), fallbackID); alertErr != nil {
+			logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": alertErr}).Warnf("failed to send fallback assignment Slack alert")
+		}
+		return nil
+	}
+	if err := s.sendOrderRequest(ctx, fields); err != nil {
+		return fmt.Errorf("fallback: send order request: %w", err)
+	}
+	setFallbackTriedKey()
+	if alertErr := NewSlackService(serverConf.SlackWebhookURL).SendFallbackAssignmentAlert(fields.ID.String(), fallbackID); alertErr != nil {
+		logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": alertErr}).Warnf("failed to send fallback assignment Slack alert")
+	}
+	return nil
+}
+
 // assignOtcOrder assigns an OTC order to a provider and creates a Redis key for reassignment
 func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.PaymentOrderFields) error {
 	// Start a transaction for the entire operation
@@ -760,7 +923,7 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 	}
 
 	orderRequestData := map[string]interface{}{
-		"type": "otc",
+		"type":       "otc",
 		"providerId": order.ProviderID,
 	}
 	err = storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err()
