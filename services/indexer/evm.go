@@ -456,7 +456,7 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 	return eventCounts, nil
 }
 
-// IndexGateway indexes all gateway events (OrderCreated, OrderSettled, OrderRefunded) in one efficient call
+// IndexGateway indexes all gateway events (OrderCreated, SettleOut, SettleIn, OrderRefunded) in one efficient call
 func (s *IndexerEVM) IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
@@ -479,8 +479,8 @@ func (s *IndexerEVM) IndexGateway(ctx context.Context, network *ent.Network, add
 	return eventCounts, nil
 }
 
-// IndexProviderAddress indexes OrderSettled events for a provider address
-func (s *IndexerEVM) IndexProviderAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
+// IndexProviderSettlementAddress indexes SettleOut events for a provider address
+func (s *IndexerEVM) IndexProviderSettlementAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
 	if txHash != "" {
@@ -567,7 +567,8 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 
 	// Process all events in a single pass
 	orderCreatedEvents := []*types.OrderCreatedEvent{}
-	orderSettledEvents := []*types.OrderSettledEvent{}
+	settleOutEvents := []*types.SettleOutEvent{}
+	settleInEvents := []*types.SettleInEvent{}
 	orderRefundedEvents := []*types.OrderRefundedEvent{}
 
 	// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
@@ -726,8 +727,8 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			}
 			orderCreatedEvents = append(orderCreatedEvents, createdEvent)
 
-		case utils.OrderSettledEventSignature:
-			// Safely extract required fields for OrderSettled
+		case utils.SettleOutEventSignature:
+			// Safely extract required fields for SettleOut
 			settlePercentStr, ok := nonIndexedParams["settlePercent"].(string)
 			if !ok || settlePercentStr == "" {
 				continue
@@ -761,7 +762,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 				continue
 			}
 
-			settledEvent := &types.OrderSettledEvent{
+			settledEvent := &types.SettleOutEvent{
 				BlockNumber:       blockNumber,
 				TxHash:            txHashFromEvent,
 				SplitOrderId:      splitOrderIdStr,
@@ -770,7 +771,77 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 				SettlePercent:     settlePercent,
 				RebatePercent:     rebatePercent,
 			}
-			orderSettledEvents = append(orderSettledEvents, settledEvent)
+			settleOutEvents = append(settleOutEvents, settledEvent)
+
+		case utils.SettleInEventSignature:
+			// SettleIn (onramp) event
+			orderIdStr, ok := indexedParams["orderId"].(string)
+			if !ok || orderIdStr == "" {
+				continue
+			}
+			liquidityProviderStr, _ := indexedParams["liquidityProvider"].(string)
+			recipientStr, ok := indexedParams["recipient"].(string)
+			if !ok || recipientStr == "" {
+				continue
+			}
+			amountStr, ok := nonIndexedParams["amount"].(string)
+			if !ok || amountStr == "" {
+				continue
+			}
+			amount, err := decimal.NewFromString(amountStr)
+			if err != nil {
+				continue
+			}
+			tokenStr, ok := nonIndexedParams["token"].(string)
+			if !ok {
+				tokenStr = ""
+			}
+			aggregatorFeeStr, _ := nonIndexedParams["aggregatorFee"].(string)
+			var aggregatorFee decimal.Decimal
+			if aggregatorFeeStr == "" {
+				aggregatorFee = decimal.Zero
+			} else {
+				var parseErr error
+				aggregatorFee, parseErr = decimal.NewFromString(aggregatorFeeStr)
+				if parseErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":         fmt.Sprintf("%v", parseErr),
+						"aggregatorFee": aggregatorFeeStr,
+						"orderId":       orderIdStr,
+						"txHash":        txHashFromEvent,
+					}).Warnf("SettleIn: failed to parse aggregatorFee, skipping event")
+					continue
+				}
+			}
+			rateStr, _ := nonIndexedParams["rate"].(string)
+			var rate decimal.Decimal
+			if rateStr == "" {
+				rate = decimal.Zero
+			} else {
+				var parseErr error
+				rate, parseErr = decimal.NewFromString(rateStr)
+				if parseErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", parseErr),
+						"rate":    rateStr,
+						"orderId": orderIdStr,
+						"txHash":  txHashFromEvent,
+					}).Warnf("SettleIn: failed to parse rate, skipping event")
+					continue
+				}
+			}
+			settleInEvent := &types.SettleInEvent{
+				BlockNumber:       blockNumber,
+				TxHash:            txHashFromEvent,
+				OrderId:           orderIdStr,
+				LiquidityProvider: ethcommon.HexToAddress(liquidityProviderStr).Hex(),
+				Amount:            amount,
+				Recipient:         ethcommon.HexToAddress(recipientStr).Hex(),
+				Token:             ethcommon.HexToAddress(tokenStr).Hex(),
+				AggregatorFee:     aggregatorFee,
+				Rate:              rate,
+			}
+			settleInEvents = append(settleInEvents, settleInEvent)
 
 		case utils.OrderRefundedEventSignature:
 			// Safely extract required fields for OrderRefunded
@@ -817,24 +888,43 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	}
 	eventCounts.OrderCreated = len(orderCreatedEvents)
 
-	// Process OrderSettled events
-	if len(orderSettledEvents) > 0 {
+	// Process SettleOut (offramp) events
+	if len(settleOutEvents) > 0 {
 		orderIds := []string{}
-		orderIdToEvent := make(map[string]*types.OrderSettledEvent)
-		for _, event := range orderSettledEvents {
+		orderIdToEvent := make(map[string]*types.SettleOutEvent)
+		for _, event := range settleOutEvents {
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err := common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
+		err := common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
-			logger.Errorf("Failed to process OrderSettled events: %v", err)
+			logger.Errorf("Failed to process SettleOut events: %v", err)
 		} else {
 			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderSettled events", len(orderSettledEvents))
+				logger.Infof("Successfully processed %d SettleOut events", len(settleOutEvents))
 			}
 		}
 	}
-	eventCounts.OrderSettled = len(orderSettledEvents)
+	eventCounts.SettleOut = len(settleOutEvents)
+
+	// Process SettleIn (onramp) events
+	if len(settleInEvents) > 0 {
+		orderIds := []string{}
+		orderIdToEvent := make(map[string]*types.SettleInEvent)
+		for _, event := range settleInEvents {
+			orderIds = append(orderIds, event.OrderId)
+			orderIdToEvent[event.OrderId] = event
+		}
+		err := common.ProcessSettleInOrders(ctx, network, orderIds, orderIdToEvent)
+		if err != nil {
+			logger.Errorf("Failed to process SettleIn events: %v", err)
+		} else {
+			if network.ChainID != 56 && network.ChainID != 1135 {
+				logger.Infof("Successfully processed %d SettleIn events", len(settleInEvents))
+			}
+		}
+	}
+	eventCounts.SettleIn = len(settleInEvents)
 
 	// Process OrderRefunded events
 	if len(orderRefundedEvents) > 0 {
@@ -858,18 +948,18 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	return eventCounts, nil
 }
 
-// indexProviderAddressByTransaction processes a specific transaction for provider address OrderSettled events
+// indexProviderAddressByTransaction processes a specific transaction for provider address SettleOut events
 func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, network *ent.Network, providerAddress string, txHash string) (*types.EventCounts, error) {
 	eventCounts := &types.EventCounts{}
 
-	// Get OrderSettled events for this transaction
+	// Get SettleOut events for this transaction
 	events, err := s.engineService.GetContractEventsWithFallback(
 		ctx,
 		network,
 		network.GatewayContractAddress,
 		0,
 		0,
-		[]string{utils.OrderSettledEventSignature},
+		[]string{utils.SettleOutEventSignature},
 		txHash,
 		map[string]string{
 			"filter_transaction_hash": txHash,
@@ -880,13 +970,13 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 	)
 	if err != nil {
 		if err.Error() == "no events found" {
-			return eventCounts, nil // No OrderSettled events found for this transaction
+			return eventCounts, nil // No SettleOut events found for this transaction
 		}
-		return eventCounts, fmt.Errorf("error getting OrderSettled events for transaction %s: %w", txHash[:10]+"...", err)
+		return eventCounts, fmt.Errorf("error getting SettleOut events for transaction %s: %w", txHash[:10]+"...", err)
 	}
 
-	// Process OrderSettled events for the specific provider address
-	orderSettledEvents := []*types.OrderSettledEvent{}
+	// Process SettleOut events for the specific provider address
+	settleOutEvents := []*types.SettleOutEvent{}
 
 	for _, event := range events {
 		eventMap := event.(map[string]interface{})
@@ -944,6 +1034,15 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 			continue
 		}
 
+		rebatePercentStr, ok := nonIndexedParams["rebatePercent"].(string)
+		if !ok || rebatePercentStr == "" {
+			continue
+		}
+		rebatePercent, err := decimal.NewFromString(rebatePercentStr)
+		if err != nil {
+			continue
+		}
+
 		splitOrderId, ok := nonIndexedParams["splitOrderId"].(string)
 		if !ok || splitOrderId == "" {
 			continue
@@ -954,40 +1053,41 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 			continue
 		}
 
-		settledEvent := &types.OrderSettledEvent{
+		settledEvent := &types.SettleOutEvent{
 			BlockNumber:       blockNumber,
 			TxHash:            txHash,
 			SplitOrderId:      splitOrderId,
 			OrderId:           orderId,
 			LiquidityProvider: liquidityProvider,
 			SettlePercent:     settlePercent,
+			RebatePercent:     rebatePercent,
 		}
-		orderSettledEvents = append(orderSettledEvents, settledEvent)
+		settleOutEvents = append(settleOutEvents, settledEvent)
 	}
 
-	// Process OrderSettled events
-	if len(orderSettledEvents) > 0 {
+	// Process SettleOut events
+	if len(settleOutEvents) > 0 {
 		orderIds := []string{}
-		orderIdToEvent := make(map[string]*types.OrderSettledEvent)
-		for _, event := range orderSettledEvents {
+		orderIdToEvent := make(map[string]*types.SettleOutEvent)
+		for _, event := range settleOutEvents {
 			orderIds = append(orderIds, event.OrderId)
 			orderIdToEvent[event.OrderId] = event
 		}
-		err = common.ProcessSettledOrders(ctx, network, orderIds, orderIdToEvent)
+		err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
-			logger.Errorf("Failed to process OrderSettled events: %v", err)
+			logger.Errorf("Failed to process SettleOut events: %v", err)
 		} else {
 			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderSettled events for provider %s", len(orderSettledEvents), providerAddress)
+				logger.Infof("Successfully processed %d SettleOut events for provider %s", len(settleOutEvents), providerAddress)
 			}
 		}
 	}
-	eventCounts.OrderSettled = len(orderSettledEvents)
+	eventCounts.SettleOut = len(settleOutEvents)
 
 	return eventCounts, nil
 }
 
-// indexProviderAddressByAddress processes provider address's transaction history for OrderSettled events
+// indexProviderAddressByAddress processes provider address's transaction history for SettleOut events
 func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network *ent.Network, providerAddress string, fromBlock int64, toBlock int64) error {
 	// Determine parameters based on whether block range is provided
 	var limit int
@@ -1025,7 +1125,7 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 		logger.Infof("%s", logMessage)
 	}
 
-	// Process each transaction to find OrderSettled events
+	// Process each transaction to find SettleOut events
 	for i, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
 		if !ok || txHash == "" {

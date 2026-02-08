@@ -55,21 +55,59 @@ func (_c *ProviderOrderTokenCreate) SetNillableUpdatedAt(v *time.Time) *Provider
 	return _c
 }
 
-// SetFixedConversionRate sets the "fixed_conversion_rate" field.
-func (_c *ProviderOrderTokenCreate) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenCreate {
-	_c.mutation.SetFixedConversionRate(v)
+// SetFixedBuyRate sets the "fixed_buy_rate" field.
+func (_c *ProviderOrderTokenCreate) SetFixedBuyRate(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetFixedBuyRate(v)
 	return _c
 }
 
-// SetFloatingConversionRate sets the "floating_conversion_rate" field.
-func (_c *ProviderOrderTokenCreate) SetFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenCreate {
-	_c.mutation.SetFloatingConversionRate(v)
+// SetNillableFixedBuyRate sets the "fixed_buy_rate" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillableFixedBuyRate(v *decimal.Decimal) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetFixedBuyRate(*v)
+	}
 	return _c
 }
 
-// SetConversionRateType sets the "conversion_rate_type" field.
-func (_c *ProviderOrderTokenCreate) SetConversionRateType(v providerordertoken.ConversionRateType) *ProviderOrderTokenCreate {
-	_c.mutation.SetConversionRateType(v)
+// SetFixedSellRate sets the "fixed_sell_rate" field.
+func (_c *ProviderOrderTokenCreate) SetFixedSellRate(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetFixedSellRate(v)
+	return _c
+}
+
+// SetNillableFixedSellRate sets the "fixed_sell_rate" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillableFixedSellRate(v *decimal.Decimal) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetFixedSellRate(*v)
+	}
+	return _c
+}
+
+// SetFloatingBuyDelta sets the "floating_buy_delta" field.
+func (_c *ProviderOrderTokenCreate) SetFloatingBuyDelta(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetFloatingBuyDelta(v)
+	return _c
+}
+
+// SetNillableFloatingBuyDelta sets the "floating_buy_delta" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillableFloatingBuyDelta(v *decimal.Decimal) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetFloatingBuyDelta(*v)
+	}
+	return _c
+}
+
+// SetFloatingSellDelta sets the "floating_sell_delta" field.
+func (_c *ProviderOrderTokenCreate) SetFloatingSellDelta(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetFloatingSellDelta(v)
+	return _c
+}
+
+// SetNillableFloatingSellDelta sets the "floating_sell_delta" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillableFloatingSellDelta(v *decimal.Decimal) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetFloatingSellDelta(*v)
+	}
 	return _c
 }
 
@@ -223,20 +261,6 @@ func (_c *ProviderOrderTokenCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderOrderToken.updated_at"`)}
 	}
-	if _, ok := _c.mutation.FixedConversionRate(); !ok {
-		return &ValidationError{Name: "fixed_conversion_rate", err: errors.New(`ent: missing required field "ProviderOrderToken.fixed_conversion_rate"`)}
-	}
-	if _, ok := _c.mutation.FloatingConversionRate(); !ok {
-		return &ValidationError{Name: "floating_conversion_rate", err: errors.New(`ent: missing required field "ProviderOrderToken.floating_conversion_rate"`)}
-	}
-	if _, ok := _c.mutation.ConversionRateType(); !ok {
-		return &ValidationError{Name: "conversion_rate_type", err: errors.New(`ent: missing required field "ProviderOrderToken.conversion_rate_type"`)}
-	}
-	if v, ok := _c.mutation.ConversionRateType(); ok {
-		if err := providerordertoken.ConversionRateTypeValidator(v); err != nil {
-			return &ValidationError{Name: "conversion_rate_type", err: fmt.Errorf(`ent: validator failed for field "ProviderOrderToken.conversion_rate_type": %w`, err)}
-		}
-	}
 	if _, ok := _c.mutation.MaxOrderAmount(); !ok {
 		return &ValidationError{Name: "max_order_amount", err: errors.New(`ent: missing required field "ProviderOrderToken.max_order_amount"`)}
 	}
@@ -299,17 +323,21 @@ func (_c *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgraph
 		_spec.SetField(providerordertoken.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := _c.mutation.FixedConversionRate(); ok {
-		_spec.SetField(providerordertoken.FieldFixedConversionRate, field.TypeFloat64, value)
-		_node.FixedConversionRate = value
+	if value, ok := _c.mutation.FixedBuyRate(); ok {
+		_spec.SetField(providerordertoken.FieldFixedBuyRate, field.TypeFloat64, value)
+		_node.FixedBuyRate = value
 	}
-	if value, ok := _c.mutation.FloatingConversionRate(); ok {
-		_spec.SetField(providerordertoken.FieldFloatingConversionRate, field.TypeFloat64, value)
-		_node.FloatingConversionRate = value
+	if value, ok := _c.mutation.FixedSellRate(); ok {
+		_spec.SetField(providerordertoken.FieldFixedSellRate, field.TypeFloat64, value)
+		_node.FixedSellRate = value
 	}
-	if value, ok := _c.mutation.ConversionRateType(); ok {
-		_spec.SetField(providerordertoken.FieldConversionRateType, field.TypeEnum, value)
-		_node.ConversionRateType = value
+	if value, ok := _c.mutation.FloatingBuyDelta(); ok {
+		_spec.SetField(providerordertoken.FieldFloatingBuyDelta, field.TypeFloat64, value)
+		_node.FloatingBuyDelta = value
+	}
+	if value, ok := _c.mutation.FloatingSellDelta(); ok {
+		_spec.SetField(providerordertoken.FieldFloatingSellDelta, field.TypeFloat64, value)
+		_node.FloatingSellDelta = value
 	}
 	if value, ok := _c.mutation.MaxOrderAmount(); ok {
 		_spec.SetField(providerordertoken.FieldMaxOrderAmount, field.TypeFloat64, value)
@@ -458,51 +486,99 @@ func (u *ProviderOrderTokenUpsert) UpdateUpdatedAt() *ProviderOrderTokenUpsert {
 	return u
 }
 
-// SetFixedConversionRate sets the "fixed_conversion_rate" field.
-func (u *ProviderOrderTokenUpsert) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
-	u.Set(providerordertoken.FieldFixedConversionRate, v)
+// SetFixedBuyRate sets the "fixed_buy_rate" field.
+func (u *ProviderOrderTokenUpsert) SetFixedBuyRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldFixedBuyRate, v)
 	return u
 }
 
-// UpdateFixedConversionRate sets the "fixed_conversion_rate" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsert) UpdateFixedConversionRate() *ProviderOrderTokenUpsert {
-	u.SetExcluded(providerordertoken.FieldFixedConversionRate)
+// UpdateFixedBuyRate sets the "fixed_buy_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateFixedBuyRate() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldFixedBuyRate)
 	return u
 }
 
-// AddFixedConversionRate adds v to the "fixed_conversion_rate" field.
-func (u *ProviderOrderTokenUpsert) AddFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
-	u.Add(providerordertoken.FieldFixedConversionRate, v)
+// AddFixedBuyRate adds v to the "fixed_buy_rate" field.
+func (u *ProviderOrderTokenUpsert) AddFixedBuyRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldFixedBuyRate, v)
 	return u
 }
 
-// SetFloatingConversionRate sets the "floating_conversion_rate" field.
-func (u *ProviderOrderTokenUpsert) SetFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
-	u.Set(providerordertoken.FieldFloatingConversionRate, v)
+// ClearFixedBuyRate clears the value of the "fixed_buy_rate" field.
+func (u *ProviderOrderTokenUpsert) ClearFixedBuyRate() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldFixedBuyRate)
 	return u
 }
 
-// UpdateFloatingConversionRate sets the "floating_conversion_rate" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsert) UpdateFloatingConversionRate() *ProviderOrderTokenUpsert {
-	u.SetExcluded(providerordertoken.FieldFloatingConversionRate)
+// SetFixedSellRate sets the "fixed_sell_rate" field.
+func (u *ProviderOrderTokenUpsert) SetFixedSellRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldFixedSellRate, v)
 	return u
 }
 
-// AddFloatingConversionRate adds v to the "floating_conversion_rate" field.
-func (u *ProviderOrderTokenUpsert) AddFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
-	u.Add(providerordertoken.FieldFloatingConversionRate, v)
+// UpdateFixedSellRate sets the "fixed_sell_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateFixedSellRate() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldFixedSellRate)
 	return u
 }
 
-// SetConversionRateType sets the "conversion_rate_type" field.
-func (u *ProviderOrderTokenUpsert) SetConversionRateType(v providerordertoken.ConversionRateType) *ProviderOrderTokenUpsert {
-	u.Set(providerordertoken.FieldConversionRateType, v)
+// AddFixedSellRate adds v to the "fixed_sell_rate" field.
+func (u *ProviderOrderTokenUpsert) AddFixedSellRate(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldFixedSellRate, v)
 	return u
 }
 
-// UpdateConversionRateType sets the "conversion_rate_type" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsert) UpdateConversionRateType() *ProviderOrderTokenUpsert {
-	u.SetExcluded(providerordertoken.FieldConversionRateType)
+// ClearFixedSellRate clears the value of the "fixed_sell_rate" field.
+func (u *ProviderOrderTokenUpsert) ClearFixedSellRate() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldFixedSellRate)
+	return u
+}
+
+// SetFloatingBuyDelta sets the "floating_buy_delta" field.
+func (u *ProviderOrderTokenUpsert) SetFloatingBuyDelta(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldFloatingBuyDelta, v)
+	return u
+}
+
+// UpdateFloatingBuyDelta sets the "floating_buy_delta" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateFloatingBuyDelta() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldFloatingBuyDelta)
+	return u
+}
+
+// AddFloatingBuyDelta adds v to the "floating_buy_delta" field.
+func (u *ProviderOrderTokenUpsert) AddFloatingBuyDelta(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldFloatingBuyDelta, v)
+	return u
+}
+
+// ClearFloatingBuyDelta clears the value of the "floating_buy_delta" field.
+func (u *ProviderOrderTokenUpsert) ClearFloatingBuyDelta() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldFloatingBuyDelta)
+	return u
+}
+
+// SetFloatingSellDelta sets the "floating_sell_delta" field.
+func (u *ProviderOrderTokenUpsert) SetFloatingSellDelta(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldFloatingSellDelta, v)
+	return u
+}
+
+// UpdateFloatingSellDelta sets the "floating_sell_delta" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateFloatingSellDelta() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldFloatingSellDelta)
+	return u
+}
+
+// AddFloatingSellDelta adds v to the "floating_sell_delta" field.
+func (u *ProviderOrderTokenUpsert) AddFloatingSellDelta(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldFloatingSellDelta, v)
+	return u
+}
+
+// ClearFloatingSellDelta clears the value of the "floating_sell_delta" field.
+func (u *ProviderOrderTokenUpsert) ClearFloatingSellDelta() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldFloatingSellDelta)
 	return u
 }
 
@@ -703,59 +779,115 @@ func (u *ProviderOrderTokenUpsertOne) UpdateUpdatedAt() *ProviderOrderTokenUpser
 	})
 }
 
-// SetFixedConversionRate sets the "fixed_conversion_rate" field.
-func (u *ProviderOrderTokenUpsertOne) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+// SetFixedBuyRate sets the "fixed_buy_rate" field.
+func (u *ProviderOrderTokenUpsertOne) SetFixedBuyRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetFixedConversionRate(v)
+		s.SetFixedBuyRate(v)
 	})
 }
 
-// AddFixedConversionRate adds v to the "fixed_conversion_rate" field.
-func (u *ProviderOrderTokenUpsertOne) AddFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+// AddFixedBuyRate adds v to the "fixed_buy_rate" field.
+func (u *ProviderOrderTokenUpsertOne) AddFixedBuyRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.AddFixedConversionRate(v)
+		s.AddFixedBuyRate(v)
 	})
 }
 
-// UpdateFixedConversionRate sets the "fixed_conversion_rate" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertOne) UpdateFixedConversionRate() *ProviderOrderTokenUpsertOne {
+// UpdateFixedBuyRate sets the "fixed_buy_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateFixedBuyRate() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateFixedConversionRate()
+		s.UpdateFixedBuyRate()
 	})
 }
 
-// SetFloatingConversionRate sets the "floating_conversion_rate" field.
-func (u *ProviderOrderTokenUpsertOne) SetFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+// ClearFixedBuyRate clears the value of the "fixed_buy_rate" field.
+func (u *ProviderOrderTokenUpsertOne) ClearFixedBuyRate() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetFloatingConversionRate(v)
+		s.ClearFixedBuyRate()
 	})
 }
 
-// AddFloatingConversionRate adds v to the "floating_conversion_rate" field.
-func (u *ProviderOrderTokenUpsertOne) AddFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+// SetFixedSellRate sets the "fixed_sell_rate" field.
+func (u *ProviderOrderTokenUpsertOne) SetFixedSellRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.AddFloatingConversionRate(v)
+		s.SetFixedSellRate(v)
 	})
 }
 
-// UpdateFloatingConversionRate sets the "floating_conversion_rate" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertOne) UpdateFloatingConversionRate() *ProviderOrderTokenUpsertOne {
+// AddFixedSellRate adds v to the "fixed_sell_rate" field.
+func (u *ProviderOrderTokenUpsertOne) AddFixedSellRate(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateFloatingConversionRate()
+		s.AddFixedSellRate(v)
 	})
 }
 
-// SetConversionRateType sets the "conversion_rate_type" field.
-func (u *ProviderOrderTokenUpsertOne) SetConversionRateType(v providerordertoken.ConversionRateType) *ProviderOrderTokenUpsertOne {
+// UpdateFixedSellRate sets the "fixed_sell_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateFixedSellRate() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetConversionRateType(v)
+		s.UpdateFixedSellRate()
 	})
 }
 
-// UpdateConversionRateType sets the "conversion_rate_type" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertOne) UpdateConversionRateType() *ProviderOrderTokenUpsertOne {
+// ClearFixedSellRate clears the value of the "fixed_sell_rate" field.
+func (u *ProviderOrderTokenUpsertOne) ClearFixedSellRate() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateConversionRateType()
+		s.ClearFixedSellRate()
+	})
+}
+
+// SetFloatingBuyDelta sets the "floating_buy_delta" field.
+func (u *ProviderOrderTokenUpsertOne) SetFloatingBuyDelta(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetFloatingBuyDelta(v)
+	})
+}
+
+// AddFloatingBuyDelta adds v to the "floating_buy_delta" field.
+func (u *ProviderOrderTokenUpsertOne) AddFloatingBuyDelta(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddFloatingBuyDelta(v)
+	})
+}
+
+// UpdateFloatingBuyDelta sets the "floating_buy_delta" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateFloatingBuyDelta() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateFloatingBuyDelta()
+	})
+}
+
+// ClearFloatingBuyDelta clears the value of the "floating_buy_delta" field.
+func (u *ProviderOrderTokenUpsertOne) ClearFloatingBuyDelta() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearFloatingBuyDelta()
+	})
+}
+
+// SetFloatingSellDelta sets the "floating_sell_delta" field.
+func (u *ProviderOrderTokenUpsertOne) SetFloatingSellDelta(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetFloatingSellDelta(v)
+	})
+}
+
+// AddFloatingSellDelta adds v to the "floating_sell_delta" field.
+func (u *ProviderOrderTokenUpsertOne) AddFloatingSellDelta(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddFloatingSellDelta(v)
+	})
+}
+
+// UpdateFloatingSellDelta sets the "floating_sell_delta" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateFloatingSellDelta() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateFloatingSellDelta()
+	})
+}
+
+// ClearFloatingSellDelta clears the value of the "floating_sell_delta" field.
+func (u *ProviderOrderTokenUpsertOne) ClearFloatingSellDelta() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearFloatingSellDelta()
 	})
 }
 
@@ -1145,59 +1277,115 @@ func (u *ProviderOrderTokenUpsertBulk) UpdateUpdatedAt() *ProviderOrderTokenUpse
 	})
 }
 
-// SetFixedConversionRate sets the "fixed_conversion_rate" field.
-func (u *ProviderOrderTokenUpsertBulk) SetFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+// SetFixedBuyRate sets the "fixed_buy_rate" field.
+func (u *ProviderOrderTokenUpsertBulk) SetFixedBuyRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetFixedConversionRate(v)
+		s.SetFixedBuyRate(v)
 	})
 }
 
-// AddFixedConversionRate adds v to the "fixed_conversion_rate" field.
-func (u *ProviderOrderTokenUpsertBulk) AddFixedConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+// AddFixedBuyRate adds v to the "fixed_buy_rate" field.
+func (u *ProviderOrderTokenUpsertBulk) AddFixedBuyRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.AddFixedConversionRate(v)
+		s.AddFixedBuyRate(v)
 	})
 }
 
-// UpdateFixedConversionRate sets the "fixed_conversion_rate" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertBulk) UpdateFixedConversionRate() *ProviderOrderTokenUpsertBulk {
+// UpdateFixedBuyRate sets the "fixed_buy_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateFixedBuyRate() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateFixedConversionRate()
+		s.UpdateFixedBuyRate()
 	})
 }
 
-// SetFloatingConversionRate sets the "floating_conversion_rate" field.
-func (u *ProviderOrderTokenUpsertBulk) SetFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+// ClearFixedBuyRate clears the value of the "fixed_buy_rate" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearFixedBuyRate() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetFloatingConversionRate(v)
+		s.ClearFixedBuyRate()
 	})
 }
 
-// AddFloatingConversionRate adds v to the "floating_conversion_rate" field.
-func (u *ProviderOrderTokenUpsertBulk) AddFloatingConversionRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+// SetFixedSellRate sets the "fixed_sell_rate" field.
+func (u *ProviderOrderTokenUpsertBulk) SetFixedSellRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.AddFloatingConversionRate(v)
+		s.SetFixedSellRate(v)
 	})
 }
 
-// UpdateFloatingConversionRate sets the "floating_conversion_rate" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertBulk) UpdateFloatingConversionRate() *ProviderOrderTokenUpsertBulk {
+// AddFixedSellRate adds v to the "fixed_sell_rate" field.
+func (u *ProviderOrderTokenUpsertBulk) AddFixedSellRate(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateFloatingConversionRate()
+		s.AddFixedSellRate(v)
 	})
 }
 
-// SetConversionRateType sets the "conversion_rate_type" field.
-func (u *ProviderOrderTokenUpsertBulk) SetConversionRateType(v providerordertoken.ConversionRateType) *ProviderOrderTokenUpsertBulk {
+// UpdateFixedSellRate sets the "fixed_sell_rate" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateFixedSellRate() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetConversionRateType(v)
+		s.UpdateFixedSellRate()
 	})
 }
 
-// UpdateConversionRateType sets the "conversion_rate_type" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertBulk) UpdateConversionRateType() *ProviderOrderTokenUpsertBulk {
+// ClearFixedSellRate clears the value of the "fixed_sell_rate" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearFixedSellRate() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateConversionRateType()
+		s.ClearFixedSellRate()
+	})
+}
+
+// SetFloatingBuyDelta sets the "floating_buy_delta" field.
+func (u *ProviderOrderTokenUpsertBulk) SetFloatingBuyDelta(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetFloatingBuyDelta(v)
+	})
+}
+
+// AddFloatingBuyDelta adds v to the "floating_buy_delta" field.
+func (u *ProviderOrderTokenUpsertBulk) AddFloatingBuyDelta(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddFloatingBuyDelta(v)
+	})
+}
+
+// UpdateFloatingBuyDelta sets the "floating_buy_delta" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateFloatingBuyDelta() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateFloatingBuyDelta()
+	})
+}
+
+// ClearFloatingBuyDelta clears the value of the "floating_buy_delta" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearFloatingBuyDelta() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearFloatingBuyDelta()
+	})
+}
+
+// SetFloatingSellDelta sets the "floating_sell_delta" field.
+func (u *ProviderOrderTokenUpsertBulk) SetFloatingSellDelta(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetFloatingSellDelta(v)
+	})
+}
+
+// AddFloatingSellDelta adds v to the "floating_sell_delta" field.
+func (u *ProviderOrderTokenUpsertBulk) AddFloatingSellDelta(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddFloatingSellDelta(v)
+	})
+}
+
+// UpdateFloatingSellDelta sets the "floating_sell_delta" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateFloatingSellDelta() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateFloatingSellDelta()
+	})
+}
+
+// ClearFloatingSellDelta clears the value of the "floating_sell_delta" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearFloatingSellDelta() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearFloatingSellDelta()
 	})
 }
 

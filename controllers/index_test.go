@@ -109,12 +109,13 @@ func TestIndex(t *testing.T) {
 
 			// Assert /currencies response with the seeded Naira currency.
 			nairaCurrency := types.SupportedCurrencies{
-				Code:       "NGN",
-				Name:       "Nigerian Naira",
-				ShortName:  "Naira",
-				Decimals:   2,
-				Symbol:     "₦",
-				MarketRate: decimal.NewFromFloat(950.0),
+				Code:          "NGN",
+				Name:          "Nigerian Naira",
+				ShortName:     "Naira",
+				Decimals:      2,
+				Symbol:        "₦",
+				MarketBuyRate: decimal.NewFromFloat(950.0),
+				MarketSellRate: decimal.NewFromFloat(950.0),
 			}
 
 			assert.Equal(t, nairaCurrency.Code, response.Data[0].Code)
@@ -122,7 +123,7 @@ func TestIndex(t *testing.T) {
 			assert.Equal(t, nairaCurrency.ShortName, response.Data[0].ShortName)
 			assert.Equal(t, nairaCurrency.Decimals, response.Data[0].Decimals)
 			assert.Equal(t, nairaCurrency.Symbol, response.Data[0].Symbol)
-			assert.True(t, response.Data[0].MarketRate.Equal(nairaCurrency.MarketRate))
+			assert.True(t, response.Data[0].MarketSellRate.Equal(nairaCurrency.MarketSellRate))
 		})
 	})
 

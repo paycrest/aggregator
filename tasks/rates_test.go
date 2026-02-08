@@ -14,9 +14,10 @@ func TestFetchExternalRate(t *testing.T) {
 
 	// Test unsupported currency
 	t.Run("UnsupportedCurrency", func(t *testing.T) {
-		value, err := fetchExternalRate("KSH")
+		buy, sell, err := fetchExternalRate("KSH")
 		assert.Error(t, err)
-		assert.Equal(t, value, decimal.Zero)
+		assert.Equal(t, buy, decimal.Zero)
+		assert.Equal(t, sell, decimal.Zero)
 		assert.Contains(t, err.Error(), "currency not supported")
 	})
 
@@ -35,10 +36,12 @@ func TestFetchExternalRate(t *testing.T) {
 					}
 				]`))
 
-		value, err := fetchExternalRate("NGN")
+		buy, sell, err := fetchExternalRate("NGN")
 		assert.NoError(t, err)
-		expectedRate := decimal.NewFromFloat((1444.36 + 1451.61) / 2) // Average of buy and sell
-		assert.True(t, value.Equal(expectedRate))
+		expectedBuy := decimal.NewFromFloat(1451.61) // swapped in implementation
+		expectedSell := decimal.NewFromFloat(1444.36)
+		assert.True(t, buy.Equal(expectedBuy))
+		assert.True(t, sell.Equal(expectedSell))
 	})
 
 	// Test API error
@@ -46,9 +49,10 @@ func TestFetchExternalRate(t *testing.T) {
 		httpmock.RegisterResponder("GET", "https://api.rates.noblocks.xyz/rates/usdt/kes",
 			httpmock.NewStringResponder(500, `{"error": "Internal server error"}`))
 
-		value, err := fetchExternalRate("KES")
+		buy, sell, err := fetchExternalRate("KES")
 		assert.Error(t, err)
-		assert.Equal(t, value, decimal.Zero)
+		assert.Equal(t, buy, decimal.Zero)
+		assert.Equal(t, sell, decimal.Zero)
 		assert.Contains(t, err.Error(), "ComputeMarketRate")
 	})
 
@@ -57,9 +61,10 @@ func TestFetchExternalRate(t *testing.T) {
 		httpmock.RegisterResponder("GET", "https://api.rates.noblocks.xyz/rates/usdt/ghs",
 			httpmock.NewStringResponder(200, `[]`))
 
-		value, err := fetchExternalRate("GHS")
+		buy, sell, err := fetchExternalRate("GHS")
 		assert.Error(t, err)
-		assert.Equal(t, value, decimal.Zero)
+		assert.Equal(t, buy, decimal.Zero)
+		assert.Equal(t, sell, decimal.Zero)
 		assert.Contains(t, err.Error(), "No data in the response")
 	})
 
@@ -68,9 +73,10 @@ func TestFetchExternalRate(t *testing.T) {
 		httpmock.RegisterResponder("GET", "https://api.rates.noblocks.xyz/rates/usdt/mwk",
 			httpmock.NewStringResponder(200, `invalid json`))
 
-		value, err := fetchExternalRate("MWK")
+		buy, sell, err := fetchExternalRate("MWK")
 		assert.Error(t, err)
-		assert.Equal(t, value, decimal.Zero)
+		assert.Equal(t, buy, decimal.Zero)
+		assert.Equal(t, sell, decimal.Zero)
 	})
 
 	// Test malformed rate data
@@ -87,9 +93,10 @@ func TestFetchExternalRate(t *testing.T) {
 					}
 				]`))
 
-		value, err := fetchExternalRate("TZS")
+		buy, sell, err := fetchExternalRate("TZS")
 		assert.Error(t, err)
-		assert.Equal(t, value, decimal.Zero)
+		assert.Equal(t, buy, decimal.Zero)
+		assert.Equal(t, sell, decimal.Zero)
 		assert.Contains(t, err.Error(), "Invalid buyRate format")
 	})
 

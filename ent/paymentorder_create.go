@@ -260,16 +260,16 @@ func (_c *PaymentOrderCreate) SetNillableFromAddress(v *string) *PaymentOrderCre
 	return _c
 }
 
-// SetReturnAddress sets the "return_address" field.
-func (_c *PaymentOrderCreate) SetReturnAddress(v string) *PaymentOrderCreate {
-	_c.mutation.SetReturnAddress(v)
+// SetRefundOrRecipientAddress sets the "refund_or_recipient_address" field.
+func (_c *PaymentOrderCreate) SetRefundOrRecipientAddress(v string) *PaymentOrderCreate {
+	_c.mutation.SetRefundOrRecipientAddress(v)
 	return _c
 }
 
-// SetNillableReturnAddress sets the "return_address" field if the given value is not nil.
-func (_c *PaymentOrderCreate) SetNillableReturnAddress(v *string) *PaymentOrderCreate {
+// SetNillableRefundOrRecipientAddress sets the "refund_or_recipient_address" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableRefundOrRecipientAddress(v *string) *PaymentOrderCreate {
 	if v != nil {
-		_c.SetReturnAddress(*v)
+		_c.SetRefundOrRecipientAddress(*v)
 	}
 	return _c
 }
@@ -354,20 +354,6 @@ func (_c *PaymentOrderCreate) SetAccountName(v string) *PaymentOrderCreate {
 	return _c
 }
 
-// SetMemo sets the "memo" field.
-func (_c *PaymentOrderCreate) SetMemo(v string) *PaymentOrderCreate {
-	_c.mutation.SetMemo(v)
-	return _c
-}
-
-// SetNillableMemo sets the "memo" field if the given value is not nil.
-func (_c *PaymentOrderCreate) SetNillableMemo(v *string) *PaymentOrderCreate {
-	if v != nil {
-		_c.SetMemo(*v)
-	}
-	return _c
-}
-
 // SetMetadata sets the "metadata" field.
 func (_c *PaymentOrderCreate) SetMetadata(v map[string]interface{}) *PaymentOrderCreate {
 	_c.mutation.SetMetadata(v)
@@ -422,6 +408,20 @@ func (_c *PaymentOrderCreate) SetCancellationReasons(v []string) *PaymentOrderCr
 	return _c
 }
 
+// SetMemo sets the "memo" field.
+func (_c *PaymentOrderCreate) SetMemo(v string) *PaymentOrderCreate {
+	_c.mutation.SetMemo(v)
+	return _c
+}
+
+// SetNillableMemo sets the "memo" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableMemo(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetMemo(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *PaymentOrderCreate) SetStatus(v paymentorder.Status) *PaymentOrderCreate {
 	_c.mutation.SetStatus(v)
@@ -432,6 +432,20 @@ func (_c *PaymentOrderCreate) SetStatus(v paymentorder.Status) *PaymentOrderCrea
 func (_c *PaymentOrderCreate) SetNillableStatus(v *paymentorder.Status) *PaymentOrderCreate {
 	if v != nil {
 		_c.SetStatus(*v)
+	}
+	return _c
+}
+
+// SetDirection sets the "direction" field.
+func (_c *PaymentOrderCreate) SetDirection(v paymentorder.Direction) *PaymentOrderCreate {
+	_c.mutation.SetDirection(v)
+	return _c
+}
+
+// SetNillableDirection sets the "direction" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableDirection(v *paymentorder.Direction) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetDirection(*v)
 	}
 	return _c
 }
@@ -672,6 +686,10 @@ func (_c *PaymentOrderCreate) defaults() {
 		v := paymentorder.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.Direction(); !ok {
+		v := paymentorder.DefaultDirection
+		_c.mutation.SetDirection(v)
+	}
 	if _, ok := _c.mutation.OrderType(); !ok {
 		v := paymentorder.DefaultOrderType
 		_c.mutation.SetOrderType(v)
@@ -741,9 +759,9 @@ func (_c *PaymentOrderCreate) check() error {
 			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.from_address": %w`, err)}
 		}
 	}
-	if v, ok := _c.mutation.ReturnAddress(); ok {
-		if err := paymentorder.ReturnAddressValidator(v); err != nil {
-			return &ValidationError{Name: "return_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.return_address": %w`, err)}
+	if v, ok := _c.mutation.RefundOrRecipientAddress(); ok {
+		if err := paymentorder.RefundOrRecipientAddressValidator(v); err != nil {
+			return &ValidationError{Name: "refund_or_recipient_address", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.refund_or_recipient_address": %w`, err)}
 		}
 	}
 	if v, ok := _c.mutation.ReceiveAddress(); ok {
@@ -780,11 +798,6 @@ func (_c *PaymentOrderCreate) check() error {
 			return &ValidationError{Name: "account_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.account_name": %w`, err)}
 		}
 	}
-	if v, ok := _c.mutation.Memo(); ok {
-		if err := paymentorder.MemoValidator(v); err != nil {
-			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
-		}
-	}
 	if v, ok := _c.mutation.Sender(); ok {
 		if err := paymentorder.SenderValidator(v); err != nil {
 			return &ValidationError{Name: "sender", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.sender": %w`, err)}
@@ -795,12 +808,25 @@ func (_c *PaymentOrderCreate) check() error {
 			return &ValidationError{Name: "reference", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.reference": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.Memo(); ok {
+		if err := paymentorder.MemoValidator(v); err != nil {
+			return &ValidationError{Name: "memo", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.memo": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "PaymentOrder.status"`)}
 	}
 	if v, ok := _c.mutation.Status(); ok {
 		if err := paymentorder.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.status": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Direction(); !ok {
+		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "PaymentOrder.direction"`)}
+	}
+	if v, ok := _c.mutation.Direction(); ok {
+		if err := paymentorder.DirectionValidator(v); err != nil {
+			return &ValidationError{Name: "direction", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.direction": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.OrderType(); !ok {
@@ -922,9 +948,9 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_spec.SetField(paymentorder.FieldFromAddress, field.TypeString, value)
 		_node.FromAddress = value
 	}
-	if value, ok := _c.mutation.ReturnAddress(); ok {
-		_spec.SetField(paymentorder.FieldReturnAddress, field.TypeString, value)
-		_node.ReturnAddress = value
+	if value, ok := _c.mutation.RefundOrRecipientAddress(); ok {
+		_spec.SetField(paymentorder.FieldRefundOrRecipientAddress, field.TypeString, value)
+		_node.RefundOrRecipientAddress = value
 	}
 	if value, ok := _c.mutation.ReceiveAddress(); ok {
 		_spec.SetField(paymentorder.FieldReceiveAddress, field.TypeString, value)
@@ -958,10 +984,6 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_spec.SetField(paymentorder.FieldAccountName, field.TypeString, value)
 		_node.AccountName = value
 	}
-	if value, ok := _c.mutation.Memo(); ok {
-		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
-		_node.Memo = value
-	}
 	if value, ok := _c.mutation.Metadata(); ok {
 		_spec.SetField(paymentorder.FieldMetadata, field.TypeJSON, value)
 		_node.Metadata = value
@@ -982,9 +1004,17 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_spec.SetField(paymentorder.FieldCancellationReasons, field.TypeJSON, value)
 		_node.CancellationReasons = value
 	}
+	if value, ok := _c.mutation.Memo(); ok {
+		_spec.SetField(paymentorder.FieldMemo, field.TypeString, value)
+		_node.Memo = value
+	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(paymentorder.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
+	}
+	if value, ok := _c.mutation.Direction(); ok {
+		_spec.SetField(paymentorder.FieldDirection, field.TypeEnum, value)
+		_node.Direction = value
 	}
 	if value, ok := _c.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
@@ -1458,21 +1488,21 @@ func (u *PaymentOrderUpsert) ClearFromAddress() *PaymentOrderUpsert {
 	return u
 }
 
-// SetReturnAddress sets the "return_address" field.
-func (u *PaymentOrderUpsert) SetReturnAddress(v string) *PaymentOrderUpsert {
-	u.Set(paymentorder.FieldReturnAddress, v)
+// SetRefundOrRecipientAddress sets the "refund_or_recipient_address" field.
+func (u *PaymentOrderUpsert) SetRefundOrRecipientAddress(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldRefundOrRecipientAddress, v)
 	return u
 }
 
-// UpdateReturnAddress sets the "return_address" field to the value that was provided on create.
-func (u *PaymentOrderUpsert) UpdateReturnAddress() *PaymentOrderUpsert {
-	u.SetExcluded(paymentorder.FieldReturnAddress)
+// UpdateRefundOrRecipientAddress sets the "refund_or_recipient_address" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateRefundOrRecipientAddress() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldRefundOrRecipientAddress)
 	return u
 }
 
-// ClearReturnAddress clears the value of the "return_address" field.
-func (u *PaymentOrderUpsert) ClearReturnAddress() *PaymentOrderUpsert {
-	u.SetNull(paymentorder.FieldReturnAddress)
+// ClearRefundOrRecipientAddress clears the value of the "refund_or_recipient_address" field.
+func (u *PaymentOrderUpsert) ClearRefundOrRecipientAddress() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldRefundOrRecipientAddress)
 	return u
 }
 
@@ -1602,24 +1632,6 @@ func (u *PaymentOrderUpsert) UpdateAccountName() *PaymentOrderUpsert {
 	return u
 }
 
-// SetMemo sets the "memo" field.
-func (u *PaymentOrderUpsert) SetMemo(v string) *PaymentOrderUpsert {
-	u.Set(paymentorder.FieldMemo, v)
-	return u
-}
-
-// UpdateMemo sets the "memo" field to the value that was provided on create.
-func (u *PaymentOrderUpsert) UpdateMemo() *PaymentOrderUpsert {
-	u.SetExcluded(paymentorder.FieldMemo)
-	return u
-}
-
-// ClearMemo clears the value of the "memo" field.
-func (u *PaymentOrderUpsert) ClearMemo() *PaymentOrderUpsert {
-	u.SetNull(paymentorder.FieldMemo)
-	return u
-}
-
 // SetMetadata sets the "metadata" field.
 func (u *PaymentOrderUpsert) SetMetadata(v map[string]interface{}) *PaymentOrderUpsert {
 	u.Set(paymentorder.FieldMetadata, v)
@@ -1716,6 +1728,24 @@ func (u *PaymentOrderUpsert) ClearCancellationReasons() *PaymentOrderUpsert {
 	return u
 }
 
+// SetMemo sets the "memo" field.
+func (u *PaymentOrderUpsert) SetMemo(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldMemo, v)
+	return u
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateMemo() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldMemo)
+	return u
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *PaymentOrderUpsert) ClearMemo() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldMemo)
+	return u
+}
+
 // SetStatus sets the "status" field.
 func (u *PaymentOrderUpsert) SetStatus(v paymentorder.Status) *PaymentOrderUpsert {
 	u.Set(paymentorder.FieldStatus, v)
@@ -1725,6 +1755,18 @@ func (u *PaymentOrderUpsert) SetStatus(v paymentorder.Status) *PaymentOrderUpser
 // UpdateStatus sets the "status" field to the value that was provided on create.
 func (u *PaymentOrderUpsert) UpdateStatus() *PaymentOrderUpsert {
 	u.SetExcluded(paymentorder.FieldStatus)
+	return u
+}
+
+// SetDirection sets the "direction" field.
+func (u *PaymentOrderUpsert) SetDirection(v paymentorder.Direction) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldDirection, v)
+	return u
+}
+
+// UpdateDirection sets the "direction" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateDirection() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldDirection)
 	return u
 }
 
@@ -2141,24 +2183,24 @@ func (u *PaymentOrderUpsertOne) ClearFromAddress() *PaymentOrderUpsertOne {
 	})
 }
 
-// SetReturnAddress sets the "return_address" field.
-func (u *PaymentOrderUpsertOne) SetReturnAddress(v string) *PaymentOrderUpsertOne {
+// SetRefundOrRecipientAddress sets the "refund_or_recipient_address" field.
+func (u *PaymentOrderUpsertOne) SetRefundOrRecipientAddress(v string) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetReturnAddress(v)
+		s.SetRefundOrRecipientAddress(v)
 	})
 }
 
-// UpdateReturnAddress sets the "return_address" field to the value that was provided on create.
-func (u *PaymentOrderUpsertOne) UpdateReturnAddress() *PaymentOrderUpsertOne {
+// UpdateRefundOrRecipientAddress sets the "refund_or_recipient_address" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateRefundOrRecipientAddress() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateReturnAddress()
+		s.UpdateRefundOrRecipientAddress()
 	})
 }
 
-// ClearReturnAddress clears the value of the "return_address" field.
-func (u *PaymentOrderUpsertOne) ClearReturnAddress() *PaymentOrderUpsertOne {
+// ClearRefundOrRecipientAddress clears the value of the "refund_or_recipient_address" field.
+func (u *PaymentOrderUpsertOne) ClearRefundOrRecipientAddress() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.ClearReturnAddress()
+		s.ClearRefundOrRecipientAddress()
 	})
 }
 
@@ -2309,27 +2351,6 @@ func (u *PaymentOrderUpsertOne) UpdateAccountName() *PaymentOrderUpsertOne {
 	})
 }
 
-// SetMemo sets the "memo" field.
-func (u *PaymentOrderUpsertOne) SetMemo(v string) *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetMemo(v)
-	})
-}
-
-// UpdateMemo sets the "memo" field to the value that was provided on create.
-func (u *PaymentOrderUpsertOne) UpdateMemo() *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateMemo()
-	})
-}
-
-// ClearMemo clears the value of the "memo" field.
-func (u *PaymentOrderUpsertOne) ClearMemo() *PaymentOrderUpsertOne {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.ClearMemo()
-	})
-}
-
 // SetMetadata sets the "metadata" field.
 func (u *PaymentOrderUpsertOne) SetMetadata(v map[string]interface{}) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -2442,6 +2463,27 @@ func (u *PaymentOrderUpsertOne) ClearCancellationReasons() *PaymentOrderUpsertOn
 	})
 }
 
+// SetMemo sets the "memo" field.
+func (u *PaymentOrderUpsertOne) SetMemo(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMemo(v)
+	})
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateMemo() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMemo()
+	})
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *PaymentOrderUpsertOne) ClearMemo() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMemo()
+	})
+}
+
 // SetStatus sets the "status" field.
 func (u *PaymentOrderUpsertOne) SetStatus(v paymentorder.Status) *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -2453,6 +2495,20 @@ func (u *PaymentOrderUpsertOne) SetStatus(v paymentorder.Status) *PaymentOrderUp
 func (u *PaymentOrderUpsertOne) UpdateStatus() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetDirection sets the "direction" field.
+func (u *PaymentOrderUpsertOne) SetDirection(v paymentorder.Direction) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetDirection(v)
+	})
+}
+
+// UpdateDirection sets the "direction" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateDirection() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateDirection()
 	})
 }
 
@@ -3038,24 +3094,24 @@ func (u *PaymentOrderUpsertBulk) ClearFromAddress() *PaymentOrderUpsertBulk {
 	})
 }
 
-// SetReturnAddress sets the "return_address" field.
-func (u *PaymentOrderUpsertBulk) SetReturnAddress(v string) *PaymentOrderUpsertBulk {
+// SetRefundOrRecipientAddress sets the "refund_or_recipient_address" field.
+func (u *PaymentOrderUpsertBulk) SetRefundOrRecipientAddress(v string) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetReturnAddress(v)
+		s.SetRefundOrRecipientAddress(v)
 	})
 }
 
-// UpdateReturnAddress sets the "return_address" field to the value that was provided on create.
-func (u *PaymentOrderUpsertBulk) UpdateReturnAddress() *PaymentOrderUpsertBulk {
+// UpdateRefundOrRecipientAddress sets the "refund_or_recipient_address" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateRefundOrRecipientAddress() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateReturnAddress()
+		s.UpdateRefundOrRecipientAddress()
 	})
 }
 
-// ClearReturnAddress clears the value of the "return_address" field.
-func (u *PaymentOrderUpsertBulk) ClearReturnAddress() *PaymentOrderUpsertBulk {
+// ClearRefundOrRecipientAddress clears the value of the "refund_or_recipient_address" field.
+func (u *PaymentOrderUpsertBulk) ClearRefundOrRecipientAddress() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
-		s.ClearReturnAddress()
+		s.ClearRefundOrRecipientAddress()
 	})
 }
 
@@ -3206,27 +3262,6 @@ func (u *PaymentOrderUpsertBulk) UpdateAccountName() *PaymentOrderUpsertBulk {
 	})
 }
 
-// SetMemo sets the "memo" field.
-func (u *PaymentOrderUpsertBulk) SetMemo(v string) *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.SetMemo(v)
-	})
-}
-
-// UpdateMemo sets the "memo" field to the value that was provided on create.
-func (u *PaymentOrderUpsertBulk) UpdateMemo() *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.UpdateMemo()
-	})
-}
-
-// ClearMemo clears the value of the "memo" field.
-func (u *PaymentOrderUpsertBulk) ClearMemo() *PaymentOrderUpsertBulk {
-	return u.Update(func(s *PaymentOrderUpsert) {
-		s.ClearMemo()
-	})
-}
-
 // SetMetadata sets the "metadata" field.
 func (u *PaymentOrderUpsertBulk) SetMetadata(v map[string]interface{}) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -3339,6 +3374,27 @@ func (u *PaymentOrderUpsertBulk) ClearCancellationReasons() *PaymentOrderUpsertB
 	})
 }
 
+// SetMemo sets the "memo" field.
+func (u *PaymentOrderUpsertBulk) SetMemo(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetMemo(v)
+	})
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateMemo() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateMemo()
+	})
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *PaymentOrderUpsertBulk) ClearMemo() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearMemo()
+	})
+}
+
 // SetStatus sets the "status" field.
 func (u *PaymentOrderUpsertBulk) SetStatus(v paymentorder.Status) *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
@@ -3350,6 +3406,20 @@ func (u *PaymentOrderUpsertBulk) SetStatus(v paymentorder.Status) *PaymentOrderU
 func (u *PaymentOrderUpsertBulk) UpdateStatus() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetDirection sets the "direction" field.
+func (u *PaymentOrderUpsertBulk) SetDirection(v paymentorder.Direction) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetDirection(v)
+	})
+}
+
+// UpdateDirection sets the "direction" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateDirection() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateDirection()
 	})
 }
 

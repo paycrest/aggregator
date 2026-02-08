@@ -13,6 +13,7 @@ import (
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
@@ -112,7 +113,7 @@ func (s *OrderStarknet) CreateOrder(ctx context.Context, orderID uuid.UUID) erro
 		return fmt.Errorf("%s - CreateOrder.parseFeeAddress: %w", orderIDPrefix, err)
 	}
 	senderFeeFelt := new(felt.Felt).SetBigInt(u.ToSubunit(order.SenderFee, order.Edges.Token.Decimals))
-	refundAddressFelt, err := utils.HexToFelt(order.ReturnAddress)
+	refundAddressFelt, err := utils.HexToFelt(order.RefundOrRecipientAddress)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.parseRefundAddress: %w", orderIDPrefix, err)
 	}
@@ -223,6 +224,34 @@ func (s *OrderStarknet) RefundOrder(ctx context.Context, network *ent.Network, o
 	_, err = s.client.PaymasterExecuteTransaction(ctx, execReq)
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.paymasterExecuteTransaction: %w", orderIDPrefix, err)
+	}
+
+	// Create order_refunding log (indexer will update to order_refunded when event is indexed)
+	tx, err := db.Client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - RefundOrder.tx: %w", orderIDPrefix, err)
+	}
+	transactionLog, err := tx.TransactionLog.
+		Create().
+		SetStatus(transactionlog.StatusOrderRefunding).
+		SetGatewayID(paymentOrder.GatewayID).
+		SetNetwork(paymentOrder.Edges.Token.Edges.Network.Identifier).
+		Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("%s - RefundOrder.createLog: %w", orderIDPrefix, err)
+	}
+	_, err = tx.PaymentOrder.
+		UpdateOneID(paymentOrder.ID).
+		SetStatus(paymentorder.StatusRefunding).
+		AddTransactions(transactionLog).
+		Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("%s - RefundOrder.updateStatus: %w", orderIDPrefix, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("%s - RefundOrder.commit: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -339,6 +368,15 @@ func (s *OrderStarknet) SettleOrder(ctx context.Context, orderID uuid.UUID) erro
 	_, err = s.client.PaymasterExecuteTransaction(ctx, execReq)
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.paymasterExecuteTransaction: %w", orderIDPrefix, err)
+	}
+
+	// Update order status to settling (indexer will set settled when event is indexed)
+	_, err = db.Client.PaymentOrder.
+		UpdateOneID(order.ID).
+		SetStatus(paymentorder.StatusSettling).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - SettleOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 
 	return nil

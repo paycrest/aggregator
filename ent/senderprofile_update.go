@@ -53,6 +53,26 @@ func (_u *SenderProfileUpdate) ClearWebhookURL() *SenderProfileUpdate {
 	return _u
 }
 
+// SetWebhookVersion sets the "webhook_version" field.
+func (_u *SenderProfileUpdate) SetWebhookVersion(v string) *SenderProfileUpdate {
+	_u.mutation.SetWebhookVersion(v)
+	return _u
+}
+
+// SetNillableWebhookVersion sets the "webhook_version" field if the given value is not nil.
+func (_u *SenderProfileUpdate) SetNillableWebhookVersion(v *string) *SenderProfileUpdate {
+	if v != nil {
+		_u.SetWebhookVersion(*v)
+	}
+	return _u
+}
+
+// ClearWebhookVersion clears the value of the "webhook_version" field.
+func (_u *SenderProfileUpdate) ClearWebhookVersion() *SenderProfileUpdate {
+	_u.mutation.ClearWebhookVersion()
+	return _u
+}
+
 // SetDomainWhitelist sets the "domain_whitelist" field.
 func (_u *SenderProfileUpdate) SetDomainWhitelist(v []string) *SenderProfileUpdate {
 	_u.mutation.SetDomainWhitelist(v)
@@ -283,6 +303,12 @@ func (_u *SenderProfileUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	if _u.mutation.WebhookURLCleared() {
 		_spec.ClearField(senderprofile.FieldWebhookURL, field.TypeString)
 	}
+	if value, ok := _u.mutation.WebhookVersion(); ok {
+		_spec.SetField(senderprofile.FieldWebhookVersion, field.TypeString, value)
+	}
+	if _u.mutation.WebhookVersionCleared() {
+		_spec.ClearField(senderprofile.FieldWebhookVersion, field.TypeString)
+	}
 	if value, ok := _u.mutation.DomainWhitelist(); ok {
 		_spec.SetField(senderprofile.FieldDomainWhitelist, field.TypeJSON, value)
 	}
@@ -462,6 +488,26 @@ func (_u *SenderProfileUpdateOne) SetNillableWebhookURL(v *string) *SenderProfil
 // ClearWebhookURL clears the value of the "webhook_url" field.
 func (_u *SenderProfileUpdateOne) ClearWebhookURL() *SenderProfileUpdateOne {
 	_u.mutation.ClearWebhookURL()
+	return _u
+}
+
+// SetWebhookVersion sets the "webhook_version" field.
+func (_u *SenderProfileUpdateOne) SetWebhookVersion(v string) *SenderProfileUpdateOne {
+	_u.mutation.SetWebhookVersion(v)
+	return _u
+}
+
+// SetNillableWebhookVersion sets the "webhook_version" field if the given value is not nil.
+func (_u *SenderProfileUpdateOne) SetNillableWebhookVersion(v *string) *SenderProfileUpdateOne {
+	if v != nil {
+		_u.SetWebhookVersion(*v)
+	}
+	return _u
+}
+
+// ClearWebhookVersion clears the value of the "webhook_version" field.
+func (_u *SenderProfileUpdateOne) ClearWebhookVersion() *SenderProfileUpdateOne {
+	_u.mutation.ClearWebhookVersion()
 	return _u
 }
 
@@ -724,6 +770,12 @@ func (_u *SenderProfileUpdateOne) sqlSave(ctx context.Context) (_node *SenderPro
 	}
 	if _u.mutation.WebhookURLCleared() {
 		_spec.ClearField(senderprofile.FieldWebhookURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.WebhookVersion(); ok {
+		_spec.SetField(senderprofile.FieldWebhookVersion, field.TypeString, value)
+	}
+	if _u.mutation.WebhookVersionCleared() {
+		_spec.ClearField(senderprofile.FieldWebhookVersion, field.TypeString)
 	}
 	if value, ok := _u.mutation.DomainWhitelist(); ok {
 		_spec.SetField(senderprofile.FieldDomainWhitelist, field.TypeJSON, value)

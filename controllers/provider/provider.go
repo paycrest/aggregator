@@ -3,12 +3,19 @@ package provider
 import (
 	"context"
 	"encoding/csv"
+	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
@@ -19,10 +26,15 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerbalances"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/senderordertoken"
+	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/balance"
+	"github.com/paycrest/aggregator/services/contracts"
 	orderService "github.com/paycrest/aggregator/services/order"
 	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
@@ -35,6 +47,7 @@ import (
 )
 
 var orderConf = config.OrderConfig()
+var cryptoConf = config.CryptoConfig()
 
 // ProviderController is a controller type for provider endpoints
 type ProviderController struct {
@@ -161,10 +174,14 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 	statusMap := map[string]paymentorder.Status{
 		"pending":    paymentorder.StatusPending,
 		"validated":  paymentorder.StatusValidated,
+		"processing": paymentorder.StatusFulfilling, // for backwards compatibility
+		"fulfilling": paymentorder.StatusFulfilling,
 		"fulfilled":  paymentorder.StatusFulfilled,
 		"cancelled":  paymentorder.StatusCancelled,
-		"processing": paymentorder.StatusFulfilling, // Backward compatibility
+		"settling":   paymentorder.StatusSettling,
 		"settled":    paymentorder.StatusSettled,
+		"refunding":  paymentorder.StatusRefunding,
+		"refunded":   paymentorder.StatusRefunded,
 	}
 
 	statusQueryParam := ctx.Query("status")
@@ -552,25 +569,39 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Get Order request from Redis
-	result, err := storage.RedisClient.HGetAll(ctx, fmt.Sprintf("order_request_%s", orderID)).Result()
+	// Parse request body for direction and amount (for payin orders)
+	var acceptRequest types.AcceptOrderRequest
+	if err := ctx.ShouldBindJSON(&acceptRequest); err != nil {
+		if !errors.Is(err, io.EOF) {
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Invalid request body"})
+			return
+		}
+		// Empty body: backward compatibility, default to payout
+		acceptRequest.Direction = "payout"
+	}
+
+	// Get order request from Redis (offramp: set by assignment; payin: set by sender at creation)
+	orderRequestKey := fmt.Sprintf("order_request_%s", orderID)
+	result, err := storage.RedisClient.HGetAll(ctx, orderRequestKey).Result()
 	if err != nil {
 		logger.Errorf("error getting order request from Redis: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to accept order request", nil)
 		return
 	}
-
-	if result["providerId"] != provider.ID || len(result) == 0 {
+	if len(result) == 0 || result["providerId"] != provider.ID {
 		logger.Errorf("order request not found in Redis: %v", orderID)
 		u.APIResponse(ctx, http.StatusNotFound, "error", "Order request not found or is expired", nil)
 		return
 	}
 
+	// Payin vs payout: payin has direction=payin in order_request
+	isPayin := result["direction"] == "payin"
+
 	// Best-effort cleanup of metadata key used for timeout recovery.
 	_, _ = storage.RedisClient.Del(ctx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
 
-	// Delete order request from Redis
-	_, err = storage.RedisClient.Del(ctx, fmt.Sprintf("order_request_%s", orderID)).Result()
+	// Delete order request from Redis after validation (both payin and offramp)
+	_, err = storage.RedisClient.Del(ctx, orderRequestKey).Result()
 	if err != nil {
 		logger.Errorf("error deleting order request from Redis: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to accept order request", nil)
@@ -584,7 +615,20 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// Fetch the order to check its current status before accepting
-	currentOrder, err := tx.PaymentOrder.Get(ctx, orderID)
+	// For payin, we need token and network info
+	var currentOrder *ent.PaymentOrder
+	if isPayin {
+		currentOrder, err = tx.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(orderID)).
+			WithProvider().
+			WithToken(func(tq *ent.TokenQuery) {
+				tq.WithNetwork()
+			}).
+			Only(ctx)
+	} else {
+		currentOrder, err = tx.PaymentOrder.Get(ctx, orderID)
+	}
 	if err != nil {
 		_ = tx.Rollback()
 		if ent.IsNotFound(err) {
@@ -596,6 +640,114 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			}).Errorf("error fetching order: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order", nil)
 		}
+		return
+	}
+
+	// For payin orders, confirm it's an onramp order and check token balance reservation
+	if isPayin {
+		// Confirm order is onramp
+		if currentOrder.Direction != paymentorder.DirectionOnramp {
+			_ = tx.Rollback()
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Order is not an onramp order", nil)
+			return
+		}
+
+		// Ensure reserved token liquidity exists / is sufficient
+		// Total crypto needed: amount + senderFee
+		totalCryptoNeeded := currentOrder.Amount.Add(currentOrder.SenderFee)
+
+		// Check provider token balance reservation
+		providerBalance, err := storage.Client.ProviderBalances.
+			Query().
+			Where(
+				providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerbalances.HasTokenWith(token.IDEQ(currentOrder.Edges.Token.ID)),
+			).
+			Only(ctx)
+		if err != nil {
+			_ = tx.Rollback()
+			logger.Errorf("Failed to get provider token balance: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check provider balance", nil)
+			return
+		}
+
+		// Check if reserved balance is sufficient
+		if providerBalance.ReservedBalance.LessThan(totalCryptoNeeded) {
+			// Create order_refunding transaction log and set order to REFUNDING under the same transaction
+			networkID := ""
+			if currentOrder.Edges.Token != nil && currentOrder.Edges.Token.Edges.Network != nil {
+				networkID = currentOrder.Edges.Token.Edges.Network.Identifier
+			}
+			transactionLog, err := tx.TransactionLog.Create().
+				SetStatus(transactionlog.StatusOrderRefunding).
+				SetGatewayID(orderID.String()).
+				SetNetwork(networkID).
+				Save(ctx)
+			if err != nil {
+				_ = tx.Rollback()
+				logger.Errorf("Failed to create order_refunding transaction log: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+				return
+			}
+			_, err = tx.PaymentOrder.
+				UpdateOneID(orderID).
+				SetStatus(paymentorder.StatusRefunding).
+				AddTransactions(transactionLog).
+				Save(ctx)
+			if err != nil {
+				_ = tx.Rollback()
+				logger.Errorf("Failed to set order status to refunding: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+				return
+			}
+			if err = tx.Commit(); err != nil {
+				logger.Errorf("Failed to commit transaction: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+				return
+			}
+
+			// Return 4XX with refund details
+			refundDetails := map[string]interface{}{
+				"accountIdentifier": currentOrder.AccountIdentifier,
+				"accountName":       currentOrder.AccountName,
+				"institution":       currentOrder.Institution,
+			}
+			if currentOrder.Metadata != nil {
+				if m, ok := currentOrder.Metadata["refundAccountMetadata"].(map[string]interface{}); ok {
+					refundDetails["metadata"] = m
+				}
+			}
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Insufficient reserved token balance", refundDetails)
+			return
+		}
+	}
+
+	// For payin: if order is already Fulfilling and same provider, return 201 + lock payload (idempotent retry after settlement failure)
+	if isPayin && currentOrder.Direction == paymentorder.DirectionOnramp && currentOrder.Status == paymentorder.StatusFulfilling && currentOrder.Edges.Provider != nil && currentOrder.Edges.Provider.ID == provider.ID {
+		_ = tx.Rollback()
+		response := types.AcceptOrderResponse{
+			ID:                orderID.String(),
+			Institution:       currentOrder.Institution,
+			AccountIdentifier: currentOrder.AccountIdentifier,
+			AccountName:       currentOrder.AccountName,
+			Memo:              currentOrder.Memo,
+			Metadata:          currentOrder.Metadata,
+		}
+		response.Direction = "payin"
+		response.Amount = currentOrder.Amount.Add(currentOrder.SenderFee).Mul(currentOrder.Rate).RoundBank(0)
+		if currentOrder.Edges.Token != nil && currentOrder.Edges.Token.Edges.Network != nil {
+			network := currentOrder.Edges.Token.Edges.Network
+			response.ChainId = fmt.Sprintf("%d", network.ChainID)
+			response.RpcUrl = network.RPCEndpoint
+			response.DelegationAddress = network.GatewayContractAddress
+		}
+		if currentOrder.OrderType == paymentorder.OrderTypeOtc {
+			if response.Metadata == nil {
+				response.Metadata = make(map[string]interface{})
+			}
+			response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
+		}
+		u.APIResponse(ctx, http.StatusCreated, "success", "Order accepted", response)
 		return
 	}
 
@@ -619,23 +771,24 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		Where(
 			paymentorder.IDEQ(orderID),
 			paymentorder.HasTransactionsWith(
-				transactionlog.StatusEQ(transactionlog.StatusOrderProcessing),
+				transactionlog.StatusEQ(transactionlog.StatusOrderFulfilling),
 			),
 		).
 		Only(ctx)
 	if err != nil {
 		if !ent.IsNotFound(err) {
+			_ = tx.Rollback()
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
-		} else {
-			transactionLog, err = tx.TransactionLog.
-				Create().
-				SetStatus(transactionlog.StatusOrderProcessing).
-				Save(ctx)
-			if err != nil {
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
-				return
-			}
+		}
+		transactionLog, err = tx.TransactionLog.
+			Create().
+			SetStatus(transactionlog.StatusOrderFulfilling).
+			Save(ctx)
+		if err != nil {
+			_ = tx.Rollback()
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
 		}
 	}
 
@@ -682,7 +835,18 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// Fetch the updated order for response
-	order, err := tx.PaymentOrder.Get(ctx, orderID)
+	var order *ent.PaymentOrder
+	if isPayin {
+		order, err = tx.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(orderID)).
+			WithToken(func(tq *ent.TokenQuery) {
+				tq.WithNetwork()
+			}).
+			Only(ctx)
+	} else {
+		order, err = tx.PaymentOrder.Get(ctx, orderID)
+	}
 	if err != nil {
 		logger.Errorf("%s - error.AcceptOrder.Get: %v", orderID, err)
 		_ = tx.Rollback()
@@ -696,18 +860,41 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		return
 	}
 
+	// Unified AcceptOrder response for both payin and payout
 	response := types.AcceptOrderResponse{
-		ID:                orderID,
-		Amount:            order.Amount.Mul(order.Rate).RoundBank(0),
+		ID:                orderID.String(),
 		Institution:       order.Institution,
 		AccountIdentifier: order.AccountIdentifier,
 		AccountName:       order.AccountName,
 		Memo:              order.Memo,
 		Metadata:          order.Metadata,
 	}
+	if isPayin {
+		response.Direction = "payin"
+		response.Amount = order.Amount.Add(order.SenderFee).Mul(order.Rate).RoundBank(0)
+		if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+			network := order.Edges.Token.Edges.Network
+			response.ChainId = fmt.Sprintf("%d", network.ChainID)
+			response.RpcUrl = network.RPCEndpoint
+			response.DelegationAddress = network.GatewayContractAddress
+		}
+	} else {
+		response.Direction = "payout"
+		response.Amount = order.Amount.Mul(order.Rate).RoundBank(0)
+	}
 
-	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling && order.Edges.Provider == provider {
-		response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
+	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling {
+		orderWithProvider, _ := storage.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(orderID)).
+			WithProvider().
+			Only(ctx)
+		if orderWithProvider != nil && orderWithProvider.Edges.Provider != nil && orderWithProvider.Edges.Provider.ID == provider.ID {
+			if response.Metadata == nil {
+				response.Metadata = make(map[string]interface{})
+			}
+			response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
+		}
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &response)
@@ -828,16 +1015,6 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		return
 	}
 
-	updateLockOrder := storage.Client.PaymentOrder.
-		Update().
-		Where(
-			paymentorder.IDEQ(orderID),
-			paymentorder.Or(
-				paymentorder.StatusEQ(paymentorder.StatusFulfilling),
-				paymentorder.StatusEQ(paymentorder.StatusFulfilled),
-			),
-		)
-
 	// Query or create order fulfillment
 	fulfillment, err := storage.Client.PaymentOrderFulfillment.
 		Query().
@@ -908,19 +1085,27 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				}).
 				Only(ctx)
 			if err != nil {
+				networkID := ""
+				if fulfillment != nil && fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Edges.Token != nil && fulfillment.Edges.Order.Edges.Token.Edges.Network != nil {
+					networkID = fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier
+				}
 				logger.WithFields(logger.Fields{
 					"Error":   fmt.Sprintf("%v", err),
 					"Trx Id":  payload.TxID,
-					"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+					"Network": networkID,
 				}).Errorf("Failed to fetch order fulfillment: %v", err)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 				return
 			}
 		} else {
+			networkID := ""
+			if fulfillment != nil && fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Edges.Token != nil && fulfillment.Edges.Order.Edges.Token.Edges.Network != nil {
+				networkID = fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier
+			}
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
 				"Trx Id":  payload.TxID,
-				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Network": networkID,
 			}).Errorf("Failed to fetch order fulfillment when order is found: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
@@ -949,6 +1134,38 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			return
 		}
 	}
+
+	// Handle refund outcome when order is Refunding (payin insufficient-balance refund path)
+	if fulfillment.Edges.Order != nil &&
+		fulfillment.Edges.Order.Status == paymentorder.StatusRefunding &&
+		fulfillment.Edges.Order.Direction == paymentorder.DirectionOnramp {
+		ctrl.handleRefundOutcomeFulfillment(ctx, orderID, payload, fulfillment, provider)
+		return
+	}
+
+	// Check if this is a payin order (onramp)
+	isPayin := fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Direction == paymentorder.DirectionOnramp
+
+	// Handle payin orders
+	if isPayin {
+		ctrl.handlePayinFulfillment(ctx, orderID, payload, fulfillment, provider)
+		return
+	}
+
+	ctrl.handlePayoutFulfillment(ctx, orderID, payload, fulfillment, provider)
+}
+
+// handlePayoutFulfillment handles payout (offramp) order fulfillment by validation status.
+func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
+	updateLockOrder := storage.Client.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.IDEQ(orderID),
+			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusFulfilling),
+				paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+			),
+		)
 
 	switch payload.ValidationStatus {
 	case paymentorderfulfillment.ValidationStatusSuccess:
@@ -1124,7 +1341,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}()
 
 	case paymentorderfulfillment.ValidationStatusFailed:
-		_, err = fulfillment.Update().
+		_, err := fulfillment.Update().
 			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
 			SetValidationError(payload.ValidationError).
 			Save(ctx)
@@ -1199,6 +1416,521 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Order fulfilled successfully", nil)
+}
+
+// handleRefundOutcomeFulfillment handles FulfillOrder when order is Refunding (payin insufficient-balance refund path).
+// It interprets payload.ValidationStatus as refund outcome: refunded, pending, or failed.
+func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
+	order := fulfillment.Edges.Order
+	if order == nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Order not found", nil)
+		return
+	}
+
+	switch payload.ValidationStatus {
+	case paymentorderfulfillment.ValidationStatusRefunded:
+		// Update fulfillment to Refunded (and TxID, PSP if present)
+		fulfillmentUpdate := fulfillment.Update().
+			SetValidationStatus(paymentorderfulfillment.ValidationStatusRefunded).
+			SetValidationError(payload.ValidationError)
+		if payload.TxID != "" {
+			fulfillmentUpdate = fulfillmentUpdate.SetTxID(payload.TxID)
+		}
+		if payload.PSP != "" {
+			fulfillmentUpdate = fulfillmentUpdate.SetPsp(payload.PSP)
+		}
+		_, err := fulfillmentUpdate.Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to update refund fulfillment to refunded")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+
+		// Note: TransactionLog status is immutable in schema; order_refunding log remains. Order status Refunded is the source of truth.
+		// Set order status to Refunded
+		_, err = storage.Client.PaymentOrder.UpdateOneID(order.ID).SetStatus(paymentorder.StatusRefunded).Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to update order status to refunded")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+
+		// Release reserved token balance
+		if order.Edges.Token != nil && order.Edges.Provider != nil {
+			totalCryptoReserved := order.Amount.Add(order.SenderFee)
+			if relErr := ctrl.balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+				logger.Errorf("Failed to release token balance for refunded order (order %s): %v", orderID, relErr)
+			}
+		}
+		u.APIResponse(ctx, http.StatusOK, "success", "Refund completed", nil)
+		return
+	case paymentorderfulfillment.ValidationStatusFailed:
+		_, err := fulfillment.Update().
+			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+			SetValidationError(payload.ValidationError).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to update refund fulfillment to failed")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+		// Set order to Fulfilled (terminal state) and release reserved token balance (consistent with handlePayinFulfillment and aggregator refund-failure handling)
+		_, err = storage.Client.PaymentOrder.UpdateOneID(order.ID).SetStatus(paymentorder.StatusFulfilled).Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to update order status for refund failure")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+		if order.Edges.Token != nil && order.Edges.Provider != nil {
+			totalCryptoReserved := order.Amount.Add(order.SenderFee)
+			if relErr := ctrl.balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+				logger.Errorf("Failed to release token balance for refund-failed order (order %s): %v", orderID, relErr)
+			}
+		}
+		u.APIResponse(ctx, http.StatusOK, "success", "Refund failed", nil)
+		return
+	case paymentorderfulfillment.ValidationStatusPending:
+		_, err := fulfillment.Update().
+			SetValidationStatus(paymentorderfulfillment.ValidationStatusPending).
+			SetValidationError(payload.ValidationError).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to update refund fulfillment to pending")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+		u.APIResponse(ctx, http.StatusOK, "success", "Refund pending", nil)
+		return
+	default:
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid validation status for refund outcome", nil)
+		return
+	}
+}
+
+// handlePayinFulfillment handles payin (onramp) order fulfillment
+func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
+	// Validate authorization is provided for payin orders
+	if payload.Authorization == nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Authorization is required for payin orders", types.ErrorData{
+			Field:   "Authorization",
+			Message: "EIP-7702 SetCodeAuthorization is required for payin fulfillment",
+		})
+		return
+	}
+
+	// Only proceed to settlement when validation succeeded; reject failed/pending like handlePayoutFulfillment
+	switch payload.ValidationStatus {
+	case paymentorderfulfillment.ValidationStatusFailed:
+		_, err := fulfillment.Update().
+			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+			SetValidationError(payload.ValidationError).
+			Save(ctx)
+		if err != nil {
+			logger.Errorf("Failed to update payin fulfillment to failed: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+		// Set order status to Fulfilled so state is consistent with released balance (match payout flow)
+		if fulfillment.Edges.Order != nil {
+			_, err = storage.Client.PaymentOrder.UpdateOneID(fulfillment.Edges.Order.ID).SetStatus(paymentorder.StatusFulfilled).Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to update order status for payin validation failure (order %s): %v", orderID, err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+				return
+			}
+		}
+		// Release reserved token balance (provider reserved when they accepted)
+		if fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Edges.Token != nil && fulfillment.Edges.Order.Edges.Provider != nil {
+			totalCryptoReserved := fulfillment.Edges.Order.Amount.Add(fulfillment.Edges.Order.SenderFee)
+			if relErr := ctrl.balanceService.ReleaseTokenBalance(ctx, fulfillment.Edges.Order.Edges.Provider.ID, fulfillment.Edges.Order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+				logger.Errorf("Failed to release token balance for payin validation failure (order %s): %v", orderID, relErr)
+			}
+		}
+		u.APIResponse(ctx, http.StatusOK, "success", "Fulfillment validation failed", nil)
+		return
+	case paymentorderfulfillment.ValidationStatusSuccess:
+		// Proceed to settlement below
+	default:
+		// Pending or unknown: do not attempt settlement
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Fulfillment must have validation status success to settle payin order", nil)
+		return
+	}
+
+	// Fetch order with token, network, provider, and sender profile (prepareSettleInCallData needs SenderProfile.ID)
+	orderWithDetails, err := storage.Client.PaymentOrder.
+		Query().
+		Where(paymentorder.IDEQ(orderID)).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithProvider().
+		WithSenderProfile().
+		Only(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch order details: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order details", nil)
+		return
+	}
+
+	// Derive currency from order's institution (provider can have same token for multiple fiat currencies)
+	institution, err := u.GetInstitutionByCode(ctx, orderWithDetails.Institution, true)
+	if err != nil {
+		logger.Errorf("Failed to fetch institution for payin settlement: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order institution", nil)
+		return
+	}
+	if institution == nil || institution.Edges.FiatCurrency == nil {
+		logger.Errorf("Order institution or fiat currency not found: %s", orderWithDetails.Institution)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order institution not configured", nil)
+		return
+	}
+	currencyCode := institution.Edges.FiatCurrency.Code
+
+	// Get provider payout address
+	providerOrderToken, err := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			providerordertoken.HasTokenWith(token.IDEQ(orderWithDetails.Edges.Token.ID)),
+			providerordertoken.NetworkEQ(orderWithDetails.Edges.Token.Edges.Network.Identifier),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+		).
+		Only(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch provider order token: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider configuration", nil)
+		return
+	}
+
+	if providerOrderToken.PayoutAddress == "" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider payout address not configured", nil)
+		return
+	}
+
+	// Generate Gateway order ID for settleIn: keccak256(abi.encode(payoutAddress, aggregatorAddress, paymentOrderID, chainID))
+	if cryptoConf.AggregatorAccountEVM == "" {
+		logger.Errorf("Aggregator EVM address not configured")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Aggregator not configured", nil)
+		return
+	}
+	gatewayOrderID, err := gatewayOrderIDFromEncode(
+		providerOrderToken.PayoutAddress,
+		cryptoConf.AggregatorAccountEVM,
+		orderID,
+		orderWithDetails.Edges.Token.Edges.Network.ChainID,
+	)
+	if err != nil {
+		logger.Errorf("Failed to generate gateway order ID: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to generate order ID", nil)
+		return
+	}
+
+	// Prepare settleIn call data
+	// settleIn(_orderId, _token, _amount, _senderFeeRecipient, _senderFee, _recipient, _rate)
+	settleInData, err := ctrl.prepareSettleInCallData(ctx, orderWithDetails, gatewayOrderID)
+	if err != nil {
+		logger.Errorf("Failed to prepare settleIn call data: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to prepare settlement data", nil)
+		return
+	}
+
+	// Atomic settlement submission: create marker and transition to Settling in a single conditional transaction
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.Errorf("Failed to start transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+	transactionLog, err := tx.TransactionLog.
+		Create().
+		SetStatus(transactionlog.StatusOrderSettling).
+		SetGatewayID(gatewayOrderID).
+		SetNetwork(orderWithDetails.Edges.Token.Edges.Network.Identifier).
+		Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		logger.Errorf("Failed to create transaction log: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+	// Conditional update: only transition if order is still Fulfilling (atomic guard)
+	updatedCount, err := tx.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.IDEQ(orderID),
+			paymentorder.StatusEQ(paymentorder.StatusFulfilling),
+		).
+		SetStatus(paymentorder.StatusSettling).
+		SetGatewayID(gatewayOrderID).
+		AddTransactions(transactionLog).
+		Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		logger.Errorf("Failed to update order status: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+	if updatedCount == 0 {
+		_ = tx.Rollback()
+		u.APIResponse(ctx, http.StatusOK, "success", "Settlement already submitted or completed", nil)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		logger.Errorf("Failed to commit transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+
+	// Execute EIP-7702 transaction (after marker is persisted so retries are idempotent)
+	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, payload.Authorization, settleInData); err != nil {
+		logger.Errorf("Failed to execute payin settlement: %v", err)
+		// Compensating update: revert order status and remove settlement log so provider can retry
+		txCompensate, txErr := storage.Client.Tx(ctx)
+		if txErr != nil {
+			logger.Errorf("Failed to start compensating transaction: %v", txErr)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+			return
+		}
+		_, txErr = txCompensate.PaymentOrder.
+			UpdateOneID(orderID).
+			SetStatus(paymentorder.StatusFulfilling).
+			RemoveTransactions(transactionLog).
+			Save(ctx)
+		if txErr != nil {
+			_ = txCompensate.Rollback()
+			logger.Errorf("Failed to revert order status on settlement error: %v", txErr)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+			return
+		}
+		txErr = txCompensate.TransactionLog.DeleteOneID(transactionLog.ID).Exec(ctx)
+		if txErr != nil {
+			_ = txCompensate.Rollback()
+			logger.Errorf("Failed to remove settlement log on settlement error: %v", txErr)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+			return
+		}
+		if commitErr := txCompensate.Commit(); commitErr != nil {
+			logger.Errorf("Failed to commit compensating transaction: %v", commitErr)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+			return
+		}
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+		return
+	}
+
+	// Update fulfillment status and release reserved token balance
+	tx2, err := storage.Client.Tx(ctx)
+	if err != nil {
+		logger.Errorf("Failed to start transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+	_, err = tx2.PaymentOrderFulfillment.
+		UpdateOneID(fulfillment.ID).
+		SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
+		Save(ctx)
+	if err != nil {
+		_ = tx2.Rollback()
+		logger.Errorf("Failed to update fulfillment status: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+	if err := tx2.Commit(); err != nil {
+		logger.Errorf("Failed to commit transaction: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+		return
+	}
+	totalCryptoReserved := orderWithDetails.Amount.Add(orderWithDetails.SenderFee)
+	err = ctrl.balanceService.ReleaseTokenBalance(ctx, provider.ID, orderWithDetails.Edges.Token.ID, totalCryptoReserved, nil)
+	if err != nil {
+		logger.Errorf("Failed to release token balance: %v", err)
+		// Don't fail the entire operation if balance release fails - log and continue
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Order submitted for settlement", nil)
+}
+
+// gatewayOrderIDFromEncode returns keccak256(abi.encode(payoutAddress, aggregatorAddress, paymentOrderID, chainID)) as hex.
+func gatewayOrderIDFromEncode(payoutAddress, aggregatorAddress string, paymentOrderID uuid.UUID, chainID int64) (string, error) {
+	addressType, err := abi.NewType("address", "", nil)
+	if err != nil {
+		return "", err
+	}
+	bytes32Type, err := abi.NewType("bytes32", "", nil)
+	if err != nil {
+		return "", err
+	}
+	uint256Type, err := abi.NewType("uint256", "", nil)
+	if err != nil {
+		return "", err
+	}
+	arguments := abi.Arguments{
+		{Type: addressType},
+		{Type: addressType},
+		{Type: bytes32Type},
+		{Type: uint256Type},
+	}
+	var paymentOrderIDBytes32 [32]byte
+	copy(paymentOrderIDBytes32[:], paymentOrderID[:]) // 16 UUID bytes, zero-padded to 32
+	packed, err := arguments.Pack(
+		ethcommon.HexToAddress(payoutAddress),
+		ethcommon.HexToAddress(aggregatorAddress),
+		paymentOrderIDBytes32,
+		big.NewInt(chainID),
+	)
+	if err != nil {
+		return "", err
+	}
+	hash := crypto.Keccak256Hash(packed)
+	return hash.Hex(), nil
+}
+
+// prepareSettleInCallData prepares the call data for Gateway settleIn method
+func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order *ent.PaymentOrder, gatewayOrderID string) ([]byte, error) {
+	if order.Edges.SenderProfile == nil {
+		return nil, fmt.Errorf("order has no sender profile")
+	}
+	if order.Edges.Token == nil {
+		return nil, fmt.Errorf("order has no token")
+	}
+
+	// Use current Gateway contract bindings; plan expects regenerated bindings if ABI changes
+	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Gateway ABI: %w", err)
+	}
+
+	// Get fee address (sender fee recipient)
+	senderOrderToken, err := storage.Client.SenderOrderToken.
+		Query().
+		Where(
+			senderordertoken.HasTokenWith(token.IDEQ(order.Edges.Token.ID)),
+			senderordertoken.HasSenderWith(senderprofile.IDEQ(order.Edges.SenderProfile.ID)),
+		).
+		Only(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch sender order token: %w", err)
+	}
+
+	// Get recipient address (onramp: crypto destination for settleIn)
+	recipientAddress := order.RefundOrRecipientAddress
+	if recipientAddress == "" {
+		return nil, fmt.Errorf("recipient address not set on order")
+	}
+
+	// Convert amounts to big.Int
+	amountBig := u.ToSubunit(order.Amount, order.Edges.Token.Decimals)
+	senderFeeBig := u.ToSubunit(order.SenderFee, order.Edges.Token.Decimals)
+
+	// Convert rate to uint96 (rate is stored as decimal, need to convert to basis points * 100)
+	// Rate format: Gateway expects rate as uint96 where 100 = 1.00 (local transfer)
+	// For FX transfers, rate represents the conversion rate scaled appropriately
+	rateBig := order.Rate.Mul(decimal.NewFromInt(100)).BigInt()
+	if rateBig.Cmp(big.NewInt(0)) == 0 {
+		rateBig = big.NewInt(100) // Default to 1.00 (100 basis points)
+	}
+
+	// Generate Gateway order ID bytes
+	orderIDBytes, err := hex.DecodeString(strings.TrimPrefix(gatewayOrderID, "0x"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode gateway order ID: %w", err)
+	}
+	var orderIDByte32 [32]byte
+	copy(orderIDByte32[:], orderIDBytes)
+
+	// Pack settleIn call data
+	// settleIn(bytes32 _orderId, address _token, uint256 _amount, address _senderFeeRecipient, uint96 _senderFee, address _recipient, uint96 _rate)
+	data, err := gatewayABI.Pack(
+		"settleIn",
+		orderIDByte32,
+		ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
+		amountBig,
+		ethcommon.HexToAddress(senderOrderToken.FeeAddress),
+		senderFeeBig,
+		ethcommon.HexToAddress(recipientAddress),
+		rateBig,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack settleIn ABI: %w", err)
+	}
+
+	return data, nil
+}
+
+// executePayinSettlement executes the EIP-7702 transaction for payin settlement via Engine write/transaction with authorizationList.
+func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, authorization *types.SetCodeAuthorization, settleInData []byte) error {
+	if authorization == nil {
+		return fmt.Errorf("authorization is required")
+	}
+	if cryptoConf.AggregatorAccountEVM == "" {
+		return fmt.Errorf("aggregator EVM address not configured")
+	}
+	gatewayAddress := order.Edges.Token.Edges.Network.GatewayContractAddress
+	if gatewayAddress == "" {
+		return fmt.Errorf("gateway contract address not set for network")
+	}
+	orderChainID := order.Edges.Token.Edges.Network.ChainID
+	if fmt.Sprintf("%d", orderChainID) != authorization.ChainID {
+		return fmt.Errorf("authorization chain ID does not match order network")
+	}
+
+	// Validate V and derive yParity: only 0, 1, 27, 28 are accepted (EIP-155 and legacy)
+	var yParity int
+	switch authorization.V {
+	case 0:
+		yParity = 0
+	case 1:
+		yParity = 1
+	case 27:
+		yParity = 0
+	case 28:
+		yParity = 1
+	default:
+		return fmt.Errorf("authorization V must be 0, 1, 27, or 28; got %d", authorization.V)
+	}
+
+	authEntry := map[string]interface{}{
+		"chainId": authorization.ChainID,
+		"address": authorization.Address,
+		"nonce":   authorization.Nonce,
+		"yParity": yParity,
+		"r":       authorization.R,
+		"s":       authorization.S,
+	}
+	authorizationList := []map[string]interface{}{authEntry}
+
+	params := []map[string]interface{}{
+		{"authorizationList": authorizationList},
+		{
+			"to":    gatewayAddress,
+			"data":  fmt.Sprintf("0x%x", settleInData),
+			"value": "0",
+		},
+	}
+
+	engineSvc := services.NewEngineService()
+	chainID := order.Edges.Token.Edges.Network.ChainID
+	reqCtx := ctx.Request.Context()
+	_, err := engineSvc.SendTransactionBatch(reqCtx, chainID, cryptoConf.AggregatorAccountEVM, params)
+	if err != nil {
+		return fmt.Errorf("send transaction with authorizationList: %w", err)
+	}
+	return nil
 }
 
 // CancelOrder controller cancels an order
@@ -1457,18 +2189,21 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 
 	var response *types.MarketRateResponse
 	if !strings.EqualFold(tokenObj.BaseCurrency, currency.Code) {
-		deviation := currency.MarketRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
+		// Use sell rate for deviation calculation (offramp perspective)
+		deviation := currency.MarketSellRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
 
 		response = &types.MarketRateResponse{
-			MarketRate:  currency.MarketRate,
-			MinimumRate: currency.MarketRate.Sub(deviation),
-			MaximumRate: currency.MarketRate.Add(deviation),
+			MarketBuyRate:  currency.MarketBuyRate,
+			MarketSellRate: currency.MarketSellRate,
+			MinimumRate:    currency.MarketSellRate.Sub(deviation),
+			MaximumRate:    currency.MarketSellRate.Add(deviation),
 		}
 	} else {
 		response = &types.MarketRateResponse{
-			MarketRate:  decimal.NewFromInt(1),
-			MinimumRate: decimal.NewFromInt(1),
-			MaximumRate: decimal.NewFromInt(1),
+			MarketBuyRate:  decimal.NewFromInt(1),
+			MarketSellRate: decimal.NewFromInt(1),
+			MinimumRate:    decimal.NewFromInt(1),
+			MaximumRate:    decimal.NewFromInt(1),
 		}
 	}
 
@@ -1592,7 +2327,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
 			return
 		}
-		localStablecoinVolume[0].Sum = localStablecoinVolume[0].Sum.Div(fiatCurrency.MarketRate)
+		localStablecoinVolume[0].Sum = localStablecoinVolume[0].Sum.Div(fiatCurrency.MarketSellRate)
 	}
 
 	var totalFiatVolume decimal.Decimal
@@ -1825,6 +2560,228 @@ func (ctrl *ProviderController) GetPaymentOrderByID(ctx *gin.Context) {
 		CancellationReasons: paymentOrder.CancellationReasons,
 		OrderType:           paymentOrder.OrderType,
 	})
+}
+
+// GetPaymentOrderByIDV2 returns a single payment order in v2 API schema (providerAccount, source, destination).
+func (ctrl *ProviderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
+	orderID := ctx.Param("id")
+	id, err := uuid.Parse(orderID)
+	if err != nil {
+		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "Order ID": orderID}).Errorf("Failed to parse order ID: %v", err)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid order ID", nil)
+		return
+	}
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+
+	paymentOrder, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.IDEQ(id),
+			paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+		).
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+		WithTransactions().
+		Only(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "Order ID": orderID}).Errorf("Failed to fetch payment order: %v", err)
+		u.APIResponse(ctx, http.StatusNotFound, "error", "Payment order not found", nil)
+		return
+	}
+
+	institution, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeEQ(paymentOrder.Institution)).
+		WithFiatCurrency().
+		Only(ctx)
+	if err != nil {
+		logger.Errorf("Failed to fetch institution: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment order", nil)
+		return
+	}
+
+	var transactionLogs []types.TransactionLog
+	for _, tx := range paymentOrder.Edges.Transactions {
+		transactionLogs = append(transactionLogs, types.TransactionLog{
+			ID:        tx.ID,
+			GatewayId: tx.GatewayID,
+			Status:    tx.Status,
+			TxHash:    tx.TxHash,
+			CreatedAt: tx.CreatedAt,
+		})
+	}
+	var otcExpiry *time.Time
+	if paymentOrder.OrderType == paymentorder.OrderTypeOtc {
+		switch paymentOrder.Status {
+		case paymentorder.StatusPending:
+			exp := paymentOrder.UpdatedAt.Add(orderConf.OrderRequestValidityOtc)
+			otcExpiry = &exp
+		case paymentorder.StatusFulfilling:
+			exp := paymentOrder.UpdatedAt.Add(orderConf.OrderFulfillmentValidityOtc)
+			otcExpiry = &exp
+		}
+	}
+	resp := u.BuildV2PaymentOrderGetResponse(paymentOrder, institution, transactionLogs, paymentOrder.CancellationReasons, otcExpiry)
+	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", resp)
+}
+
+// GetPaymentOrdersV2 returns a list of payment orders in v2 API schema (list only; currency required like v1).
+func (ctrl *ProviderController) GetPaymentOrdersV2(ctx *gin.Context) {
+	providerCtx, ok := ctx.Get("provider")
+	if !ok {
+		u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid API key or token", nil)
+		return
+	}
+	provider := providerCtx.(*ent.ProviderProfile)
+	ctrl.handleListPaymentOrdersV2(ctx, provider)
+}
+
+// handleListPaymentOrdersV2 handles v2 payment order listing with pagination and v2 response shape (currency required).
+func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, provider *ent.ProviderProfile) {
+	page, offset, pageSize := u.Paginate(ctx)
+	ordering := ctx.Query("ordering")
+	order := ent.Desc(paymentorder.FieldCreatedAt)
+	if ordering == "asc" {
+		order = ent.Asc(paymentorder.FieldCreatedAt)
+	}
+
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+	)
+
+	currency := ctx.Query("currency")
+	if currency == "" {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency is required", nil)
+		return
+	}
+	currencyExists, err := provider.QueryProviderBalances().
+		Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency))).
+		Exist(ctx)
+	if err != nil {
+		logger.Errorf("error checking provider currency: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check currency", nil)
+		return
+	}
+	if !currencyExists {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not found", nil)
+		return
+	}
+	institutionCodes, err := storage.Client.Institution.
+		Query().
+		Where(institution.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency))).
+		Select(institution.FieldCode).
+		Strings(ctx)
+	if err != nil {
+		logger.Errorf("error fetching institution codes: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
+		return
+	}
+	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.InstitutionIn(institutionCodes...))
+
+	statusMap := map[string]paymentorder.Status{
+		"pending":    paymentorder.StatusPending,
+		"validated":  paymentorder.StatusValidated,
+		"fulfilling": paymentorder.StatusFulfilling,
+		"fulfilled":  paymentorder.StatusFulfilled,
+		"cancelled":  paymentorder.StatusCancelled,
+		"settling":   paymentorder.StatusSettling,
+		"settled":    paymentorder.StatusSettled,
+		"refunding":  paymentorder.StatusRefunding,
+		"refunded":   paymentorder.StatusRefunded,
+	}
+	if status, ok := statusMap[ctx.Query("status")]; ok {
+		paymentOrderQuery = paymentOrderQuery.Where(paymentorder.StatusEQ(status))
+	}
+
+	count, err := paymentOrderQuery.Count(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
+		return
+	}
+
+	paymentOrders, err := paymentOrderQuery.
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+		WithTransactions().
+		Limit(pageSize).
+		Offset(offset).
+		Order(order).
+		All(ctx)
+	if err != nil {
+		logger.Errorf("error fetching orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
+		return
+	}
+
+	orders, err := ctrl.buildV2ProviderOrderGetResponses(ctx, paymentOrders)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.V2PaymentOrderListResponse{
+		Page:         page,
+		PageSize:     pageSize,
+		TotalRecords: count,
+		Orders:       orders,
+	})
+}
+
+// buildV2ProviderOrderGetResponses converts payment orders to v2 get response list with OTC expiry and cancellation reasons.
+func (ctrl *ProviderController) buildV2ProviderOrderGetResponses(ctx *gin.Context, paymentOrders []*ent.PaymentOrder) ([]types.V2PaymentOrderGetResponse, error) {
+	if len(paymentOrders) == 0 {
+		return nil, nil
+	}
+	codes := make(map[string]bool)
+	for _, po := range paymentOrders {
+		codes[po.Institution] = true
+	}
+	codeSlice := make([]string, 0, len(codes))
+	for c := range codes {
+		codeSlice = append(codeSlice, c)
+	}
+	institutions, err := storage.Client.Institution.
+		Query().
+		Where(institution.CodeIn(codeSlice...)).
+		WithFiatCurrency().
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	instMap := make(map[string]*ent.Institution)
+	for _, inst := range institutions {
+		instMap[inst.Code] = inst
+	}
+
+	out := make([]types.V2PaymentOrderGetResponse, 0, len(paymentOrders))
+	for _, po := range paymentOrders {
+		inst, _ := instMap[po.Institution]
+		var txLogs []types.TransactionLog
+		for _, tx := range po.Edges.Transactions {
+			txLogs = append(txLogs, types.TransactionLog{ID: tx.ID, GatewayId: tx.GatewayID, Status: tx.Status, TxHash: tx.TxHash, CreatedAt: tx.CreatedAt})
+		}
+		var otcExpiry *time.Time
+		if po.OrderType == paymentorder.OrderTypeOtc {
+			switch po.Status {
+			case paymentorder.StatusPending:
+				exp := po.UpdatedAt.Add(orderConf.OrderRequestValidityOtc)
+				otcExpiry = &exp
+			case paymentorder.StatusFulfilling:
+				exp := po.UpdatedAt.Add(orderConf.OrderFulfillmentValidityOtc)
+				otcExpiry = &exp
+			}
+		}
+		resp := u.BuildV2PaymentOrderGetResponse(po, inst, txLogs, po.CancellationReasons, otcExpiry)
+		out = append(out, *resp)
+	}
+	return out, nil
 }
 
 // UpdateProviderBalance handles the update of provider balance

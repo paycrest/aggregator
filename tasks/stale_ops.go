@@ -165,6 +165,7 @@ func RetryStaleUserOperations() error {
 	lockOrders, err = storage.Client.PaymentOrder.
 		Query().
 		Where(
+			paymentorder.DirectionEQ(paymentorder.DirectionOfframp), // On-chain refund only for offramp (user lock); onramp refund is provider-side
 			paymentorder.GatewayIDNEQ(""),
 			paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
 			paymentorder.StatusNEQ(paymentorder.StatusValidated),

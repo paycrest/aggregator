@@ -31,8 +31,12 @@ func (FiatCurrency) Fields() []ent.Field {
 		field.Int("decimals").Default(2),
 		field.String("symbol"),
 		field.String("name"),
-		field.Float("market_rate").
-			GoType(decimal.Decimal{}),
+		field.Float("market_buy_rate").
+			GoType(decimal.Decimal{}).
+			Optional(),
+		field.Float("market_sell_rate").
+			GoType(decimal.Decimal{}).
+			Optional(),
 		field.Bool("is_enabled").Default(false),
 	}
 }

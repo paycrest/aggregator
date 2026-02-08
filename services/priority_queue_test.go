@@ -38,6 +38,7 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testCtxForPQ = struct {
@@ -370,15 +371,14 @@ func setupForPQ() error {
 	testCtxForPQ.publicProviderProfileAPIKey = apiKey
 	_, err = test.AddProviderOrderTokenToProvider(
 		map[string]interface{}{
-			"fixed_conversion_rate":    decimal.NewFromFloat(100),
-			"conversion_rate_type":     "fixed",
-			"floating_conversion_rate": decimal.NewFromFloat(1.0),
-			"max_order_amount":         decimal.NewFromFloat(1000),
-			"min_order_amount":         decimal.NewFromFloat(1.0),
-			"provider":                 publicProviderProfile,
-			"currency_id":              currency.ID,
-			"network":                  token.Edges.Network.Identifier,
-			"token_id":                 token.ID,
+			"fixed_buy_rate":   decimal.NewFromFloat(100),
+			"fixed_sell_rate":  decimal.NewFromFloat(100),
+			"max_order_amount": decimal.NewFromFloat(1000),
+			"min_order_amount": decimal.NewFromFloat(1.0),
+			"provider":         publicProviderProfile,
+			"currency_id":      currency.ID,
+			"network":          token.Edges.Network.Identifier,
+			"token_id":         token.ID,
 		},
 	)
 	if err != nil {
@@ -565,7 +565,7 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		service.CreatePriorityQueueForBucket(ctx, _bucket)
 
-		redisKey := fmt.Sprintf("bucket_%s_%s_%s", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
 
 		data, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 		assert.NoError(t, err)
@@ -582,7 +582,7 @@ func TestPriorityQueueTest(t *testing.T) {
 		err = service.ProcessBucketQueues()
 		assert.NoError(t, err)
 
-		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
 
 		// ProcessBucketQueues launches goroutines; wait until the queue is populated.
 		assert.Eventually(t, func() bool {
@@ -606,7 +606,8 @@ func TestPriorityQueueTest(t *testing.T) {
 			"max_amount":  testCtxForPQ.maxAmount,
 			"currency_id": testCtxForPQ.currency.ID,
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, bucket, "CreateTestProvisionBucket returned nil")
 
 		_bucket, err := db.Client.ProvisionBucket.
 			Query().
@@ -614,7 +615,8 @@ func TestPriorityQueueTest(t *testing.T) {
 			WithCurrency().
 			WithProviderProfiles().
 			Only(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, _bucket)
 
 		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 			"provider":   testCtxForPQ.publicProviderProfile,
@@ -622,9 +624,11 @@ func TestPriorityQueueTest(t *testing.T) {
 			"token_id":   testCtxForPQ.token.ID,
 			"gateway_id": "order-1",
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, _order)
+
 		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		order, err := db.Client.PaymentOrder.
 			Query().
@@ -634,8 +638,8 @@ func TestPriorityQueueTest(t *testing.T) {
 			}).
 			WithToken().
 			Only(ctx)
-
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, order)
 
 		service.CreatePriorityQueueForBucket(ctx, _bucket)
 
@@ -658,7 +662,7 @@ func TestPriorityQueueTest(t *testing.T) {
 	t.Run("TestGetProviderRate", func(t *testing.T) {
 		// Use the provider profile directly - it was created with db.Client which is the same as client
 		// The relationship queries should work as long as db.Client is set correctly
-		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol, testCtxForPQ.currency.Code)
+		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol, testCtxForPQ.currency.Code, RateSideSell)
 		assert.NoError(t, err)
 		_rate, ok := rate.Float64()
 		assert.True(t, ok)

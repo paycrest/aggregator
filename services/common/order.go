@@ -41,6 +41,15 @@ var (
 	orderConf  = config.OrderConfig()
 )
 
+// normalizeGatewayID ensures "0x" prefix and lowercases the value for case-insensitive DB comparisons.
+func normalizeGatewayID(orderID string) string {
+	s := orderID
+	if !strings.HasPrefix(s, "0x") {
+		s = "0x" + s
+	}
+	return strings.ToLower(s)
+}
+
 // ProcessPaymentOrderFromBlockchain processes a payment order from blockchain event.
 // It either creates a new order or updates an existing API-created order (with messageHash but no gatewayID)
 // with on-chain details when the OrderCreatedEvent is indexed.
@@ -51,11 +60,13 @@ func ProcessPaymentOrderFromBlockchain(
 	refundOrder func(context.Context, *ent.Network, string) error,
 	assignPaymentOrder func(context.Context, types.PaymentOrderFields) error,
 ) error {
+	normalizedGatewayID := normalizeGatewayID(event.OrderId)
+
 	// Check if order already exists with gatewayID (already indexed from blockchain)
 	existingOrderWithGatewayID, err := db.Client.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.GatewayIDEQ(event.OrderId),
+			paymentorder.GatewayIDEQ(normalizedGatewayID),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -96,7 +107,7 @@ func ProcessPaymentOrderFromBlockchain(
 			_, err = db.Client.PaymentOrder.
 				Update().
 				Where(paymentorder.IDEQ(existingOrderWithMessageHash.ID)).
-				SetGatewayID(event.OrderId).
+				SetGatewayID(normalizedGatewayID).
 				SetTxHash(event.TxHash).
 				SetBlockNumber(int64(event.BlockNumber)).
 				SetStatus(paymentorder.StatusPending).
@@ -285,56 +296,72 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusRefunded.dbtransaction %v", err)
 	}
 
-	// Attempt to update an existing log
+	gatewayID := normalizeGatewayID(event.OrderId)
 	var transactionLog *ent.TransactionLog
-	updatedLogRows, err := tx.TransactionLog.
+
+	// Update any existing order_refunding log (created when refund tx was submitted) by setting tx_hash.
+	updatedRefundingRows, err := tx.TransactionLog.
 		Update().
 		Where(
-			transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
-			transactionlog.GatewayIDEQ(event.OrderId),
+			transactionlog.StatusEQ(transactionlog.StatusOrderRefunding),
+			transactionlog.GatewayIDEQ(gatewayID),
 			transactionlog.NetworkEQ(network.Identifier),
-			transactionlog.TxHashEQ(event.TxHash),
 		).
 		SetTxHash(event.TxHash).
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()
-		return fmt.Errorf("UpdateOrderStatusRefunded.update: %v", err)
+		return fmt.Errorf("UpdateOrderStatusRefunded.updateRefunding: %v", err)
 	}
 
-	// If no rows were updated, check if log already exists (race condition protection)
-	if updatedLogRows == 0 {
-		// Check if transaction log already exists to prevent duplicates
-		existingLog, err := tx.TransactionLog.
-			Query().
+	// If no order_refunding log was updated, do idempotency: match or create order_refunded log for this event
+	if updatedRefundingRows == 0 {
+		// Idempotency: try to match an existing order_refunded log for this event (same gateway_id, network, tx_hash)
+		updatedLogRows, err := tx.TransactionLog.
+			Update().
 			Where(
 				transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
-				transactionlog.GatewayIDEQ(event.OrderId),
+				transactionlog.GatewayIDEQ(gatewayID),
 				transactionlog.NetworkEQ(network.Identifier),
 				transactionlog.TxHashEQ(event.TxHash),
 			).
-			Only(ctx)
+			SetTxHash(event.TxHash).
+			Save(ctx)
 		if err != nil {
-			if ent.IsNotFound(err) {
-				// Log doesn't exist, create new one
-				transactionLog, err = tx.TransactionLog.
-					Create().
-					SetStatus(transactionlog.StatusOrderRefunded).
-					SetTxHash(event.TxHash).
-					SetGatewayID(event.OrderId).
-					SetNetwork(network.Identifier).
-					Save(ctx)
-				if err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("UpdateOrderStatusRefunded.update: %v", err)
+		}
+
+		if updatedLogRows == 0 {
+			existingLog, err := tx.TransactionLog.
+				Query().
+				Where(
+					transactionlog.StatusEQ(transactionlog.StatusOrderRefunded),
+					transactionlog.GatewayIDEQ(gatewayID),
+					transactionlog.NetworkEQ(network.Identifier),
+					transactionlog.TxHashEQ(event.TxHash),
+				).
+				Only(ctx)
+			if err != nil {
+				if ent.IsNotFound(err) {
+					transactionLog, err = tx.TransactionLog.
+						Create().
+						SetStatus(transactionlog.StatusOrderRefunded).
+						SetTxHash(event.TxHash).
+						SetGatewayID(gatewayID).
+						SetNetwork(network.Identifier).
+						Save(ctx)
+					if err != nil {
+						_ = tx.Rollback()
+						return fmt.Errorf("UpdateOrderStatusRefunded.create: %v", err)
+					}
+				} else {
 					_ = tx.Rollback()
-					return fmt.Errorf("UpdateOrderStatusRefunded.create: %v", err)
+					return fmt.Errorf("UpdateOrderStatusRefunded.query: %v", err)
 				}
 			} else {
-				_ = tx.Rollback()
-				return fmt.Errorf("UpdateOrderStatusRefunded.query: %v", err)
+				transactionLog = existingLog
 			}
-		} else {
-			// Log already exists (created by another concurrent transaction)
-			transactionLog = existingLog
 		}
 	}
 
@@ -342,7 +369,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 	paymentOrderUpdate := tx.PaymentOrder.
 		Update().
 		Where(
-			paymentorder.GatewayIDEQ(event.OrderId),
+			paymentorder.GatewayIDEQ(gatewayID),
 			paymentorder.Or(
 				paymentorder.StatusEQ(paymentorder.StatusRefunding),
 				paymentorder.StatusEQ(paymentorder.StatusPending),
@@ -372,7 +399,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 	paymentOrder, err := tx.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.GatewayIDEQ(event.OrderId),
+			paymentorder.GatewayIDEQ(gatewayID),
 			paymentorder.HasTokenWith(
 				tokenent.HasNetworkWith(
 					networkent.IdentifierEQ(network.Identifier),
@@ -426,39 +453,43 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 	return nil
 }
 
-// UpdateOrderStatusSettled updates the status of a payment order to settled
-func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *types.OrderSettledEvent, messageHash string) error {
+// UpdateOrderStatusSettleOut updates the status of a payment order to settled (offramp / SettleOut).
+func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event *types.SettleOutEvent, messageHash string) error {
 	tx, err := db.Client.Tx(ctx)
 	if err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.db: %v", err)
+		return fmt.Errorf("UpdateOrderStatusSettleOut.db: %v", err)
 	}
 
-	// Attempt to update an existing log
+	gatewayID := normalizeGatewayID(event.OrderId)
+
+	// Update any existing order_settling log(s) for this event (same gateway_id, network) by setting tx_hash.
+	// Row count is used to decide whether to create a new order_settled log below.
 	var transactionLog *ent.TransactionLog
 	updatedLogRows, err := tx.TransactionLog.
 		Update().
 		Where(
-			transactionlog.StatusEQ(transactionlog.StatusOrderSettled),
-			transactionlog.GatewayIDEQ(event.OrderId),
+			transactionlog.StatusEQ(transactionlog.StatusOrderSettling),
+			transactionlog.GatewayIDEQ(gatewayID),
 			transactionlog.NetworkEQ(network.Identifier),
 		).
 		SetTxHash(event.TxHash).
 		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.update: %v", err)
+		return fmt.Errorf("UpdateOrderStatusSettleOut.update: %v", err)
 	}
 
-	// If no rows were updated, create a new log
+	// If no existing order_settling log was updated, create a new order_settled log (e.g. legacy or indexer-first path).
+	// When updatedLogRows > 0, order already has that log linked; no need to AddTransactions again.
 	if updatedLogRows == 0 {
 		transactionLog, err = tx.TransactionLog.
 			Create().
 			SetStatus(transactionlog.StatusOrderSettled).
 			SetTxHash(event.TxHash).
-			SetGatewayID(event.OrderId).
+			SetGatewayID(gatewayID).
 			SetNetwork(network.Identifier).
 			Save(ctx)
 		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettled.create: %v", err)
+			return fmt.Errorf("UpdateOrderStatusSettleOut.create: %v", err)
 		}
 	}
 
@@ -468,12 +499,12 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	if strings.HasPrefix(network.Identifier, "starknet") {
 		splitOrderId, err = uuid.Parse(strings.ReplaceAll(event.SplitOrderId, "0x", ""))
 		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettled.splitOrderId: %v", err)
+			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: %v", err)
 		}
 	} else {
 		splitOrderId, err = uuid.Parse(string(ethcommon.FromHex(event.SplitOrderId)))
 		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettled.splitOrderId: %v", err)
+			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: %v", err)
 		}
 	}
 
@@ -499,7 +530,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 
 	_, err = paymentOrderUpdate.Save(ctx)
 	if err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.aggregator: %v", err)
+		return fmt.Errorf("UpdateOrderStatusSettleOut.aggregator: %v", err)
 	}
 
 	// Update provider balance for settled orders
@@ -563,7 +594,7 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.sender %v", err)
+		return fmt.Errorf("UpdateOrderStatusSettleOut commit failed: %w", err)
 	}
 
 	// Clean up order exclude list from Redis (best effort, don't fail if it errors)
@@ -575,9 +606,111 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 	// Send webhook notification to sender
 	err = utils.SendPaymentOrderWebhook(ctx, paymentOrder)
 	if err != nil {
-		return fmt.Errorf("UpdateOrderStatusSettled.webhook: %v", err)
+		return fmt.Errorf("UpdateOrderStatusSettleOut.webhook: %v", err)
 	}
 
+	return nil
+}
+
+// UpdateOrderStatusSettleIn updates a payin (onramp) order to settled when a SettleIn event is indexed.
+func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event *types.SettleInEvent) error {
+	tx, err := db.Client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusSettleIn.db: %v", err)
+	}
+
+	gatewayID := normalizeGatewayID(event.OrderId)
+
+	// Update any existing order_settling log(s) for this gateway order by setting tx_hash
+	var transactionLog *ent.TransactionLog
+	updatedLogRows, err := tx.TransactionLog.
+		Update().
+		Where(
+			transactionlog.StatusEQ(transactionlog.StatusOrderSettling),
+			transactionlog.GatewayIDEQ(gatewayID),
+			transactionlog.NetworkEQ(network.Identifier),
+		).
+		SetTxHash(event.TxHash).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusSettleIn.update: %v", err)
+	}
+
+	if updatedLogRows == 0 {
+		transactionLog, err = tx.TransactionLog.
+			Create().
+			SetStatus(transactionlog.StatusOrderSettled).
+			SetTxHash(event.TxHash).
+			SetGatewayID(gatewayID).
+			SetNetwork(network.Identifier).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("UpdateOrderStatusSettleIn.create: %v", err)
+		}
+	}
+
+	// Find payin order by gateway ID and status settling
+
+	paymentOrderUpdate := tx.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.GatewayIDEQ(gatewayID),
+			paymentorder.StatusEQ(paymentorder.StatusSettling),
+			paymentorder.DirectionEQ(paymentorder.DirectionOnramp),
+			paymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		SetBlockNumber(event.BlockNumber).
+		SetTxHash(event.TxHash).
+		SetStatus(paymentorder.StatusSettled)
+
+	if transactionLog != nil {
+		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
+	}
+
+	updatedOrderRows, err := paymentOrderUpdate.Save(ctx)
+	if err != nil {
+		return fmt.Errorf("UpdateOrderStatusSettleIn.aggregator: %v", err)
+	}
+
+	if updatedOrderRows == 0 {
+		_ = tx.Rollback()
+		return nil // No matching payin order in settling (e.g. already settled or wrong network)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("UpdateOrderStatusSettleIn.commit: %v", err)
+	}
+
+	// Reload payment order for webhook
+	paymentOrder, err := db.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.GatewayIDEQ(gatewayID),
+			paymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		WithSenderProfile().
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		Only(ctx)
+	if err != nil {
+		return nil // Order updated; webhook best-effort
+	}
+
+	if err := utils.SendPaymentOrderWebhook(ctx, paymentOrder); err != nil {
+		logger.WithFields(logger.Fields{
+			"OrderID": gatewayID,
+			"Error":   err.Error(),
+		}).Errorf("UpdateOrderStatusSettleIn.webhook: failed to send webhook")
+	}
 	return nil
 }
 
@@ -1034,7 +1167,7 @@ func validateAndPreparePaymentOrderData(
 		senderAPIKey, err := getAPIKeyFromMetadata(recipient.Metadata)
 		if err != nil {
 			// TODO: enforce sender API key presence in metadata in the future if needed
-		} else if err == nil && senderAPIKey != uuid.Nil {
+		} else if senderAPIKey != uuid.Nil {
 			_, err := getSenderProfileFromAPIKey(ctx, senderAPIKey)
 			if err != nil {
 				logger.WithFields(logger.Fields{
@@ -1088,15 +1221,16 @@ func validateAndPreparePaymentOrderData(
 		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Provision bucket lookup failed", refundOrder, existingOrder)
 	}
 
-	// Create payment order fields
+	// Create payment order fields (normalize gateway ID for case-insensitive DB storage/lookup)
+	// Chain-created orders from OrderCreatedEvent are offramp (SettleOut flow)
 	paymentOrderFields := &types.PaymentOrderFields{
 		Token:             token,
 		Network:           network,
-		GatewayID:         event.OrderId,
+		GatewayID:         normalizeGatewayID(event.OrderId),
 		Amount:            event.Amount,
 		Rate:              event.Rate,
 		ProtocolFee:       event.ProtocolFee,
-		AmountInUSD:       utils.CalculatePaymentOrderAmountInUSD(event.Amount, token, institution),
+		AmountInUSD:       utils.CalculatePaymentOrderAmountInUSD(event.Amount, token, institution, paymentorder.DirectionOfframp),
 		BlockNumber:       int64(event.BlockNumber),
 		TxHash:            event.TxHash,
 		Institution:       recipient.Institution,
@@ -1127,6 +1261,7 @@ func validateAndPreparePaymentOrderData(
 		event.Amount,
 		paymentOrderFields.ProviderID,
 		token.Edges.Network.Identifier,
+		utils.RateSideSell, // This is for offramp orders
 	)
 
 	if rateResult.Rate == decimal.NewFromInt(1) && paymentOrderFields.Rate != decimal.NewFromInt(1) {
@@ -1232,16 +1367,18 @@ func createBasicPaymentOrderAndCancel(
 	refundOrder func(context.Context, *ent.Network, string) error,
 	existingOrder *ent.PaymentOrder,
 ) error {
+	normalizedGatewayID := normalizeGatewayID(event.OrderId)
+
 	// Check if order already exists with gatewayID (should exist if we updated it before validation)
 	var orderToCancel *ent.PaymentOrder
-	if existingOrder != nil && existingOrder.GatewayID == event.OrderId {
+	if existingOrder != nil && normalizeGatewayID(existingOrder.GatewayID) == normalizedGatewayID {
 		orderToCancel = existingOrder
 	} else {
 		// Try to find existing order by gatewayID as fallback
 		foundOrder, err := db.Client.PaymentOrder.
 			Query().
 			Where(
-				paymentorder.GatewayIDEQ(event.OrderId),
+				paymentorder.GatewayIDEQ(normalizedGatewayID),
 				paymentorder.HasTokenWith(
 					tokenent.HasNetworkWith(
 						networkent.IdentifierEQ(network.Identifier),
@@ -1274,7 +1411,7 @@ func createBasicPaymentOrderAndCancel(
 	paymentOrder := types.PaymentOrderFields{
 		Token:       token,
 		Network:     network,
-		GatewayID:   event.OrderId,
+		GatewayID:   normalizedGatewayID,
 		Amount:      adjustedAmount,
 		Rate:        event.Rate,
 		ProtocolFee: adjustedProtocolFee,
@@ -1286,7 +1423,7 @@ func createBasicPaymentOrderAndCancel(
 			if err != nil {
 				return decimal.Zero
 			}
-			return utils.CalculatePaymentOrderAmountInUSD(adjustedAmount, token, institution)
+			return utils.CalculatePaymentOrderAmountInUSD(adjustedAmount, token, institution, paymentorder.DirectionOfframp)
 		}(),
 		BlockNumber: int64(event.BlockNumber),
 		TxHash:      event.TxHash,

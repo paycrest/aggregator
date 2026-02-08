@@ -208,8 +208,8 @@ func TestIndexerStarknet_IndexGateway(t *testing.T) {
 	})
 }
 
-// TestIndexerStarknet_IndexProviderAddress tests the IndexProviderAddress function with a real settlement transaction
-func TestIndexerStarknet_IndexProviderAddress(t *testing.T) {
+// TestIndexerStarknet_IndexProviderSettlementAddress tests the IndexProviderSettlementAddress function with a real settlement transaction
+func TestIndexerStarknet_IndexProviderSettlementAddress(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test that requires network access")
 	}
@@ -229,7 +229,7 @@ func TestIndexerStarknet_IndexProviderAddress(t *testing.T) {
 	network := createMockNetwork()
 
 	t.Run("Index Provider Settlement", func(t *testing.T) {
-		eventCounts, err := indexer.IndexProviderAddress(
+		eventCounts, err := indexer.IndexProviderSettlementAddress(
 			ctx,
 			network,
 			providerAddress,
@@ -250,7 +250,7 @@ func TestIndexerStarknet_IndexProviderAddress(t *testing.T) {
 
 	t.Run("Index Non-Provider Transaction", func(t *testing.T) {
 		// Try to index OrderCreated transaction for provider (should find nothing)
-		eventCounts, err := indexer.IndexProviderAddress(
+		eventCounts, err := indexer.IndexProviderSettlementAddress(
 			ctx,
 			network,
 			providerAddress,
@@ -300,8 +300,8 @@ func TestIndexerStarknet_Integration(t *testing.T) {
 		require.NoError(t, err, "Failed to index order creation")
 		t.Logf("✓ Step 2 - OrderCreated indexed: %d events", orderCreatedCounts.OrderCreated)
 
-		// Step 3: Provider settles the order (IndexProviderAddress)
-		settlementCounts, err := indexer.IndexProviderAddress(ctx, network, providerAddress, 0, 0, txHashOrderSettled)
+		// Step 3: Provider settles the order (IndexProviderSettlementAddress)
+		settlementCounts, err := indexer.IndexProviderSettlementAddress(ctx, network, providerAddress, 0, 0, txHashOrderSettled)
 		require.NoError(t, err, "Failed to index provider settlement")
 		t.Logf("✓ Step 3 - OrderSettled indexed: %d events", settlementCounts.OrderSettled)
 

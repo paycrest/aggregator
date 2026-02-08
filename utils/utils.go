@@ -210,8 +210,9 @@ func AbsPercentageDeviation(trueValue, measuredValue decimal.Decimal) decimal.De
 	return deviation.Abs()
 }
 
-// CalculatePaymentOrderAmountInUSD calculates the amount in USD for a payment order
-func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, institution *ent.Institution) decimal.Decimal {
+// CalculatePaymentOrderAmountInUSD calculates the amount in USD for a payment order.
+// It uses MarketBuyRate for onramp (when non-zero) and MarketSellRate for offramp or when buy rate is zero.
+func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, institution *ent.Institution, direction paymentorder.Direction) decimal.Decimal {
 	// Guard against nil inputs
 	if token == nil || institution == nil {
 		return amount
@@ -228,12 +229,20 @@ func CalculatePaymentOrderAmountInUSD(amount decimal.Decimal, token *ent.Token, 
 		fiatCurrency = institutionCurrency
 	}
 
-	// Only multiply when the token matches the institution's fiat currency
-	if fiatCurrency != nil && token.BaseCurrency == fiatCurrency.Code && !fiatCurrency.MarketRate.IsZero() {
-		return amount.Div(fiatCurrency.MarketRate)
+	if fiatCurrency == nil || token.BaseCurrency != fiatCurrency.Code {
+		return amount
 	}
 
-	return amount
+	// Onramp: use buy rate (crypto bought with fiat); offramp or zero buy rate: use sell rate
+	var rate decimal.Decimal
+	if direction == paymentorder.DirectionOnramp && !fiatCurrency.MarketBuyRate.IsZero() {
+		rate = fiatCurrency.MarketBuyRate
+	} else if !fiatCurrency.MarketSellRate.IsZero() {
+		rate = fiatCurrency.MarketSellRate
+	} else {
+		return amount
+	}
+	return amount.Div(rate)
 }
 
 // SendPaymentOrderWebhook notifies a sender when the status of a payment order changes
@@ -244,6 +253,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 		Query().
 		Where(paymentorder.IDEQ(paymentOrder.ID)).
 		WithSenderProfile().
+		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
@@ -295,44 +305,85 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 		return err
 	}
 
-	// Create the payload
 	var providerID string
 	if paymentOrder.Edges.Provider != nil {
 		providerID = paymentOrder.Edges.Provider.ID
 	}
-	payloadStruct := types.PaymentOrderWebhookPayload{
-		Event: event,
-		Data: types.PaymentOrderWebhookData{
-			ID:             paymentOrder.ID,
-			Amount:         paymentOrder.Amount,
-			AmountPaid:     paymentOrder.AmountPaid,
-			AmountReturned: paymentOrder.AmountReturned,
-			PercentSettled: paymentOrder.PercentSettled,
-			SenderFee:      paymentOrder.SenderFee,
-			NetworkFee:     paymentOrder.NetworkFee,
-			Rate:           paymentOrder.Rate,
-			Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
-			GatewayID:      paymentOrder.GatewayID,
-			SenderID:       profile.ID,
-			Recipient: types.PaymentOrderRecipient{
-				Currency:          institution.Edges.FiatCurrency.Code,
-				Institution:       paymentOrder.Institution,
-				AccountIdentifier: paymentOrder.AccountIdentifier,
-				AccountName:       paymentOrder.AccountName,
-				ProviderID:        providerID,
-				Memo:              paymentOrder.Memo,
-			},
-			FromAddress:   paymentOrder.FromAddress,
-			ReturnAddress: paymentOrder.ReturnAddress,
-			Reference:     paymentOrder.Reference,
-			UpdatedAt:     paymentOrder.UpdatedAt,
-			CreatedAt:     paymentOrder.CreatedAt,
-			TxHash:        paymentOrder.TxHash,
-			Status:        paymentOrder.Status,
-		},
+
+	webhookVersion := profile.WebhookVersion
+	if webhookVersion == "" {
+		webhookVersion = "1"
 	}
 
-	payload := StructToMap(payloadStruct)
+	var payload map[string]interface{}
+	if webhookVersion == "2" {
+		// V2: aligned with API schema — providerAccount, source, destination (same types as V2PaymentOrderResponse).
+		source, destination, providerAccount := BuildV2OrderSourceDestinationProviderAccount(paymentOrder, institution)
+
+		payloadStructV2 := types.V2PaymentOrderWebhookPayload{
+			Event:          event,
+			WebhookVersion: webhookVersion,
+			Data: types.V2PaymentOrderWebhookData{
+				ID:              paymentOrder.ID,
+				Direction:       string(paymentOrder.Direction),
+				Amount:          paymentOrder.Amount,
+				AmountInUSD:     paymentOrder.AmountInUsd,
+				AmountPaid:      paymentOrder.AmountPaid,
+				AmountReturned:  paymentOrder.AmountReturned,
+				PercentSettled:  paymentOrder.PercentSettled,
+				SenderFee:       paymentOrder.SenderFee,
+				TransactionFee:  paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee),
+				Rate:            paymentOrder.Rate,
+				GatewayID:       paymentOrder.GatewayID,
+				SenderID:        profile.ID,
+				ProviderAccount: providerAccount,
+				Source:          source,
+				Destination:     destination,
+				FromAddress:     paymentOrder.FromAddress,
+				Reference:       paymentOrder.Reference,
+				Timestamp:       time.Now().UTC(),
+				TxHash:          paymentOrder.TxHash,
+				Status:          paymentOrder.Status,
+			},
+		}
+		payload = StructToMap(payloadStructV2)
+	} else {
+		// V1: current payload (backward compatible)
+		payloadStruct := types.PaymentOrderWebhookPayload{
+			Event:          event,
+			WebhookVersion: webhookVersion,
+			Data: types.PaymentOrderWebhookData{
+				ID:             paymentOrder.ID,
+				Amount:         paymentOrder.Amount,
+				AmountPaid:     paymentOrder.AmountPaid,
+				AmountReturned: paymentOrder.AmountReturned,
+				PercentSettled: paymentOrder.PercentSettled,
+				SenderFee:      paymentOrder.SenderFee,
+				NetworkFee:     paymentOrder.NetworkFee,
+				Rate:           paymentOrder.Rate,
+				Network:        paymentOrder.Edges.Token.Edges.Network.Identifier,
+				GatewayID:      paymentOrder.GatewayID,
+				SenderID:       profile.ID,
+				Recipient: types.PaymentOrderRecipient{
+					Currency:          institution.Edges.FiatCurrency.Code,
+					Institution:       paymentOrder.Institution,
+					AccountIdentifier: paymentOrder.AccountIdentifier,
+					AccountName:       paymentOrder.AccountName,
+					ProviderID:        providerID,
+					Memo:              paymentOrder.Memo,
+				},
+				FromAddress:   paymentOrder.FromAddress,
+				ReturnAddress: paymentOrder.RefundOrRecipientAddress,
+				RefundAddress: paymentOrder.RefundOrRecipientAddress,
+				Reference:     paymentOrder.Reference,
+				UpdatedAt:     paymentOrder.UpdatedAt,
+				CreatedAt:     paymentOrder.CreatedAt,
+				TxHash:        paymentOrder.TxHash,
+				Status:        paymentOrder.Status,
+			},
+		}
+		payload = StructToMap(payloadStruct)
+	}
 
 	// Compute HMAC signature
 	apiKey, err := profile.QueryAPIKey().Only(ctx)
@@ -375,6 +426,196 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	}
 
 	return nil
+}
+
+// ParseValidUntilFromMetadata extracts a time from metadata validUntil (string RFC3339 or numeric Unix seconds).
+func ParseValidUntilFromMetadata(v interface{}) (time.Time, bool) {
+	if v == nil {
+		return time.Time{}, false
+	}
+	switch x := v.(type) {
+	case string:
+		t, err := time.Parse(time.RFC3339, x)
+		if err != nil {
+			return time.Time{}, false
+		}
+		return t, true
+	case float64:
+		return time.Unix(int64(x), 0), true
+	case int:
+		return time.Unix(int64(x), 0), true
+	case int64:
+		return time.Unix(x, 0), true
+	case int32:
+		return time.Unix(int64(x), 0), true
+	default:
+		return time.Time{}, false
+	}
+}
+
+// BuildV2OrderSourceDestinationProviderAccount builds source, destination, and providerAccount for v2 API/get responses.
+// paymentOrder must have Token and Token.Edges.Network loaded. institution is required for fiat (currency); use nil only if unavailable (then currency/institution display may be empty).
+func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder, institution *ent.Institution) (source, destination, providerAccount any) {
+	networkID := ""
+	if paymentOrder.Edges.Token != nil && paymentOrder.Edges.Token.Edges.Network != nil {
+		networkID = paymentOrder.Edges.Token.Edges.Network.Identifier
+	}
+	tokenSymbol := ""
+	if paymentOrder.Edges.Token != nil {
+		tokenSymbol = paymentOrder.Edges.Token.Symbol
+	}
+	currencyCode := ""
+	if institution != nil && institution.Edges.FiatCurrency != nil {
+		currencyCode = institution.Edges.FiatCurrency.Code
+	}
+	providerID := ""
+	if paymentOrder.Edges.Provider != nil {
+		providerID = paymentOrder.Edges.Provider.ID
+	}
+
+	isOnramp := paymentOrder.Direction == paymentorder.DirectionOnramp
+	if isOnramp {
+		if paymentOrder.Metadata != nil {
+			if pa, ok := paymentOrder.Metadata["providerAccount"].(map[string]interface{}); ok {
+				var inst, acctID, acctName string
+				if v, ok := pa["institution"].(string); ok {
+					inst = v
+				}
+				if v, ok := pa["accountIdentifier"].(string); ok {
+					acctID = v
+				}
+				if v, ok := pa["accountName"].(string); ok {
+					acctName = v
+				}
+				var validUntil time.Time
+				if t, ok := ParseValidUntilFromMetadata(pa["validUntil"]); ok {
+					validUntil = t
+				}
+				providerAccount = &types.V2FiatProviderAccount{
+					Institution:       inst,
+					AccountIdentifier: acctID,
+					AccountName:       acctName,
+					ValidUntil:        validUntil,
+				}
+			}
+		}
+		refundAccountMetadata := (map[string]interface{})(nil)
+		if paymentOrder.Metadata != nil {
+			if m, ok := paymentOrder.Metadata["refundAccountMetadata"].(map[string]interface{}); ok {
+				refundAccountMetadata = m
+			}
+		}
+		country := ""
+		if paymentOrder.Metadata != nil {
+			if c, ok := paymentOrder.Metadata["country"].(string); ok {
+				country = c
+			}
+		}
+		source = &types.V2FiatSource{
+			Type:     "fiat",
+			Currency: currencyCode,
+			Country:  country,
+			RefundAccount: types.V2FiatRefundAccount{
+				Institution:       paymentOrder.Institution,
+				AccountIdentifier: paymentOrder.AccountIdentifier,
+				AccountName:       paymentOrder.AccountName,
+				Metadata:          refundAccountMetadata,
+			},
+		}
+		destination = &types.V2CryptoDestination{
+			Type:       "crypto",
+			Currency:   tokenSymbol,
+			Network:    networkID,
+			ProviderID: providerID,
+			Recipient: types.V2CryptoRecipient{
+				Address: paymentOrder.RefundOrRecipientAddress,
+				Network: networkID,
+			},
+		}
+	} else {
+		if paymentOrder.ReceiveAddress != "" {
+			providerAccount = &types.V2CryptoProviderAccount{
+				Network:        networkID,
+				ReceiveAddress: paymentOrder.ReceiveAddress,
+				ValidUntil:     paymentOrder.ReceiveAddressExpiry,
+			}
+		}
+		source = &types.V2CryptoSource{
+			Type:          "crypto",
+			Currency:      tokenSymbol,
+			Network:       networkID,
+			RefundAddress: paymentOrder.RefundOrRecipientAddress,
+		}
+		destCountry := ""
+		if paymentOrder.Metadata != nil {
+			if c, ok := paymentOrder.Metadata["country"].(string); ok {
+				destCountry = c
+			}
+		}
+		destination = &types.V2FiatDestination{
+			Type:       "fiat",
+			Currency:   currencyCode,
+			Country:    destCountry,
+			ProviderID: providerID,
+			Recipient: types.V2FiatRecipient{
+				Institution:       paymentOrder.Institution,
+				AccountIdentifier: paymentOrder.AccountIdentifier,
+				AccountName:       paymentOrder.AccountName,
+				Memo:              paymentOrder.Memo,
+				Metadata:          paymentOrder.Metadata,
+			},
+		}
+	}
+	return source, destination, providerAccount
+}
+
+// BuildV2PaymentOrderGetResponse builds a full V2PaymentOrderGetResponse from payment order and optional provider fields.
+func BuildV2PaymentOrderGetResponse(
+	paymentOrder *ent.PaymentOrder,
+	institution *ent.Institution,
+	transactionLogs []types.TransactionLog,
+	cancellationReasons []string,
+	otcExpiry *time.Time,
+) *types.V2PaymentOrderGetResponse {
+	source, destination, providerAccount := BuildV2OrderSourceDestinationProviderAccount(paymentOrder, institution)
+	txFee := paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee)
+	senderFeePercentStr := ""
+	if !paymentOrder.Amount.IsZero() {
+		senderFeePercentStr = paymentOrder.SenderFee.Div(paymentOrder.Amount).Mul(decimal.NewFromInt(100)).String()
+	}
+	resp := &types.V2PaymentOrderGetResponse{
+		ID:                  paymentOrder.ID,
+		Status:              string(paymentOrder.Status),
+		Direction:           string(paymentOrder.Direction),
+		CreatedAt:           paymentOrder.CreatedAt,
+		UpdatedAt:           paymentOrder.UpdatedAt,
+		Amount:              paymentOrder.Amount.String(),
+		AmountInUsd:         paymentOrder.AmountInUsd.String(),
+		AmountPaid:          paymentOrder.AmountPaid.String(),
+		AmountReturned:      paymentOrder.AmountReturned.String(),
+		PercentSettled:      paymentOrder.PercentSettled.String(),
+		Rate:                paymentOrder.Rate.String(),
+		SenderFee:           paymentOrder.SenderFee.String(),
+		SenderFeePercent:    senderFeePercentStr,
+		TransactionFee:      txFee.String(),
+		Reference:           paymentOrder.Reference,
+		ProviderAccount:     providerAccount,
+		Source:              source,
+		Destination:         destination,
+		TxHash:              paymentOrder.TxHash,
+		TransactionLogs:     transactionLogs,
+		CancellationReasons: cancellationReasons,
+		OTCExpiry:           otcExpiry,
+	}
+	if paymentOrder.Metadata != nil {
+		if amountIn, ok := paymentOrder.Metadata["amountIn"].(string); ok {
+			resp.AmountIn = amountIn
+		}
+	}
+	if resp.AmountIn == "" {
+		resp.AmountIn = paymentOrder.Amount.String()
+	}
+	return resp
 }
 
 // StructToMap converts a struct to a map[string]interface{}
@@ -765,6 +1006,14 @@ func IsValidHttpsUrl(urlStr string) bool {
 	return parsedUrl.Scheme == "https" && parsedUrl.Host != ""
 }
 
+// RateSide represents the direction of the rate (buy for onramp, sell for offramp)
+type RateSide string
+
+const (
+	RateSideBuy  RateSide = "buy"  // Onramp: fiat per 1 token the sender pays to buy crypto
+	RateSideSell RateSide = "sell" // Offramp: fiat per 1 token the sender receives when selling crypto
+)
+
 // RateValidationResult contains the result of rate validation
 type RateValidationResult struct {
 	Rate       decimal.Decimal
@@ -774,16 +1023,17 @@ type RateValidationResult struct {
 
 // ValidateRate validates if a provided rate is achievable for the given parameters
 // Returns the rate, provider ID (if found), and order type (regular or OTC)
-func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (RateValidationResult, error) {
+// side parameter determines whether to use buy rates (onramp) or sell rates (offramp)
+func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string, side RateSide) (RateValidationResult, error) {
 	isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
 
 	// Determine which validation function to use
 	var result RateValidationResult
 	var err error
 	if providerID != "" {
-		result, err = validateProviderRate(ctx, token, currency, amount, providerID, networkFilter)
+		result, err = validateProviderRate(ctx, token, currency, amount, providerID, networkFilter, side)
 	} else {
-		result, err = validateBucketRate(ctx, token, currency, amount, networkFilter)
+		result, err = validateBucketRate(ctx, token, currency, amount, networkFilter, side)
 	}
 
 	if err != nil {
@@ -801,7 +1051,7 @@ func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurre
 }
 
 // validateProviderRate handles provider-specific rate validation
-func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string) (RateValidationResult, error) {
+func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, providerID, networkFilter string, side RateSide) (RateValidationResult, error) {
 	// Get the provider from the database
 	provider, err := storage.Client.ProviderProfile.
 		Query().
@@ -848,17 +1098,29 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 
 	// Get rate first (needed for fiat conversion and OTC validation)
 	var rateResponse decimal.Decimal
-	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount, networkFilter)
+	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount, networkFilter, side)
 	if found {
 		rateResponse = redisRate
 	} else {
 		// Fallback to database rate if Redis rate not found
-		if providerOrderToken.ConversionRateType == "fixed" {
-			rateResponse = providerOrderToken.FixedConversionRate
-		} else {
-			// For floating rates, use market rate + floating adjustment
-			rateResponse = currency.MarketRate.Add(providerOrderToken.FloatingConversionRate)
+		switch side {
+		case RateSideBuy:
+			if !providerOrderToken.FixedBuyRate.IsZero() {
+				rateResponse = providerOrderToken.FixedBuyRate
+			} else if !providerOrderToken.FloatingBuyDelta.IsZero() && !currency.MarketBuyRate.IsZero() {
+				rateResponse = currency.MarketBuyRate.Add(providerOrderToken.FloatingBuyDelta).RoundBank(2)
+			}
+		case RateSideSell:
+			if !providerOrderToken.FixedSellRate.IsZero() {
+				rateResponse = providerOrderToken.FixedSellRate
+			} else if !providerOrderToken.FloatingSellDelta.IsZero() && !currency.MarketSellRate.IsZero() {
+				rateResponse = currency.MarketSellRate.Add(providerOrderToken.FloatingSellDelta).RoundBank(2)
+			}
 		}
+	}
+
+	if rateResponse.IsZero() {
+		return RateValidationResult{}, fmt.Errorf("provider rate not configured for this token/currency/side (set fixed or floating rate)")
 	}
 
 	// Validate amount limits: if exceeds regular max, check OTC limits
@@ -880,16 +1142,31 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		// Amount is within regular limits - proceed normally
 	}
 
-	_, err = storage.Client.ProviderBalances.Query().
-		Where(
-			providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
-			providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
-			providerbalances.AvailableBalanceGT(amount.Mul(rateResponse)),
-			providerbalances.IsAvailableEQ(true),
-		).
-		Only(ctx)
+	// Onramp (buy): check provider has sufficient token balance. Offramp (sell): check fiat balance.
+	if side == RateSideBuy {
+		_, err = storage.Client.ProviderBalances.Query().
+			Where(
+				providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+				providerbalances.AvailableBalanceGT(amount),
+				providerbalances.IsAvailableEQ(true),
+			).
+			Only(ctx)
+	} else {
+		_, err = storage.Client.ProviderBalances.Query().
+			Where(
+				providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+				providerbalances.AvailableBalanceGT(amount.Mul(rateResponse)),
+				providerbalances.IsAvailableEQ(true),
+			).
+			Only(ctx)
+	}
 	if err != nil {
 		if ent.IsNotFound(err) {
+			if side == RateSideBuy {
+				return RateValidationResult{}, fmt.Errorf("provider has insufficient %s balance", token.Symbol)
+			}
 			return RateValidationResult{}, fmt.Errorf("provider has insufficient liquidity for %s", currency.Code)
 		}
 		return RateValidationResult{}, fmt.Errorf("internal server error")
@@ -903,10 +1180,10 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 }
 
 // getProviderRateFromRedis retrieves the provider's current rate from Redis queue.
-// If networkFilter is non-empty, only entries where parts[2] (network) matches networkFilter are considered.
-func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal, networkFilter string) (decimal.Decimal, bool) {
-	// Get redis keys for provision buckets for this currency
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currencyCode+"_*_*", 100).Result()
+func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal, networkFilter string, side RateSide) (decimal.Decimal, bool) {
+	// Get redis keys for provision buckets for this currency and side
+	// Scan for side-specific bucket keys: bucket_{currency}_{min}_{max}_{side}
+	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currencyCode+"_*_*_"+string(side), 100).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -973,9 +1250,10 @@ func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, curr
 }
 
 // validateBucketRate handles bucket-based rate validation
-func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string) (RateValidationResult, error) {
-	// Get redis keys for provision buckets
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*", 100).Result()
+func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string, side RateSide) (RateValidationResult, error) {
+	// Get redis keys for provision buckets for the specific side
+	// Scan for side-specific bucket keys: bucket_{currency}_{min}_{max}_{side}
+	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*_"+string(side), 100).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1013,7 +1291,7 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 		}
 
 		// Find the first provider at the top of the queue that matches our criteria
-		result := findSuitableProviderRate(ctx, providers, token.Symbol, networkIdentifier, amount, bucketData)
+		result := findSuitableProviderRate(ctx, providers, token, networkIdentifier, amount, bucketData, side)
 		if result.Found {
 			foundExactMatch = true
 			bestRate = result.Rate
@@ -1062,10 +1340,10 @@ type BucketData struct {
 }
 
 func parseBucketKey(key string) (*BucketData, error) {
-	// Expected format: "bucket_{currency}_{minAmount}_{maxAmount}"
+	// Expected format: "bucket_{currency}_{minAmount}_{maxAmount}_{side}"
 	parts := strings.Split(key, "_")
 	if len(parts) != 4 && len(parts) != 5 {
-		return nil, fmt.Errorf("invalid bucket key format: expected 4 parts, got %d", len(parts))
+		return nil, fmt.Errorf("invalid bucket key format: expected 4 or 5 parts, got %d", len(parts))
 	}
 
 	if parts[0] != "bucket" {
@@ -1091,6 +1369,9 @@ func parseBucketKey(key string) (*BucketData, error) {
 		return nil, fmt.Errorf("min amount (%s) must be less than max amount (%s)", minAmount, maxAmount)
 	}
 
+	// If there's a 5th part, it should be "buy" or "sell" (side), but we ignore it for parsing
+	// as the side is already known from the key pattern
+
 	return &BucketData{
 		Currency:  currency,
 		MinAmount: minAmount,
@@ -1108,8 +1389,10 @@ type ProviderRateResult struct {
 
 // findSuitableProviderRate finds the first suitable provider rate from the provider list
 // Returns the rate, provider ID, order type, and a boolean indicating if an exact match was found
-// An exact match means: amount within limits, within bucket range, and provider has sufficient balance
-func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) ProviderRateResult {
+// An exact match means: amount within limits, within bucket range, and provider has sufficient balance.
+// For onramp (RateSideBuy) balance is token; for offramp (RateSideSell) balance is fiat.
+func findSuitableProviderRate(ctx context.Context, providers []string, token *ent.Token, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData, side RateSide) ProviderRateResult {
+	tokenSymbol := token.Symbol
 	var bestRate decimal.Decimal
 	var foundExactMatch bool
 
@@ -1143,13 +1426,12 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 		var providerOrderToken *ent.ProviderOrderToken
 		if networkIdentifier != "" {
 			// Network filter provided - fetch with network constraint
-			pot, err := storage.Client.ProviderOrderToken.
+			potQuery := storage.Client.ProviderOrderToken.
 				Query().
 				Where(
 					providerordertoken.HasProviderWith(
 						providerprofile.IDEQ(parts[0]),
 						providerprofile.HasProviderBalancesWith(
-							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 							providerbalances.IsAvailableEQ(true),
 						),
 					),
@@ -1157,7 +1439,27 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 					providerordertoken.NetworkEQ(networkIdentifier),
 					providerordertoken.SettlementAddressNEQ(""),
-				).Only(ctx)
+				)
+			if side == RateSideBuy {
+				potQuery = potQuery.Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+							providerbalances.IsAvailableEQ(true),
+						),
+					),
+				)
+			} else {
+				potQuery = potQuery.Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providerbalances.IsAvailableEQ(true),
+						),
+					),
+				)
+			}
+			pot, err := potQuery.Only(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
 					continue
@@ -1171,20 +1473,39 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 			providerOrderToken = pot
 		} else {
 			// No network filter - fetch first matching entry
-			pot, err := storage.Client.ProviderOrderToken.
+			potQuery := storage.Client.ProviderOrderToken.
 				Query().
 				Where(
 					providerordertoken.HasProviderWith(
 						providerprofile.IDEQ(parts[0]),
 						providerprofile.HasProviderBalancesWith(
-							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 							providerbalances.IsAvailableEQ(true),
 						),
 					),
 					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
 					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
 					providerordertoken.SettlementAddressNEQ(""),
-				).First(ctx)
+				)
+			if side == RateSideBuy {
+				potQuery = potQuery.Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+							providerbalances.IsAvailableEQ(true),
+						),
+					),
+				)
+			} else {
+				potQuery = potQuery.Where(
+					providerordertoken.HasProviderWith(
+						providerprofile.HasProviderBalancesWith(
+							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+							providerbalances.IsAvailableEQ(true),
+						),
+					),
+				)
+			}
+			pot, err := potQuery.First(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
 					continue
@@ -1263,17 +1584,33 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 
 		// Check if fiat amount is within the bucket range
 		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
-			_, err := storage.Client.ProviderBalances.Query().
-				Where(
-					providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
-					providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-					providerbalances.AvailableBalanceGT(fiatAmount),
-					providerbalances.IsAvailableEQ(true),
-				).
-				Only(ctx)
+			// Onramp: check token balance; offramp: check fiat balance
+			if side == RateSideBuy {
+				_, err = storage.Client.ProviderBalances.Query().
+					Where(
+						providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
+						providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+						providerbalances.AvailableBalanceGT(tokenAmount),
+						providerbalances.IsAvailableEQ(true),
+					).
+					Only(ctx)
+			} else {
+				_, err = storage.Client.ProviderBalances.Query().
+					Where(
+						providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
+						providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
+						providerbalances.AvailableBalanceGT(fiatAmount),
+						providerbalances.IsAvailableEQ(true),
+					).
+					Only(ctx)
+			}
 			if err != nil {
 				if ent.IsNotFound(err) {
-					skipReasons = append(skipReasons, fmt.Sprintf("provider %s has insufficient balance (need %s %s)", providerID, fiatAmount, bucketData.Currency))
+					if side == RateSideBuy {
+						skipReasons = append(skipReasons, fmt.Sprintf("provider %s has insufficient %s balance (need %s)", providerID, tokenSymbol, tokenAmount))
+					} else {
+						skipReasons = append(skipReasons, fmt.Sprintf("provider %s has insufficient balance (need %s %s)", providerID, fiatAmount, bucketData.Currency))
+					}
 					continue
 				}
 				return ProviderRateResult{Found: false}

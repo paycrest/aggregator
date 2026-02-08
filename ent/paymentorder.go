@@ -61,8 +61,8 @@ type PaymentOrder struct {
 	GatewayID string `json:"gateway_id,omitempty"`
 	// FromAddress holds the value of the "from_address" field.
 	FromAddress string `json:"from_address,omitempty"`
-	// ReturnAddress holds the value of the "return_address" field.
-	ReturnAddress string `json:"return_address,omitempty"`
+	// RefundOrRecipientAddress holds the value of the "refund_or_recipient_address" field.
+	RefundOrRecipientAddress string `json:"refund_or_recipient_address,omitempty"`
 	// ReceiveAddress holds the value of the "receive_address" field.
 	ReceiveAddress string `json:"receive_address,omitempty"`
 	// ReceiveAddressSalt holds the value of the "receive_address_salt" field.
@@ -79,8 +79,6 @@ type PaymentOrder struct {
 	AccountIdentifier string `json:"account_identifier,omitempty"`
 	// AccountName holds the value of the "account_name" field.
 	AccountName string `json:"account_name,omitempty"`
-	// Memo holds the value of the "memo" field.
-	Memo string `json:"memo,omitempty"`
 	// Metadata holds the value of the "metadata" field.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 	// Sender holds the value of the "sender" field.
@@ -91,8 +89,12 @@ type PaymentOrder struct {
 	CancellationCount int `json:"cancellation_count,omitempty"`
 	// CancellationReasons holds the value of the "cancellation_reasons" field.
 	CancellationReasons []string `json:"cancellation_reasons,omitempty"`
+	// Memo holds the value of the "memo" field.
+	Memo string `json:"memo,omitempty"`
 	// Status holds the value of the "status" field.
 	Status paymentorder.Status `json:"status,omitempty"`
+	// Direction holds the value of the "direction" field.
+	Direction paymentorder.Direction `json:"direction,omitempty"`
 	// OrderType holds the value of the "order_type" field.
 	OrderType paymentorder.OrderType `json:"order_type,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -211,7 +213,7 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(decimal.Decimal)
 		case paymentorder.FieldBlockNumber, paymentorder.FieldCancellationCount:
 			values[i] = new(sql.NullInt64)
-		case paymentorder.FieldTxHash, paymentorder.FieldMessageHash, paymentorder.FieldGatewayID, paymentorder.FieldFromAddress, paymentorder.FieldReturnAddress, paymentorder.FieldReceiveAddress, paymentorder.FieldFeeAddress, paymentorder.FieldInstitution, paymentorder.FieldAccountIdentifier, paymentorder.FieldAccountName, paymentorder.FieldMemo, paymentorder.FieldSender, paymentorder.FieldReference, paymentorder.FieldStatus, paymentorder.FieldOrderType:
+		case paymentorder.FieldTxHash, paymentorder.FieldMessageHash, paymentorder.FieldGatewayID, paymentorder.FieldFromAddress, paymentorder.FieldRefundOrRecipientAddress, paymentorder.FieldReceiveAddress, paymentorder.FieldFeeAddress, paymentorder.FieldInstitution, paymentorder.FieldAccountIdentifier, paymentorder.FieldAccountName, paymentorder.FieldSender, paymentorder.FieldReference, paymentorder.FieldMemo, paymentorder.FieldStatus, paymentorder.FieldDirection, paymentorder.FieldOrderType:
 			values[i] = new(sql.NullString)
 		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt, paymentorder.FieldReceiveAddressExpiry, paymentorder.FieldIndexerCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -356,11 +358,11 @@ func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.FromAddress = value.String
 			}
-		case paymentorder.FieldReturnAddress:
+		case paymentorder.FieldRefundOrRecipientAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field return_address", values[i])
+				return fmt.Errorf("unexpected type %T for field refund_or_recipient_address", values[i])
 			} else if value.Valid {
-				_m.ReturnAddress = value.String
+				_m.RefundOrRecipientAddress = value.String
 			}
 		case paymentorder.FieldReceiveAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -410,12 +412,6 @@ func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.AccountName = value.String
 			}
-		case paymentorder.FieldMemo:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field memo", values[i])
-			} else if value.Valid {
-				_m.Memo = value.String
-			}
 		case paymentorder.FieldMetadata:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field metadata", values[i])
@@ -450,11 +446,23 @@ func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 					return fmt.Errorf("unmarshal field cancellation_reasons: %w", err)
 				}
 			}
+		case paymentorder.FieldMemo:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field memo", values[i])
+			} else if value.Valid {
+				_m.Memo = value.String
+			}
 		case paymentorder.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				_m.Status = paymentorder.Status(value.String)
+			}
+		case paymentorder.FieldDirection:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field direction", values[i])
+			} else if value.Valid {
+				_m.Direction = paymentorder.Direction(value.String)
 			}
 		case paymentorder.FieldOrderType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -622,8 +630,8 @@ func (_m *PaymentOrder) String() string {
 	builder.WriteString("from_address=")
 	builder.WriteString(_m.FromAddress)
 	builder.WriteString(", ")
-	builder.WriteString("return_address=")
-	builder.WriteString(_m.ReturnAddress)
+	builder.WriteString("refund_or_recipient_address=")
+	builder.WriteString(_m.RefundOrRecipientAddress)
 	builder.WriteString(", ")
 	builder.WriteString("receive_address=")
 	builder.WriteString(_m.ReceiveAddress)
@@ -649,9 +657,6 @@ func (_m *PaymentOrder) String() string {
 	builder.WriteString("account_name=")
 	builder.WriteString(_m.AccountName)
 	builder.WriteString(", ")
-	builder.WriteString("memo=")
-	builder.WriteString(_m.Memo)
-	builder.WriteString(", ")
 	builder.WriteString("metadata=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Metadata))
 	builder.WriteString(", ")
@@ -667,8 +672,14 @@ func (_m *PaymentOrder) String() string {
 	builder.WriteString("cancellation_reasons=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CancellationReasons))
 	builder.WriteString(", ")
+	builder.WriteString("memo=")
+	builder.WriteString(_m.Memo)
+	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))
+	builder.WriteString(", ")
+	builder.WriteString("direction=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Direction))
 	builder.WriteString(", ")
 	builder.WriteString("order_type=")
 	builder.WriteString(fmt.Sprintf("%v", _m.OrderType))
