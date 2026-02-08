@@ -69,10 +69,10 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for SyncPaymentOrderFulfillments: %v", err)
 	}
 
-	// Handle receive address validity every 6 minutes
-	_, err = scheduler.Every(6).Minutes().Do(HandleReceiveAddressValidity)
+	// Expire stale orders every 6 minutes: offramp receive-address validity + onramp Pending past VA validity (metadata.providerAccount.validUntil)
+	_, err = scheduler.Every(6).Minutes().Do(ExpireStaleOrders)
 	if err != nil {
-		logger.Errorf("StartCronJobs for HandleReceiveAddressValidity: %v", err)
+		logger.Errorf("StartCronJobs for ExpireStaleOrders: %v", err)
 	}
 
 	// Retry stale user operations every 60 seconds

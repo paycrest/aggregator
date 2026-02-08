@@ -428,8 +428,8 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	return nil
 }
 
-// parseValidUntilFromMetadata extracts a time from metadata validUntil (string RFC3339 or numeric Unix seconds).
-func parseValidUntilFromMetadata(v interface{}) (time.Time, bool) {
+// ParseValidUntilFromMetadata extracts a time from metadata validUntil (string RFC3339 or numeric Unix seconds).
+func ParseValidUntilFromMetadata(v interface{}) (time.Time, bool) {
 	if v == nil {
 		return time.Time{}, false
 	}
@@ -488,7 +488,7 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 					acctName = v
 				}
 				var validUntil time.Time
-				if t, ok := parseValidUntilFromMetadata(pa["validUntil"]); ok {
+				if t, ok := ParseValidUntilFromMetadata(pa["validUntil"]); ok {
 					validUntil = t
 				}
 				providerAccount = &types.V2FiatProviderAccount{

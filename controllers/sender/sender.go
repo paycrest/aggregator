@@ -1822,6 +1822,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		SetMemo(""). // Onramp doesn't use memo
 		SetMetadata(metadata).
 		SetProviderID(providerID).
+		SetStatus(paymentorder.StatusPending). // VA issued at init; provider already assigned at this point.
 		AddTransactions(transactionLog)
 
 	paymentOrder, err := paymentOrderBuilder.Save(ctx)
