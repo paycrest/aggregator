@@ -91,7 +91,8 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 				"type": "section",
 				"text": map[string]interface{}{
 					"type": "mrkdwn",
-					"text": fmt.Sprintf("*Provider Currencies:* %s", currenciesString)},
+					"text": fmt.Sprintf("*Provider Currencies:* %s", currenciesString),
+				},
 			},
 		)
 	}
@@ -252,6 +253,44 @@ func (s *SlackService) SendSubmissionNotification(firstName, email, submissionID
 	if resp.StatusCode != http.StatusOK {
 		logger.Errorf("Slack notification failed with status: %d", resp.StatusCode)
 		return fmt.Errorf("slack notification failed with status: %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// SendFallbackAssignmentAlert sends a Slack notification when an order was assigned to the fallback node.
+func (s *SlackService) SendFallbackAssignmentAlert(orderID, providerID string) error {
+	if s.SlackWebhookURL == "" {
+		return nil
+	}
+	message := map[string]interface{}{
+		"blocks": []map[string]interface{}{
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": "*[FALLBACK_ASSIGNMENT] Fallback node used*",
+				},
+			},
+			{
+				"type": "section",
+				"text": map[string]interface{}{
+					"type": "mrkdwn",
+					"text": fmt.Sprintf("*Order ID:* %s\n*Fallback Provider ID:* %s", orderID, providerID),
+				},
+			},
+		},
+	}
+	jsonPayload, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("slack webhook returned status %d", resp.StatusCode)
 	}
 	return nil
 }
