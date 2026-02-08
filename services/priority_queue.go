@@ -824,8 +824,9 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 			return fmt.Errorf("fallback: assign OTC order: %w", err)
 		}
 		setFallbackTriedKey()
+		logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "FallbackID": fallbackID}).Infof("[FALLBACK_ASSIGNMENT] successful fallback assignment")
 		if alertErr := NewSlackService(serverConf.SlackWebhookURL).SendFallbackAssignmentAlert(fields.ID.String(), fallbackID); alertErr != nil {
-			logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": alertErr}).Warnf("failed to send fallback assignment Slack alert")
+			logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "FallbackID": fallbackID, "Error": alertErr}).Infof("[FALLBACK_ASSIGNMENT] failed to send fallback assignment Slack alert")
 		}
 		return nil
 	}
@@ -833,8 +834,9 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 		return fmt.Errorf("fallback: send order request: %w", err)
 	}
 	setFallbackTriedKey()
+	logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "FallbackID": fallbackID}).Infof("[FALLBACK_ASSIGNMENT] successful fallback assignment")
 	if alertErr := NewSlackService(serverConf.SlackWebhookURL).SendFallbackAssignmentAlert(fields.ID.String(), fallbackID); alertErr != nil {
-		logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": alertErr}).Warnf("failed to send fallback assignment Slack alert")
+		logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "FallbackID": fallbackID, "Error": alertErr}).Infof("[FALLBACK_ASSIGNMENT] failed to send fallback assignment Slack alert")
 	}
 	return nil
 }
