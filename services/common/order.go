@@ -633,7 +633,7 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 	if paymentOrderFields != nil {
 		cancellationCount := 1
 		if isAML {
-			cancellationCount = 3
+			cancellationCount = orderConf.RefundCancellationCount
 		}
 		orderBuilder := db.Client.PaymentOrder.
 			Create().
@@ -694,7 +694,7 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 	} else if createdPaymentOrder != nil {
 		cancellationCount := 1
 		if isAML {
-			cancellationCount = 3
+			cancellationCount = orderConf.RefundCancellationCount
 		}
 		_, err := db.Client.PaymentOrder.
 			Update().

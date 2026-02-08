@@ -718,6 +718,22 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
 		fields.Network = order.Edges.Token.Edges.Network
 	}
+
+	// Verify order is still in a state that allows assignment
+	currentOrder, err := storage.Client.PaymentOrder.Get(ctx, order.ID)
+	if err != nil {
+		return fmt.Errorf("fallback: failed to load order: %w", err)
+	}
+	if currentOrder.Status != paymentorder.StatusPending && currentOrder.Status != paymentorder.StatusCancelled {
+		return fmt.Errorf("fallback: order %s is in state %s, not assignable", order.ID, currentOrder.Status)
+	}
+
+	// Check if order request already exists in Redis (idempotency)
+	orderKey := fmt.Sprintf("order_request_%s", order.ID)
+	if exists, err := storage.RedisClient.Exists(ctx, orderKey).Result(); err == nil && exists > 0 {
+		return fmt.Errorf("fallback: order %s already has an active order_request", order.ID)
+	}
+
 	if fields.Token == nil {
 		return fmt.Errorf("fallback: order %s has no token", order.ID.String())
 	}
@@ -821,7 +837,8 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 		if fields.OrderType == "otc" {
 			ttl = orderConf.OrderRefundTimeoutOtc
 		}
-		if setErr := storage.RedisClient.Set(ctx, fallbackTriedKey, "1", ttl).Err(); setErr != nil {
+		// 2x refund timeout so the key does not expire before we're done with the refund window (e.g. if fallback cancels late).
+		if setErr := storage.RedisClient.Set(ctx, fallbackTriedKey, "1", 2 * ttl).Err(); setErr != nil {
 			logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": setErr}).Warnf("failed to set fallback_tried key")
 		}
 	}

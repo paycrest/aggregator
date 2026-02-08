@@ -328,17 +328,12 @@ func RetryStaleUserOperations() error {
 
 			// If the order could still be reassigned to another public provider (per order_requests logic),
 			if order.CancellationCount < orderConf.RefundCancellationCount {
-				// 2) Check if we already tried full-queue reassignment (don't retry every run).
-				// Skip full-queue if we already tried fallback (don't retry reassignment after fallback).
-				reassignmentTriedKey := fmt.Sprintf("reassignment_tried_%s", order.ID.String())
-				reassignmentTried, _ := storage.RedisClient.Exists(ctx, reassignmentTriedKey).Result()
-				tryFullQueue := reassignmentTried == 0 && !fallbackAlreadyTried
 
 				// Safeguard: only reassign via full-queue when order was NOT already sent to a provider (no order_request in Redis).
 				// When order_request_* exists, sendOrderRequest already stored it; skip full-queue and go through fallback to avoid double-send.
 				orderRequestKey := fmt.Sprintf("order_request_%s", order.ID.String())
 				orderRequestExists, _ := storage.RedisClient.Exists(ctx, orderRequestKey).Result()
-				tryFullQueue = tryFullQueue && (orderRequestExists == 0)
+				tryFullQueue := !fallbackAlreadyTried && (orderRequestExists == 0)
 
 				// No provider or public provider: can try full-queue (reassign to public). Private provider: skip full-queue.
 				canTryFullQueue := order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil &&
@@ -382,6 +377,7 @@ func RetryStaleUserOperations() error {
 						continue
 					}
 					// We tried public reassignment and it failed; set cancellation count to threshold immediately so we can refund.
+					// Any failure should proceed to try fallback, else proceed with refund
 					_, _ = storage.Client.PaymentOrder.
 						Update().
 						Where(paymentorder.IDEQ(order.ID)).
@@ -391,6 +387,7 @@ func RetryStaleUserOperations() error {
 			}
 
 			// 3) Full queue skipped or failed; try fallback (only if configured and not already tried).
+			// Any failure should proceed with refund
 			if tryFallback {
 				if err := pq.TryFallbackAssignment(ctx, order); err == nil {
 					continue
@@ -406,7 +403,6 @@ func RetryStaleUserOperations() error {
 							"Error":   fmt.Sprintf("%v", updateErr),
 							"OrderID": order.ID.String(),
 						}).Errorf("RetryStaleUserOperations: failed to update cancellation count; skipping refund this run")
-						continue
 					}
 				}
 			}				
