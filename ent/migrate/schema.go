@@ -326,7 +326,7 @@ var (
 		{Name: "available_balance", Type: field.TypeFloat64},
 		{Name: "total_balance", Type: field.TypeFloat64},
 		{Name: "reserved_balance", Type: field.TypeFloat64},
-		{Name: "is_available", Type: field.TypeBool, Default: true},
+		{Name: "is_available", Type: field.TypeBool, Default: false},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "fiat_currency_provider_balances", Type: field.TypeUUID, Nullable: true},
 		{Name: "provider_profile_provider_balances", Type: field.TypeString},
