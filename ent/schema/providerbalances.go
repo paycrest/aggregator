@@ -25,7 +25,7 @@ func (ProviderBalances) Fields() []ent.Field {
 		field.Float("available_balance").GoType(decimal.Decimal{}),
 		field.Float("total_balance").GoType(decimal.Decimal{}),
 		field.Float("reserved_balance").GoType(decimal.Decimal{}),
-		field.Bool("is_available").Default(true),
+		field.Bool("is_available").Default(false),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
 	}
 }

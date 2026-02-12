@@ -182,7 +182,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 				SetAvailableBalance(decimal.Zero).
 				SetTotalBalance(decimal.Zero).
 				SetReservedBalance(decimal.Zero).
-				SetIsAvailable(true).
+				SetIsAvailable(false).
 				SetProviderID(provider.ID).
 				Save(ctx)
 			if err != nil {
