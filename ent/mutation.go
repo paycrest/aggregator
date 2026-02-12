@@ -13956,7 +13956,6 @@ type ProviderProfileMutation struct {
 	host_identifier          *string
 	provision_mode           *providerprofile.ProvisionMode
 	is_active                *bool
-	is_kyb_verified          *bool
 	updated_at               *time.Time
 	visibility_mode          *providerprofile.VisibilityMode
 	clearedFields            map[string]struct{}
@@ -14258,42 +14257,6 @@ func (m *ProviderProfileMutation) OldIsActive(ctx context.Context) (v bool, err 
 // ResetIsActive resets all changes to the "is_active" field.
 func (m *ProviderProfileMutation) ResetIsActive() {
 	m.is_active = nil
-}
-
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (m *ProviderProfileMutation) SetIsKybVerified(b bool) {
-	m.is_kyb_verified = &b
-}
-
-// IsKybVerified returns the value of the "is_kyb_verified" field in the mutation.
-func (m *ProviderProfileMutation) IsKybVerified() (r bool, exists bool) {
-	v := m.is_kyb_verified
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsKybVerified returns the old "is_kyb_verified" field's value of the ProviderProfile entity.
-// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldIsKybVerified(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsKybVerified is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsKybVerified requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsKybVerified: %w", err)
-	}
-	return oldValue.IsKybVerified, nil
-}
-
-// ResetIsKybVerified resets all changes to the "is_kyb_verified" field.
-func (m *ProviderProfileMutation) ResetIsKybVerified() {
-	m.is_kyb_verified = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -14789,7 +14752,7 @@ func (m *ProviderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 6)
 	if m.trading_name != nil {
 		fields = append(fields, providerprofile.FieldTradingName)
 	}
@@ -14801,9 +14764,6 @@ func (m *ProviderProfileMutation) Fields() []string {
 	}
 	if m.is_active != nil {
 		fields = append(fields, providerprofile.FieldIsActive)
-	}
-	if m.is_kyb_verified != nil {
-		fields = append(fields, providerprofile.FieldIsKybVerified)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, providerprofile.FieldUpdatedAt)
@@ -14827,8 +14787,6 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.ProvisionMode()
 	case providerprofile.FieldIsActive:
 		return m.IsActive()
-	case providerprofile.FieldIsKybVerified:
-		return m.IsKybVerified()
 	case providerprofile.FieldUpdatedAt:
 		return m.UpdatedAt()
 	case providerprofile.FieldVisibilityMode:
@@ -14850,8 +14808,6 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldProvisionMode(ctx)
 	case providerprofile.FieldIsActive:
 		return m.OldIsActive(ctx)
-	case providerprofile.FieldIsKybVerified:
-		return m.OldIsKybVerified(ctx)
 	case providerprofile.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	case providerprofile.FieldVisibilityMode:
@@ -14892,13 +14848,6 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsActive(v)
-		return nil
-	case providerprofile.FieldIsKybVerified:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsKybVerified(v)
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		v, ok := value.(time.Time)
@@ -14989,9 +14938,6 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 		return nil
 	case providerprofile.FieldIsActive:
 		m.ResetIsActive()
-		return nil
-	case providerprofile.FieldIsKybVerified:
-		m.ResetIsKybVerified()
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		m.ResetUpdatedAt()

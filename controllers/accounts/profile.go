@@ -646,6 +646,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			Query().
 			Where(
 				provisionbucket.And(
+					provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(op.Currency.ID)),
 					provisionbucket.MinAmountLTE(convertedMax), // providerMin ≤ bucketMax
 					provisionbucket.MaxAmountGTE(convertedMin), // providerMax ≥ bucketMin
 				),

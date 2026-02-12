@@ -80,11 +80,6 @@ func IsActive(v bool) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldIsActive, v))
 }
 
-// IsKybVerified applies equality check predicate on the "is_kyb_verified" field. It's identical to IsKybVerifiedEQ.
-func IsKybVerified(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKybVerified, v))
-}
-
 // UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
 func UpdatedAt(v time.Time) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldEQ(FieldUpdatedAt, v))
@@ -268,16 +263,6 @@ func IsActiveEQ(v bool) predicate.ProviderProfile {
 // IsActiveNEQ applies the NEQ predicate on the "is_active" field.
 func IsActiveNEQ(v bool) predicate.ProviderProfile {
 	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsActive, v))
-}
-
-// IsKybVerifiedEQ applies the EQ predicate on the "is_kyb_verified" field.
-func IsKybVerifiedEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldEQ(FieldIsKybVerified, v))
-}
-
-// IsKybVerifiedNEQ applies the NEQ predicate on the "is_kyb_verified" field.
-func IsKybVerifiedNEQ(v bool) predicate.ProviderProfile {
-	return predicate.ProviderProfile(sql.FieldNEQ(FieldIsKybVerified, v))
 }
 
 // UpdatedAtEQ applies the EQ predicate on the "updated_at" field.

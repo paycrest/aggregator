@@ -1163,6 +1163,24 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				return
 			}
 
+			// Set provider profile inactive when KYB is rejected
+			_, err = storage.Client.ProviderProfile.Update().
+				Where(providerprofile.HasUserWith(user.EmailEQ(email))).
+				SetIsActive(false).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to set provider profile inactive for user %s (KYB Profile %s): %v", email, kybProfileID, err)
+			}
+
+			// Set sender profile inactive when KYB is rejected
+			_, err = storage.Client.SenderProfile.Update().
+				Where(senderprofile.HasUserWith(user.EmailEQ(email))).
+				SetIsActive(false).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to set sender profile inactive for user %s (KYB Profile %s): %v", email, kybProfileID, err)
+			}
+
 			// Combine reason and comment for storage
 			var finalRejectionComment string
 			if rejectionComment != "" {
@@ -1303,6 +1321,24 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				logger.Errorf("Failed to approve KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
 				return
+			}
+
+			// Set provider profile active when KYB is approved
+			_, err = storage.Client.ProviderProfile.Update().
+				Where(providerprofile.HasUserWith(user.IDEQ(kyb.Edges.User.ID))).
+				SetIsActive(true).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to set provider profile active for user %s (KYB Profile %s): %v", email, kybProfileID, err)
+			}
+
+			// Set sender profile active when KYB is approved
+			_, err = storage.Client.SenderProfile.Update().
+				Where(senderprofile.HasUserWith(user.IDEQ(kyb.Edges.User.ID))).
+				SetIsActive(true).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to set sender profile active for user %s (KYB Profile %s): %v", email, kybProfileID, err)
 			}
 
 			// Update KYB Profile status and clear rejection comment

@@ -23,8 +23,6 @@ const (
 	FieldProvisionMode = "provision_mode"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
-	// FieldIsKybVerified holds the string denoting the is_kyb_verified field in the database.
-	FieldIsKybVerified = "is_kyb_verified"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
 	// FieldVisibilityMode holds the string denoting the visibility_mode field in the database.
@@ -110,7 +108,6 @@ var Columns = []string{
 	FieldHostIdentifier,
 	FieldProvisionMode,
 	FieldIsActive,
-	FieldIsKybVerified,
 	FieldUpdatedAt,
 	FieldVisibilityMode,
 }
@@ -147,8 +144,6 @@ var (
 	TradingNameValidator func(string) error
 	// DefaultIsActive holds the default value on creation for the "is_active" field.
 	DefaultIsActive bool
-	// DefaultIsKybVerified holds the default value on creation for the "is_kyb_verified" field.
-	DefaultIsKybVerified bool
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
@@ -235,11 +230,6 @@ func ByProvisionMode(opts ...sql.OrderTermOption) OrderOption {
 // ByIsActive orders the results by the is_active field.
 func ByIsActive(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsActive, opts...).ToFunc()
-}
-
-// ByIsKybVerified orders the results by the is_kyb_verified field.
-func ByIsKybVerified(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsKybVerified, opts...).ToFunc()
 }
 
 // ByUpdatedAt orders the results by the updated_at field.

@@ -88,20 +88,6 @@ func (_c *ProviderProfileCreate) SetNillableIsActive(v *bool) *ProviderProfileCr
 	return _c
 }
 
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (_c *ProviderProfileCreate) SetIsKybVerified(v bool) *ProviderProfileCreate {
-	_c.mutation.SetIsKybVerified(v)
-	return _c
-}
-
-// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (_c *ProviderProfileCreate) SetNillableIsKybVerified(v *bool) *ProviderProfileCreate {
-	if v != nil {
-		_c.SetIsKybVerified(*v)
-	}
-	return _c
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (_c *ProviderProfileCreate) SetUpdatedAt(v time.Time) *ProviderProfileCreate {
 	_c.mutation.SetUpdatedAt(v)
@@ -311,10 +297,6 @@ func (_c *ProviderProfileCreate) defaults() {
 		v := providerprofile.DefaultIsActive
 		_c.mutation.SetIsActive(v)
 	}
-	if _, ok := _c.mutation.IsKybVerified(); !ok {
-		v := providerprofile.DefaultIsKybVerified
-		_c.mutation.SetIsKybVerified(v)
-	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := providerprofile.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
@@ -346,9 +328,6 @@ func (_c *ProviderProfileCreate) check() error {
 	}
 	if _, ok := _c.mutation.IsActive(); !ok {
 		return &ValidationError{Name: "is_active", err: errors.New(`ent: missing required field "ProviderProfile.is_active"`)}
-	}
-	if _, ok := _c.mutation.IsKybVerified(); !ok {
-		return &ValidationError{Name: "is_kyb_verified", err: errors.New(`ent: missing required field "ProviderProfile.is_kyb_verified"`)}
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderProfile.updated_at"`)}
@@ -415,10 +394,6 @@ func (_c *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Creat
 	if value, ok := _c.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
 		_node.IsActive = value
-	}
-	if value, ok := _c.mutation.IsKybVerified(); ok {
-		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
-		_node.IsKybVerified = value
 	}
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
@@ -669,18 +644,6 @@ func (u *ProviderProfileUpsert) UpdateIsActive() *ProviderProfileUpsert {
 	return u
 }
 
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (u *ProviderProfileUpsert) SetIsKybVerified(v bool) *ProviderProfileUpsert {
-	u.Set(providerprofile.FieldIsKybVerified, v)
-	return u
-}
-
-// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
-func (u *ProviderProfileUpsert) UpdateIsKybVerified() *ProviderProfileUpsert {
-	u.SetExcluded(providerprofile.FieldIsKybVerified)
-	return u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (u *ProviderProfileUpsert) SetUpdatedAt(v time.Time) *ProviderProfileUpsert {
 	u.Set(providerprofile.FieldUpdatedAt, v)
@@ -820,20 +783,6 @@ func (u *ProviderProfileUpsertOne) SetIsActive(v bool) *ProviderProfileUpsertOne
 func (u *ProviderProfileUpsertOne) UpdateIsActive() *ProviderProfileUpsertOne {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateIsActive()
-	})
-}
-
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (u *ProviderProfileUpsertOne) SetIsKybVerified(v bool) *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsKybVerified(v)
-	})
-}
-
-// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
-func (u *ProviderProfileUpsertOne) UpdateIsKybVerified() *ProviderProfileUpsertOne {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsKybVerified()
 	})
 }
 
@@ -1147,20 +1096,6 @@ func (u *ProviderProfileUpsertBulk) SetIsActive(v bool) *ProviderProfileUpsertBu
 func (u *ProviderProfileUpsertBulk) UpdateIsActive() *ProviderProfileUpsertBulk {
 	return u.Update(func(s *ProviderProfileUpsert) {
 		s.UpdateIsActive()
-	})
-}
-
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (u *ProviderProfileUpsertBulk) SetIsKybVerified(v bool) *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.SetIsKybVerified(v)
-	})
-}
-
-// UpdateIsKybVerified sets the "is_kyb_verified" field to the value that was provided on create.
-func (u *ProviderProfileUpsertBulk) UpdateIsKybVerified() *ProviderProfileUpsertBulk {
-	return u.Update(func(s *ProviderProfileUpsert) {
-		s.UpdateIsKybVerified()
 	})
 }
 

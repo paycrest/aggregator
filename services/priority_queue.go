@@ -16,7 +16,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/token"
-	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -66,13 +65,110 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 		return nil, err
 	}
 
-	// Filter providers by currency availability and balance for each bucket
+	// Filter providers by currency availability and balance for each bucket.
+	// Always reconcile provider-bucket links from order tokens (overlap rule, same as profile)
+	// so missing links are fixed on each run without waiting for profile updates.
 	for _, bucket := range buckets {
-		var availableProviders []*ent.ProviderProfile
+		// 1. Reconcile links: find providers whose order tokens overlap this bucket (in bucket currency)
+		// and add missing links; optionally remove links for providers who no longer qualify.
+		orderTokens, err := storage.Client.ProviderOrderToken.Query().
+			Where(
+				providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
+				providerordertoken.HasProviderWith(providerprofile.IsActive(true)),
+			).
+			WithProvider().
+			WithCurrency().
+			All(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":           fmt.Sprintf("%v", err),
+				"BucketMinAmount": bucket.MinAmount,
+				"BucketMaxAmount": bucket.MaxAmount,
+				"Currency":        bucket.Edges.Currency.Code,
+			}).Errorf("Failed to get order tokens for bucket reconciliation")
+			continue
+		}
+
+		shouldBeLinkedProviderIDs := make(map[string]bool)
+		// TODO: this could be done in batch and processed in parallel for better performance
+		for _, orderToken := range orderTokens {
+			rate := s.tokenRateForBucket(orderToken)
+			if rate.IsZero() {
+				// Currency edge unloaded or missing; cannot compute overlap. Skip this token so we don't
+				// silently exclude the provider, and log so operators see data/loading issues.
+				logger.WithFields(logger.Fields{
+					"ProviderID":      orderToken.Edges.Provider.ID,
+					"BucketID":        bucket.ID,
+					"BucketCurrency":  bucket.Edges.Currency.Code,
+					"OrderTokenID":    orderToken.ID,
+				}).Errorf("Skipping overlap check: token rate is zero (currency edge missing or not loaded for order token)")
+				continue
+			}
+			convertedMin := orderToken.MinOrderAmount.Mul(rate)
+			convertedMax := orderToken.MaxOrderAmount.Mul(rate)
+			// Overlap: bucket [Min, Max] overlaps provider [convertedMin, convertedMax]
+			if bucket.MinAmount.LessThanOrEqual(convertedMax) && bucket.MaxAmount.GreaterThanOrEqual(convertedMin) {
+				providerID := orderToken.Edges.Provider.ID
+				shouldBeLinkedProviderIDs[providerID] = true
+				exists, err := orderToken.Edges.Provider.QueryProvisionBuckets().
+					Where(provisionbucket.IDEQ(bucket.ID)).
+					Exist(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":           fmt.Sprintf("%v", err),
+						"ProviderID":      providerID,
+						"BucketCurrency": bucket.Edges.Currency.Code,
+					}).Errorf("Failed to check existing bucket for provider")
+					continue
+				}
+				if exists {
+					continue
+				}
+				_, err = storage.Client.ProviderProfile.Update().
+					Where(providerprofile.IDEQ(providerID)).
+					AddProvisionBuckets(bucket).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":           fmt.Sprintf("%v", err),
+						"ProviderID":      providerID,
+						"BucketCurrency":  bucket.Edges.Currency.Code,
+						"BucketMinAmount": bucket.MinAmount,
+						"BucketMaxAmount": bucket.MaxAmount,
+					}).Errorf("Failed to add provision bucket to provider")
+				}
+			}
+		}
+
+		// 2. Remove stale links: providers linked to this bucket but no longer having an overlapping token.
+		linkedProviders, err := bucket.QueryProviderProfiles().All(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Bucket": bucket.ID,
+			}).Errorf("Failed to get linked providers for bucket")
+		} else {
+			for _, p := range linkedProviders {
+				if !shouldBeLinkedProviderIDs[p.ID] {
+					_, err = storage.Client.ProviderProfile.Update().
+						Where(providerprofile.IDEQ(p.ID)).
+						RemoveProvisionBuckets(bucket).
+						Save(ctx)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", err),
+							"ProviderID": p.ID,
+							"BucketID":   bucket.ID,
+						}).Errorf("Failed to remove stale provision bucket link")
+					}
+				}
+			}
+		}
+
+		// 3. Get available providers (linked + balance + active); requery so newly linked are included.
 		availableProviders, err := bucket.QueryProviderProfiles().
 			Where(
 				providerprofile.IsActive(true),
-				providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
 				providerprofile.HasProviderBalancesWith(
 					providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
@@ -91,91 +187,6 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 			continue
 		}
 
-		if len(availableProviders) == 0 {
-			// if no providers are available, get the order tokens for the bucket
-			orderTokens, err := storage.Client.ProviderOrderToken.Query().
-				Where(
-					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucket.Edges.Currency.Code)),
-					providerordertoken.HasProviderWith(providerprofile.IsActive(true)),
-					providerordertoken.HasProviderWith(
-						providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
-					),
-					providerordertoken.MinOrderAmountLTE(bucket.MinAmount),
-					providerordertoken.MaxOrderAmountGTE(bucket.MaxAmount),
-				).
-				WithProvider().
-				All(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":           fmt.Sprintf("%v", err),
-					"BucketMinAmount": bucket.MinAmount,
-					"BucketMaxAmount": bucket.MaxAmount,
-					"Currency":        bucket.Edges.Currency.Code,
-				}).Errorf("Failed to get available providers for bucket")
-				continue
-			}
-			if len(orderTokens) > 0 {
-				for _, orderToken := range orderTokens {
-					// Avoid duplicate M2M inserts for the same provider/bucket pair
-					exists, err := orderToken.Edges.Provider.QueryProvisionBuckets().
-						Where(provisionbucket.IDEQ(bucket.ID)).
-						Exist(ctx)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":           fmt.Sprintf("%v", err),
-							"ProviderID":      orderToken.Edges.Provider.ID,
-							"BucketCurrency":  bucket.Edges.Currency.Code,
-							"BucketMinAmount": bucket.MinAmount,
-							"BucketMaxAmount": bucket.MaxAmount,
-						}).Errorf("Failed to check existing bucket for provider")
-						continue
-					}
-					if exists {
-						// Already linked; skip re-adding
-						continue
-					}
-
-					_, err = storage.Client.ProviderProfile.Update().
-						Where(providerprofile.IDEQ(orderToken.Edges.Provider.ID)).
-						AddProvisionBuckets(bucket).
-						Save(ctx)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":           fmt.Sprintf("%v", err),
-							"ProviderID":      orderToken.Edges.Provider.ID,
-							"BucketCurrency":  bucket.Edges.Currency.Code,
-							"BucketMinAmount": bucket.MinAmount,
-							"BucketMaxAmount": bucket.MaxAmount,
-						}).Errorf("Failed to add provision bucket to provider")
-					}
-
-					provider, err := storage.Client.ProviderProfile.Query().
-						Where(
-							providerprofile.IDEQ(orderToken.Edges.Provider.ID),
-							providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-							providerprofile.HasProviderBalancesWith(
-								providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
-								providerbalances.AvailableBalanceGT(bucket.MinAmount),
-								providerbalances.IsAvailableEQ(true),
-							),
-						).
-						Only(ctx)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":           fmt.Sprintf("%v", err),
-							"ProviderID":      orderToken.Edges.Provider.ID,
-							"BucketCurrency":  bucket.Edges.Currency.Code,
-							"BucketMinAmount": bucket.MinAmount,
-							"BucketMaxAmount": bucket.MaxAmount,
-						}).Errorf("Failed to get provider")
-					}
-					if provider != nil {
-						availableProviders = append(availableProviders, provider)
-					}
-				}
-			}
-		}
-
 		bucket.Edges.ProviderProfiles = availableProviders
 
 		// If no providers are eligible for this bucket, log balance health for a small sample of
@@ -191,7 +202,6 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 			candidates, candErr := bucket.QueryProviderProfiles().
 				Where(
 					providerprofile.IsActive(true),
-					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 					providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
 				).
 				Limit(3).
@@ -240,6 +250,20 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 	}
 
 	return buckets, nil
+}
+
+// tokenRateForBucket returns the fiat rate for the order token (token amount -> bucket currency).
+// The token must be loaded with WithCurrency() so Edges.Currency and MarketRate are set.
+// Returns decimal.Zero when the currency edge is missing (e.g. eager-load failed); callers must
+// treat zero as "cannot compute overlap" and log/skip instead of silently excluding providers.
+func (s *PriorityQueueService) tokenRateForBucket(orderToken *ent.ProviderOrderToken) decimal.Decimal {
+	if orderToken.Edges.Currency == nil {
+		return decimal.Zero
+	}
+	if orderToken.ConversionRateType == providerordertoken.ConversionRateTypeFixed {
+		return orderToken.FixedConversionRate
+	}
+	return orderToken.Edges.Currency.MarketRate.Add(orderToken.FloatingConversionRate)
 }
 
 // GetProviderRate returns the rate for a provider
