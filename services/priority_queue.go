@@ -1146,13 +1146,28 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			continue
 		}
 
-		// Parse rate (amount limits and OTC checks already done by ValidateRate/findSuitableProviderRate)
+		// Parse min/max order amounts and validate against order amount
+		minOrderAmount, err := decimal.NewFromString(parts[4])
+		if err != nil {
+			continue
+		}
+		maxOrderAmount, err := decimal.NewFromString(parts[5])
+		if err != nil {
+			continue
+		}
+
+		// Check if order amount is within provider's min/max order amount limits
+		if order.Amount.LessThan(minOrderAmount) {
+			// Order amount is below provider's minimum - skip this provider
+			continue
+		}
+
 		rate, err := decimal.NewFromString(parts[3])
 		if err != nil {
 			continue
 		}
 
-		// Fetch ProviderOrderToken only for rate slippage check
+		// Fetch ProviderOrderToken for rate slippage and OTC limit checks
 		bucketCurrency := order.ProvisionBucket.Edges.Currency
 		if bucketCurrency == nil {
 			bucketCurrency, err = order.ProvisionBucket.QueryCurrency().Only(ctx)
@@ -1181,6 +1196,19 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			First(ctx)
 		if err != nil {
 			continue
+		}
+
+		// Check if order amount exceeds provider's max order amount
+		if order.Amount.GreaterThan(maxOrderAmount) {
+			// Amount exceeds regular max - check OTC limits as fallback
+			if providerToken.MinOrderAmountOtc.IsZero() || providerToken.MaxOrderAmountOtc.IsZero() {
+				// OTC limits not configured - skip this provider
+				continue
+			}
+			if order.Amount.LessThan(providerToken.MinOrderAmountOtc) || order.Amount.GreaterThan(providerToken.MaxOrderAmountOtc) {
+				// Amount outside OTC limits - skip this provider
+				continue
+			}
 		}
 
 		// Calculate allowed deviation based on slippage
