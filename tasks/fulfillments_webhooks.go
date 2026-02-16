@@ -541,8 +541,10 @@ func SyncPaymentOrderFulfillments() {
 
 // Retry failed webhook notifications
 func RetryFailedWebhookNotifications() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
+	// Use timeout only for fetching attempts, not for processing them
+	// Processing should use per-operation timeouts to avoid deadline exceeded errors
+	fetchCtx, fetchCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer fetchCancel()
 
 	// Fetch failed webhook notifications that are due for retry
 	attempts, err := storage.Client.WebhookRetryAttempt.
@@ -551,7 +553,7 @@ func RetryFailedWebhookNotifications() error {
 			webhookretryattempt.StatusEQ(webhookretryattempt.StatusFailed),
 			webhookretryattempt.NextRetryTimeLTE(time.Now()),
 		).
-		All(ctx)
+		All(fetchCtx)
 	if err != nil {
 		return fmt.Errorf("RetryFailedWebhookNotifications: %w", err)
 	}
@@ -560,7 +562,7 @@ func RetryFailedWebhookNotifications() error {
 	maxCumulativeTime := 24 * time.Hour
 
 	for _, attempt := range attempts {
-		// Send the webhook notification
+		// Send the webhook notification with per-request timeout
 		body, err := fastshot.NewClient(attempt.WebhookURL).
 			Config().SetTimeout(30*time.Second).
 			Header().Add("X-Paycrest-Signature", attempt.Signature).
@@ -569,8 +571,9 @@ func RetryFailedWebhookNotifications() error {
 			Send()
 
 		if err != nil || (body.StatusCode() >= 205) {
-			// Webhook notification failed
-			// Update attempt with next retry time
+			// Webhook notification failed - use per-operation timeout for update
+			saveCtx, saveCancel := context.WithTimeout(context.Background(), 10*time.Second)
+
 			attemptNumber := attempt.AttemptNumber + 1
 			delay := baseDelay * time.Duration(math.Pow(2, float64(attemptNumber-1)))
 
@@ -587,6 +590,7 @@ func RetryFailedWebhookNotifications() error {
 				attemptUpdate.SetStatus(webhookretryattempt.StatusExpired)
 				uid, err := uuid.Parse(attempt.Payload["data"].(map[string]interface{})["senderId"].(string))
 				if err != nil {
+					saveCancel()
 					return fmt.Errorf("RetryFailedWebhookNotifications.FailedExtraction: %w", err)
 				}
 				profile, err := storage.Client.SenderProfile.
@@ -595,33 +599,52 @@ func RetryFailedWebhookNotifications() error {
 						senderprofile.IDEQ(uid),
 					).
 					WithUser().
-					Only(ctx)
+					Only(saveCtx)
 				if err != nil {
+					saveCancel()
 					return fmt.Errorf("RetryFailedWebhookNotifications.CouldNotFetchProfile: %w", err)
 				}
 
 				emailService := email.NewEmailServiceWithProviders()
-				_, err = emailService.SendWebhookFailureEmail(ctx, profile.Edges.User.Email, profile.Edges.User.FirstName)
+				_, err = emailService.SendWebhookFailureEmail(saveCtx, profile.Edges.User.Email, profile.Edges.User.FirstName)
 
 				if err != nil {
+					saveCancel()
 					return fmt.Errorf("RetryFailedWebhookNotifications.SendWebhookFailureEmail: %w", err)
 				}
 			}
 
-			_, err := attemptUpdate.Save(ctx)
+			_, err := attemptUpdate.Save(saveCtx)
+			saveCancel()
+
 			if err != nil {
-				return fmt.Errorf("RetryFailedWebhookNotifications: %w", err)
+				// Log error but don't fail entire batch - skip this attempt and continue
+				logger.WithFields(logger.Fields{
+					"Error":     fmt.Sprintf("%v", err),
+					"AttemptID": attempt.ID,
+				}).Errorf("RetryFailedWebhookNotifications.SaveUpdate")
+				continue
 			}
 
 			continue
 		}
 
-		// Webhook notification was successful
+		// Webhook notification was successful - use per-operation timeout for update
+		successCtx, successCancel := context.WithTimeout(context.Background(), 10*time.Second)
+
 		_, err = attempt.Update().
 			SetStatus(webhookretryattempt.StatusSuccess).
-			Save(ctx)
+			Save(successCtx)
+
+		successCancel()
+
 		if err != nil {
-			return fmt.Errorf("RetryFailedWebhookNotifications: %w", err)
+			// Log error but don't fail entire batch - skip this attempt and continue
+			logger.WithFields(logger.Fields{
+				"Error":     fmt.Sprintf("%v", err),
+				"AttemptID": attempt.ID,
+			}).Errorf("RetryFailedWebhookNotifications.SaveSuccess")
+			continue
 		}
 	}
 
