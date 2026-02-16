@@ -546,6 +546,11 @@ func TestPriorityQueueTest(t *testing.T) {
 	})
 
 	t.Run("TestCreatePriorityQueueForBucket", func(t *testing.T) {
+		// Ensure fallback is unset so the test's provider is included in the queue
+		oldFallback := viper.GetString("FALLBACK_PROVIDER_ID")
+		viper.Set("FALLBACK_PROVIDER_ID", "")
+		defer viper.Set("FALLBACK_PROVIDER_ID", oldFallback)
+
 		ctx := context.Background()
 		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
 			"provider_id": testCtxForPQ.publicProviderProfile.ID,
@@ -579,6 +584,11 @@ func TestPriorityQueueTest(t *testing.T) {
 	})
 
 	t.Run("TestProcessBucketQueues", func(t *testing.T) {
+		// Ensure fallback is unset so the test's provider is included in the queue (not skipped or sanitized out)
+		oldFallback := viper.GetString("FALLBACK_PROVIDER_ID")
+		viper.Set("FALLBACK_PROVIDER_ID", "")
+		defer viper.Set("FALLBACK_PROVIDER_ID", oldFallback)
+
 		err = service.ProcessBucketQueues()
 		assert.NoError(t, err)
 
@@ -945,6 +955,136 @@ func TestPriorityQueueTest(t *testing.T) {
 
 			assert.Equal(t, 2, count1, "Provider1 should have 2 failures")
 			assert.Equal(t, 1, count2, "Provider2 should have 1 failure")
+		})
+	})
+
+	t.Run("TestTryFallbackAssignment", func(t *testing.T) {
+		ctx := context.Background()
+
+		t.Run("FallbackNotConfigured", func(t *testing.T) {
+			old := viper.GetString("FALLBACK_PROVIDER_ID")
+			viper.Set("FALLBACK_PROVIDER_ID", "")
+			defer viper.Set("FALLBACK_PROVIDER_ID", old)
+
+			_order, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
+				"provider": testCtxForPQ.publicProviderProfile, "rate": 100.0, "gateway_id": "gw-fb-none",
+			})
+			assert.NoError(t, err)
+			_, err = _order.Update().ClearProvider().Save(ctx)
+			assert.NoError(t, err)
+			_, err = test.AddProvisionBucketToPaymentOrder(_order, testCtxForPQ.bucket.ID)
+			assert.NoError(t, err)
+
+			order, err := db.Client.PaymentOrder.Get(ctx, _order.ID)
+			assert.NoError(t, err)
+
+			err = service.TryFallbackAssignment(ctx, order)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "fallback provider not configured")
+		})
+
+		t.Run("OTCExcluded", func(t *testing.T) {
+			old := viper.GetString("FALLBACK_PROVIDER_ID")
+			viper.Set("FALLBACK_PROVIDER_ID", testCtxForPQ.publicProviderProfile.ID)
+			defer viper.Set("FALLBACK_PROVIDER_ID", old)
+
+			_order, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
+				"provider": testCtxForPQ.publicProviderProfile, "rate": 100.0, "gateway_id": "gw-fb-otc",
+			})
+			assert.NoError(t, err)
+			_, err = _order.Update().ClearProvider().SetOrderType(paymentorder.OrderTypeOtc).Save(ctx)
+			assert.NoError(t, err)
+			_, err = test.AddProvisionBucketToPaymentOrder(_order, testCtxForPQ.bucket.ID)
+			assert.NoError(t, err)
+
+			order, err := db.Client.PaymentOrder.Get(ctx, _order.ID)
+			assert.NoError(t, err)
+
+			err = service.TryFallbackAssignment(ctx, order)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "fallback is only for regular orders")
+		})
+
+		t.Run("OrderRequestExists", func(t *testing.T) {
+			old := viper.GetString("FALLBACK_PROVIDER_ID")
+			viper.Set("FALLBACK_PROVIDER_ID", testCtxForPQ.publicProviderProfile.ID)
+			defer viper.Set("FALLBACK_PROVIDER_ID", old)
+
+			_order, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
+				"provider": testCtxForPQ.publicProviderProfile, "rate": 100.0, "gateway_id": "gw-fb-redis",
+			})
+			assert.NoError(t, err)
+			_, err = _order.Update().ClearProvider().Save(ctx)
+			assert.NoError(t, err)
+			_, err = test.AddProvisionBucketToPaymentOrder(_order, testCtxForPQ.bucket.ID)
+			assert.NoError(t, err)
+
+			orderKey := fmt.Sprintf("order_request_%s", _order.ID)
+			_, err = db.RedisClient.HSet(ctx, orderKey, "providerId", testCtxForPQ.publicProviderProfile.ID).Result()
+			assert.NoError(t, err)
+			defer db.RedisClient.Del(ctx, orderKey)
+
+			order, err := db.Client.PaymentOrder.Get(ctx, _order.ID)
+			assert.NoError(t, err)
+
+			err = service.TryFallbackAssignment(ctx, order)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "already has an active order_request")
+		})
+
+		t.Run("FallbackAlreadyTried", func(t *testing.T) {
+			old := viper.GetString("FALLBACK_PROVIDER_ID")
+			viper.Set("FALLBACK_PROVIDER_ID", testCtxForPQ.publicProviderProfile.ID)
+			defer viper.Set("FALLBACK_PROVIDER_ID", old)
+
+			_order, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
+				"provider": testCtxForPQ.publicProviderProfile, "rate": 100.0, "gateway_id": "gw-fb-tried",
+			})
+			assert.NoError(t, err)
+			_, err = _order.Update().ClearProvider().Save(ctx)
+			assert.NoError(t, err)
+			_, err = test.AddProvisionBucketToPaymentOrder(_order, testCtxForPQ.bucket.ID)
+			assert.NoError(t, err)
+			_, err = _order.Update().SetFallbackTriedAt(time.Now()).Save(ctx)
+			assert.NoError(t, err)
+
+			order, err := db.Client.PaymentOrder.Get(ctx, _order.ID)
+			assert.NoError(t, err)
+
+			err = service.TryFallbackAssignment(ctx, order)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "already had fallback assignment tried")
+		})
+
+		t.Run("Success", func(t *testing.T) {
+			old := viper.GetString("FALLBACK_PROVIDER_ID")
+			viper.Set("FALLBACK_PROVIDER_ID", testCtxForPQ.publicProviderProfile.ID)
+			defer viper.Set("FALLBACK_PROVIDER_ID", old)
+
+			_order, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
+				"provider": testCtxForPQ.publicProviderProfile, "rate": 100.0, "gateway_id": "gw-fb-success",
+			})
+			assert.NoError(t, err)
+			_, err = _order.Update().ClearProvider().Save(ctx)
+			assert.NoError(t, err)
+			_, err = test.AddProvisionBucketToPaymentOrder(_order, testCtxForPQ.bucket.ID)
+			assert.NoError(t, err)
+
+			order, err := db.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(_order.ID)).
+				WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+				WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) { pb.WithCurrency() }).
+				Only(ctx)
+			assert.NoError(t, err)
+
+			err = service.TryFallbackAssignment(ctx, order)
+			assert.NoError(t, err)
+
+			// Idempotency: FallbackTriedAt should be set
+			updated, err := db.Client.PaymentOrder.Get(ctx, _order.ID)
+			assert.NoError(t, err)
+			assert.False(t, updated.FallbackTriedAt.IsZero(), "FallbackTriedAt should be set after success")
 		})
 	})
 }
