@@ -44,8 +44,8 @@ func main() {
 	if err := storage.DBConnection(DSN); err != nil {
 		logger.Fatalf("database DBConnection: %s", err)
 	}
-	defer storage.GetClient().Close()
 	defer utils.CloseHTTPClient()
+	defer storage.GetClient().Close()
 
 	// Fix database mishap
 	// err := tasks.FixDatabaseMishap()
