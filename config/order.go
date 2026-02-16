@@ -26,6 +26,7 @@ type OrderConfiguration struct {
 	PercentDeviationFromExternalRate decimal.Decimal
 	PercentDeviationFromMarketRate   decimal.Decimal
 	IndexingDuration                 time.Duration
+	FallbackProviderID               string
 }
 
 // OrderConfig sets the order configuration
@@ -44,6 +45,7 @@ func OrderConfig() *OrderConfiguration {
 	viper.SetDefault("PERCENT_DEVIATION_FROM_EXTERNAL_RATE", 0.01)
 	viper.SetDefault("PERCENT_DEVIATION_FROM_MARKET_RATE", 0.1)
 	viper.SetDefault("INDEXING_DURATION", 10)
+	viper.SetDefault("FALLBACK_PROVIDER_ID", "")
 
 	// Validate ProviderMaxRetryAttempts to ensure it's at least 1
 	// If invalid (0 or negative), use the default value of 3
@@ -68,6 +70,7 @@ func OrderConfig() *OrderConfiguration {
 		PercentDeviationFromExternalRate: decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_EXTERNAL_RATE")),
 		PercentDeviationFromMarketRate:   decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_MARKET_RATE")),
 		IndexingDuration:                 time.Duration(viper.GetInt("INDEXING_DURATION")) * time.Second,
+		FallbackProviderID:               viper.GetString("FALLBACK_PROVIDER_ID"),
 	}
 }
 

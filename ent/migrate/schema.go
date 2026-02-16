@@ -213,6 +213,7 @@ var (
 		{Name: "cancellation_reasons", Type: field.TypeJSON, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "deposited", "pending", "fulfilling", "fulfilled", "validated", "settling", "settled", "cancelled", "refunding", "refunded", "expired"}, Default: "initiated"},
 		{Name: "order_type", Type: field.TypeEnum, Enums: []string{"otc", "regular"}, Default: "regular"},
+		{Name: "fallback_tried_at", Type: field.TypeTime, Nullable: true},
 		{Name: "api_key_payment_orders", Type: field.TypeUUID, Nullable: true},
 		{Name: "provider_profile_assigned_orders", Type: field.TypeString, Nullable: true},
 		{Name: "provision_bucket_payment_orders", Type: field.TypeInt, Nullable: true},
@@ -227,31 +228,31 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_api_keys_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[36]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[37]},
 				RefColumns: []*schema.Column{APIKeysColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_provider_profiles_assigned_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[37]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[38]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "payment_orders_provision_buckets_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[38]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[39]},
 				RefColumns: []*schema.Column{ProvisionBucketsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_sender_profiles_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[39]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[40]},
 				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_tokens_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[40]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[41]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -260,7 +261,7 @@ var (
 			{
 				Name:    "paymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_token_payment_orders",
 				Unique:  true,
-				Columns: []*schema.Column{PaymentOrdersColumns[17], PaymentOrdersColumns[4], PaymentOrdersColumns[14], PaymentOrdersColumns[15], PaymentOrdersColumns[25], PaymentOrdersColumns[26], PaymentOrdersColumns[27], PaymentOrdersColumns[28], PaymentOrdersColumns[40]},
+				Columns: []*schema.Column{PaymentOrdersColumns[17], PaymentOrdersColumns[4], PaymentOrdersColumns[14], PaymentOrdersColumns[15], PaymentOrdersColumns[25], PaymentOrdersColumns[26], PaymentOrdersColumns[27], PaymentOrdersColumns[28], PaymentOrdersColumns[41]},
 			},
 		},
 	}

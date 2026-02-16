@@ -450,6 +450,20 @@ func (_c *PaymentOrderCreate) SetNillableOrderType(v *paymentorder.OrderType) *P
 	return _c
 }
 
+// SetFallbackTriedAt sets the "fallback_tried_at" field.
+func (_c *PaymentOrderCreate) SetFallbackTriedAt(v time.Time) *PaymentOrderCreate {
+	_c.mutation.SetFallbackTriedAt(v)
+	return _c
+}
+
+// SetNillableFallbackTriedAt sets the "fallback_tried_at" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableFallbackTriedAt(v *time.Time) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetFallbackTriedAt(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *PaymentOrderCreate) SetID(v uuid.UUID) *PaymentOrderCreate {
 	_c.mutation.SetID(v)
@@ -989,6 +1003,10 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
 		_node.OrderType = value
+	}
+	if value, ok := _c.mutation.FallbackTriedAt(); ok {
+		_spec.SetField(paymentorder.FieldFallbackTriedAt, field.TypeTime, value)
+		_node.FallbackTriedAt = value
 	}
 	if nodes := _c.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -1740,6 +1758,24 @@ func (u *PaymentOrderUpsert) UpdateOrderType() *PaymentOrderUpsert {
 	return u
 }
 
+// SetFallbackTriedAt sets the "fallback_tried_at" field.
+func (u *PaymentOrderUpsert) SetFallbackTriedAt(v time.Time) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldFallbackTriedAt, v)
+	return u
+}
+
+// UpdateFallbackTriedAt sets the "fallback_tried_at" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateFallbackTriedAt() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldFallbackTriedAt)
+	return u
+}
+
+// ClearFallbackTriedAt clears the value of the "fallback_tried_at" field.
+func (u *PaymentOrderUpsert) ClearFallbackTriedAt() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldFallbackTriedAt)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -2467,6 +2503,27 @@ func (u *PaymentOrderUpsertOne) SetOrderType(v paymentorder.OrderType) *PaymentO
 func (u *PaymentOrderUpsertOne) UpdateOrderType() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateOrderType()
+	})
+}
+
+// SetFallbackTriedAt sets the "fallback_tried_at" field.
+func (u *PaymentOrderUpsertOne) SetFallbackTriedAt(v time.Time) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetFallbackTriedAt(v)
+	})
+}
+
+// UpdateFallbackTriedAt sets the "fallback_tried_at" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateFallbackTriedAt() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateFallbackTriedAt()
+	})
+}
+
+// ClearFallbackTriedAt clears the value of the "fallback_tried_at" field.
+func (u *PaymentOrderUpsertOne) ClearFallbackTriedAt() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearFallbackTriedAt()
 	})
 }
 
@@ -3364,6 +3421,27 @@ func (u *PaymentOrderUpsertBulk) SetOrderType(v paymentorder.OrderType) *Payment
 func (u *PaymentOrderUpsertBulk) UpdateOrderType() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateOrderType()
+	})
+}
+
+// SetFallbackTriedAt sets the "fallback_tried_at" field.
+func (u *PaymentOrderUpsertBulk) SetFallbackTriedAt(v time.Time) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetFallbackTriedAt(v)
+	})
+}
+
+// UpdateFallbackTriedAt sets the "fallback_tried_at" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateFallbackTriedAt() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateFallbackTriedAt()
+	})
+}
+
+// ClearFallbackTriedAt clears the value of the "fallback_tried_at" field.
+func (u *PaymentOrderUpsertBulk) ClearFallbackTriedAt() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearFallbackTriedAt()
 	})
 }
 
