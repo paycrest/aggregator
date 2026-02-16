@@ -87,6 +87,8 @@ const (
 	FieldStatus = "status"
 	// FieldOrderType holds the string denoting the order_type field in the database.
 	FieldOrderType = "order_type"
+	// FieldFallbackTriedAt holds the string denoting the fallback_tried_at field in the database.
+	FieldFallbackTriedAt = "fallback_tried_at"
 	// EdgeToken holds the string denoting the token edge name in mutations.
 	EdgeToken = "token"
 	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
@@ -192,6 +194,7 @@ var Columns = []string{
 	FieldCancellationReasons,
 	FieldStatus,
 	FieldOrderType,
+	FieldFallbackTriedAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "payment_orders"
@@ -504,6 +507,11 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByOrderType orders the results by the order_type field.
 func ByOrderType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOrderType, opts...).ToFunc()
+}
+
+// ByFallbackTriedAt orders the results by the fallback_tried_at field.
+func ByFallbackTriedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFallbackTriedAt, opts...).ToFunc()
 }
 
 // ByTokenField orders the results by token field.

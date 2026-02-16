@@ -675,6 +675,26 @@ func (_u *PaymentOrderUpdate) SetNillableOrderType(v *paymentorder.OrderType) *P
 	return _u
 }
 
+// SetFallbackTriedAt sets the "fallback_tried_at" field.
+func (_u *PaymentOrderUpdate) SetFallbackTriedAt(v time.Time) *PaymentOrderUpdate {
+	_u.mutation.SetFallbackTriedAt(v)
+	return _u
+}
+
+// SetNillableFallbackTriedAt sets the "fallback_tried_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableFallbackTriedAt(v *time.Time) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetFallbackTriedAt(*v)
+	}
+	return _u
+}
+
+// ClearFallbackTriedAt clears the value of the "fallback_tried_at" field.
+func (_u *PaymentOrderUpdate) ClearFallbackTriedAt() *PaymentOrderUpdate {
+	_u.mutation.ClearFallbackTriedAt()
+	return _u
+}
+
 // SetTokenID sets the "token" edge to the Token entity by ID.
 func (_u *PaymentOrderUpdate) SetTokenID(id int) *PaymentOrderUpdate {
 	_u.mutation.SetTokenID(id)
@@ -1188,6 +1208,12 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.FallbackTriedAt(); ok {
+		_spec.SetField(paymentorder.FieldFallbackTriedAt, field.TypeTime, value)
+	}
+	if _u.mutation.FallbackTriedAtCleared() {
+		_spec.ClearField(paymentorder.FieldFallbackTriedAt, field.TypeTime)
 	}
 	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -2081,6 +2107,26 @@ func (_u *PaymentOrderUpdateOne) SetNillableOrderType(v *paymentorder.OrderType)
 	return _u
 }
 
+// SetFallbackTriedAt sets the "fallback_tried_at" field.
+func (_u *PaymentOrderUpdateOne) SetFallbackTriedAt(v time.Time) *PaymentOrderUpdateOne {
+	_u.mutation.SetFallbackTriedAt(v)
+	return _u
+}
+
+// SetNillableFallbackTriedAt sets the "fallback_tried_at" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableFallbackTriedAt(v *time.Time) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetFallbackTriedAt(*v)
+	}
+	return _u
+}
+
+// ClearFallbackTriedAt clears the value of the "fallback_tried_at" field.
+func (_u *PaymentOrderUpdateOne) ClearFallbackTriedAt() *PaymentOrderUpdateOne {
+	_u.mutation.ClearFallbackTriedAt()
+	return _u
+}
+
 // SetTokenID sets the "token" edge to the Token entity by ID.
 func (_u *PaymentOrderUpdateOne) SetTokenID(id int) *PaymentOrderUpdateOne {
 	_u.mutation.SetTokenID(id)
@@ -2624,6 +2670,12 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	}
 	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.FallbackTriedAt(); ok {
+		_spec.SetField(paymentorder.FieldFallbackTriedAt, field.TypeTime, value)
+	}
+	if _u.mutation.FallbackTriedAtCleared() {
+		_spec.ClearField(paymentorder.FieldFallbackTriedAt, field.TypeTime)
 	}
 	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{

@@ -91,7 +91,8 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 				"type": "section",
 				"text": map[string]interface{}{
 					"type": "mrkdwn",
-					"text": fmt.Sprintf("*Provider Currencies:* %s", currenciesString)},
+					"text": fmt.Sprintf("*Provider Currencies:* %s", currenciesString),
+				},
 			},
 		)
 	}

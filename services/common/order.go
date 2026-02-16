@@ -41,6 +41,8 @@ var (
 	orderConf  = config.OrderConfig()
 )
 
+const CancellationReasonAML = "AML compliance check failed"
+
 // ProcessPaymentOrderFromBlockchain processes a payment order from blockchain event.
 // It either creates a new order or updates an existing API-created order (with messageHash but no gatewayID)
 // with on-chain details when the OrderCreatedEvent is indexed.
@@ -626,7 +628,13 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 		return nil
 	}
 
+	isAML := cancellationReason == CancellationReasonAML
+
 	if paymentOrderFields != nil {
+		cancellationCount := 1
+		if isAML {
+			cancellationCount = orderConf.RefundCancellationCount
+		}
 		orderBuilder := db.Client.PaymentOrder.
 			Create().
 			SetToken(paymentOrderFields.Token).
@@ -644,7 +652,7 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			SetAmountInUsd(paymentOrderFields.AmountInUSD).
 			SetMemo(paymentOrderFields.Memo).
 			SetMetadata(paymentOrderFields.Metadata).
-			SetCancellationCount(3).
+			SetCancellationCount(cancellationCount).
 			SetCancellationReasons([]string{cancellationReason}).
 			SetStatus(paymentorder.StatusCancelled)
 
@@ -666,28 +674,32 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			return fmt.Errorf("%s - failed to create payment order: %w", paymentOrderFields.GatewayID, err)
 		}
 
-		network, err := paymentOrderFields.Token.QueryNetwork().Only(ctx)
-		if err != nil {
-			return fmt.Errorf("%s - failed to fetch network: %w", paymentOrderFields.GatewayID, err)
-		}
-
-		err = refundOrder(ctx, network, paymentOrderFields.GatewayID)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"OrderID":      order.ID.String(),
-				"OrderTrxHash": order.TxHash,
-				"GatewayID":    order.GatewayID,
-			}).Errorf("Handle cancellation failed to refund order")
+		// Refund immediately only for AML; other cancellations are refunded via the refund path (with fallback first). See tasks.RetryStaleUserOperations.
+		if isAML {
+			network, err := paymentOrderFields.Token.QueryNetwork().Only(ctx)
+			if err != nil {
+				return fmt.Errorf("%s - failed to fetch network: %w", paymentOrderFields.GatewayID, err)
+			}
+			err = refundOrder(ctx, network, paymentOrderFields.GatewayID)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":        fmt.Sprintf("%v", err),
+					"OrderID":      order.ID.String(),
+					"OrderTrxHash": order.TxHash,
+					"GatewayID":    order.GatewayID,
+				}).Errorf("Handle cancellation failed to refund order")
+			}
 		}
 
 	} else if createdPaymentOrder != nil {
+		cancellationCount := 1
+		if isAML {
+			cancellationCount = orderConf.RefundCancellationCount
+		}
 		_, err := db.Client.PaymentOrder.
 			Update().
-			Where(
-				paymentorder.IDEQ(createdPaymentOrder.ID),
-			).
-			SetCancellationCount(3).
+			Where(paymentorder.IDEQ(createdPaymentOrder.ID)).
+			SetCancellationCount(cancellationCount).
 			SetCancellationReasons([]string{cancellationReason}).
 			SetStatus(paymentorder.StatusCancelled).
 			Save(ctx)
@@ -695,19 +707,21 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			return fmt.Errorf("%s - failed to update payment order: %w", createdPaymentOrder.GatewayID, err)
 		}
 
-		network, err := createdPaymentOrder.QueryToken().QueryNetwork().Only(ctx)
-		if err != nil {
-			return fmt.Errorf("%s - failed to fetch network: %w", createdPaymentOrder.GatewayID, err)
-		}
-
-		err = refundOrder(ctx, network, createdPaymentOrder.GatewayID)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"OrderID":      fmt.Sprintf("0x%v", hex.EncodeToString(createdPaymentOrder.ID[:])),
-				"OrderTrxHash": createdPaymentOrder.TxHash,
-				"GatewayID":    createdPaymentOrder.GatewayID,
-			}).Errorf("Handle cancellation failed to refund order")
+		// Refund immediately only for AML; other cancellations are refunded via the refund path (with fallback first). See tasks.RetryStaleUserOperations.
+		if isAML {
+			network, err := createdPaymentOrder.QueryToken().QueryNetwork().Only(ctx)
+			if err != nil {
+				return fmt.Errorf("%s - failed to fetch network: %w", createdPaymentOrder.GatewayID, err)
+			}
+			err = refundOrder(ctx, network, createdPaymentOrder.GatewayID)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":        fmt.Sprintf("%v", err),
+					"OrderID":      fmt.Sprintf("0x%v", hex.EncodeToString(createdPaymentOrder.ID[:])),
+					"OrderTrxHash": createdPaymentOrder.TxHash,
+					"GatewayID":    createdPaymentOrder.GatewayID,
+				}).Errorf("Handle cancellation failed to refund order")
+			}
 		}
 	}
 
@@ -970,7 +984,7 @@ func processPaymentOrderPostCreation(
 		}
 
 		if !ok && err == nil {
-			err := HandleCancellation(ctx, paymentOrder, nil, "AML compliance check failed", refundOrder)
+			err := HandleCancellation(ctx, paymentOrder, nil, CancellationReasonAML, refundOrder)
 			if err != nil {
 				return fmt.Errorf("checkAMLCompliance.RefundOrder: %w", err)
 			}
@@ -1322,7 +1336,6 @@ func getSenderProfileFromAPIKey(ctx context.Context, apiKeyUUID uuid.UUID) (*ent
 			spq.WithUser() // Load User edge for KYB status if needed in the future
 		}).
 		Only(ctx)
-
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, fmt.Errorf("API key not found")
