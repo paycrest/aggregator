@@ -546,6 +546,11 @@ func TestPriorityQueueTest(t *testing.T) {
 	})
 
 	t.Run("TestCreatePriorityQueueForBucket", func(t *testing.T) {
+		// Ensure fallback is unset so the test's provider is included in the queue
+		oldFallback := viper.GetString("FALLBACK_PROVIDER_ID")
+		viper.Set("FALLBACK_PROVIDER_ID", "")
+		defer viper.Set("FALLBACK_PROVIDER_ID", oldFallback)
+
 		ctx := context.Background()
 		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
 			"provider_id": testCtxForPQ.publicProviderProfile.ID,
@@ -579,6 +584,11 @@ func TestPriorityQueueTest(t *testing.T) {
 	})
 
 	t.Run("TestProcessBucketQueues", func(t *testing.T) {
+		// Ensure fallback is unset so the test's provider is included in the queue (not skipped or sanitized out)
+		oldFallback := viper.GetString("FALLBACK_PROVIDER_ID")
+		viper.Set("FALLBACK_PROVIDER_ID", "")
+		defer viper.Set("FALLBACK_PROVIDER_ID", oldFallback)
+
 		err = service.ProcessBucketQueues()
 		assert.NoError(t, err)
 
