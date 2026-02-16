@@ -106,16 +106,25 @@ func RetryStaleUserOperations() error {
 		}
 	}(ctx)
 
-	// Settle order process
+	// Settle order process: validated orders (5–15 min) or orders stuck in settling (> 10 min)
 	lockOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.StatusEQ(paymentorder.StatusValidated),
 			paymentorder.HasFulfillmentsWith(
 				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess),
 			),
-			paymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
-			paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
+			paymentorder.Or(
+				paymentorder.And(
+					paymentorder.StatusEQ(paymentorder.StatusValidated),
+					paymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
+					paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
+				),
+				// Stuck settling: updated > 10 min ago
+				paymentorder.And(
+					paymentorder.StatusEQ(paymentorder.StatusSettling),
+					paymentorder.UpdatedAtLT(time.Now().Add(-10*time.Minute)),
+				),
+			),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -129,6 +138,49 @@ func RetryStaleUserOperations() error {
 	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range lockOrders {
+			// SettleOrder only accepts StatusValidated; reset stuck settling so it can be retried.
+			// Guard on StatusSettling so we never overwrite an order that became settled (or any
+			// other status) after the initial query—avoids race and re-submitting settlement.
+			if order.Status == paymentorder.StatusSettling {
+				affected, err := storage.Client.PaymentOrder.
+					Update().
+					Where(
+						paymentorder.IDEQ(order.ID),
+						paymentorder.StatusEQ(paymentorder.StatusSettling),
+					).
+					SetStatus(paymentorder.StatusValidated).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.SettleOrder.resetSettlingStatus")
+					continue
+				}
+				if affected == 0 {
+					// Order was no longer settling (e.g. indexer already set to settled), skip
+					continue
+				}
+				// Re-fetch so SettleOrder's query (StatusValidated) will find the order; avoids race
+				// where we call SettleOrder before the update is visible.
+				orderID := order.ID
+				order, err = storage.Client.PaymentOrder.
+					Query().
+					Where(
+						paymentorder.IDEQ(orderID),
+						paymentorder.StatusEQ(paymentorder.StatusValidated),
+					).
+					WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+					WithProvider().
+					Only(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": orderID.String(),
+					}).Errorf("RetryStaleUserOperations.SettleOrder.refetchAfterReset")
+					continue
+				}
+			}
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				service = orderService.NewOrderTron()
