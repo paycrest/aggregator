@@ -674,7 +674,7 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			return fmt.Errorf("%s - failed to create payment order: %w", paymentOrderFields.GatewayID, err)
 		}
 
-		// Refund immediately only for AML; other cancellations are refunded via the refund path (with fallback first).
+		// Refund immediately only for AML; other cancellations are refunded via the refund path (with fallback first). See tasks.RetryStaleUserOperations.
 		if isAML {
 			network, err := paymentOrderFields.Token.QueryNetwork().Only(ctx)
 			if err != nil {
@@ -707,7 +707,7 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			return fmt.Errorf("%s - failed to update payment order: %w", createdPaymentOrder.GatewayID, err)
 		}
 
-		// Refund immediately only for AML; other cancellations are refunded via the refund path (with fallback first).
+		// Refund immediately only for AML; other cancellations are refunded via the refund path (with fallback first). See tasks.RetryStaleUserOperations.
 		if isAML {
 			network, err := createdPaymentOrder.QueryToken().QueryNetwork().Only(ctx)
 			if err != nil {

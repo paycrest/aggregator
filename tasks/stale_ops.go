@@ -312,13 +312,11 @@ func RetryStaleUserOperations() error {
 	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range lockOrders {
-			// 1) Check fallback_tried FIRST: if we already tried fallback, skip reassignment entirely and refund.
+			// 1) If we already tried fallback (DB) or order is already on fallback provider, skip reassignment and refund.
 			tryFallback := orderConf.FallbackProviderID != ""
 			fallbackAlreadyTried := false
 			if tryFallback {
-				fallbackTriedKey := fmt.Sprintf("fallback_tried_%s", order.ID.String())
-				alreadyTried, _ := storage.RedisClient.Exists(ctx, fallbackTriedKey).Result()
-				if alreadyTried > 0 || (order.Edges.Provider != nil && order.Edges.Provider.ID == orderConf.FallbackProviderID) {
+				if !order.FallbackTriedAt.IsZero() || (order.Edges.Provider != nil && order.Edges.Provider.ID == orderConf.FallbackProviderID) {
 					tryFallback = false
 					fallbackAlreadyTried = true
 				}
@@ -328,11 +326,14 @@ func RetryStaleUserOperations() error {
 
 			// If the order could still be reassigned to another public provider (per order_requests logic),
 			if order.CancellationCount < orderConf.RefundCancellationCount {
-
 				// Safeguard: only reassign via full-queue when order was NOT already sent to a provider (no order_request in Redis).
 				// When order_request_* exists, sendOrderRequest already stored it; skip full-queue and go through fallback to avoid double-send.
 				orderRequestKey := fmt.Sprintf("order_request_%s", order.ID.String())
-				orderRequestExists, _ := storage.RedisClient.Exists(ctx, orderRequestKey).Result()
+				orderRequestExists, orderRequestErr := storage.RedisClient.Exists(ctx, orderRequestKey).Result()
+				if orderRequestErr != nil {
+					logger.WithFields(logger.Fields{"OrderID": order.ID.String(), "Error": orderRequestErr}).Errorf("RetryStaleUserOperations: failed to check order_request key; assuming exists to avoid double-send")
+					orderRequestExists = 1 // treat as exists so we skip full-queue
+				}
 				tryFullQueue := !fallbackAlreadyTried && (orderRequestExists == 0)
 
 				// No provider or public provider: can try full-queue (reassign to public). Private provider: skip full-queue.
@@ -387,6 +388,7 @@ func RetryStaleUserOperations() error {
 			}
 
 			// 3) Full queue skipped or failed; try fallback (only if configured and not already tried).
+			// Fallback only succeeds when order_request_* key is gone (expired or cleared); TryFallbackAssignment returns error if key exists.
 			// Any failure should proceed with refund
 			if tryFallback {
 				if err := pq.TryFallbackAssignment(ctx, order); err == nil {
@@ -402,7 +404,7 @@ func RetryStaleUserOperations() error {
 						logger.WithFields(logger.Fields{
 							"Error":   fmt.Sprintf("%v", updateErr),
 							"OrderID": order.ID.String(),
-						}).Errorf("RetryStaleUserOperations: failed to update cancellation count; skipping refund this run")
+						}).Errorf("RetryStaleUserOperations: failed to update cancellation count; continue with refund")
 					}
 				}
 			}				

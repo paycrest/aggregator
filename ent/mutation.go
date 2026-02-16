@@ -6318,6 +6318,7 @@ type PaymentOrderMutation struct {
 	appendcancellation_reasons []string
 	status                     *paymentorder.Status
 	order_type                 *paymentorder.OrderType
+	fallback_tried_at          *time.Time
 	clearedFields              map[string]struct{}
 	token                      *int
 	clearedtoken               bool
@@ -8189,6 +8190,55 @@ func (m *PaymentOrderMutation) ResetOrderType() {
 	m.order_type = nil
 }
 
+// SetFallbackTriedAt sets the "fallback_tried_at" field.
+func (m *PaymentOrderMutation) SetFallbackTriedAt(t time.Time) {
+	m.fallback_tried_at = &t
+}
+
+// FallbackTriedAt returns the value of the "fallback_tried_at" field in the mutation.
+func (m *PaymentOrderMutation) FallbackTriedAt() (r time.Time, exists bool) {
+	v := m.fallback_tried_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFallbackTriedAt returns the old "fallback_tried_at" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldFallbackTriedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFallbackTriedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFallbackTriedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFallbackTriedAt: %w", err)
+	}
+	return oldValue.FallbackTriedAt, nil
+}
+
+// ClearFallbackTriedAt clears the value of the "fallback_tried_at" field.
+func (m *PaymentOrderMutation) ClearFallbackTriedAt() {
+	m.fallback_tried_at = nil
+	m.clearedFields[paymentorder.FieldFallbackTriedAt] = struct{}{}
+}
+
+// FallbackTriedAtCleared returns if the "fallback_tried_at" field was cleared in this mutation.
+func (m *PaymentOrderMutation) FallbackTriedAtCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldFallbackTriedAt]
+	return ok
+}
+
+// ResetFallbackTriedAt resets all changes to the "fallback_tried_at" field.
+func (m *PaymentOrderMutation) ResetFallbackTriedAt() {
+	m.fallback_tried_at = nil
+	delete(m.clearedFields, paymentorder.FieldFallbackTriedAt)
+}
+
 // SetTokenID sets the "token" edge to the Token entity by id.
 func (m *PaymentOrderMutation) SetTokenID(id int) {
 	m.token = &id
@@ -8526,7 +8576,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 35)
+	fields := make([]string, 0, 36)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -8632,6 +8682,9 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.order_type != nil {
 		fields = append(fields, paymentorder.FieldOrderType)
 	}
+	if m.fallback_tried_at != nil {
+		fields = append(fields, paymentorder.FieldFallbackTriedAt)
+	}
 	return fields
 }
 
@@ -8710,6 +8763,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case paymentorder.FieldOrderType:
 		return m.OrderType()
+	case paymentorder.FieldFallbackTriedAt:
+		return m.FallbackTriedAt()
 	}
 	return nil, false
 }
@@ -8789,6 +8844,8 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldStatus(ctx)
 	case paymentorder.FieldOrderType:
 		return m.OldOrderType(ctx)
+	case paymentorder.FieldFallbackTriedAt:
+		return m.OldFallbackTriedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -9043,6 +9100,13 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetOrderType(v)
 		return nil
+	case paymentorder.FieldFallbackTriedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFallbackTriedAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -9280,6 +9344,9 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	if m.FieldCleared(paymentorder.FieldCancellationReasons) {
 		fields = append(fields, paymentorder.FieldCancellationReasons)
 	}
+	if m.FieldCleared(paymentorder.FieldFallbackTriedAt) {
+		fields = append(fields, paymentorder.FieldFallbackTriedAt)
+	}
 	return fields
 }
 
@@ -9341,6 +9408,9 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 		return nil
 	case paymentorder.FieldCancellationReasons:
 		m.ClearCancellationReasons()
+		return nil
+	case paymentorder.FieldFallbackTriedAt:
+		m.ClearFallbackTriedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder nullable field %s", name)
@@ -9454,6 +9524,9 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldOrderType:
 		m.ResetOrderType()
+		return nil
+	case paymentorder.FieldFallbackTriedAt:
+		m.ResetFallbackTriedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)

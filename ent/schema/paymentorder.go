@@ -116,6 +116,9 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.Enum("order_type").
 			Values("otc", "regular").
 			Default("regular"),
+		// Fallback assignment: set when order was assigned via fallback provider (DB-level idempotency).
+		field.Time("fallback_tried_at").
+			Optional(),
 	}
 }
 

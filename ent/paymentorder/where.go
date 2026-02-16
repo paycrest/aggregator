@@ -212,6 +212,11 @@ func CancellationCount(v int) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldCancellationCount, v))
 }
 
+// FallbackTriedAt applies equality check predicate on the "fallback_tried_at" field. It's identical to FallbackTriedAtEQ.
+func FallbackTriedAt(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldFallbackTriedAt, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldCreatedAt, v))
@@ -1975,6 +1980,56 @@ func OrderTypeIn(vs ...OrderType) predicate.PaymentOrder {
 // OrderTypeNotIn applies the NotIn predicate on the "order_type" field.
 func OrderTypeNotIn(vs ...OrderType) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldNotIn(FieldOrderType, vs...))
+}
+
+// FallbackTriedAtEQ applies the EQ predicate on the "fallback_tried_at" field.
+func FallbackTriedAtEQ(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldFallbackTriedAt, v))
+}
+
+// FallbackTriedAtNEQ applies the NEQ predicate on the "fallback_tried_at" field.
+func FallbackTriedAtNEQ(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldFallbackTriedAt, v))
+}
+
+// FallbackTriedAtIn applies the In predicate on the "fallback_tried_at" field.
+func FallbackTriedAtIn(vs ...time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldFallbackTriedAt, vs...))
+}
+
+// FallbackTriedAtNotIn applies the NotIn predicate on the "fallback_tried_at" field.
+func FallbackTriedAtNotIn(vs ...time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldFallbackTriedAt, vs...))
+}
+
+// FallbackTriedAtGT applies the GT predicate on the "fallback_tried_at" field.
+func FallbackTriedAtGT(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldFallbackTriedAt, v))
+}
+
+// FallbackTriedAtGTE applies the GTE predicate on the "fallback_tried_at" field.
+func FallbackTriedAtGTE(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldFallbackTriedAt, v))
+}
+
+// FallbackTriedAtLT applies the LT predicate on the "fallback_tried_at" field.
+func FallbackTriedAtLT(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldFallbackTriedAt, v))
+}
+
+// FallbackTriedAtLTE applies the LTE predicate on the "fallback_tried_at" field.
+func FallbackTriedAtLTE(v time.Time) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldFallbackTriedAt, v))
+}
+
+// FallbackTriedAtIsNil applies the IsNil predicate on the "fallback_tried_at" field.
+func FallbackTriedAtIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldFallbackTriedAt))
+}
+
+// FallbackTriedAtNotNil applies the NotNil predicate on the "fallback_tried_at" field.
+func FallbackTriedAtNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldFallbackTriedAt))
 }
 
 // HasToken applies the HasEdge predicate on the "token" edge.
