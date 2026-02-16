@@ -10,6 +10,7 @@ import (
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/tasks"
+	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -44,6 +45,7 @@ func main() {
 		logger.Fatalf("database DBConnection: %s", err)
 	}
 	defer storage.GetClient().Close()
+	defer utils.CloseHTTPClient()
 
 	// Fix database mishap
 	// err := tasks.FixDatabaseMishap()

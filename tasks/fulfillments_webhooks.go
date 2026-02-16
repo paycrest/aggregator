@@ -541,9 +541,8 @@ func SyncPaymentOrderFulfillments() {
 
 // Retry failed webhook notifications
 func RetryFailedWebhookNotifications() error {
-	// ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	// defer cancel()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
 
 	// Fetch failed webhook notifications that are due for retry
 	attempts, err := storage.Client.WebhookRetryAttempt.
