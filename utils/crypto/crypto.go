@@ -172,6 +172,9 @@ func PublicKeyEncryptJSON(data interface{}, publicKeyPEM string) ([]byte, error)
 // PublicKeyDecryptPlain decrypts ciphertext using RSA 2048 encryption algorithm
 func PublicKeyDecryptPlain(ciphertext []byte, privateKeyPEM string) ([]byte, error) {
 	privateKeyBlock, _ := pem.Decode([]byte(privateKeyPEM))
+	if privateKeyBlock == nil {
+		return nil, fmt.Errorf("failed to parse PEM block")
+	}
 	privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBlock.Bytes)
 	if err != nil {
 		return nil, err
