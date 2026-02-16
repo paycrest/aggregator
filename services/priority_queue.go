@@ -520,6 +520,25 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	} else {
 		// New queue is empty, keep the old queue and clean up temp
 		_ = s.deleteQueue(ctx, tempRedisKey)
+		// Sanitize retained queue: remove fallback provider entries when config dictates
+		if orderConf.FallbackProviderID != "" {
+			oldData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+			if err == nil && len(oldData) > 0 {
+				var filtered []interface{}
+				for _, entry := range oldData {
+					parts := strings.SplitN(entry, ":", 2)
+					if len(parts) >= 1 && parts[0] != orderConf.FallbackProviderID {
+						filtered = append(filtered, entry)
+					}
+				}
+				if len(filtered) < len(oldData) {
+					_ = s.deleteQueue(ctx, redisKey)
+					if len(filtered) > 0 {
+						_ = storage.RedisClient.RPush(ctx, redisKey, filtered...).Err()
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -691,7 +710,7 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 // Slippage is taken from the fallback provider's ProviderOrderToken (rate_slippage). Returns a clear error if fallback
 // was attempted but order rate is outside the fallback provider's acceptable slippage.
 func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order *ent.PaymentOrder) error {
-	fallbackID := orderConf.FallbackProviderID
+	fallbackID := config.OrderConfig().FallbackProviderID
 	if fallbackID == "" {
 		return fmt.Errorf("fallback provider not configured")
 	}
