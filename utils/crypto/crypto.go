@@ -77,6 +77,11 @@ func DecryptPlain(ciphertext []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	// Validate ciphertext length before slicing
+	if len(ciphertext) < gcm.NonceSize() {
+		return nil, fmt.Errorf("ciphertext too short for nonce: got %d bytes, need at least %d", len(ciphertext), gcm.NonceSize())
+	}
+
 	// Parse nonce from ciphertext
 	nonce, ciphertext := ciphertext[:gcm.NonceSize()], ciphertext[gcm.NonceSize():]
 
