@@ -750,7 +750,7 @@ func (c *Client) handleOrderSettled(emittedEvent rpc.EmittedEvent) (map[string]i
 	if !ok {
 		return nil, fmt.Errorf("failed to extract settle_percent as uint64")
 	}
-	
+
 	rebatePercentStr, ok := extractUint64AsString(rebatePercent)
 	if !ok {
 		return nil, fmt.Errorf("failed to extract rebate_percent as uint64")
@@ -865,7 +865,6 @@ func (c *Client) handleTransfer(emittedEvent rpc.EmittedEvent) (map[string]inter
 	return event, nil
 }
 
-
 func extractUint64AsString(val interface{}) (string, bool) {
 	if uintVal, ok := val.(uint64); ok {
 		return fmt.Sprintf("%d", uintVal), true
@@ -945,4 +944,3 @@ func u256FromFelts(low, high *felt.Felt) *big.Int {
 
 	return result
 }
-

@@ -23,12 +23,14 @@ import (
 
 // TaskIndexBlockchainEvents indexes transfer events for all enabled tokens
 func TaskIndexBlockchainEvents() error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
 
 	// Use distributed lock to prevent concurrent execution
-	// Lock TTL: 10 seconds (2.5x cron interval + buffer for processing time)
-	// This ensures the lock doesn't expire even if processing takes longer than one cron cycle
-	cleanup, acquired, err := acquireDistributedLock(ctx, "task_index_blockchain_events_lock", 10*time.Second, "TaskIndexBlockchainEvents")
+	// Lock TTL: 50 seconds (slightly longer than context timeout to prevent race conditions)
+	// Context timeout: 45 seconds (allows realistic blockchain RPC call durations for multiple networks)
+	// Cron runs every 4 seconds, so lock TTL must exceed timeout to prevent concurrent execution
+	cleanup, acquired, err := acquireDistributedLock(ctx, "task_index_blockchain_events_lock", 50*time.Second, "TaskIndexBlockchainEvents")
 	if err != nil {
 		return err
 	}
@@ -58,11 +60,13 @@ func TaskIndexBlockchainEvents() error {
 		return fmt.Errorf("TaskIndexBlockchainEvents.fetchNetworks: %w", err)
 	}
 
-	// Process each network in parallel
+	// Process each network in parallel with timeout protection
+	var wg sync.WaitGroup
 	for _, network := range networks {
+		wg.Add(1)
 		go func(network *ent.Network) {
-			// Create a new context for this network's operations
-			ctx := context.Background()
+			defer wg.Done()
+			// Use the provided context with timeout instead of creating a new unbounded one
 			var indexerInstance types.Indexer
 
 			if strings.HasPrefix(network.Identifier, "tron") {
@@ -182,6 +186,9 @@ func TaskIndexBlockchainEvents() error {
 			}
 		}(network)
 	}
+
+	// Wait for all network processing goroutines to complete
+	wg.Wait()
 	return nil
 }
 

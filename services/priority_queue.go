@@ -97,10 +97,10 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 				// Currency edge unloaded or missing; cannot compute overlap. Skip this token so we don't
 				// silently exclude the provider, and log so operators see data/loading issues.
 				logger.WithFields(logger.Fields{
-					"ProviderID":      orderToken.Edges.Provider.ID,
-					"BucketID":        bucket.ID,
-					"BucketCurrency":  bucket.Edges.Currency.Code,
-					"OrderTokenID":    orderToken.ID,
+					"ProviderID":     orderToken.Edges.Provider.ID,
+					"BucketID":       bucket.ID,
+					"BucketCurrency": bucket.Edges.Currency.Code,
+					"OrderTokenID":   orderToken.ID,
 				}).Errorf("Skipping overlap check: token rate is zero (currency edge missing or not loaded for order token)")
 				continue
 			}
@@ -115,8 +115,8 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 					Exist(ctx)
 				if err != nil {
 					logger.WithFields(logger.Fields{
-						"Error":           fmt.Sprintf("%v", err),
-						"ProviderID":      providerID,
+						"Error":          fmt.Sprintf("%v", err),
+						"ProviderID":     providerID,
 						"BucketCurrency": bucket.Edges.Currency.Code,
 					}).Errorf("Failed to check existing bucket for provider")
 					continue
@@ -144,7 +144,7 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 		linkedProviders, err := bucket.QueryProviderProfiles().All(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
+				"Error":  fmt.Sprintf("%v", err),
 				"Bucket": bucket.ID,
 			}).Errorf("Failed to get linked providers for bucket")
 		} else {
