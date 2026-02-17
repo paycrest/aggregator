@@ -797,6 +797,10 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 				fields.ID.String(), fiatAmount.String(), institution.Edges.FiatCurrency.Code, bErr)
 		}
 		fields.ProvisionBucket = bucket
+		// Persist so later flows (e.g. FulfillOrder) see the bucket and do not panic on nil ProvisionBucket
+		if _, upErr := storage.Client.PaymentOrder.UpdateOneID(fields.ID).SetProvisionBucket(bucket).Save(ctx); upErr != nil {
+			return fmt.Errorf("fallback: failed to set provision bucket on order %s: %w", fields.ID.String(), upErr)
+		}
 	}
 
 	bucketCurrency := fields.ProvisionBucket.Edges.Currency
