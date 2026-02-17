@@ -571,9 +571,7 @@ func RetryFailedWebhookNotifications() error {
 			Send()
 
 		if err != nil || (body.StatusCode() >= 205) {
-			// Webhook notification failed - use per-operation timeout for update
-			saveCtx, saveCancel := context.WithTimeout(context.Background(), 10*time.Second)
-
+			// Webhook notification failed - use per-operation timeouts to prevent deadline exceeded errors
 			attemptNumber := attempt.AttemptNumber + 1
 			delay := baseDelay * time.Duration(math.Pow(2, float64(attemptNumber-1)))
 
@@ -590,30 +588,37 @@ func RetryFailedWebhookNotifications() error {
 				attemptUpdate.SetStatus(webhookretryattempt.StatusExpired)
 				uid, err := uuid.Parse(attempt.Payload["data"].(map[string]interface{})["senderId"].(string))
 				if err != nil {
-					saveCancel()
 					return fmt.Errorf("RetryFailedWebhookNotifications.FailedExtraction: %w", err)
 				}
+
+				// Use separate context for SenderProfile fetch to avoid deadline pressure
+				profileCtx, profileCancel := context.WithTimeout(context.Background(), 10*time.Second)
 				profile, err := storage.Client.SenderProfile.
 					Query().
 					Where(
 						senderprofile.IDEQ(uid),
 					).
 					WithUser().
-					Only(saveCtx)
+					Only(profileCtx)
+				profileCancel()
+
 				if err != nil {
-					saveCancel()
 					return fmt.Errorf("RetryFailedWebhookNotifications.CouldNotFetchProfile: %w", err)
 				}
 
+				// Use separate context for email send to avoid deadline pressure
+				emailCtx, emailCancel := context.WithTimeout(context.Background(), 15*time.Second)
 				emailService := email.NewEmailServiceWithProviders()
-				_, err = emailService.SendWebhookFailureEmail(saveCtx, profile.Edges.User.Email, profile.Edges.User.FirstName)
+				_, err = emailService.SendWebhookFailureEmail(emailCtx, profile.Edges.User.Email, profile.Edges.User.FirstName)
+				emailCancel()
 
 				if err != nil {
-					saveCancel()
 					return fmt.Errorf("RetryFailedWebhookNotifications.SendWebhookFailureEmail: %w", err)
 				}
 			}
 
+			// Use separate context for save operation to ensure clean deadline
+			saveCtx, saveCancel := context.WithTimeout(context.Background(), 10*time.Second)
 			_, err := attemptUpdate.Save(saveCtx)
 			saveCancel()
 
