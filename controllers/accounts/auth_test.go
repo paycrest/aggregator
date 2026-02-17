@@ -961,7 +961,7 @@ func TestAuth(t *testing.T) {
 			}
 			res, err := test.PerformRequest(t, "PATCH", "/reset-password", ResetPasswordPayload, nil, router)
 
-			assert.Error(t, errors.New("Invalid password reset token"), err)
+			assert.NoError(t, err)
 			// Assert the response body
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 		})
@@ -979,7 +979,7 @@ func TestAuth(t *testing.T) {
 			}
 			res, err := test.PerformRequest(t, "PATCH", "/reset-password", ResetPasswordPayload, nil, router)
 
-			assert.Error(t, errors.New("Invalid password reset token"), err)
+			assert.NoError(t, err)
 			// Assert the response body
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 		})
@@ -997,7 +997,7 @@ func TestAuth(t *testing.T) {
 			}
 			res, err := test.PerformRequest(t, "PATCH", "/reset-password", ResetPasswordPayload, nil, router)
 
-			assert.Error(t, errors.New("Invalid password reset token"), err)
+			assert.NoError(t, err)
 			// Assert the response body
 			assert.Equal(t, http.StatusBadRequest, res.Code)
 		})
