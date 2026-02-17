@@ -8,14 +8,17 @@ import (
 	"time"
 
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/services"
 	orderService "github.com/paycrest/aggregator/services/order"
 	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -389,7 +392,8 @@ func RetryStaleUserOperations() error {
 				tryFullQueue := !fallbackAlreadyTried && (orderRequestExists == 0)
 
 				// No provider or public provider: can try full-queue (reassign to public). Private provider: skip full-queue.
-				canTryFullQueue := order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil &&
+				// Allow nil bucket so we can try to resolve and persist it before assignment (another node can then pick the order).
+				canTryFullQueue := (order.Edges.ProvisionBucket == nil || (order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil)) &&
 					(order.Edges.Provider == nil || order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate)
 
 				if tryFullQueue && canTryFullQueue {
@@ -403,7 +407,33 @@ func RetryStaleUserOperations() error {
 							Save(ctx)
 					}
 
-					orderFields := types.PaymentOrderFields{
+					// Resolve and persist nil provision bucket so AssignPaymentOrder can run and another node can pick the order.
+					if order.Edges.ProvisionBucket == nil {
+						institution, instErr := utils.GetInstitutionByCode(ctx, order.Institution, true)
+						if instErr == nil && institution != nil && institution.Edges.FiatCurrency != nil {
+							fiatAmount := order.Amount.Mul(order.Rate)
+							bucket, bErr := storage.Client.ProvisionBucket.
+								Query().
+								Where(
+									provisionbucket.MaxAmountGTE(fiatAmount),
+									provisionbucket.MinAmountLTE(fiatAmount),
+									provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(institution.Edges.FiatCurrency.ID)),
+								).
+								WithCurrency().
+								First(ctx)
+							if bErr == nil && bucket != nil {
+								if _, upErr := storage.Client.PaymentOrder.UpdateOneID(order.ID).SetProvisionBucket(bucket).Save(ctx); upErr == nil {
+									order.Edges.ProvisionBucket = bucket
+								}
+							}
+						}
+						if order.Edges.ProvisionBucket == nil {
+							logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Warnf("stale_ops: could not resolve provision bucket for order; skipping full-queue assignment")
+						}
+					}
+
+					if order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+						orderFields := types.PaymentOrderFields{
 						ID:                order.ID,
 						OrderType:         order.OrderType.String(),
 						Token:             order.Edges.Token,
@@ -436,6 +466,7 @@ func RetryStaleUserOperations() error {
 						Where(paymentorder.IDEQ(order.ID)).
 						SetCancellationCount(orderConf.RefundCancellationCount).
 						Save(ctx)
+					}
 				}
 			}
 

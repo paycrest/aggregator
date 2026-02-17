@@ -747,6 +747,9 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	}
 
 	// Convert ent order to PaymentOrderFields for the rest of the fallback logic
+	if order.AccountIdentifier == "" || order.Institution == "" || order.AccountName == "" {
+		return fmt.Errorf("fallback: order %s has no recipient information", order.ID.String())
+	}
 	fields := types.PaymentOrderFields{
 		ID:                order.ID,
 		OrderType:         order.OrderType.String(),
