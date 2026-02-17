@@ -443,9 +443,14 @@ func RetryStaleUserOperations() error {
 			// Fallback only succeeds when order_request_* key is gone (expired or cleared); TryFallbackAssignment returns error if key exists.
 			// Any failure should proceed with refund
 			if tryFallback {
-				if err := pq.TryFallbackAssignment(ctx, order); err == nil {
+				err := pq.TryFallbackAssignment(ctx, order)
+				if err == nil {
 					continue
 				}
+				logger.WithFields(logger.Fields{
+					"OrderID": order.ID.String(),
+					"Error":   err.Error(),
+				}).Warnf("RetryStaleUserOperations: TryFallbackAssignment failed")
 				if order.CancellationCount < orderConf.RefundCancellationCount {
 					_, updateErr := storage.Client.PaymentOrder.
 						Update().
