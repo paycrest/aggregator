@@ -450,7 +450,7 @@ func RetryStaleUserOperations() error {
 				logger.WithFields(logger.Fields{
 					"OrderID": order.ID.String(),
 					"Error":   err.Error(),
-				}).Warnf("RetryStaleUserOperations: TryFallbackAssignment failed")
+				}).Errorf("RetryStaleUserOperations: TryFallbackAssignment failed")
 				if order.CancellationCount < orderConf.RefundCancellationCount {
 					_, updateErr := storage.Client.PaymentOrder.
 						Update().
