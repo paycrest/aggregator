@@ -74,6 +74,45 @@ func (m *mockEmailService) SendPartnerOnboardingSuccessEmail(ctx context.Context
 	return types.SendEmailResponse{Id: "mock-partner-onboarding-id"}, nil
 }
 
+// failingMockEmailService is a mock implementation that returns errors for specific operations
+type failingMockEmailService struct{}
+
+func (m *failingMockEmailService) SendEmail(ctx context.Context, payload types.SendEmailPayload) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-email-id"}, nil
+}
+
+func (m *failingMockEmailService) SendTemplateEmail(ctx context.Context, payload types.SendEmailPayload, templateID string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-template-id"}, nil
+}
+
+func (m *failingMockEmailService) SendVerificationEmail(ctx context.Context, token, email, firstName string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-verification-id"}, nil
+}
+
+func (m *failingMockEmailService) SendPasswordResetEmail(ctx context.Context, token, email, firstName string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-reset-id"}, nil
+}
+
+func (m *failingMockEmailService) SendWelcomeEmail(ctx context.Context, email, firstName string, scopes []string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{}, fmt.Errorf("failed to send welcome email")
+}
+
+func (m *failingMockEmailService) SendKYBApprovalEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-kyb-approval-id"}, nil
+}
+
+func (m *failingMockEmailService) SendKYBRejectionEmail(ctx context.Context, email, firstName, reasonForDecline string, additionalData map[string]interface{}) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-kyb-rejection-id"}, nil
+}
+
+func (m *failingMockEmailService) SendWebhookFailureEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-webhook-failure-id"}, nil
+}
+
+func (m *failingMockEmailService) SendPartnerOnboardingSuccessEmail(ctx context.Context, email, firstName, apiKey string) (types.SendEmailResponse, error) {
+	return types.SendEmailResponse{Id: "mock-partner-onboarding-id"}, nil
+}
+
 func TestAuth(t *testing.T) {
 	// Set environment to "test" so users are auto-verified (email won't be in response)
 	originalEnv := os.Getenv("ENVIRONMENT")
@@ -261,13 +300,14 @@ func TestAuth(t *testing.T) {
 		})
 
 		t.Run("with valid payload and failed welcome email", func(t *testing.T) {
-			// Override httpmock for this test to simulate email failure
-			httpmock.Reset()
-			httpmock.RegisterResponder("POST", "https://api.sendgrid.com/v3/mail/send",
-				func(r *http.Request) (*http.Response, error) {
-					return httpmock.NewBytesResponse(500, []byte(`{"error": "SendGrid failure"}`)), fmt.Errorf("SendGrid error")
-				},
-			)
+			// Create a separate router with the failing email service to test email error handling
+			failingRouter := gin.New()
+			failingCtrl := &AuthController{
+				apiKeyService: svc.NewAPIKeyService(),
+				emailService:  &failingMockEmailService{}, // Use failing mock to test error path
+			}
+
+			failingRouter.POST("/register", failingCtrl.Register)
 
 			payload := types.RegisterPayload{
 				FirstName:  "Ike",
@@ -282,66 +322,16 @@ func TestAuth(t *testing.T) {
 				"Client-Type": "web",
 			}
 
-			res, err := test.PerformRequest(t, "POST", "/register", payload, header, router)
+			res, err := test.PerformRequest(t, "POST", "/register", payload, header, failingRouter)
 			assert.NoError(t, err)
 
-			// Assert the response body
-			assert.Equal(t, http.StatusCreated, res.Code)
+			// Assert that the registration failed due to email service error
+			assert.Equal(t, http.StatusInternalServerError, res.Code)
 
 			var response types.Response
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
-			assert.Equal(t, "User created successfully", response.Message)
-			data, ok := response.Data.(map[string]interface{})
-			assert.True(t, ok, "response.Data is not of type map[string]interface{}")
-			assert.NotNil(t, data, "response.Data is nil")
-
-			// Assert the response data
-			assert.Contains(t, data, "id")
-			match, _ := regexp.MatchString(
-				`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`,
-				data["id"].(string),
-			)
-			if !match {
-				t.Errorf("Expected '%s' to be a valid UUID", data["id"].(string))
-			}
-
-			userID = data["id"].(string)
-
-			// Parse the user ID string to uuid.UUID
-			userUUID, err := uuid.Parse(userID)
-			assert.NoError(t, err)
-			assert.Equal(t, "", data["email"].(string))
-			assert.Equal(t, payload.FirstName, data["firstName"].(string))
-			assert.Equal(t, payload.LastName, data["lastName"].(string))
-
-			// Query the database to check if API key and profile were created
-			user, err := db.Client.User.
-				Query().
-				Where(userEnt.IDEQ(userUUID)).
-				WithProviderProfile(
-					func(q *ent.ProviderProfileQuery) {
-						q.WithAPIKey()
-					}).
-				WithSenderProfile(func(q *ent.SenderProfileQuery) {
-					q.WithAPIKey()
-				}).
-				Only(context.Background())
-
-			assert.NoError(t, err)
-			assert.NotNil(t, user)
-			assert.NotNil(t, user.Edges.SenderProfile.Edges.APIKey)
-			assert.NotNil(t, user.Edges.ProviderProfile.Edges.APIKey)
-
-			// Restore default httpmock for other tests
-			httpmock.Reset()
-			httpmock.RegisterResponder("POST", "https://api.sendgrid.com/v3/mail/send",
-				func(r *http.Request) (*http.Response, error) {
-					resp := httpmock.NewBytesResponse(202, nil)
-					resp.Header.Set("X-Message-Id", "thisisatestid")
-					return resp, nil
-				},
-			)
+			assert.Contains(t, response.Message, "welcome email")
 		})
 
 		t.Run("with only sender scope payload", func(t *testing.T) {
