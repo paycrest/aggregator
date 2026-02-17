@@ -776,8 +776,11 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	// If order has no bucket yet, resolve one from institution currency + fiat amount.
 	if fields.ProvisionBucket == nil {
 		institution, instErr := utils.GetInstitutionByCode(ctx, order.Institution, true)
-		if instErr != nil || institution.Edges.FiatCurrency == nil {
-			return fmt.Errorf("fallback: cannot resolve bucket for order %s: institution/currency lookup failed: %w", fields.ID.String(), instErr)
+		if instErr != nil {
+			return fmt.Errorf("fallback: cannot resolve bucket for order %s: institution lookup failed: %w", fields.ID.String(), instErr)
+		}
+		if institution.Edges.FiatCurrency == nil {
+			return fmt.Errorf("fallback: cannot resolve bucket for order %s: institution %s has no fiat currency", fields.ID.String(), order.Institution)
 		}
 		fiatAmount := order.Amount.Mul(order.Rate)
 		bucket, bErr := storage.Client.ProvisionBucket.
