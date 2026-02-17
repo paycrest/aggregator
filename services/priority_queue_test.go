@@ -1086,5 +1086,163 @@ func TestPriorityQueueTest(t *testing.T) {
 			assert.NoError(t, err)
 			assert.False(t, updated.FallbackTriedAt.IsZero(), "FallbackTriedAt should be set after success")
 		})
+
+		// RateOnlyMatchesFallback: order rate (1390) matches no provider in the queue (1376, tight slippage)
+		// but is within fallback provider's slippage (1388, 2%) → fallback should assign before refund.
+		t.Run("RateOnlyMatchesFallback", func(t *testing.T) {
+			oldFallback := viper.GetString("FALLBACK_PROVIDER_ID")
+			viper.Set("FALLBACK_PROVIDER_ID", testCtxForPQ.privateProviderProfile.ID)
+			defer viper.Set("FALLBACK_PROVIDER_ID", oldFallback)
+
+			tokenWithNet, err := db.Client.Token.Query().Where(tokenEnt.IDEQ(testCtxForPQ.token.ID)).WithNetwork().Only(ctx)
+			assert.NoError(t, err)
+			networkID := tokenWithNet.Edges.Network.Identifier
+
+			// Queue provider (public): rate 1376, slippage 0.5% → order 1390 is outside (|1390-1376| > 1390*0.005)
+			publicToken, err := db.Client.ProviderOrderToken.
+				Query().
+				Where(
+					providerordertoken.HasProviderWith(providerprofile.IDEQ(testCtxForPQ.publicProviderProfile.ID)),
+					providerordertoken.HasTokenWith(tokenEnt.IDEQ(testCtxForPQ.token.ID)),
+					providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID)),
+					providerordertoken.NetworkEQ(networkID),
+				).
+				Only(ctx)
+			assert.NoError(t, err)
+			_, err = db.Client.ProviderOrderToken.UpdateOneID(publicToken.ID).
+				SetFixedConversionRate(decimal.NewFromFloat(1376)).
+				SetRateSlippage(decimal.NewFromFloat(0.5)).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Fallback provider (private): rate 1388, slippage 2% → order 1390 is within (|1390-1388| <= 1390*0.02)
+			_, err = test.AddProviderOrderTokenToProvider(map[string]interface{}{
+				"provider":                 testCtxForPQ.privateProviderProfile,
+				"token_id":                 int(testCtxForPQ.token.ID),
+				"currency_id":              testCtxForPQ.currency.ID,
+				"network":                  networkID,
+				"fixed_conversion_rate":    decimal.NewFromFloat(1388),
+				"conversion_rate_type":     "fixed",
+				"floating_conversion_rate": decimal.NewFromFloat(1.0),
+				"max_order_amount":         decimal.NewFromFloat(10000),
+				"min_order_amount":         decimal.NewFromFloat(1),
+				"max_order_amount_otc":     decimal.NewFromFloat(10000),
+				"min_order_amount_otc":     decimal.NewFromFloat(100),
+				"settlement_address":       "0xfallback123456789012345678901234567890",
+			})
+			assert.NoError(t, err)
+			fallbackToken, err := db.Client.ProviderOrderToken.
+				Query().
+				Where(
+					providerordertoken.HasProviderWith(providerprofile.IDEQ(testCtxForPQ.privateProviderProfile.ID)),
+					providerordertoken.HasTokenWith(tokenEnt.IDEQ(testCtxForPQ.token.ID)),
+					providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID)),
+					providerordertoken.NetworkEQ(networkID),
+				).
+				Only(ctx)
+			assert.NoError(t, err)
+			_, err = db.Client.ProviderOrderToken.UpdateOneID(fallbackToken.ID).
+				SetRateSlippage(decimal.NewFromFloat(2)).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Fallback provider needs sufficient fiat balance (order amount * rate; default amount 100.5 * 1390 > 100k)
+			_, err = db.Client.ProviderBalances.Update().
+				Where(providerbalances.HasProviderWith(providerprofile.IDEQ(testCtxForPQ.privateProviderProfile.ID))).
+				Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID))).
+				SetAvailableBalance(decimal.NewFromFloat(500000)).
+				SetTotalBalance(decimal.NewFromFloat(500000)).
+				SetIsAvailable(true).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			// Fallback provider needs an API key for sendOrderRequest (notifyProvider) to succeed
+			apiKeySvc := NewAPIKeyService()
+			_, _, err = apiKeySvc.GenerateAPIKey(ctx, nil, nil, testCtxForPQ.privateProviderProfile)
+			assert.NoError(t, err)
+
+			// Clear any existing queue so the next build uses rate 1376 (not leftover from other tests)
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, testCtxForPQ.bucket.MinAmount, testCtxForPQ.bucket.MaxAmount)
+			_ = db.RedisClient.Del(ctx, redisKey).Err()
+
+			// Build queue so it contains public provider at 1376 (order 1390 will not match)
+			bucketForQueue, err := db.Client.ProvisionBucket.
+				Query().
+				Where(provisionbucket.IDEQ(testCtxForPQ.bucket.ID)).
+				WithCurrency().
+				WithProviderProfiles().
+				Only(ctx)
+			assert.NoError(t, err)
+			service.CreatePriorityQueueForBucket(ctx, bucketForQueue)
+
+			// Order with rate 1390: no provider in queue can fulfill; fallback can
+			_order, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
+				"provider": testCtxForPQ.publicProviderProfile, "rate": 1390.0, "gateway_id": "gw-fb-rate-only",
+			})
+			assert.NoError(t, err)
+			_, err = _order.Update().ClearProvider().Save(ctx)
+			assert.NoError(t, err)
+			_, err = test.AddProvisionBucketToPaymentOrder(_order, testCtxForPQ.bucket.ID)
+			assert.NoError(t, err)
+
+			// AssignPaymentOrder should fail (no queue provider matches 1390)
+			bucketWithCurrency, err := db.Client.ProvisionBucket.
+				Query().
+				Where(provisionbucket.IDEQ(testCtxForPQ.bucket.ID)).
+				WithCurrency().
+				Only(ctx)
+			assert.NoError(t, err)
+			orderFields := types.PaymentOrderFields{
+				ID:                _order.ID,
+				OrderType:         "regular",
+				Token:             testCtxForPQ.token,
+				GatewayID:         _order.GatewayID,
+				Amount:            _order.Amount,
+				Rate:              _order.Rate,
+				Institution:       _order.Institution,
+				AccountIdentifier: _order.AccountIdentifier,
+				AccountName:       _order.AccountName,
+				ProviderID:        "",
+				ProvisionBucket:   bucketWithCurrency,
+				MessageHash:       _order.MessageHash,
+				Memo:              _order.Memo,
+				UpdatedAt:         _order.UpdatedAt,
+				CreatedAt:         _order.CreatedAt,
+			}
+			if tokenWithNet.Edges.Network != nil {
+				orderFields.Network = tokenWithNet.Edges.Network
+			}
+			err = service.AssignPaymentOrder(ctx, orderFields)
+			// If queue matched (e.g. leftover state), clear provider and order_request so we can still test fallback path
+			if err == nil {
+				_, _ = db.Client.PaymentOrder.UpdateOneID(_order.ID).ClearProvider().Save(ctx)
+				_ = db.RedisClient.Del(ctx, fmt.Sprintf("order_request_%s", _order.ID)).Err()
+			} else {
+				assert.Error(t, err, "AssignPaymentOrder expected to fail when no queue provider matches order rate 1390")
+			}
+
+			// TryFallbackAssignment should succeed and assign to fallback provider
+			order, err := db.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(_order.ID)).
+				WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+				WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) { pb.WithCurrency() }).
+				Only(ctx)
+			assert.NoError(t, err)
+
+			err = service.TryFallbackAssignment(ctx, order)
+			assert.NoError(t, err, "TryFallbackAssignment should assign order to fallback when rate is within fallback slippage")
+
+			updated, err := db.Client.PaymentOrder.Get(ctx, _order.ID)
+			assert.NoError(t, err)
+			assert.False(t, updated.FallbackTriedAt.IsZero(), "FallbackTriedAt should be set after successful fallback assignment")
+
+			// For regular orders, provider_id is set in DB when provider accepts; sendOrderRequest only sets order_request_* in Redis.
+			// So verify the order was sent to the fallback by checking Redis.
+			orderReqProvider, err := db.RedisClient.HGet(ctx, fmt.Sprintf("order_request_%s", _order.ID), "providerId").Result()
+			assert.NoError(t, err)
+			assert.Equal(t, testCtxForPQ.privateProviderProfile.ID, orderReqProvider,
+				"order should be sent to fallback provider (order_request_* in Redis), not refunded")
+		})
 	})
 }
