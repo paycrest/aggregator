@@ -20,19 +20,34 @@ var (
 // Preserves default transport behaviors such as proxy handling and TLS settings.
 func GetHTTPClient() *http.Client {
 	once.Do(func() {
-		// Clone the default transport to preserve default behaviors (proxy, TLS, dial context, etc.)
-		defaultTransport := http.DefaultTransport.(*http.Transport)
-		transport := &http.Transport{
-			Proxy:                 defaultTransport.Proxy,
-			DialContext:           defaultTransport.DialContext,
-			Dial:                  defaultTransport.Dial,
-			TLSClientConfig:       defaultTransport.TLSClientConfig,
-			TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
-			DisableKeepAlives:     defaultTransport.DisableKeepAlives,
-			DisableCompression:    defaultTransport.DisableCompression,
-			MaxIdleConns:          100,
-			MaxIdleConnsPerHost:   10,
-			IdleConnTimeout:       90 * time.Second,
+		// Clone the default transport to preserve default behaviors
+		// (proxy, TLS, dial context, etc.) when available in production.
+		// Use a safe type assertion to handle mocked transports in tests.
+		var transport *http.Transport
+
+		if defaultTransport, ok := http.DefaultTransport.(*http.Transport); ok {
+			// Copy critical fields to maintain forward compatibility
+			// and reduce coupling to http.Transport implementation details
+			transport = &http.Transport{
+				Proxy:                 defaultTransport.Proxy,
+				DialContext:           defaultTransport.DialContext,
+				Dial:                  defaultTransport.Dial,
+				TLSClientConfig:       defaultTransport.TLSClientConfig,
+				TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
+				DisableKeepAlives:     defaultTransport.DisableKeepAlives,
+				DisableCompression:    defaultTransport.DisableCompression,
+				MaxIdleConns:          100,
+				MaxIdleConnsPerHost:   10,
+				IdleConnTimeout:       90 * time.Second,
+			}
+		} else {
+			// Fallback for mocked or wrapped transports in tests.
+			// Preserves connection pooling without assuming default transport type.
+			transport = &http.Transport{
+				MaxIdleConns:        100,
+				MaxIdleConnsPerHost: 10,
+				IdleConnTimeout:     90 * time.Second,
+			}
 		}
 		httpClient = &http.Client{
 			Transport: transport,

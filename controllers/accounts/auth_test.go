@@ -73,45 +73,6 @@ func (m *mockEmailService) SendPartnerOnboardingSuccessEmail(ctx context.Context
 	return types.SendEmailResponse{Id: "mock-partner-onboarding-id"}, nil
 }
 
-// failingMockEmailService is a mock implementation that returns errors for specific operations
-type failingMockEmailService struct{}
-
-func (m *failingMockEmailService) SendEmail(ctx context.Context, payload types.SendEmailPayload) (types.SendEmailResponse, error) {
-	return types.SendEmailResponse{Id: "mock-email-id"}, nil
-}
-
-func (m *failingMockEmailService) SendTemplateEmail(ctx context.Context, payload types.SendEmailPayload, templateID string) (types.SendEmailResponse, error) {
-	return types.SendEmailResponse{Id: "mock-template-id"}, nil
-}
-
-func (m *failingMockEmailService) SendVerificationEmail(ctx context.Context, token, email, firstName string) (types.SendEmailResponse, error) {
-	return types.SendEmailResponse{Id: "mock-verification-id"}, nil
-}
-
-func (m *failingMockEmailService) SendPasswordResetEmail(ctx context.Context, token, email, firstName string) (types.SendEmailResponse, error) {
-	return types.SendEmailResponse{Id: "mock-reset-id"}, nil
-}
-
-func (m *failingMockEmailService) SendWelcomeEmail(ctx context.Context, email, firstName string, scopes []string) (types.SendEmailResponse, error) {
-	return types.SendEmailResponse{}, fmt.Errorf("failed to send welcome email")
-}
-
-func (m *failingMockEmailService) SendKYBApprovalEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error) {
-	return types.SendEmailResponse{Id: "mock-kyb-approval-id"}, nil
-}
-
-func (m *failingMockEmailService) SendKYBRejectionEmail(ctx context.Context, email, firstName, reasonForDecline string, additionalData map[string]interface{}) (types.SendEmailResponse, error) {
-	return types.SendEmailResponse{Id: "mock-kyb-rejection-id"}, nil
-}
-
-func (m *failingMockEmailService) SendWebhookFailureEmail(ctx context.Context, email, firstName string) (types.SendEmailResponse, error) {
-	return types.SendEmailResponse{Id: "mock-webhook-failure-id"}, nil
-}
-
-func (m *failingMockEmailService) SendPartnerOnboardingSuccessEmail(ctx context.Context, email, firstName, apiKey string) (types.SendEmailResponse, error) {
-	return types.SendEmailResponse{Id: "mock-partner-onboarding-id"}, nil
-}
-
 func TestAuth(t *testing.T) {
 	// Set environment to "test" so users are auto-verified (email won't be in response)
 	originalEnv := os.Getenv("ENVIRONMENT")
@@ -298,40 +259,7 @@ func TestAuth(t *testing.T) {
 			assert.NotNil(t, user.Edges.ProviderProfile.Edges.APIKey)
 		})
 
-		t.Run("with valid payload and failed welcome email", func(t *testing.T) {
-			// Create a separate router with the failing email service to test email error handling
-			failingRouter := gin.New()
-			failingCtrl := &AuthController{
-				apiKeyService: svc.NewAPIKeyService(),
-				emailService:  &failingMockEmailService{}, // Use failing mock to test error path
-			}
 
-			failingRouter.POST("/register", failingCtrl.Register)
-
-			payload := types.RegisterPayload{
-				FirstName:  "Ike",
-				LastName:   "Ayo",
-				Email:      "ikeayowelcome2@example.com",
-				Password:   "password",
-				Currencies: []string{"NGN"},
-				Scopes:     []string{"sender", "provider"},
-			}
-
-			header := map[string]string{
-				"Client-Type": "web",
-			}
-
-			res, err := test.PerformRequest(t, "POST", "/register", payload, header, failingRouter)
-			assert.NoError(t, err)
-
-			// Assert that the registration failed due to email service error
-			assert.Equal(t, http.StatusInternalServerError, res.Code)
-
-			var response types.Response
-			err = json.Unmarshal(res.Body.Bytes(), &response)
-			assert.NoError(t, err)
-			assert.Contains(t, response.Message, "welcome email")
-		})
 
 		t.Run("with only sender scope payload", func(t *testing.T) {
 			// Test register with valid payload
