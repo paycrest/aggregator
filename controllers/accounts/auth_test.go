@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
