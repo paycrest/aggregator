@@ -17,12 +17,22 @@ var (
 // - MaxIdleConns: 100 (max idle connections in connection pool)
 // - MaxIdleConnsPerHost: 10 (max idle connections per host)
 // - IdleConnTimeout: 90 seconds (connections are closed after 90 seconds of inactivity)
+// Preserves default transport behaviors such as proxy handling and TLS settings.
 func GetHTTPClient() *http.Client {
 	once.Do(func() {
+		// Clone the default transport to preserve default behaviors (proxy, TLS, dial context, etc.)
+		defaultTransport := http.DefaultTransport.(*http.Transport)
 		transport := &http.Transport{
-			MaxIdleConns:        100,
-			MaxIdleConnsPerHost: 10,
-			IdleConnTimeout:     90 * time.Second,
+			Proxy:                 defaultTransport.Proxy,
+			DialContext:           defaultTransport.DialContext,
+			Dial:                  defaultTransport.Dial,
+			TLSClientConfig:       defaultTransport.TLSClientConfig,
+			TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
+			DisableKeepAlives:     defaultTransport.DisableKeepAlives,
+			DisableCompression:    defaultTransport.DisableCompression,
+			MaxIdleConns:          100,
+			MaxIdleConnsPerHost:   10,
+			IdleConnTimeout:       90 * time.Second,
 		}
 		httpClient = &http.Client{
 			Transport: transport,
