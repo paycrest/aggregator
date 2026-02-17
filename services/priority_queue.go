@@ -729,7 +729,13 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	}
 
 	// Verify order is still in a state that allows assignment; DB-level idempotency for fallback.
-	currentOrder, err := storage.Client.PaymentOrder.Get(ctx, order.ID)
+	// Eagerly load ProvisionBucket+Currency so we never need a separate fallback query for them.
+	currentOrder, err := storage.Client.PaymentOrder.Query().
+		Where(paymentorder.IDEQ(order.ID)).
+		WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
+			pb.WithCurrency()
+		}).
+		Only(ctx)
 	if err != nil {
 		return fmt.Errorf("fallback: failed to load order: %w", err)
 	}
@@ -741,6 +747,9 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	}
 
 	// Convert ent order to PaymentOrderFields for the rest of the fallback logic
+	if order.AccountIdentifier == "" || order.Institution == "" || order.AccountName == "" {
+		return fmt.Errorf("fallback: order %s has no recipient information", order.ID.String())
+	}
 	fields := types.PaymentOrderFields{
 		ID:                order.ID,
 		OrderType:         order.OrderType.String(),
@@ -753,7 +762,7 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 		AccountIdentifier: order.AccountIdentifier,
 		AccountName:       order.AccountName,
 		ProviderID:        "",
-		ProvisionBucket:   order.Edges.ProvisionBucket,
+		ProvisionBucket:   currentOrder.Edges.ProvisionBucket,
 		MessageHash:       order.MessageHash,
 		Memo:              order.Memo,
 		UpdatedAt:         order.UpdatedAt,
@@ -767,25 +776,39 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 		return fmt.Errorf("fallback: order %s has no token", order.ID.String())
 	}
 
-	// When ProvisionBucket is nil (e.g. from refund path), try to load it from the order
+	// If order has no bucket yet, resolve one from institution currency + fiat amount.
 	if fields.ProvisionBucket == nil {
-		po, err := storage.Client.PaymentOrder.Get(ctx, fields.ID)
-		if err != nil {
-			return fmt.Errorf("fallback: failed to load order: %w", err)
+		institution, instErr := utils.GetInstitutionByCode(ctx, order.Institution, true)
+		if instErr != nil {
+			return fmt.Errorf("fallback: cannot resolve bucket for order %s: institution lookup failed: %w", fields.ID.String(), instErr)
 		}
-		fields.ProvisionBucket, err = po.QueryProvisionBucket().WithCurrency().Only(ctx)
-		if err != nil || fields.ProvisionBucket == nil {
-			return fmt.Errorf("fallback: provision bucket missing for order %s: %w", fields.ID.String(), err)
+		if institution.Edges.FiatCurrency == nil {
+			return fmt.Errorf("fallback: cannot resolve bucket for order %s: institution %s has no fiat currency", fields.ID.String(), order.Institution)
+		}
+		fiatAmount := order.Amount.Mul(order.Rate)
+		bucket, bErr := storage.Client.ProvisionBucket.
+			Query().
+			Where(
+				provisionbucket.MaxAmountGTE(fiatAmount),
+				provisionbucket.MinAmountLTE(fiatAmount),
+				provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(institution.Edges.FiatCurrency.ID)),
+			).
+			WithCurrency().
+			Only(ctx)
+		if bErr != nil {
+			return fmt.Errorf("fallback: no matching provision bucket for order %s (fiat %s %s): %w",
+				fields.ID.String(), fiatAmount.String(), institution.Edges.FiatCurrency.Code, bErr)
+		}
+		fields.ProvisionBucket = bucket
+		// Persist so later flows (e.g. FulfillOrder) see the bucket and do not panic on nil ProvisionBucket
+		if _, upErr := storage.Client.PaymentOrder.UpdateOneID(fields.ID).SetProvisionBucket(bucket).Save(ctx); upErr != nil {
+			return fmt.Errorf("fallback: failed to set provision bucket on order %s: %w", fields.ID.String(), upErr)
 		}
 	}
 
 	bucketCurrency := fields.ProvisionBucket.Edges.Currency
 	if bucketCurrency == nil {
-		var cErr error
-		bucketCurrency, cErr = fields.ProvisionBucket.QueryCurrency().Only(ctx)
-		if cErr != nil {
-			return fmt.Errorf("fallback: provision bucket missing currency: %w", cErr)
-		}
+		return fmt.Errorf("fallback: provision bucket %d missing currency", fields.ProvisionBucket.ID)
 	}
 
 	// Resolve fallback provider
@@ -864,7 +887,10 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	if err := s.sendOrderRequest(ctx, fields); err != nil {
 		return fmt.Errorf("fallback: send order request: %w", err)
 	}
-	if _, setErr := storage.Client.PaymentOrder.UpdateOneID(fields.ID).SetFallbackTriedAt(time.Now()).Save(ctx); setErr != nil {
+	if _, setErr := storage.Client.PaymentOrder.UpdateOneID(fields.ID).
+		SetFallbackTriedAt(time.Now()).
+		SetOrderPercent(decimal.NewFromInt(100)).
+		Save(ctx); setErr != nil {
 		logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": setErr}).Errorf("[FALLBACK_ASSIGNMENT] failed to set fallback_tried_at on order")
 		return fmt.Errorf("fallback: failed to set fallback_tried_at (idempotency): %w", setErr)
 	}

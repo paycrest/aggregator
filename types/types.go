@@ -883,7 +883,6 @@ type KYBSubmissionInput struct {
 	ArticlesOfIncorporationUrl    string                 `json:"articlesOfIncorporationUrl" binding:"required"`
 	BusinessLicenseUrl            *string                `json:"businessLicenseUrl"`
 	ProofOfBusinessAddressUrl     string                 `json:"proofOfBusinessAddressUrl" binding:"required"`
-	ProofOfResidentialAddressUrl  string                 `json:"proofOfResidentialAddressUrl" binding:"required"`
 	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
 	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
 	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`

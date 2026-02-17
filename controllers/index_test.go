@@ -381,7 +381,6 @@ func TestIndex(t *testing.T) {
 			ArticlesOfIncorporationUrl:    "https://example.com/articles.pdf",
 			BusinessLicenseUrl:            nil, // Optional field
 			ProofOfBusinessAddressUrl:     "https://example.com/business-address.pdf",
-			ProofOfResidentialAddressUrl:  "https://example.com/residential-address.pdf",
 			AmlPolicyUrl:                  nil, // Optional field
 			KycPolicyUrl:                  nil, // Optional field
 			IAcceptTerms:                  true,
@@ -552,7 +551,6 @@ func TestIndex(t *testing.T) {
 				ArticlesOfIncorporationUrl:    "https://example.com/new-articles-inc.pdf",
 				BusinessLicenseUrl:            &businessLicenseUrl,
 				ProofOfBusinessAddressUrl:     "https://example.com/new-proof-business-address.pdf",
-				ProofOfResidentialAddressUrl:  "https://example.com/new-proof-residential-address.pdf",
 				AmlPolicyUrl:                  &amlPolicyUrl,
 				KycPolicyUrl:                  &kycPolicyUrl,
 				IAcceptTerms:                  true,
@@ -778,7 +776,6 @@ func TestIndex(t *testing.T) {
 			ArticlesOfIncorporationUrl:    "https://example.com/rejected-articles.pdf",
 			BusinessLicenseUrl:            nil,
 			ProofOfBusinessAddressUrl:     "https://example.com/rejected-business-address.pdf",
-			ProofOfResidentialAddressUrl:  "https://example.com/rejected-residential-address.pdf",
 			AmlPolicyUrl:                  nil,
 			KycPolicyUrl:                  nil,
 			IAcceptTerms:                  true,

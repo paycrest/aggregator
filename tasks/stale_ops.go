@@ -8,14 +8,17 @@ import (
 	"time"
 
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/services"
 	orderService "github.com/paycrest/aggregator/services/order"
 	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -106,16 +109,25 @@ func RetryStaleUserOperations() error {
 		}
 	}(ctx)
 
-	// Settle order process
+	// Settle order process: validated orders (5–15 min) or orders stuck in settling (> 10 min)
 	lockOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.StatusEQ(paymentorder.StatusValidated),
 			paymentorder.HasFulfillmentsWith(
 				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess),
 			),
-			paymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
-			paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
+			paymentorder.Or(
+				paymentorder.And(
+					paymentorder.StatusEQ(paymentorder.StatusValidated),
+					paymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
+					paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
+				),
+				// Stuck settling: updated > 10 min ago
+				paymentorder.And(
+					paymentorder.StatusEQ(paymentorder.StatusSettling),
+					paymentorder.UpdatedAtLT(time.Now().Add(-10*time.Minute)),
+				),
+			),
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -129,6 +141,49 @@ func RetryStaleUserOperations() error {
 	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range lockOrders {
+			// SettleOrder only accepts StatusValidated; reset stuck settling so it can be retried.
+			// Guard on StatusSettling so we never overwrite an order that became settled (or any
+			// other status) after the initial query—avoids race and re-submitting settlement.
+			if order.Status == paymentorder.StatusSettling {
+				affected, err := storage.Client.PaymentOrder.
+					Update().
+					Where(
+						paymentorder.IDEQ(order.ID),
+						paymentorder.StatusEQ(paymentorder.StatusSettling),
+					).
+					SetStatus(paymentorder.StatusValidated).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": order.ID.String(),
+					}).Errorf("RetryStaleUserOperations.SettleOrder.resetSettlingStatus")
+					continue
+				}
+				if affected == 0 {
+					// Order was no longer settling (e.g. indexer already set to settled), skip
+					continue
+				}
+				// Re-fetch so SettleOrder's query (StatusValidated) will find the order; avoids race
+				// where we call SettleOrder before the update is visible.
+				orderID := order.ID
+				order, err = storage.Client.PaymentOrder.
+					Query().
+					Where(
+						paymentorder.IDEQ(orderID),
+						paymentorder.StatusEQ(paymentorder.StatusValidated),
+					).
+					WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+					WithProvider().
+					Only(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": orderID.String(),
+					}).Errorf("RetryStaleUserOperations.SettleOrder.refetchAfterReset")
+					continue
+				}
+			}
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 				service = orderService.NewOrderTron()
@@ -337,7 +392,8 @@ func RetryStaleUserOperations() error {
 				tryFullQueue := !fallbackAlreadyTried && (orderRequestExists == 0)
 
 				// No provider or public provider: can try full-queue (reassign to public). Private provider: skip full-queue.
-				canTryFullQueue := order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil &&
+				// Allow nil bucket so we can try to resolve and persist it before assignment (another node can then pick the order).
+				canTryFullQueue := (order.Edges.ProvisionBucket == nil || (order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil)) &&
 					(order.Edges.Provider == nil || order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate)
 
 				if tryFullQueue && canTryFullQueue {
@@ -351,7 +407,33 @@ func RetryStaleUserOperations() error {
 							Save(ctx)
 					}
 
-					orderFields := types.PaymentOrderFields{
+					// Resolve and persist nil provision bucket so AssignPaymentOrder can run and another node can pick the order.
+					if order.Edges.ProvisionBucket == nil {
+						institution, instErr := utils.GetInstitutionByCode(ctx, order.Institution, true)
+						if instErr == nil && institution != nil && institution.Edges.FiatCurrency != nil {
+							fiatAmount := order.Amount.Mul(order.Rate)
+							bucket, bErr := storage.Client.ProvisionBucket.
+								Query().
+								Where(
+									provisionbucket.MaxAmountGTE(fiatAmount),
+									provisionbucket.MinAmountLTE(fiatAmount),
+									provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(institution.Edges.FiatCurrency.ID)),
+								).
+								WithCurrency().
+								First(ctx)
+							if bErr == nil && bucket != nil {
+								if _, upErr := storage.Client.PaymentOrder.UpdateOneID(order.ID).SetProvisionBucket(bucket).Save(ctx); upErr == nil {
+									order.Edges.ProvisionBucket = bucket
+								}
+							}
+						}
+						if order.Edges.ProvisionBucket == nil {
+							logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Warnf("stale_ops: could not resolve provision bucket for order; skipping full-queue assignment")
+						}
+					}
+
+					if order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+						orderFields := types.PaymentOrderFields{
 						ID:                order.ID,
 						OrderType:         order.OrderType.String(),
 						Token:             order.Edges.Token,
@@ -384,6 +466,7 @@ func RetryStaleUserOperations() error {
 						Where(paymentorder.IDEQ(order.ID)).
 						SetCancellationCount(orderConf.RefundCancellationCount).
 						Save(ctx)
+					}
 				}
 			}
 
@@ -391,9 +474,14 @@ func RetryStaleUserOperations() error {
 			// Fallback only succeeds when order_request_* key is gone (expired or cleared); TryFallbackAssignment returns error if key exists.
 			// Any failure should proceed with refund
 			if tryFallback {
-				if err := pq.TryFallbackAssignment(ctx, order); err == nil {
+				err := pq.TryFallbackAssignment(ctx, order)
+				if err == nil {
 					continue
 				}
+				logger.WithFields(logger.Fields{
+					"OrderID": order.ID.String(),
+					"Error":   err.Error(),
+				}).Errorf("RetryStaleUserOperations: TryFallbackAssignment failed")
 				if order.CancellationCount < orderConf.RefundCancellationCount {
 					_, updateErr := storage.Client.PaymentOrder.
 						Update().

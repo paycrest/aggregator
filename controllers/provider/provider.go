@@ -1044,6 +1044,16 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 
 		// Release reserved balance within the same transaction
+		if fulfillment.Edges.Order == nil || fulfillment.Edges.Order.Edges.Provider == nil ||
+			fulfillment.Edges.Order.Edges.ProvisionBucket == nil || fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency == nil {
+			logger.WithFields(logger.Fields{
+				"OrderID": orderID.String(),
+				"TxID":    payload.TxID,
+			}).Errorf("FulfillOrder: order missing provider or provision bucket (data integrity)")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order missing provider or provision bucket", nil)
+			_ = tx.Rollback()
+			return
+		}
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
 		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
@@ -1152,6 +1162,15 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 
 		// Release reserved balance for failed validation
+		if fulfillment.Edges.Order == nil || fulfillment.Edges.Order.Edges.Provider == nil ||
+			fulfillment.Edges.Order.Edges.ProvisionBucket == nil || fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency == nil {
+			logger.WithFields(logger.Fields{
+				"OrderID": orderID.String(),
+				"TxID":    payload.TxID,
+			}).Errorf("FulfillOrder: order missing provider or provision bucket (data integrity)")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order missing provider or provision bucket", nil)
+			return
+		}
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
 		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
