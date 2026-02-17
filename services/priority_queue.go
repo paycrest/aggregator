@@ -884,7 +884,10 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	if err := s.sendOrderRequest(ctx, fields); err != nil {
 		return fmt.Errorf("fallback: send order request: %w", err)
 	}
-	if _, setErr := storage.Client.PaymentOrder.UpdateOneID(fields.ID).SetFallbackTriedAt(time.Now()).Save(ctx); setErr != nil {
+	if _, setErr := storage.Client.PaymentOrder.UpdateOneID(fields.ID).
+		SetFallbackTriedAt(time.Now()).
+		SetOrderPercent(decimal.NewFromInt(100)).
+		Save(ctx); setErr != nil {
 		logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": setErr}).Errorf("[FALLBACK_ASSIGNMENT] failed to set fallback_tried_at on order")
 		return fmt.Errorf("fallback: failed to set fallback_tried_at (idempotency): %w", setErr)
 	}
