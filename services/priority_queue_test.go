@@ -665,6 +665,59 @@ func TestPriorityQueueTest(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("TestAssignPaymentOrderReturnsErrorWhenQueueEmpty", func(t *testing.T) {
+		ctx := context.Background()
+
+		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+			"provider_id": testCtxForPQ.publicProviderProfile.ID,
+			"min_amount":  testCtxForPQ.minAmount,
+			"max_amount":  testCtxForPQ.maxAmount,
+			"currency_id": testCtxForPQ.currency.ID,
+		})
+		assert.NoError(t, err)
+
+		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
+			"provider":   testCtxForPQ.publicProviderProfile,
+			"rate":       100.0,
+			"token_id":   testCtxForPQ.token.ID,
+			"gateway_id": "order-empty-queue",
+		})
+		assert.NoError(t, err)
+		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
+		assert.NoError(t, err)
+
+		order, err := db.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(_order.ID)).
+			WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
+				pb.WithCurrency()
+			}).
+			WithToken().
+			Only(ctx)
+		assert.NoError(t, err)
+
+		// Ensure both current and prev queues are empty for this bucket
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, bucket.MinAmount, bucket.MaxAmount)
+		db.RedisClient.Del(ctx, redisKey)
+		db.RedisClient.Del(ctx, redisKey+"_prev")
+
+		err = service.AssignPaymentOrder(ctx, types.PaymentOrderFields{
+			ID:                order.ID,
+			Token:             testCtxForPQ.token,
+			GatewayID:         order.GatewayID,
+			Amount:            order.Amount,
+			Rate:              order.Rate,
+			BlockNumber:       order.BlockNumber,
+			Institution:       order.Institution,
+			AccountIdentifier: order.AccountIdentifier,
+			AccountName:       order.AccountName,
+			Memo:              order.Memo,
+			ProvisionBucket:   order.Edges.ProvisionBucket,
+		})
+		assert.Error(t, err, "AssignPaymentOrder should return error when no providers are in the queue")
+		assert.Contains(t, err.Error(), "no provider matched for order")
+	})
+
 	t.Run("TestGetProviderRate", func(t *testing.T) {
 		// Use the provider profile directly - it was created with db.Client which is the same as client
 		// The relationship queries should work as long as db.Client is set correctly
