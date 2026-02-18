@@ -81,6 +81,11 @@ func RegisteredBusinessAddress(v string) predicate.KYBProfile {
 	return predicate.KYBProfile(sql.FieldEQ(FieldRegisteredBusinessAddress, v))
 }
 
+// DailyEstimatedVolume applies equality check predicate on the "daily_estimated_volume" field. It's identical to DailyEstimatedVolumeEQ.
+func DailyEstimatedVolume(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldEQ(FieldDailyEstimatedVolume, v))
+}
+
 // CertificateOfIncorporationURL applies equality check predicate on the "certificate_of_incorporation_url" field. It's identical to CertificateOfIncorporationURLEQ.
 func CertificateOfIncorporationURL(v string) predicate.KYBProfile {
 	return predicate.KYBProfile(sql.FieldEQ(FieldCertificateOfIncorporationURL, v))
@@ -389,6 +394,71 @@ func RegisteredBusinessAddressEqualFold(v string) predicate.KYBProfile {
 // RegisteredBusinessAddressContainsFold applies the ContainsFold predicate on the "registered_business_address" field.
 func RegisteredBusinessAddressContainsFold(v string) predicate.KYBProfile {
 	return predicate.KYBProfile(sql.FieldContainsFold(FieldRegisteredBusinessAddress, v))
+}
+
+// DailyEstimatedVolumeEQ applies the EQ predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeEQ(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldEQ(FieldDailyEstimatedVolume, v))
+}
+
+// DailyEstimatedVolumeNEQ applies the NEQ predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeNEQ(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldNEQ(FieldDailyEstimatedVolume, v))
+}
+
+// DailyEstimatedVolumeIn applies the In predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeIn(vs ...string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldIn(FieldDailyEstimatedVolume, vs...))
+}
+
+// DailyEstimatedVolumeNotIn applies the NotIn predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeNotIn(vs ...string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldNotIn(FieldDailyEstimatedVolume, vs...))
+}
+
+// DailyEstimatedVolumeGT applies the GT predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeGT(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldGT(FieldDailyEstimatedVolume, v))
+}
+
+// DailyEstimatedVolumeGTE applies the GTE predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeGTE(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldGTE(FieldDailyEstimatedVolume, v))
+}
+
+// DailyEstimatedVolumeLT applies the LT predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeLT(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldLT(FieldDailyEstimatedVolume, v))
+}
+
+// DailyEstimatedVolumeLTE applies the LTE predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeLTE(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldLTE(FieldDailyEstimatedVolume, v))
+}
+
+// DailyEstimatedVolumeContains applies the Contains predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeContains(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldContains(FieldDailyEstimatedVolume, v))
+}
+
+// DailyEstimatedVolumeHasPrefix applies the HasPrefix predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeHasPrefix(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldHasPrefix(FieldDailyEstimatedVolume, v))
+}
+
+// DailyEstimatedVolumeHasSuffix applies the HasSuffix predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeHasSuffix(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldHasSuffix(FieldDailyEstimatedVolume, v))
+}
+
+// DailyEstimatedVolumeEqualFold applies the EqualFold predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeEqualFold(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldEqualFold(FieldDailyEstimatedVolume, v))
+}
+
+// DailyEstimatedVolumeContainsFold applies the ContainsFold predicate on the "daily_estimated_volume" field.
+func DailyEstimatedVolumeContainsFold(v string) predicate.KYBProfile {
+	return predicate.KYBProfile(sql.FieldContainsFold(FieldDailyEstimatedVolume, v))
 }
 
 // CertificateOfIncorporationURLEQ applies the EQ predicate on the "certificate_of_incorporation_url" field.

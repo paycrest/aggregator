@@ -25,6 +25,8 @@ const (
 	FieldCompanyName = "company_name"
 	// FieldRegisteredBusinessAddress holds the string denoting the registered_business_address field in the database.
 	FieldRegisteredBusinessAddress = "registered_business_address"
+	// FieldDailyEstimatedVolume holds the string denoting the daily_estimated_volume field in the database.
+	FieldDailyEstimatedVolume = "daily_estimated_volume"
 	// FieldCertificateOfIncorporationURL holds the string denoting the certificate_of_incorporation_url field in the database.
 	FieldCertificateOfIncorporationURL = "certificate_of_incorporation_url"
 	// FieldArticlesOfIncorporationURL holds the string denoting the articles_of_incorporation_url field in the database.
@@ -69,6 +71,7 @@ var Columns = []string{
 	FieldMobileNumber,
 	FieldCompanyName,
 	FieldRegisteredBusinessAddress,
+	FieldDailyEstimatedVolume,
 	FieldCertificateOfIncorporationURL,
 	FieldArticlesOfIncorporationURL,
 	FieldBusinessLicenseURL,
@@ -141,6 +144,11 @@ func ByCompanyName(opts ...sql.OrderTermOption) OrderOption {
 // ByRegisteredBusinessAddress orders the results by the registered_business_address field.
 func ByRegisteredBusinessAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRegisteredBusinessAddress, opts...).ToFunc()
+}
+
+// ByDailyEstimatedVolume orders the results by the daily_estimated_volume field.
+func ByDailyEstimatedVolume(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDailyEstimatedVolume, opts...).ToFunc()
 }
 
 // ByCertificateOfIncorporationURL orders the results by the certificate_of_incorporation_url field.

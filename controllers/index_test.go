@@ -377,6 +377,7 @@ func TestIndex(t *testing.T) {
 			MobileNumber:                  "+1234567890",
 			CompanyName:                   "Test Company Ltd",
 			RegisteredBusinessAddress:     "123 Business St, Test City, TC 12345",
+			DailyEstimatedVolume:          "5000-10000",
 			CertificateOfIncorporationUrl: "https://example.com/cert.pdf",
 			ArticlesOfIncorporationUrl:    "https://example.com/articles.pdf",
 			BusinessLicenseUrl:            nil, // Optional field
@@ -507,6 +508,7 @@ func TestIndex(t *testing.T) {
 						SetMobileNumber("+1234567890").
 						SetCompanyName("Test Company Ltd").
 						SetRegisteredBusinessAddress("123 Business St, Test City, TC 12345").
+						SetDailyEstimatedVolume("5000-10000").
 						SetCertificateOfIncorporationURL("https://example.com/cert.pdf").
 						SetArticlesOfIncorporationURL("https://example.com/articles.pdf").
 						SetProofOfBusinessAddressURL("https://example.com/business-address.pdf").
@@ -772,6 +774,7 @@ func TestIndex(t *testing.T) {
 			MobileNumber:                  "+1234567890",
 			CompanyName:                   "Rejected Company Ltd",
 			RegisteredBusinessAddress:     "456 Rejected St, Test City, TC 12345",
+			DailyEstimatedVolume:          "10000-50000",
 			CertificateOfIncorporationUrl: "https://example.com/rejected-cert.pdf",
 			ArticlesOfIncorporationUrl:    "https://example.com/rejected-articles.pdf",
 			BusinessLicenseUrl:            nil,
@@ -807,6 +810,7 @@ func TestIndex(t *testing.T) {
 				SetMobileNumber(kybData.MobileNumber).
 				SetCompanyName(kybData.CompanyName).
 				SetRegisteredBusinessAddress(kybData.RegisteredBusinessAddress).
+				SetDailyEstimatedVolume(kybData.DailyEstimatedVolume).
 				SetCertificateOfIncorporationURL(kybData.CertificateOfIncorporationUrl).
 				SetArticlesOfIncorporationURL(kybData.ArticlesOfIncorporationUrl).
 				SetProofOfBusinessAddressURL(kybData.ProofOfBusinessAddressUrl).

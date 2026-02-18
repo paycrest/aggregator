@@ -72,6 +72,12 @@ func (_c *KYBProfileCreate) SetRegisteredBusinessAddress(v string) *KYBProfileCr
 	return _c
 }
 
+// SetDailyEstimatedVolume sets the "daily_estimated_volume" field.
+func (_c *KYBProfileCreate) SetDailyEstimatedVolume(v string) *KYBProfileCreate {
+	_c.mutation.SetDailyEstimatedVolume(v)
+	return _c
+}
+
 // SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
 func (_c *KYBProfileCreate) SetCertificateOfIncorporationURL(v string) *KYBProfileCreate {
 	_c.mutation.SetCertificateOfIncorporationURL(v)
@@ -260,6 +266,9 @@ func (_c *KYBProfileCreate) check() error {
 	if _, ok := _c.mutation.RegisteredBusinessAddress(); !ok {
 		return &ValidationError{Name: "registered_business_address", err: errors.New(`ent: missing required field "KYBProfile.registered_business_address"`)}
 	}
+	if _, ok := _c.mutation.DailyEstimatedVolume(); !ok {
+		return &ValidationError{Name: "daily_estimated_volume", err: errors.New(`ent: missing required field "KYBProfile.daily_estimated_volume"`)}
+	}
 	if _, ok := _c.mutation.CertificateOfIncorporationURL(); !ok {
 		return &ValidationError{Name: "certificate_of_incorporation_url", err: errors.New(`ent: missing required field "KYBProfile.certificate_of_incorporation_url"`)}
 	}
@@ -324,6 +333,10 @@ func (_c *KYBProfileCreate) createSpec() (*KYBProfile, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.RegisteredBusinessAddress(); ok {
 		_spec.SetField(kybprofile.FieldRegisteredBusinessAddress, field.TypeString, value)
 		_node.RegisteredBusinessAddress = value
+	}
+	if value, ok := _c.mutation.DailyEstimatedVolume(); ok {
+		_spec.SetField(kybprofile.FieldDailyEstimatedVolume, field.TypeString, value)
+		_node.DailyEstimatedVolume = value
 	}
 	if value, ok := _c.mutation.CertificateOfIncorporationURL(); ok {
 		_spec.SetField(kybprofile.FieldCertificateOfIncorporationURL, field.TypeString, value)
@@ -483,6 +496,18 @@ func (u *KYBProfileUpsert) SetRegisteredBusinessAddress(v string) *KYBProfileUps
 // UpdateRegisteredBusinessAddress sets the "registered_business_address" field to the value that was provided on create.
 func (u *KYBProfileUpsert) UpdateRegisteredBusinessAddress() *KYBProfileUpsert {
 	u.SetExcluded(kybprofile.FieldRegisteredBusinessAddress)
+	return u
+}
+
+// SetDailyEstimatedVolume sets the "daily_estimated_volume" field.
+func (u *KYBProfileUpsert) SetDailyEstimatedVolume(v string) *KYBProfileUpsert {
+	u.Set(kybprofile.FieldDailyEstimatedVolume, v)
+	return u
+}
+
+// UpdateDailyEstimatedVolume sets the "daily_estimated_volume" field to the value that was provided on create.
+func (u *KYBProfileUpsert) UpdateDailyEstimatedVolume() *KYBProfileUpsert {
+	u.SetExcluded(kybprofile.FieldDailyEstimatedVolume)
 	return u
 }
 
@@ -698,6 +723,20 @@ func (u *KYBProfileUpsertOne) SetRegisteredBusinessAddress(v string) *KYBProfile
 func (u *KYBProfileUpsertOne) UpdateRegisteredBusinessAddress() *KYBProfileUpsertOne {
 	return u.Update(func(s *KYBProfileUpsert) {
 		s.UpdateRegisteredBusinessAddress()
+	})
+}
+
+// SetDailyEstimatedVolume sets the "daily_estimated_volume" field.
+func (u *KYBProfileUpsertOne) SetDailyEstimatedVolume(v string) *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetDailyEstimatedVolume(v)
+	})
+}
+
+// UpdateDailyEstimatedVolume sets the "daily_estimated_volume" field to the value that was provided on create.
+func (u *KYBProfileUpsertOne) UpdateDailyEstimatedVolume() *KYBProfileUpsertOne {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateDailyEstimatedVolume()
 	})
 }
 
@@ -1098,6 +1137,20 @@ func (u *KYBProfileUpsertBulk) SetRegisteredBusinessAddress(v string) *KYBProfil
 func (u *KYBProfileUpsertBulk) UpdateRegisteredBusinessAddress() *KYBProfileUpsertBulk {
 	return u.Update(func(s *KYBProfileUpsert) {
 		s.UpdateRegisteredBusinessAddress()
+	})
+}
+
+// SetDailyEstimatedVolume sets the "daily_estimated_volume" field.
+func (u *KYBProfileUpsertBulk) SetDailyEstimatedVolume(v string) *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.SetDailyEstimatedVolume(v)
+	})
+}
+
+// UpdateDailyEstimatedVolume sets the "daily_estimated_volume" field to the value that was provided on create.
+func (u *KYBProfileUpsertBulk) UpdateDailyEstimatedVolume() *KYBProfileUpsertBulk {
+	return u.Update(func(s *KYBProfileUpsert) {
+		s.UpdateDailyEstimatedVolume()
 	})
 }
 
