@@ -549,6 +549,7 @@ func TestIndex(t *testing.T) {
 				MobileNumber:                  "+9876543210",
 				CompanyName:                   "Updated Business Solutions Ltd",
 				RegisteredBusinessAddress:     "456 Corporate Blvd, New City, New Country",
+				DailyEstimatedVolume:          "50000-100000",
 				CertificateOfIncorporationUrl: "https://example.com/new-cert-inc.pdf",
 				ArticlesOfIncorporationUrl:    "https://example.com/new-articles-inc.pdf",
 				BusinessLicenseUrl:            &businessLicenseUrl,
@@ -606,6 +607,7 @@ func TestIndex(t *testing.T) {
 			assert.Equal(t, modifiedKYBSubmission.MobileNumber, updatedKYBProfile.MobileNumber)
 			assert.Equal(t, modifiedKYBSubmission.CompanyName, updatedKYBProfile.CompanyName)
 			assert.Equal(t, modifiedKYBSubmission.RegisteredBusinessAddress, updatedKYBProfile.RegisteredBusinessAddress)
+			assert.Equal(t, modifiedKYBSubmission.DailyEstimatedVolume, updatedKYBProfile.DailyEstimatedVolume)
 			assert.Equal(t, modifiedKYBSubmission.CertificateOfIncorporationUrl, updatedKYBProfile.CertificateOfIncorporationURL)
 			assert.Equal(t, modifiedKYBSubmission.ArticlesOfIncorporationUrl, updatedKYBProfile.ArticlesOfIncorporationURL)
 			assert.Equal(t, *modifiedKYBSubmission.BusinessLicenseUrl, *updatedKYBProfile.BusinessLicenseURL)
