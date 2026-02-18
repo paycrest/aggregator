@@ -697,8 +697,8 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 	if err != nil {
 		prevRedisKey := redisKey + "_prev"
 		err = s.matchRate(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
-		if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "redis: nil") {
-			return err
+		if err != nil {
+			return fmt.Errorf("no provider matched for order: %w", err)
 		}
 	}
 
