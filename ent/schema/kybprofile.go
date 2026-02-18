@@ -27,7 +27,7 @@ func (KYBProfile) Fields() []ent.Field {
 		field.String("mobile_number"),
 		field.String("company_name"),
 		field.String("registered_business_address"),
-		field.String("daily_estimated_volume"),
+		field.String("daily_estimated_volume").Default(""),
 		field.String("certificate_of_incorporation_url"),
 		field.String("articles_of_incorporation_url"),
 		field.String("business_license_url").

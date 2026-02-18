@@ -134,6 +134,10 @@ func init() {
 	kybprofile.DefaultUpdatedAt = kybprofileDescUpdatedAt.Default.(func() time.Time)
 	// kybprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	kybprofile.UpdateDefaultUpdatedAt = kybprofileDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// kybprofileDescDailyEstimatedVolume is the schema descriptor for daily_estimated_volume field.
+	kybprofileDescDailyEstimatedVolume := kybprofileFields[4].Descriptor()
+	// kybprofile.DefaultDailyEstimatedVolume holds the default value on creation for the daily_estimated_volume field.
+	kybprofile.DefaultDailyEstimatedVolume = kybprofileDescDailyEstimatedVolume.Default.(string)
 	// kybprofileDescID is the schema descriptor for id field.
 	kybprofileDescID := kybprofileFields[0].Descriptor()
 	// kybprofile.DefaultID holds the default value on creation for the id field.

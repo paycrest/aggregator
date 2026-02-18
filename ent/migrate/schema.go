@@ -131,7 +131,7 @@ var (
 		{Name: "mobile_number", Type: field.TypeString},
 		{Name: "company_name", Type: field.TypeString},
 		{Name: "registered_business_address", Type: field.TypeString},
-		{Name: "daily_estimated_volume", Type: field.TypeString},
+		{Name: "daily_estimated_volume", Type: field.TypeString, Default: ""},
 		{Name: "certificate_of_incorporation_url", Type: field.TypeString},
 		{Name: "articles_of_incorporation_url", Type: field.TypeString},
 		{Name: "business_license_url", Type: field.TypeString, Nullable: true},

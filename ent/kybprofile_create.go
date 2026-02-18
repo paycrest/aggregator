@@ -78,6 +78,14 @@ func (_c *KYBProfileCreate) SetDailyEstimatedVolume(v string) *KYBProfileCreate 
 	return _c
 }
 
+// SetNillableDailyEstimatedVolume sets the "daily_estimated_volume" field if the given value is not nil.
+func (_c *KYBProfileCreate) SetNillableDailyEstimatedVolume(v *string) *KYBProfileCreate {
+	if v != nil {
+		_c.SetDailyEstimatedVolume(*v)
+	}
+	return _c
+}
+
 // SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
 func (_c *KYBProfileCreate) SetCertificateOfIncorporationURL(v string) *KYBProfileCreate {
 	_c.mutation.SetCertificateOfIncorporationURL(v)
@@ -242,6 +250,10 @@ func (_c *KYBProfileCreate) defaults() {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		v := kybprofile.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
+	}
+	if _, ok := _c.mutation.DailyEstimatedVolume(); !ok {
+		v := kybprofile.DefaultDailyEstimatedVolume
+		_c.mutation.SetDailyEstimatedVolume(v)
 	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := kybprofile.DefaultID()
