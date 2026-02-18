@@ -30,6 +30,7 @@ import (
 
 	"github.com/NethermindEth/juno/core/felt"
 	"github.com/NethermindEth/starknet.go/utils"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
@@ -1028,8 +1029,15 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 		}
 	}
 
-	// If no exact match found, return error with details
+	// If no exact match found, try fallback provider (if configured) even though it's not on the bucket queue
 	if !foundExactMatch {
+		if fallbackID := config.OrderConfig().FallbackProviderID; fallbackID != "" {
+			fallbackResult, fallbackErr := validateProviderRate(ctx, token, currency, amount, fallbackID, networkIdentifier)
+			if fallbackErr == nil {
+				return fallbackResult, nil
+			}
+		}
+
 		logger.WithFields(logger.Fields{
 			"Token":         token.Symbol,
 			"Currency":      currency.Code,
