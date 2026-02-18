@@ -65,21 +65,17 @@ func fetchExternalRate(currency string) (decimal.Decimal, error) {
 	rateData := dataArray[0]
 
 	// Extract buy and sell rates
-	buyRate, ok := rateData["buyRate"].(float64)
-	if !ok {
-		return decimal.Zero, fmt.Errorf("ComputeMarketRate: Invalid buyRate format")
-	}
+	// buyRate, ok := rateData["buyRate"].(float64)
+	// if !ok {
+	// 	return decimal.Zero, fmt.Errorf("ComputeMarketRate: Invalid buyRate format")
+	// }
 
 	sellRate, ok := rateData["sellRate"].(float64)
 	if !ok {
 		return decimal.Zero, fmt.Errorf("ComputeMarketRate: Invalid sellRate format")
 	}
 
-	// Calculate the average of buy and sell rates for the external rate
-	avgRate := (buyRate + sellRate) / 2
-	price := decimal.NewFromFloat(avgRate)
-
-	return price, nil
+	return decimal.NewFromFloat(sellRate), nil
 }
 
 // ComputeMarketRate computes the market price for fiat currencies
