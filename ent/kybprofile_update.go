@@ -79,6 +79,20 @@ func (_u *KYBProfileUpdate) SetNillableRegisteredBusinessAddress(v *string) *KYB
 	return _u
 }
 
+// SetDailyEstimatedVolume sets the "daily_estimated_volume" field.
+func (_u *KYBProfileUpdate) SetDailyEstimatedVolume(v string) *KYBProfileUpdate {
+	_u.mutation.SetDailyEstimatedVolume(v)
+	return _u
+}
+
+// SetNillableDailyEstimatedVolume sets the "daily_estimated_volume" field if the given value is not nil.
+func (_u *KYBProfileUpdate) SetNillableDailyEstimatedVolume(v *string) *KYBProfileUpdate {
+	if v != nil {
+		_u.SetDailyEstimatedVolume(*v)
+	}
+	return _u
+}
+
 // SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
 func (_u *KYBProfileUpdate) SetCertificateOfIncorporationURL(v string) *KYBProfileUpdate {
 	_u.mutation.SetCertificateOfIncorporationURL(v)
@@ -324,6 +338,9 @@ func (_u *KYBProfileUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.RegisteredBusinessAddress(); ok {
 		_spec.SetField(kybprofile.FieldRegisteredBusinessAddress, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.DailyEstimatedVolume(); ok {
+		_spec.SetField(kybprofile.FieldDailyEstimatedVolume, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.CertificateOfIncorporationURL(); ok {
 		_spec.SetField(kybprofile.FieldCertificateOfIncorporationURL, field.TypeString, value)
 	}
@@ -495,6 +512,20 @@ func (_u *KYBProfileUpdateOne) SetRegisteredBusinessAddress(v string) *KYBProfil
 func (_u *KYBProfileUpdateOne) SetNillableRegisteredBusinessAddress(v *string) *KYBProfileUpdateOne {
 	if v != nil {
 		_u.SetRegisteredBusinessAddress(*v)
+	}
+	return _u
+}
+
+// SetDailyEstimatedVolume sets the "daily_estimated_volume" field.
+func (_u *KYBProfileUpdateOne) SetDailyEstimatedVolume(v string) *KYBProfileUpdateOne {
+	_u.mutation.SetDailyEstimatedVolume(v)
+	return _u
+}
+
+// SetNillableDailyEstimatedVolume sets the "daily_estimated_volume" field if the given value is not nil.
+func (_u *KYBProfileUpdateOne) SetNillableDailyEstimatedVolume(v *string) *KYBProfileUpdateOne {
+	if v != nil {
+		_u.SetDailyEstimatedVolume(*v)
 	}
 	return _u
 }
@@ -773,6 +804,9 @@ func (_u *KYBProfileUpdateOne) sqlSave(ctx context.Context) (_node *KYBProfile, 
 	}
 	if value, ok := _u.mutation.RegisteredBusinessAddress(); ok {
 		_spec.SetField(kybprofile.FieldRegisteredBusinessAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.DailyEstimatedVolume(); ok {
+		_spec.SetField(kybprofile.FieldDailyEstimatedVolume, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.CertificateOfIncorporationURL(); ok {
 		_spec.SetField(kybprofile.FieldCertificateOfIncorporationURL, field.TypeString, value)

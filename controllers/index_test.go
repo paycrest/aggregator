@@ -377,6 +377,7 @@ func TestIndex(t *testing.T) {
 			MobileNumber:                  "+1234567890",
 			CompanyName:                   "Test Company Ltd",
 			RegisteredBusinessAddress:     "123 Business St, Test City, TC 12345",
+			DailyEstimatedVolume:          "5000-10000",
 			CertificateOfIncorporationUrl: "https://example.com/cert.pdf",
 			ArticlesOfIncorporationUrl:    "https://example.com/articles.pdf",
 			BusinessLicenseUrl:            nil, // Optional field
@@ -507,6 +508,7 @@ func TestIndex(t *testing.T) {
 						SetMobileNumber("+1234567890").
 						SetCompanyName("Test Company Ltd").
 						SetRegisteredBusinessAddress("123 Business St, Test City, TC 12345").
+						SetDailyEstimatedVolume("5000-10000").
 						SetCertificateOfIncorporationURL("https://example.com/cert.pdf").
 						SetArticlesOfIncorporationURL("https://example.com/articles.pdf").
 						SetProofOfBusinessAddressURL("https://example.com/business-address.pdf").
@@ -547,6 +549,7 @@ func TestIndex(t *testing.T) {
 				MobileNumber:                  "+9876543210",
 				CompanyName:                   "Updated Business Solutions Ltd",
 				RegisteredBusinessAddress:     "456 Corporate Blvd, New City, New Country",
+				DailyEstimatedVolume:          "50000-100000",
 				CertificateOfIncorporationUrl: "https://example.com/new-cert-inc.pdf",
 				ArticlesOfIncorporationUrl:    "https://example.com/new-articles-inc.pdf",
 				BusinessLicenseUrl:            &businessLicenseUrl,
@@ -604,6 +607,7 @@ func TestIndex(t *testing.T) {
 			assert.Equal(t, modifiedKYBSubmission.MobileNumber, updatedKYBProfile.MobileNumber)
 			assert.Equal(t, modifiedKYBSubmission.CompanyName, updatedKYBProfile.CompanyName)
 			assert.Equal(t, modifiedKYBSubmission.RegisteredBusinessAddress, updatedKYBProfile.RegisteredBusinessAddress)
+			assert.Equal(t, modifiedKYBSubmission.DailyEstimatedVolume, updatedKYBProfile.DailyEstimatedVolume)
 			assert.Equal(t, modifiedKYBSubmission.CertificateOfIncorporationUrl, updatedKYBProfile.CertificateOfIncorporationURL)
 			assert.Equal(t, modifiedKYBSubmission.ArticlesOfIncorporationUrl, updatedKYBProfile.ArticlesOfIncorporationURL)
 			assert.Equal(t, *modifiedKYBSubmission.BusinessLicenseUrl, *updatedKYBProfile.BusinessLicenseURL)
@@ -772,6 +776,7 @@ func TestIndex(t *testing.T) {
 			MobileNumber:                  "+1234567890",
 			CompanyName:                   "Rejected Company Ltd",
 			RegisteredBusinessAddress:     "456 Rejected St, Test City, TC 12345",
+			DailyEstimatedVolume:          "10000-50000",
 			CertificateOfIncorporationUrl: "https://example.com/rejected-cert.pdf",
 			ArticlesOfIncorporationUrl:    "https://example.com/rejected-articles.pdf",
 			BusinessLicenseUrl:            nil,
@@ -807,6 +812,7 @@ func TestIndex(t *testing.T) {
 				SetMobileNumber(kybData.MobileNumber).
 				SetCompanyName(kybData.CompanyName).
 				SetRegisteredBusinessAddress(kybData.RegisteredBusinessAddress).
+				SetDailyEstimatedVolume(kybData.DailyEstimatedVolume).
 				SetCertificateOfIncorporationURL(kybData.CertificateOfIncorporationUrl).
 				SetArticlesOfIncorporationURL(kybData.ArticlesOfIncorporationUrl).
 				SetProofOfBusinessAddressURL(kybData.ProofOfBusinessAddressUrl).
