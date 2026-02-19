@@ -3956,7 +3956,6 @@ type KYBProfileMutation struct {
 	mobile_number                    *string
 	company_name                     *string
 	registered_business_address      *string
-	daily_estimated_volume           *string
 	certificate_of_incorporation_url *string
 	articles_of_incorporation_url    *string
 	business_license_url             *string
@@ -4257,42 +4256,6 @@ func (m *KYBProfileMutation) OldRegisteredBusinessAddress(ctx context.Context) (
 // ResetRegisteredBusinessAddress resets all changes to the "registered_business_address" field.
 func (m *KYBProfileMutation) ResetRegisteredBusinessAddress() {
 	m.registered_business_address = nil
-}
-
-// SetDailyEstimatedVolume sets the "daily_estimated_volume" field.
-func (m *KYBProfileMutation) SetDailyEstimatedVolume(s string) {
-	m.daily_estimated_volume = &s
-}
-
-// DailyEstimatedVolume returns the value of the "daily_estimated_volume" field in the mutation.
-func (m *KYBProfileMutation) DailyEstimatedVolume() (r string, exists bool) {
-	v := m.daily_estimated_volume
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldDailyEstimatedVolume returns the old "daily_estimated_volume" field's value of the KYBProfile entity.
-// If the KYBProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *KYBProfileMutation) OldDailyEstimatedVolume(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDailyEstimatedVolume is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDailyEstimatedVolume requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDailyEstimatedVolume: %w", err)
-	}
-	return oldValue.DailyEstimatedVolume, nil
-}
-
-// ResetDailyEstimatedVolume resets all changes to the "daily_estimated_volume" field.
-func (m *KYBProfileMutation) ResetDailyEstimatedVolume() {
-	m.daily_estimated_volume = nil
 }
 
 // SetCertificateOfIncorporationURL sets the "certificate_of_incorporation_url" field.
@@ -4726,7 +4689,7 @@ func (m *KYBProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *KYBProfileMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, kybprofile.FieldCreatedAt)
 	}
@@ -4741,9 +4704,6 @@ func (m *KYBProfileMutation) Fields() []string {
 	}
 	if m.registered_business_address != nil {
 		fields = append(fields, kybprofile.FieldRegisteredBusinessAddress)
-	}
-	if m.daily_estimated_volume != nil {
-		fields = append(fields, kybprofile.FieldDailyEstimatedVolume)
 	}
 	if m.certificate_of_incorporation_url != nil {
 		fields = append(fields, kybprofile.FieldCertificateOfIncorporationURL)
@@ -4784,8 +4744,6 @@ func (m *KYBProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.CompanyName()
 	case kybprofile.FieldRegisteredBusinessAddress:
 		return m.RegisteredBusinessAddress()
-	case kybprofile.FieldDailyEstimatedVolume:
-		return m.DailyEstimatedVolume()
 	case kybprofile.FieldCertificateOfIncorporationURL:
 		return m.CertificateOfIncorporationURL()
 	case kybprofile.FieldArticlesOfIncorporationURL:
@@ -4819,8 +4777,6 @@ func (m *KYBProfileMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldCompanyName(ctx)
 	case kybprofile.FieldRegisteredBusinessAddress:
 		return m.OldRegisteredBusinessAddress(ctx)
-	case kybprofile.FieldDailyEstimatedVolume:
-		return m.OldDailyEstimatedVolume(ctx)
 	case kybprofile.FieldCertificateOfIncorporationURL:
 		return m.OldCertificateOfIncorporationURL(ctx)
 	case kybprofile.FieldArticlesOfIncorporationURL:
@@ -4878,13 +4834,6 @@ func (m *KYBProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRegisteredBusinessAddress(v)
-		return nil
-	case kybprofile.FieldDailyEstimatedVolume:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetDailyEstimatedVolume(v)
 		return nil
 	case kybprofile.FieldCertificateOfIncorporationURL:
 		v, ok := value.(string)
@@ -5025,9 +4974,6 @@ func (m *KYBProfileMutation) ResetField(name string) error {
 		return nil
 	case kybprofile.FieldRegisteredBusinessAddress:
 		m.ResetRegisteredBusinessAddress()
-		return nil
-	case kybprofile.FieldDailyEstimatedVolume:
-		m.ResetDailyEstimatedVolume()
 		return nil
 	case kybprofile.FieldCertificateOfIncorporationURL:
 		m.ResetCertificateOfIncorporationURL()

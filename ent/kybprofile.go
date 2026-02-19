@@ -29,8 +29,6 @@ type KYBProfile struct {
 	CompanyName string `json:"company_name,omitempty"`
 	// RegisteredBusinessAddress holds the value of the "registered_business_address" field.
 	RegisteredBusinessAddress string `json:"registered_business_address,omitempty"`
-	// DailyEstimatedVolume holds the value of the "daily_estimated_volume" field.
-	DailyEstimatedVolume string `json:"daily_estimated_volume,omitempty"`
 	// CertificateOfIncorporationURL holds the value of the "certificate_of_incorporation_url" field.
 	CertificateOfIncorporationURL string `json:"certificate_of_incorporation_url,omitempty"`
 	// ArticlesOfIncorporationURL holds the value of the "articles_of_incorporation_url" field.
@@ -88,7 +86,7 @@ func (*KYBProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case kybprofile.FieldMobileNumber, kybprofile.FieldCompanyName, kybprofile.FieldRegisteredBusinessAddress, kybprofile.FieldDailyEstimatedVolume, kybprofile.FieldCertificateOfIncorporationURL, kybprofile.FieldArticlesOfIncorporationURL, kybprofile.FieldBusinessLicenseURL, kybprofile.FieldProofOfBusinessAddressURL, kybprofile.FieldAmlPolicyURL, kybprofile.FieldKycPolicyURL, kybprofile.FieldKybRejectionComment:
+		case kybprofile.FieldMobileNumber, kybprofile.FieldCompanyName, kybprofile.FieldRegisteredBusinessAddress, kybprofile.FieldCertificateOfIncorporationURL, kybprofile.FieldArticlesOfIncorporationURL, kybprofile.FieldBusinessLicenseURL, kybprofile.FieldProofOfBusinessAddressURL, kybprofile.FieldAmlPolicyURL, kybprofile.FieldKycPolicyURL, kybprofile.FieldKybRejectionComment:
 			values[i] = new(sql.NullString)
 		case kybprofile.FieldCreatedAt, kybprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -146,12 +144,6 @@ func (_m *KYBProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field registered_business_address", values[i])
 			} else if value.Valid {
 				_m.RegisteredBusinessAddress = value.String
-			}
-		case kybprofile.FieldDailyEstimatedVolume:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field daily_estimated_volume", values[i])
-			} else if value.Valid {
-				_m.DailyEstimatedVolume = value.String
 			}
 		case kybprofile.FieldCertificateOfIncorporationURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -265,9 +257,6 @@ func (_m *KYBProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("registered_business_address=")
 	builder.WriteString(_m.RegisteredBusinessAddress)
-	builder.WriteString(", ")
-	builder.WriteString("daily_estimated_volume=")
-	builder.WriteString(_m.DailyEstimatedVolume)
 	builder.WriteString(", ")
 	builder.WriteString("certificate_of_incorporation_url=")
 	builder.WriteString(_m.CertificateOfIncorporationURL)
