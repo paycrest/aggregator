@@ -879,7 +879,6 @@ type KYBSubmissionInput struct {
 	MobileNumber                  string                 `json:"mobileNumber" binding:"required"`
 	CompanyName                   string                 `json:"companyName" binding:"required"`
 	RegisteredBusinessAddress     string                 `json:"registeredBusinessAddress" binding:"required"`
-	DailyEstimatedVolume          string                 `json:"dailyEstimatedVolume" binding:"required"`
 	CertificateOfIncorporationUrl string                 `json:"certificateOfIncorporationUrl" binding:"required"`
 	ArticlesOfIncorporationUrl    string                 `json:"articlesOfIncorporationUrl" binding:"required"`
 	BusinessLicenseUrl            *string                `json:"businessLicenseUrl"`
@@ -906,7 +905,6 @@ type KYBDocumentsResponse struct {
 	MobileNumber                  string                 `json:"mobileNumber"`
 	CompanyName                   string                 `json:"companyName"`
 	RegisteredBusinessAddress     string                 `json:"registeredBusinessAddress"`
-	DailyEstimatedVolume          string                 `json:"dailyEstimatedVolume"`
 	CertificateOfIncorporationUrl string                 `json:"certificateOfIncorporationUrl"`
 	ArticlesOfIncorporationUrl    string                 `json:"articlesOfIncorporationUrl"`
 	BusinessLicenseUrl            *string                `json:"businessLicenseUrl"`

@@ -1530,7 +1530,6 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			SetMobileNumber(input.MobileNumber).
 			SetCompanyName(input.CompanyName).
 			SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
-			SetDailyEstimatedVolume(input.DailyEstimatedVolume).
 			SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
 			SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
 			SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl)
@@ -1560,7 +1559,6 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			SetMobileNumber(input.MobileNumber).
 			SetCompanyName(input.CompanyName).
 			SetRegisteredBusinessAddress(input.RegisteredBusinessAddress).
-			SetDailyEstimatedVolume(input.DailyEstimatedVolume).
 			SetCertificateOfIncorporationURL(input.CertificateOfIncorporationUrl).
 			SetArticlesOfIncorporationURL(input.ArticlesOfIncorporationUrl).
 			SetProofOfBusinessAddressURL(input.ProofOfBusinessAddressUrl).
@@ -1752,7 +1750,6 @@ func (ctrl *Controller) GetKYBDocuments(ctx *gin.Context) {
 		MobileNumber:                  kybProfile.MobileNumber,
 		CompanyName:                   kybProfile.CompanyName,
 		RegisteredBusinessAddress:     kybProfile.RegisteredBusinessAddress,
-		DailyEstimatedVolume:          kybProfile.DailyEstimatedVolume,
 		CertificateOfIncorporationUrl: kybProfile.CertificateOfIncorporationURL,
 		ArticlesOfIncorporationUrl:    kybProfile.ArticlesOfIncorporationURL,
 		BusinessLicenseUrl:            kybProfile.BusinessLicenseURL,
