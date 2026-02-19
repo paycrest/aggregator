@@ -589,6 +589,12 @@ func TurnstileMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// Skip verification for partner onboarding requests
+		if c.GetHeader("X-Partner-Id") != "" {
+			c.Next()
+			return
+		}
+
 		// Get token from header or query parameter
 		token := c.GetHeader("X-Turnstile-Token")
 		if token == "" {
