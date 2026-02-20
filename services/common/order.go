@@ -99,6 +99,7 @@ func ProcessPaymentOrderFromBlockchain(
 				Update().
 				Where(paymentorder.IDEQ(existingOrderWithMessageHash.ID)).
 				SetGatewayID(event.OrderId).
+				SetOrderPercent(decimal.NewFromInt(100)).
 				SetTxHash(event.TxHash).
 				SetBlockNumber(int64(event.BlockNumber)).
 				SetStatus(paymentorder.StatusPending).
