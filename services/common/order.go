@@ -1103,6 +1103,9 @@ func validateAndPreparePaymentOrderData(
 		var e error
 		provisionBucket, isLessThanMin, e = GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
 		if e != nil {
+			if ent.IsNotFound(e) {
+				return nil // exit retry; the provision bucket is not found
+			}
 			logger.WithFields(logger.Fields{
 				"Error":    fmt.Sprintf("%v", e),
 				"Amount":   event.Amount,
