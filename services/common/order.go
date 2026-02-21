@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -41,7 +42,15 @@ var (
 	orderConf  = config.OrderConfig()
 )
 
-const CancellationReasonAML = "AML compliance check failed"
+// ErrNoProvisionBucketForAmount is returned when the amount falls in a gap between tier ranges (no bucket contains it).
+var ErrNoProvisionBucketForAmount = errors.New("no provision bucket for this amount")
+
+const (
+	CancellationReasonAML = "AML compliance check failed"
+
+	provisionBucketMaxAttempts = 3
+	provisionBucketRetryDelay  = 500 * time.Millisecond
+)
 
 // ProcessPaymentOrderFromBlockchain processes a payment order from blockchain event.
 // It either creates a new order or updates an existing API-created order (with messageHash but no gatewayID)
@@ -595,11 +604,12 @@ func GetProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *e
 			),
 		).
 		WithCurrency().
-		Only(ctx)
+		Order(ent.Asc(provisionbucket.FieldID)).
+		First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			// Check if the amount is less than the minimum bucket
-			minBucket, err := db.Client.ProvisionBucket.
+			// No bucket contains this amount: distinguish below min, above max, or gap between tiers
+			minBucket, minErr := db.Client.ProvisionBucket.
 				Query().
 				Where(
 					provisionbucket.HasCurrencyWith(
@@ -608,12 +618,30 @@ func GetProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *e
 				).
 				Order(ent.Asc(provisionbucket.FieldMinAmount)).
 				First(ctx)
-			if err != nil {
-				return nil, false, fmt.Errorf("failed to fetch minimum bucket: %w", err)
+			if minErr != nil {
+				return nil, false, fmt.Errorf("failed to fetch minimum bucket: %w", minErr)
 			}
 			if amount.LessThan(minBucket.MinAmount) {
 				return nil, true, nil
 			}
+			maxBucket, maxErr := db.Client.ProvisionBucket.
+				Query().
+				Where(
+					provisionbucket.HasCurrencyWith(
+						fiatcurrency.IDEQ(currency.ID),
+					),
+				).
+				Order(ent.Desc(provisionbucket.FieldMaxAmount)).
+				First(ctx)
+			if maxErr != nil {
+				return nil, false, fmt.Errorf("failed to fetch maximum bucket: %w", maxErr)
+			}
+			if amount.GreaterThan(maxBucket.MaxAmount) {
+				// Above highest tier: return nil bucket, no error; caller will cancel with "Amount is larger than the maximum bucket"
+				return nil, false, nil
+			}
+			// Amount is within [minBucket.MinAmount, maxBucket.MaxAmount] but no bucket contains it (gap between tiers)
+			return nil, false, ErrNoProvisionBucketForAmount
 		}
 		return nil, false, fmt.Errorf("failed to fetch provision bucket: %w", err)
 	}
@@ -1090,8 +1118,24 @@ func validateAndPreparePaymentOrderData(
 	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 	event.ProtocolFee = event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 
-	// Get provision bucket
-	provisionBucket, isLessThanMin, err := GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
+	// Get provision bucket (with retry for transient failures)
+	var provisionBucket *ent.ProvisionBucket
+	var isLessThanMin bool
+	err = utils.Retry(provisionBucketMaxAttempts, provisionBucketRetryDelay, func() error {
+		var e error
+		provisionBucket, isLessThanMin, e = GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
+		if e != nil {
+			if ent.IsNotFound(e) {
+				return nil // exit retry; the provision bucket is not found
+			}
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", e),
+				"Amount":   event.Amount,
+				"Currency": currency,
+			}).Errorf("provision bucket lookup failed, will retry")
+		}
+		return e
+	})
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1099,7 +1143,11 @@ func validateAndPreparePaymentOrderData(
 			"Currency": currency,
 		}).Errorf("failed to fetch provision bucket when creating payment order")
 
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Provision bucket lookup failed", refundOrder, existingOrder)
+		cancellationReason := "Provision bucket lookup failed"
+		if errors.Is(err, ErrNoProvisionBucketForAmount) {
+			cancellationReason = "No provision bucket for this amount"
+		}
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, cancellationReason, refundOrder, existingOrder)
 	}
 
 	// Create payment order fields

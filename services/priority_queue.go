@@ -697,8 +697,26 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 	if err != nil {
 		prevRedisKey := redisKey + "_prev"
 		err = s.matchRate(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
-		if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "redis: nil") {
-			return err
+		if err != nil {
+			// Both matchRate attempts failed; try fallback once for regular orders
+			matchRateErr := err
+			if order.OrderType != "otc" {
+				orderEnt, loadErr := storage.Client.PaymentOrder.Query().
+					Where(paymentorder.IDEQ(order.ID)).
+					WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+					Only(ctx)
+				if loadErr == nil {
+					if fallbackErr := s.TryFallbackAssignment(ctx, orderEnt); fallbackErr == nil {
+						return nil
+					} else {
+						logger.WithFields(logger.Fields{
+							"OrderID": order.ID.String(),
+							"Error":   fallbackErr.Error(),
+						}).Errorf("AssignPaymentOrder: TryFallbackAssignment failed after no provider in queue")
+					}
+				}
+			}
+			return matchRateErr
 		}
 	}
 

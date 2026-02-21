@@ -1175,7 +1175,7 @@ func TestPriorityQueueTest(t *testing.T) {
 			assert.NoError(t, err)
 			service.CreatePriorityQueueForBucket(ctx, bucketForQueue)
 
-			// Order with rate 1390: no provider in queue can fulfill; fallback can
+			// Order with rate 1390: no provider in queue can fulfill; AssignPaymentOrder tries fallback and should succeed
 			_order, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
 				"provider": testCtxForPQ.publicProviderProfile, "rate": 1390.0, "gateway_id": "gw-fb-rate-only",
 			})
@@ -1185,7 +1185,6 @@ func TestPriorityQueueTest(t *testing.T) {
 			_, err = test.AddProvisionBucketToPaymentOrder(_order, testCtxForPQ.bucket.ID)
 			assert.NoError(t, err)
 
-			// AssignPaymentOrder should fail (no queue provider matches 1390)
 			bucketWithCurrency, err := db.Client.ProvisionBucket.
 				Query().
 				Where(provisionbucket.IDEQ(testCtxForPQ.bucket.ID)).
@@ -1213,32 +1212,13 @@ func TestPriorityQueueTest(t *testing.T) {
 				orderFields.Network = tokenWithNet.Edges.Network
 			}
 			err = service.AssignPaymentOrder(ctx, orderFields)
-			// If queue matched (e.g. leftover state), clear provider and order_request so we can still test fallback path
-			if err == nil {
-				_, _ = db.Client.PaymentOrder.UpdateOneID(_order.ID).ClearProvider().Save(ctx)
-				_ = db.RedisClient.Del(ctx, fmt.Sprintf("order_request_%s", _order.ID)).Err()
-			} else {
-				assert.Error(t, err, "AssignPaymentOrder expected to fail when no queue provider matches order rate 1390")
-			}
-
-			// TryFallbackAssignment should succeed and assign to fallback provider
-			order, err := db.Client.PaymentOrder.
-				Query().
-				Where(paymentorder.IDEQ(_order.ID)).
-				WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
-				WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) { pb.WithCurrency() }).
-				Only(ctx)
-			assert.NoError(t, err)
-
-			err = service.TryFallbackAssignment(ctx, order)
-			assert.NoError(t, err, "TryFallbackAssignment should assign order to fallback when rate is within fallback slippage")
+			// AssignPaymentOrder now tries fallback when queue has no match; should succeed and assign to fallback
+			assert.NoError(t, err, "AssignPaymentOrder should succeed via fallback when no queue provider matches order rate 1390")
 
 			updated, err := db.Client.PaymentOrder.Get(ctx, _order.ID)
 			assert.NoError(t, err)
 			assert.False(t, updated.FallbackTriedAt.IsZero(), "FallbackTriedAt should be set after successful fallback assignment")
 
-			// For regular orders, provider_id is set in DB when provider accepts; sendOrderRequest only sets order_request_* in Redis.
-			// So verify the order was sent to the fallback by checking Redis.
 			orderReqProvider, err := db.RedisClient.HGet(ctx, fmt.Sprintf("order_request_%s", _order.ID), "providerId").Result()
 			assert.NoError(t, err)
 			assert.Equal(t, testCtxForPQ.privateProviderProfile.ID, orderReqProvider,
