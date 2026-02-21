@@ -10,4 +10,7 @@ When the user asks to create or draft a PR description for this repo:
    - **Testing**: How to test, manual steps, environment; confirm or add checkbox for test coverage.
    - **Checklist**: Documentation/tests, GitHub checks, base branch; keep the Code of Conduct line as-is.
 
-3. **Output** the full PR description so it can be pasted into GitHub or used with `gh pr create --body-file ...`. Do not remove the checklist or the Paycrest Contributor Code of Conduct line.
+3. **Create the PR:**
+   - **If using `gh` CLI:** Write the PR body to a temp file, run `gh pr create ... --body-file <path>`, then **delete the temp file** after the PR is created.
+   - **If manual flow** (e.g. `gh` fails or user will create in browser): **do not create a temp file**. Output the full PR description (markdown) directly in the response so the user can paste into the GitHub PR form.
+   - Do not remove the checklist or the Paycrest Contributor Code of Conduct line from the description.

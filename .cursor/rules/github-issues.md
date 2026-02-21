@@ -9,6 +9,5 @@ When the user asks to create a ticket, issue, or bug report for this repo:
 2. **Read the chosen template** and follow its structure exactly. Do not omit sections.
 
 3. **Create the issue:**
-   - **First:** Write the issue body to a file (e.g. in `.github/` or a temp path), then run:
-     `gh issue create --repo paycrest/aggregator --title "..." --body-file <path> [--label enhancement|bug]`
-   - **Only if that fails** (e.g. connection error, auth/TLS failure, `gh` not available): output the full issue body and title so the user can create the issue manually in the browser or retry the CLI after fixing the failure.
+   - **If using `gh` CLI:** Write the issue body to a temp file (e.g. in `.github/` or a temp path), run `gh issue create --repo paycrest/aggregator --title "..." --body-file <path> [--label enhancement|bug]`, then **delete the temp file** after the issue is created (whether success or not, to avoid leaving stray files).
+   - **If manual flow** (e.g. connection error, auth/TLS failure, `gh` not available, or user will create in browser): **do not create a temp file**. Output the full issue **title** and **body** (markdown) directly in the response so the user can paste into the GitHub issue form. Do not write to a file for manual creation.
