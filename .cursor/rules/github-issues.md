@@ -8,6 +8,13 @@ When the user asks to create a ticket, issue, or bug report for this repo:
 
 2. **Read the chosen template** and follow its structure exactly. Do not omit sections.
 
-3. **Create the issue:**
+3. **Formatting:** Do not use blockquote markers (`>`) in the issue body. Use plain markdown only (headings, lists, bold).
+
+4. **Create the issue:**
    - **If using `gh` CLI:** Write the issue body to a temp file (e.g. in `.github/` or a temp path), run `gh issue create --repo paycrest/aggregator --title "..." --body-file <path> [--label enhancement|bug]`, then **delete the temp file** after the issue is created (whether success or not, to avoid leaving stray files).
    - **If manual flow** (e.g. connection error, auth/TLS failure, `gh` not available, or user will create in browser): **do not create a temp file**. Output the full issue **title** and **body** (markdown) directly in the response so the user can paste into the GitHub issue form. Do not write to a file for manual creation.
+
+5. **Project board:** Aggregator issues must be added to the **Protocol Team Board** (paycrest org, project 13). After the issue is created:
+   - **Try first:** Run `gh project item-add 13 --owner paycrest --url <issue-url>` with the new issue’s URL (e.g. from `gh issue create` output or `https://github.com/paycrest/aggregator/issues/<number>`).
+   - **If it fails** (e.g. “missing required scopes [project]”): Tell the user to run `gh auth refresh -s project` to grant project access, then retry the add or add manually.
+   - **If gh add is not possible** (e.g. issue was created manually): Remind the user to add the issue to the Protocol Team Board via the issue’s “Projects” dropdown on GitHub.
