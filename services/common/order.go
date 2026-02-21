@@ -41,7 +41,12 @@ var (
 	orderConf  = config.OrderConfig()
 )
 
-const CancellationReasonAML = "AML compliance check failed"
+const (
+	CancellationReasonAML = "AML compliance check failed"
+
+	provisionBucketMaxAttempts = 3
+	provisionBucketRetryDelay  = 500 * time.Millisecond
+)
 
 // ProcessPaymentOrderFromBlockchain processes a payment order from blockchain event.
 // It either creates a new order or updates an existing API-created order (with messageHash but no gatewayID)
@@ -595,7 +600,8 @@ func GetProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *e
 			),
 		).
 		WithCurrency().
-		Only(ctx)
+		Order(ent.Asc(provisionbucket.FieldID)).
+		First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			// Check if the amount is less than the minimum bucket
@@ -1090,8 +1096,21 @@ func validateAndPreparePaymentOrderData(
 	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 	event.ProtocolFee = event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 
-	// Get provision bucket
-	provisionBucket, isLessThanMin, err := GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
+	// Get provision bucket (with retry for transient failures)
+	var provisionBucket *ent.ProvisionBucket
+	var isLessThanMin bool
+	err = utils.Retry(provisionBucketMaxAttempts, provisionBucketRetryDelay, func() error {
+		var e error
+		provisionBucket, isLessThanMin, e = GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
+		if e != nil {
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", e),
+				"Amount":   event.Amount,
+				"Currency": currency,
+			}).Errorf("provision bucket lookup failed, will retry")
+		}
+		return e
+	})
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
