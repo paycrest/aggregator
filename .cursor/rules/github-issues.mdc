@@ -1,3 +1,8 @@
+---
+description: How to create GitHub issues/tickets for this repo (templates, gh CLI, project board)
+alwaysApply: true
+---
+
 # GitHub issue (ticket) creation
 
 When the user asks to create a ticket, issue, or bug report for this repo:
@@ -15,6 +20,6 @@ When the user asks to create a ticket, issue, or bug report for this repo:
    - **If manual flow** (e.g. connection error, auth/TLS failure, `gh` not available, or user will create in browser): **do not create a temp file**. Output the full issue **title** and **body** (markdown) directly in the response so the user can paste into the GitHub issue form. Do not write to a file for manual creation.
 
 5. **Project board:** Aggregator issues must be added to the **Protocol Team Board** (paycrest org, project 13). After the issue is created:
-   - **Try first:** Run `gh project item-add 13 --owner paycrest --url <issue-url>` with the new issue’s URL (e.g. from `gh issue create` output or `https://github.com/paycrest/aggregator/issues/<number>`).
-   - **If it fails** (e.g. “missing required scopes [project]”): Tell the user to run `gh auth refresh -s project` to grant project access, then retry the add or add manually.
-   - **If gh add is not possible** (e.g. issue was created manually): Remind the user to add the issue to the Protocol Team Board via the issue’s “Projects” dropdown on GitHub.
+   - **Try first:** Run `gh project item-add 13 --owner paycrest --url <issue-url>` with the new issue's URL (e.g. from `gh issue create` output or `https://github.com/paycrest/aggregator/issues/<number>`).
+   - **If it fails** (e.g. "missing required scopes [project]"): Tell the user to run `gh auth refresh -s project` to grant project access, then retry the add or add manually.
+   - **If gh add is not possible** (e.g. issue was created manually): Remind the user to add the issue to the Protocol Team Board via the issue's "Projects" dropdown on GitHub.

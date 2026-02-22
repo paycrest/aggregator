@@ -1,3 +1,8 @@
+---
+description: How to create or draft pull requests for this repo (template, gh CLI)
+alwaysApply: true
+---
+
 # Pull request creation
 
 When the user asks to create or draft a PR description for this repo:

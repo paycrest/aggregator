@@ -49,6 +49,7 @@ func NewProfileController() *ProfileController {
 
 // UpdateSenderProfile controller updates the sender profile
 func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	var payload types.SenderProfilePayload
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -74,7 +75,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	sender := senderCtx.(*ent.SenderProfile)
 
 	// save or update SenderOrderToken
-	tx, err := storage.Client.Tx(ctx)
+	tx, err := storage.Client.Tx(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
@@ -117,7 +118,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		_, err := tx.Token.
 			Query().
 			Where(token.Symbol(tokenPayload.Symbol)).
-			First(ctx)
+			First(reqCtx)
 		if err != nil {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Token not supported", nil)
 			return
@@ -159,7 +160,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 						token.SymbolEQ(tokenPayload.Symbol),
 					),
 				).
-				Only(ctx)
+				Only(reqCtx)
 			if err != nil {
 				u.APIResponse(
 					ctx,
@@ -179,7 +180,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 				senderordertoken.HasTokenWith(token.SymbolEQ(tokenPayload.Symbol)),
 				senderordertoken.HasSenderWith(senderprofile.IDEQ(sender.ID)),
 			).
-			Exec(ctx)
+			Exec(reqCtx)
 		if err != nil {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 			return
@@ -195,7 +196,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 				SetFeePercent(tokenPayload.FeePercent).
 				SetMaxFeeCap(tokenPayload.MaxFeeCap).
 				SetFeeAddress(address.FeeAddress).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
@@ -218,7 +219,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 	}
 
 	// Save the sender profile update within the transaction
-	_, err = update.Save(ctx)
+	_, err = update.Save(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 		return
@@ -236,6 +237,7 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 
 // UpdateProviderProfile controller updates the provider profile
 func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	var payload types.ProviderProfilePayload
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -309,7 +311,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				token.HasNetworkWith(network.IdentifierEQ(tokenPayload.Network)),
 				token.IsEnabledEQ(true),
 			).
-			Only(ctx)
+			Only(reqCtx)
 		if err != nil {
 			if ent.IsNotFound(err) {
 				validationErrors = append(validationErrors, types.ErrorData{
@@ -338,7 +340,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				fiatcurrency.IsEnabledEQ(true),
 				fiatcurrency.CodeEQ(payload.Currency),
 			).
-			Only(ctx)
+			Only(reqCtx)
 		if err != nil {
 			if ent.IsNotFound(err) {
 				validationErrors = append(validationErrors, types.ErrorData{
@@ -403,7 +405,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				providerordertoken.NetworkEQ(tokenPayload.Network),
 			).
 			WithCurrency().
-			Only(ctx)
+			Only(reqCtx)
 
 		isUpdate := err == nil
 		if err != nil && !ent.IsNotFound(err) {
@@ -425,7 +427,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 					providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
 					providerordertoken.NetworkEQ(tokenPayload.Network),
-				).Exist(ctx)
+				).Exist(reqCtx)
 			if derr != nil {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
@@ -460,7 +462,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		institutionExists, err := storage.Client.Institution.
 			Query().
 			Where(institution.CodeEQ(fiatAccountPayload.Institution)).
-			Exist(ctx)
+			Exist(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":       fmt.Sprintf("%v", err),
@@ -485,7 +487,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				providerfiataccount.InstitutionEQ(fiatAccountPayload.Institution),
 				providerfiataccount.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 			).
-			Only(ctx)
+			Only(reqCtx)
 
 		isUpdate := err == nil
 		if err != nil && !ent.IsNotFound(err) {
@@ -517,7 +519,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	}
 
 	// PHASE 2: Execute all operations in a single transaction
-	tx, err := storage.Client.Tx(ctx)
+	tx, err := storage.Client.Tx(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to start transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
@@ -529,7 +531,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	if availabilityOp != nil {
 		curr, err := tx.FiatCurrency.Query().
 			Where(fiatcurrency.CodeEQ(availabilityOp.currencyCode), fiatcurrency.IsEnabledEQ(true)).
-			Only(ctx)
+			Only(reqCtx)
 		if err != nil {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency not supported", nil)
 			return
@@ -540,7 +542,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(availabilityOp.currencyCode)),
 			).
-			Only(ctx)
+			Only(reqCtx)
 		if ent.IsNotFound(err) {
 			_, err = tx.ProviderBalances.Create().
 				SetFiatCurrency(curr).
@@ -549,9 +551,9 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetReservedBalance(decimal.Zero).
 				SetIsAvailable(availabilityOp.isAvailable).
 				SetProviderID(provider.ID).
-				Save(ctx)
+				Save(reqCtx)
 		} else if err == nil {
-			_, err = pb.Update().SetIsAvailable(availabilityOp.isAvailable).Save(ctx)
+			_, err = pb.Update().SetIsAvailable(availabilityOp.isAvailable).Save(reqCtx)
 		}
 		if err != nil {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update availability", nil)
@@ -594,7 +596,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetMinOrderAmount(op.TokenPayload.MinOrderAmount).
 				SetMaxOrderAmountOtc(op.TokenPayload.MaxOrderAmountOTC).
 				SetMinOrderAmountOtc(op.TokenPayload.MinOrderAmountOTC).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -624,7 +626,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetRateSlippage(op.TokenPayload.RateSlippage).
 				SetTokenID(op.ProviderToken.ID).
 				SetCurrencyID(op.Currency.ID).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -652,7 +654,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 					provisionbucket.MaxAmountGTE(convertedMin), // providerMax ≥ bucketMin
 				),
 			).
-			All(ctx)
+			All(reqCtx)
 		if err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
 				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -678,7 +680,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetAccountIdentifier(op.Payload.AccountIdentifier).
 				SetAccountName(op.Payload.AccountName).
 				SetInstitution(op.Payload.Institution).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -698,7 +700,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				SetAccountName(op.Payload.AccountName).
 				SetInstitution(op.Payload.Institution).
 				SetProviderID(provider.ID).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -736,7 +738,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		existingFiatAccounts, err := tx.ProviderFiatAccount.
 			Query().
 			Where(providerfiataccount.HasProviderWith(providerprofile.IDEQ(provider.ID))).
-			All(ctx)
+			All(reqCtx)
 		if err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
 				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -768,7 +770,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 			if _, err := tx.ProviderFiatAccount.
 				Delete().
 				Where(providerfiataccount.IDIn(idsToDelete...)).
-				Exec(ctx); err != nil {
+				Exec(reqCtx); err != nil {
 
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
 					logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -806,7 +808,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 	}
 
 	// Save provider profile update within the transaction
-	_, err = txUpdate.Save(ctx)
+	_, err = txUpdate.Save(reqCtx)
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -834,6 +836,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 
 // GetSenderProfile retrieves the sender profile
 func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get sender profile from the context
 	senderCtx, ok := ctx.Get("sender")
 	if !ok {
@@ -842,7 +845,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	}
 	sender := senderCtx.(*ent.SenderProfile)
 
-	user, err := sender.QueryUser().Only(ctx)
+	user, err := sender.QueryUser().Only(reqCtx)
 	if err != nil {
 		logger.Errorf("Error: Failed to fetch sender profile for user %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
@@ -868,7 +871,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 				tq.WithNetwork()
 			},
 		).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -897,7 +900,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 	kybProfile, err := storage.Client.KYBProfile.
 		Query().
 		Where(kybprofile.HasUserWith(userkyb.IDEQ(user.ID))).
-		Only(ctx)
+		Only(reqCtx)
 
 	if err == nil && kybProfile != nil && kybProfile.KybRejectionComment != nil {
 		kybRejectionComment = kybProfile.KybRejectionComment
@@ -925,7 +928,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 				q.WithFiatCurrency().Where(providerbalances.HasFiatCurrency())
 			},
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			// do nothing
@@ -952,6 +955,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 
 // GetProviderProfile retrieves the provider profile
 func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get provider profile from the context
 	providerCtx, ok := ctx.Get("provider")
 	if !ok {
@@ -960,7 +964,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	user, err := provider.QueryUser().Only(ctx)
+	user, err := provider.QueryUser().Only(reqCtx)
 	if err != nil {
 		logger.Errorf("Error: Failed to fetch provider profile for user %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
@@ -970,7 +974,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	pbList, err := provider.QueryProviderBalances().
 		WithFiatCurrency().
 		Where(providerbalances.HasFiatCurrency()).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": provider.ID}).Errorf("Failed to fetch fiat balances for provider")
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
@@ -995,7 +999,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	if currencyFilter != "" {
 		query = query.Where(providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyFilter)))
 	}
-	orderTokens, err := query.All(ctx)
+	orderTokens, err := query.All(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -1007,7 +1011,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 
 	fiatAccounts, err := provider.QueryFiatAccounts().
 		Order(ent.Desc(providerfiataccount.FieldCreatedAt)).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -1052,7 +1056,7 @@ func (ctrl *ProfileController) GetProviderProfile(ctx *gin.Context) {
 	kybProfile, err := storage.Client.KYBProfile.
 		Query().
 		Where(kybprofile.HasUserWith(userkyb.IDEQ(user.ID))).
-		Only(ctx)
+		Only(reqCtx)
 
 	if err == nil && kybProfile != nil && kybProfile.KybRejectionComment != nil {
 		kybRejectionComment = kybProfile.KybRejectionComment
