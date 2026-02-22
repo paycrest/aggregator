@@ -1220,8 +1220,40 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 		return err
 	}
 
-	// Notify the provider
-	orderRequestData["orderId"] = order.ID
+	// Short ID for provider/PSP compatibility: send 12-char orderId and store mapping (no TTL; deleted on terminal status).
+	shortId := utils.UUIDToShortID(order.ID)
+	shortIdKey := utils.ShortIDRedisKey(shortId)
+	payloadOrderID := order.ID.String()
+	set, setErr := storage.RedisClient.SetNX(ctx, shortIdKey, order.ID.String(), 0).Result()
+	if setErr != nil {
+		logger.WithFields(logger.Fields{
+			"Error":   fmt.Sprintf("%v", setErr),
+			"OrderID": order.ID.String(),
+			"ShortID": shortId,
+		}).Errorf("Failed to set short_id_to_uuid mapping")
+		_ = storage.RedisClient.Del(ctx, orderKey).Err()
+		_ = storage.RedisClient.Del(ctx, metaKey).Err()
+		return fmt.Errorf("failed to set short_id mapping: %w", setErr)
+	}
+	if set {
+		payloadOrderID = shortId
+	} else {
+		existing, getErr := storage.RedisClient.Get(ctx, shortIdKey).Result()
+		if getErr == nil && existing != order.ID.String() {
+			logger.WithFields(logger.Fields{
+				"OrderID":  order.ID.String(),
+				"ShortID":  shortId,
+				"Existing": existing,
+			}).Warnf("Short ID collision: using full UUID for order payload")
+			payloadOrderID = order.ID.String()
+		} else {
+			// Idempotent: key already set to our UUID
+			payloadOrderID = shortId
+		}
+	}
+
+	// Notify provider
+	orderRequestData["orderId"] = payloadOrderID
 	err = s.notifyProvider(ctx, orderRequestData)
 	if err != nil {
 		logger.WithFields(logger.Fields{

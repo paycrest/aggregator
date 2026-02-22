@@ -602,7 +602,9 @@ func (_c *PaymentOrderCreate) Mutation() *PaymentOrderMutation {
 
 // Save creates the PaymentOrder in the database.
 func (_c *PaymentOrderCreate) Save(ctx context.Context) (*PaymentOrder, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -629,44 +631,74 @@ func (_c *PaymentOrderCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *PaymentOrderCreate) defaults() {
+func (_c *PaymentOrderCreate) defaults() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if paymentorder.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if paymentorder.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
 	if _, ok := _c.mutation.AmountPaid(); !ok {
+		if paymentorder.DefaultAmountPaid == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultAmountPaid (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultAmountPaid()
 		_c.mutation.SetAmountPaid(v)
 	}
 	if _, ok := _c.mutation.AmountReturned(); !ok {
+		if paymentorder.DefaultAmountReturned == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultAmountReturned (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultAmountReturned()
 		_c.mutation.SetAmountReturned(v)
 	}
 	if _, ok := _c.mutation.PercentSettled(); !ok {
+		if paymentorder.DefaultPercentSettled == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultPercentSettled (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultPercentSettled()
 		_c.mutation.SetPercentSettled(v)
 	}
 	if _, ok := _c.mutation.SenderFee(); !ok {
+		if paymentorder.DefaultSenderFee == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultSenderFee (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultSenderFee()
 		_c.mutation.SetSenderFee(v)
 	}
 	if _, ok := _c.mutation.NetworkFee(); !ok {
+		if paymentorder.DefaultNetworkFee == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultNetworkFee (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultNetworkFee()
 		_c.mutation.SetNetworkFee(v)
 	}
 	if _, ok := _c.mutation.ProtocolFee(); !ok {
+		if paymentorder.DefaultProtocolFee == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultProtocolFee (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultProtocolFee()
 		_c.mutation.SetProtocolFee(v)
 	}
 	if _, ok := _c.mutation.OrderPercent(); !ok {
+		if paymentorder.DefaultOrderPercent == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultOrderPercent (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultOrderPercent()
 		_c.mutation.SetOrderPercent(v)
 	}
 	if _, ok := _c.mutation.FeePercent(); !ok {
+		if paymentorder.DefaultFeePercent == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultFeePercent (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultFeePercent()
 		_c.mutation.SetFeePercent(v)
 	}
@@ -691,9 +723,13 @@ func (_c *PaymentOrderCreate) defaults() {
 		_c.mutation.SetOrderType(v)
 	}
 	if _, ok := _c.mutation.ID(); !ok {
+		if paymentorder.DefaultID == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultID (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultID()
 		_c.mutation.SetID(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
