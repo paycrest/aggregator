@@ -19,6 +19,7 @@ func GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddre
 	if err != nil {
 		return nil, fmt.Errorf("failed to create RPC client: %w", err)
 	}
+	defer client.Close()
 
 	var eventSignatures []string
 	if len(topics) > 0 && topics[0] == utils.TransferEventSignature {
@@ -69,6 +70,8 @@ func GetContractEventsRPC(ctx context.Context, rpcEndpoint string, contractAddre
 		for _, topic := range topics {
 			if topic != "" {
 				filterQuery.Topics = append(filterQuery.Topics, []common.Hash{common.HexToHash(topic)})
+			} else {
+				filterQuery.Topics = append(filterQuery.Topics, nil)
 			}
 		}
 

@@ -234,15 +234,11 @@ func ProcessExpiredOrdersRefunds() error {
 				return
 			}
 
+			var receipt *ethTypes.Receipt
 			err = utils.DefaultNonceManager.SubmitWithNonce(ctx, client, network.ChainID, aggregatorAddr, func(nonce uint64) error {
-				receipt, txErr := utils.SendKeeperTx(ctx, client, aggregatorKey, nonce, userAddr, batchData, authList, chainID)
-				if txErr != nil {
-					return txErr
-				}
-				if receipt.Status == 0 {
-					return fmt.Errorf("refund tx reverted in block %s", receipt.BlockNumber.String())
-				}
-				return nil
+				var txErr error
+				receipt, txErr = utils.SendKeeperTx(ctx, client, aggregatorKey, nonce, userAddr, batchData, authList, chainID)
+				return txErr
 			})
 			if err != nil {
 				logger.WithFields(logger.Fields{
@@ -253,6 +249,24 @@ func ProcessExpiredOrdersRefunds() error {
 					"Balance":        balance.String(),
 				}).Errorf("Failed to send refund transfer transaction")
 				return
+			}
+			if receipt.Status == 0 {
+				logger.WithFields(logger.Fields{
+					"OrderID": order.ID.String(),
+				}).Errorf("Refund transaction reverted on-chain")
+				return
+			}
+
+			_, err = order.Update().
+				SetStatus(paymentorder.StatusRefunded).
+				SetTxHash(receipt.TxHash.Hex()).
+				SetBlockNumber(receipt.BlockNumber).
+				Save(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":   err.Error(),
+					"OrderID": order.ID.String(),
+				}).Errorf("Failed to update order status after refund")
 			}
 
 		}(order)

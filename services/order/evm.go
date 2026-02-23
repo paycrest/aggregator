@@ -102,6 +102,9 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	}
 
 	// Decrypt the receive address private key from salt
+	if len(order.ReceiveAddressSalt) == 0 {
+		return fmt.Errorf("%s - CreateOrder: receive address salt is empty", orderIDPrefix)
+	}
 	saltDecrypted, err := cryptoUtils.DecryptPlain(order.ReceiveAddressSalt)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.decryptSalt: %w", orderIDPrefix, err)
@@ -123,20 +126,19 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	chainID := big.NewInt(network.ChainID)
 	delegationContract := ethcommon.HexToAddress(network.DelegationContractAddress)
 
-	// This account is a controlled address so delegation will not be set at this point
-	// Check delegation status
-	// alreadyDelegated, err := utils.CheckDelegation(client, userAddr, delegationContract)
-	// if err != nil {
-	// 	return fmt.Errorf("%s - CreateOrder.checkDelegation: %w", orderIDPrefix, err)
-	// }
-
-	// Sign 7702 authorization
-	// This is a fresh wallet so nonce can be 0 instead of making another client call
-	auth, err := utils.SignAuthorization7702(userKey, chainID, delegationContract, 0)
+	alreadyDelegated, err := utils.CheckDelegation(client, userAddr, delegationContract)
 	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.signAuth: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - CreateOrder.checkDelegation: %w", orderIDPrefix, err)
 	}
-	authList := []types.SetCodeAuthorization{auth}
+
+	var authList []types.SetCodeAuthorization
+	if !alreadyDelegated {
+		auth, err := utils.SignAuthorization7702(userKey, chainID, delegationContract, 0)
+		if err != nil {
+			return fmt.Errorf("%s - CreateOrder.signAuth: %w", orderIDPrefix, err)
+		}
+		authList = []types.SetCodeAuthorization{auth}
+	}
 
 	// Build batch calls: approve + createOrder
 	gatewayAddr := ethcommon.HexToAddress(network.GatewayContractAddress)
@@ -158,8 +160,13 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		{To: gatewayAddr, Value: big.NewInt(0), Data: createOrderData},
 	}
 
-	// Fresh wallet — batch nonce is always 0
 	var batchNonce uint64
+	if alreadyDelegated {
+		batchNonce, err = utils.ReadBatchNonce(client, userAddr)
+		if err != nil {
+			return fmt.Errorf("%s - CreateOrder.readBatchNonce: %w", orderIDPrefix, err)
+		}
+	}
 
 	batchSig, err := utils.SignBatch7702(userKey, userAddr, batchNonce, calls)
 	if err != nil {
@@ -185,13 +192,13 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		if txErr != nil {
 			return fmt.Errorf("%s - CreateOrder.sendTx: %w", orderIDPrefix, txErr)
 		}
-		if receipt.Status == 0 {
-			return fmt.Errorf("%s - CreateOrder: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
-		}
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+	if receipt.Status == 0 {
+		return fmt.Errorf("%s - CreateOrder: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
 	}
 
 	_, err = order.Update().
@@ -260,13 +267,13 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		if txErr != nil {
 			return fmt.Errorf("%s - RefundOrder.sendTx: %w", orderIDPrefix, txErr)
 		}
-		if receipt.Status == 0 {
-			return fmt.Errorf("%s - RefundOrder: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
-		}
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+	if receipt.Status == 0 {
+		return fmt.Errorf("%s - RefundOrder: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
 	}
 
 	// TODO: revisit — call IndexGateway with tx hash instead of setting it directly
@@ -331,13 +338,13 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 		if txErr != nil {
 			return fmt.Errorf("%s - SettleOrder.sendTx: %w", orderIDPrefix, txErr)
 		}
-		if receipt.Status == 0 {
-			return fmt.Errorf("%s - SettleOrder: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
-		}
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+	if receipt.Status == 0 {
+		return fmt.Errorf("%s - SettleOrder: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
 	}
 
 	// TODO: revisit — call IndexGateway with tx hash instead of setting it directly

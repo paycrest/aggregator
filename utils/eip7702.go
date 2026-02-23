@@ -34,19 +34,19 @@ func CheckDelegation(client *ethclient.Client, eoa, delegationContract common.Ad
 	if err != nil {
 		return false, err
 	}
-	if len(code) == 0 {
+	if len(code) != 23 {
 		return false, nil
 	}
-	delegationCode, err := client.CodeAt(context.Background(), delegationContract, nil)
-	if err != nil {
-		return false, err
+	if code[0] != 0xef || code[1] != 0x01 || code[2] != 0x00 {
+		return false, nil
 	}
-	return string(code) == string(delegationCode), nil
+	target := common.BytesToAddress(code[3:23])
+	return target == delegationContract, nil
 }
 
 func SignAuthorization7702(privateKey *ecdsa.PrivateKey, chainID *big.Int, contractAddr common.Address, nonce uint64) (types.SetCodeAuthorization, error) {
 	encoded, err := rlp.EncodeToBytes([]interface{}{
-		chainID, contractAddr, big.NewInt(int64(nonce)),
+		chainID, contractAddr, new(big.Int).SetUint64(nonce),
 	})
 	if err != nil {
 		return types.SetCodeAuthorization{}, fmt.Errorf("RLP encode failed: %w", err)
@@ -98,8 +98,14 @@ func SignBatch7702(privateKey *ecdsa.PrivateKey, signerAddr common.Address, nonc
 
 // Mostly used for onramp
 func ReadBatchNonce(client *ethclient.Client, userAddr common.Address) (uint64, error) {
-	parsed, _ := abi.JSON(strings.NewReader(batchNonceABI))
-	data, _ := parsed.Pack("nonce")
+	parsed, err := abi.JSON(strings.NewReader(batchNonceABI))
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse batch nonce ABI: %w", err)
+	}
+	data, err := parsed.Pack("nonce")
+	if err != nil {
+		return 0, fmt.Errorf("failed to pack nonce call: %w", err)
+	}
 	result, err := client.CallContract(context.Background(), ethereum.CallMsg{To: &userAddr, Data: data}, nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to read batch nonce: %w", err)
@@ -166,11 +172,18 @@ func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecds
 	}
 
 	for i := 0; i < 30; i++ {
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("context cancelled waiting for tx %s: %w", signedTx.Hash().Hex(), ctx.Err())
+		}
 		receipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
 		if err == nil {
 			return receipt, nil
 		}
-		time.Sleep(2 * time.Second)
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context cancelled waiting for tx %s: %w", signedTx.Hash().Hex(), ctx.Err())
+		case <-time.After(2 * time.Second):
+		}
 	}
 	return nil, fmt.Errorf("timeout waiting for tx %s", signedTx.Hash().Hex())
 }
