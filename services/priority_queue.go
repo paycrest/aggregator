@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -26,7 +28,6 @@ import (
 
 var (
 	serverConf = config.ServerConfig()
-	orderConf  = config.OrderConfig()
 )
 
 type PriorityQueueService struct {
@@ -38,6 +39,30 @@ func NewPriorityQueueService() *PriorityQueueService {
 	return &PriorityQueueService{
 		balanceService: balance.New(),
 	}
+}
+
+// GetStuckOrderCount returns the number of "stuck" orders for a provider: status=fulfilled, at least one fulfillment with validation_status=pending, updated_at <= now - OrderRefundTimeout, order_type=regular.
+func (s *PriorityQueueService) GetStuckOrderCount(ctx context.Context, providerID string) (int, error) {
+	conf := config.OrderConfig()
+	if conf.ProviderStuckFulfillmentThreshold <= 0 {
+		return 0, nil
+	}
+	cutoff := time.Now().Add(-conf.OrderRefundTimeout)
+	count, err := storage.Client.PaymentOrder.Query().
+		Where(
+			paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+			paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular),
+			paymentorder.UpdatedAtLTE(cutoff),
+			paymentorder.HasProviderWith(providerprofile.IDEQ(providerID)),
+			paymentorder.HasFulfillmentsWith(
+				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending),
+			),
+		).
+		Count(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // ProcessBucketQueues creates a priority queue for each bucket and saves it to redis
@@ -325,6 +350,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s", bucket.Edges.Currency.Code, bucket.MinAmount, bucket.MaxAmount)
 	prevRedisKey := redisKey + "_prev"
 	tempRedisKey := redisKey + "_temp"
+	orderConf := config.OrderConfig()
 
 	// Copy the current queue to the previous queue (backup before rebuilding)
 	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
@@ -542,9 +568,68 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	}
 }
 
+// tryUsePreSetProvider fetches the provider by order.ProviderID, optionally refreshes rate, then assigns (OTC or sendOrderRequest).
+// Returns (true, provider, nil) if assignment succeeded; (false, provider, err) otherwise. Caller uses provider to decide private early-return.
+func (s *PriorityQueueService) tryUsePreSetProvider(ctx context.Context, order types.PaymentOrderFields) (assigned bool, provider *ent.ProviderProfile, err error) {
+	provider, err = storage.Client.ProviderProfile.
+		Query().
+		Where(providerprofile.IDEQ(order.ProviderID)).
+		Only(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+		}).Errorf("failed to get provider")
+		return false, nil, err
+	}
+
+	if !order.UpdatedAt.IsZero() && order.UpdatedAt.Before(time.Now().Add(-10*time.Minute)) {
+		order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+			}).Errorf("failed to get rate for provider")
+		} else {
+			_, err = storage.Client.PaymentOrder.
+				Update().
+				Where(paymentorder.MessageHashEQ(order.MessageHash)).
+				SetRate(order.Rate).
+				Save(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+				}).Errorf("failed to update rate for provider")
+			}
+		}
+	}
+
+	if order.OrderType == "otc" {
+		if err := s.assignOtcOrder(ctx, order); err != nil {
+			return false, provider, err
+		}
+		return true, provider, nil
+	}
+	err = s.sendOrderRequest(ctx, order)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+		}).Errorf("failed to send order request to specific provider")
+		return false, provider, err
+	}
+	return true, provider, nil
+}
+
 // AssignPaymentOrder assigns payment orders to providers
 func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order types.PaymentOrderFields) error {
 	orderIDPrefix := strings.Split(order.ID.String(), "-")[0]
+	orderConf := config.OrderConfig()
 
 	// Both regular and OTC orders must have a provision bucket
 	if order.ProvisionBucket == nil {
@@ -622,66 +707,32 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 		}
 		if shouldSkip {
 			// Provider should be skipped, continue to queue matching
-		} else {
-			provider, err := storage.Client.ProviderProfile.
-				Query().
-				Where(
-					providerprofile.IDEQ(order.ProviderID),
-				).
-				Only(ctx)
-
-			if err == nil {
-				// TODO: check for provider's minimum and maximum rate for negotiation
-				// Update the rate with the current rate if order was last updated more than 10 mins ago
-				if !order.UpdatedAt.IsZero() && order.UpdatedAt.Before(time.Now().Add(-10*time.Minute)) {
-					order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.ProviderID,
-						}).Errorf("failed to get rate for provider")
-					}
-					_, err = storage.Client.PaymentOrder.
-						Update().
-						Where(paymentorder.MessageHashEQ(order.MessageHash)).
-						SetRate(order.Rate).
-						Save(ctx)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.ProviderID,
-						}).Errorf("failed to update rate for provider")
-					}
-				}
-
-				// Handle OTC orders differently - no balance reservation, no provision node request
-				if order.OrderType == "otc" {
-					if err := s.assignOtcOrder(ctx, order); err != nil {
-						return err
-					}
-					return nil
-				} else {
-					// Regular orders: send order request (balance reservation + provision node)
-					err = s.sendOrderRequest(ctx, order)
-					if err == nil {
-						return nil
-					}
-					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", err),
-						"OrderID":    order.ID.String(),
-						"ProviderID": order.ProviderID,
-					}).Errorf("failed to send order request to specific provider")
-				}
-			} else {
+		} else if order.OrderType != "otc" && orderConf.ProviderStuckFulfillmentThreshold > 0 {
+			// Regular orders: skip pre-set provider if they are at or over stuck fulfillment threshold
+			stuckCount, errStuck := s.GetStuckOrderCount(ctx, order.ProviderID)
+			if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+				// Fall through to queue matching
+			} else if errStuck != nil {
 				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
+					"Error":      fmt.Sprintf("%v", errStuck),
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.ProviderID,
-				}).Errorf("failed to get provider")
+				}).Errorf("failed to get stuck order count for pre-set provider")
+			} else {
+				assigned, provider, _ := s.tryUsePreSetProvider(ctx, order)
+				if assigned {
+					return nil
+				}
+				if provider != nil && provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+					return nil
+				}
 			}
-
+		} else {
+			// OTC or threshold 0: use pre-set provider without stuck check
+			assigned, provider, _ := s.tryUsePreSetProvider(ctx, order)
+			if assigned {
+				return nil
+			}
 			if provider != nil && provider.VisibilityMode == providerprofile.VisibilityModePrivate {
 				return nil
 			}
@@ -713,8 +764,16 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 							"OrderID": order.ID.String(),
 							"Error":   fallbackErr.Error(),
 						}).Errorf("AssignPaymentOrder: TryFallbackAssignment failed after no provider in queue")
+						var errStuck *types.ErrNoProviderDueToStuck
+						if errors.As(fallbackErr, &errStuck) {
+							return fallbackErr
+						}
 					}
 				}
+			}
+			var errStuck *types.ErrNoProviderDueToStuck
+			if errors.As(matchRateErr, &errStuck) {
+				return matchRateErr
 			}
 			return matchRateErr
 		}
@@ -728,7 +787,8 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 // Slippage is taken from the fallback provider's ProviderOrderToken (rate_slippage). Returns a clear error if fallback
 // was attempted but order rate is outside the fallback provider's acceptable slippage.
 func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order *ent.PaymentOrder) error {
-	fallbackID := config.OrderConfig().FallbackProviderID
+	orderConf := config.OrderConfig()
+	fallbackID := orderConf.FallbackProviderID
 	if fallbackID == "" {
 		return fmt.Errorf("fallback provider not configured")
 	}
@@ -829,6 +889,14 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 		return fmt.Errorf("fallback: provision bucket %d missing currency", fields.ProvisionBucket.ID)
 	}
 
+	// Skip fallback provider if at or over stuck fulfillment threshold
+	if orderConf.ProviderStuckFulfillmentThreshold > 0 {
+		stuckCount, errStuck := s.GetStuckOrderCount(ctx, fallbackID)
+		if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+			return &types.ErrNoProviderDueToStuck{CurrencyCode: bucketCurrency.Code}
+		}
+	}
+
 	// Resolve fallback provider
 	provider, err := storage.Client.ProviderProfile.Get(ctx, fallbackID)
 	if err != nil {
@@ -919,6 +987,7 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 // assignOtcOrder assigns an OTC order to a provider and creates a Redis key for reassignment.
 // DB updates are committed first; Redis operations run afterward to avoid mixing transaction scope with Redis.
 func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.PaymentOrderFields) error {
+	orderConf := config.OrderConfig()
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -1081,6 +1150,7 @@ func (s *PriorityQueueService) addProviderToExcludeList(ctx context.Context, ord
 
 // sendOrderRequest sends an order request to a provider
 func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.PaymentOrderFields) error {
+	orderConf := config.OrderConfig()
 	// Reserve balance for this order
 	currency := order.ProvisionBucket.Edges.Currency.Code
 	amount := order.Amount.Mul(order.Rate).RoundBank(0)
@@ -1311,9 +1381,18 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 
 // matchRate matches order rate with a provider rate
 func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.PaymentOrderFields, excludeList []string) error {
+	orderConf := config.OrderConfig()
+	var considered, skippedDueToStuck int
 	for index := 0; ; index++ {
 		providerData, err := storage.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
 		if err != nil {
+			if considered > 0 && skippedDueToStuck == considered {
+				currencyCode := ""
+				if order.ProvisionBucket != nil && order.ProvisionBucket.Edges.Currency != nil {
+					currencyCode = order.ProvisionBucket.Edges.Currency.Code
+				}
+				return &types.ErrNoProviderDueToStuck{CurrencyCode: currencyCode}
+			}
 			return err
 		}
 
@@ -1445,6 +1524,16 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 		allowedDeviation := order.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
 
 		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
+			considered++
+			// Regular orders: skip provider if at or over stuck fulfillment threshold
+			if order.OrderType != "otc" && orderConf.ProviderStuckFulfillmentThreshold > 0 {
+				stuckCount, errStuck := s.GetStuckOrderCount(ctx, order.ProviderID)
+				if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+					skippedDueToStuck++
+					continue
+				}
+			}
+
 			// Found a match for the rate - handle index pop once (common for both OTC and regular)
 			if index == 0 {
 				// Match found at index 0, perform LPOP to dequeue

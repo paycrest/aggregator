@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -220,6 +221,12 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	// Validate rate using extracted logic
 	rateResult, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
 	if err != nil {
+		var errStuck *types.ErrNoProviderDueToStuck
+		if errors.As(err, &errStuck) && errStuck.CurrencyCode != "" {
+			msg := fmt.Sprintf("There's a banking/mobile network issue affecting %s providers", errStuck.CurrencyCode)
+			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", msg, nil)
+			return
+		}
 		// Return 404 if no provider found, else 500 for other errors
 		if strings.Contains(err.Error(), "no provider available") {
 			u.APIResponse(ctx, http.StatusNotFound, "error", err.Error(), nil)

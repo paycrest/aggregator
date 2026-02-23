@@ -19,10 +19,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -895,6 +897,17 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		return RateValidationResult{}, fmt.Errorf("internal server error")
 	}
 
+	// Regular orders: reject if provider is at or over stuck fulfillment threshold
+	if orderType == paymentorder.OrderTypeRegular {
+		orderConf := config.OrderConfig()
+		if orderConf.ProviderStuckFulfillmentThreshold > 0 {
+			stuckCount, errStuck := getProviderStuckOrderCount(ctx, providerID)
+			if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+				return RateValidationResult{}, &types.ErrNoProviderDueToStuck{CurrencyCode: currency.Code}
+			}
+		}
+	}
+
 	return RateValidationResult{
 		Rate:       rateResponse,
 		ProviderID: providerID,
@@ -990,6 +1003,8 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 	var foundExactMatch bool
 	var selectedProviderID string
 	var selectedOrderType paymentorder.OrderType
+	var anySkippedDueToStuck bool
+	var currencyForStuck string
 
 	// Scan through the buckets to find a matching rate
 	for _, key := range keys {
@@ -1021,6 +1036,10 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 			selectedOrderType = result.OrderType
 			break // Found exact match, no need to continue
 		}
+		if result.AllSkippedDueToStuck && result.CurrencyCode != "" {
+			anySkippedDueToStuck = true
+			currencyForStuck = result.CurrencyCode
+		}
 
 		// Track the best available rate for logging purposes
 		if result.Rate.GreaterThan(bestRate) {
@@ -1030,6 +1049,9 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 
 	// If no exact match found, return error with details
 	if !foundExactMatch {
+		if anySkippedDueToStuck && currencyForStuck != "" {
+			return RateValidationResult{}, &types.ErrNoProviderDueToStuck{CurrencyCode: currencyForStuck}
+		}
 		logger.WithFields(logger.Fields{
 			"Token":         token.Symbol,
 			"Currency":      currency.Code,
@@ -1100,10 +1122,36 @@ func parseBucketKey(key string) (*BucketData, error) {
 
 // ProviderRateResult contains the result of finding a suitable provider rate
 type ProviderRateResult struct {
-	Rate       decimal.Decimal
-	ProviderID string
-	OrderType  paymentorder.OrderType
-	Found      bool
+	Rate                 decimal.Decimal
+	ProviderID           string
+	OrderType            paymentorder.OrderType
+	Found                bool
+	AllSkippedDueToStuck bool   // true when no match because every considered provider was skipped due to stuck threshold
+	CurrencyCode         string // set when AllSkippedDueToStuck is true, for 503 response
+}
+
+// getProviderStuckOrderCount returns the number of stuck orders for a provider (status=fulfilled, pending fulfillment, updated_at <= now - OrderRefundTimeout, regular only).
+func getProviderStuckOrderCount(ctx context.Context, providerID string) (int, error) {
+	orderConf := config.OrderConfig()
+	if orderConf.ProviderStuckFulfillmentThreshold <= 0 {
+		return 0, nil
+	}
+	cutoff := time.Now().Add(-orderConf.OrderRefundTimeout)
+	count, err := storage.Client.PaymentOrder.Query().
+		Where(
+			paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+			paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular),
+			paymentorder.UpdatedAtLTE(cutoff),
+			paymentorder.HasProviderWith(providerprofile.IDEQ(providerID)),
+			paymentorder.HasFulfillmentsWith(
+				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending),
+			),
+		).
+		Count(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // findSuitableProviderRate finds the first suitable provider rate from the provider list
@@ -1112,6 +1160,8 @@ type ProviderRateResult struct {
 func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymbol string, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData) ProviderRateResult {
 	var bestRate decimal.Decimal
 	var foundExactMatch bool
+	var considered, skippedDueToStuck int
+	orderConf := config.OrderConfig()
 
 	// Track reasons for debugging when no match is found
 	var skipReasons []string
@@ -1279,6 +1329,15 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 				return ProviderRateResult{Found: false}
 			}
 
+			considered++
+			if orderConf.ProviderStuckFulfillmentThreshold > 0 {
+				stuckCount, errStuck := getProviderStuckOrderCount(ctx, providerID)
+				if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+					skippedDueToStuck++
+					continue
+				}
+			}
+
 			// Determine order type for this provider
 			orderType := DetermineOrderType(providerOrderToken, tokenAmount)
 
@@ -1310,9 +1369,12 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 		}).Debugf("ValidateRate.NoSuitableProvider: providers skipped due to limits/balance")
 	}
 
+	allSkippedDueToStuck := considered > 0 && skippedDueToStuck == considered
 	return ProviderRateResult{
-		Rate:  bestRate,
-		Found: foundExactMatch,
+		Rate:                 bestRate,
+		Found:                foundExactMatch,
+		AllSkippedDueToStuck: allSkippedDueToStuck,
+		CurrencyCode:         bucketData.Currency,
 	}
 }
 

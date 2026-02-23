@@ -26,7 +26,10 @@ type OrderConfiguration struct {
 	PercentDeviationFromExternalRate decimal.Decimal
 	PercentDeviationFromMarketRate   decimal.Decimal
 	IndexingDuration                 time.Duration
-	FallbackProviderID               string
+	// FallbackProviderID is the ID of the provider to use as a fallback for orders that cannot be fulfilled by any other provider.
+	FallbackProviderID string
+	// ProviderStuckFulfillmentThreshold: skip provider assignment when their stuck order count >= this value. 0 = disabled.
+	ProviderStuckFulfillmentThreshold int
 }
 
 // OrderConfig sets the order configuration
@@ -46,6 +49,7 @@ func OrderConfig() *OrderConfiguration {
 	viper.SetDefault("PERCENT_DEVIATION_FROM_MARKET_RATE", 0.1)
 	viper.SetDefault("INDEXING_DURATION", 10)
 	viper.SetDefault("FALLBACK_PROVIDER_ID", "")
+	viper.SetDefault("PROVIDER_STUCK_FULFILLMENT_THRESHOLD", 0) // 0 = disabled
 
 	// Validate ProviderMaxRetryAttempts to ensure it's at least 1
 	// If invalid (0 or negative), use the default value of 3
@@ -55,22 +59,23 @@ func OrderConfig() *OrderConfiguration {
 	}
 
 	return &OrderConfiguration{
-		OrderFulfillmentValidity:         time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY")) * time.Second,
-		OrderFulfillmentValidityOtc:      time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY_OTC")) * time.Second,
-		OrderRefundTimeout:               time.Duration(viper.GetInt("ORDER_REFUND_TIMEOUT")) * time.Second,
-		OrderRefundTimeoutOtc:            time.Duration(viper.GetInt("ORDER_REFUND_TIMEOUT_OTC")) * time.Second,
-		ReceiveAddressValidity:           time.Duration(viper.GetInt("RECEIVE_ADDRESS_VALIDITY")) * time.Second,
-		OrderRequestValidity:             time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY")) * time.Second,
-		OrderRequestValidityOtc:          time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY_OTC")) * time.Second,
-		TronProApiKey:                    viper.GetString("TRON_PRO_API_KEY"),
-		EntryPointContractAddress:        common.HexToAddress(viper.GetString("ENTRY_POINT_CONTRACT_ADDRESS")),
-		BucketQueueRebuildInterval:       viper.GetInt("BUCKET_QUEUE_REBUILD_INTERVAL"),
-		RefundCancellationCount:          viper.GetInt("REFUND_CANCELLATION_COUNT"),
-		ProviderMaxRetryAttempts:         providerMaxRetryAttempts,
-		PercentDeviationFromExternalRate: decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_EXTERNAL_RATE")),
-		PercentDeviationFromMarketRate:   decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_MARKET_RATE")),
-		IndexingDuration:                 time.Duration(viper.GetInt("INDEXING_DURATION")) * time.Second,
-		FallbackProviderID:               viper.GetString("FALLBACK_PROVIDER_ID"),
+		OrderFulfillmentValidity:          time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY")) * time.Second,
+		OrderFulfillmentValidityOtc:       time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY_OTC")) * time.Second,
+		OrderRefundTimeout:                time.Duration(viper.GetInt("ORDER_REFUND_TIMEOUT")) * time.Second,
+		OrderRefundTimeoutOtc:             time.Duration(viper.GetInt("ORDER_REFUND_TIMEOUT_OTC")) * time.Second,
+		ReceiveAddressValidity:            time.Duration(viper.GetInt("RECEIVE_ADDRESS_VALIDITY")) * time.Second,
+		OrderRequestValidity:              time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY")) * time.Second,
+		OrderRequestValidityOtc:           time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY_OTC")) * time.Second,
+		TronProApiKey:                     viper.GetString("TRON_PRO_API_KEY"),
+		EntryPointContractAddress:         common.HexToAddress(viper.GetString("ENTRY_POINT_CONTRACT_ADDRESS")),
+		BucketQueueRebuildInterval:        viper.GetInt("BUCKET_QUEUE_REBUILD_INTERVAL"),
+		RefundCancellationCount:           viper.GetInt("REFUND_CANCELLATION_COUNT"),
+		ProviderMaxRetryAttempts:          providerMaxRetryAttempts,
+		PercentDeviationFromExternalRate:  decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_EXTERNAL_RATE")),
+		PercentDeviationFromMarketRate:    decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_MARKET_RATE")),
+		IndexingDuration:                  time.Duration(viper.GetInt("INDEXING_DURATION")) * time.Second,
+		FallbackProviderID:                viper.GetString("FALLBACK_PROVIDER_ID"),
+		ProviderStuckFulfillmentThreshold: viper.GetInt("PROVIDER_STUCK_FULFILLMENT_THRESHOLD"),
 	}
 }
 

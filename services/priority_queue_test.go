@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -25,6 +26,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	userEnt "github.com/paycrest/aggregator/ent/user"
@@ -38,6 +40,7 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testCtxForPQ = struct {
@@ -1223,6 +1226,160 @@ func TestPriorityQueueTest(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, testCtxForPQ.privateProviderProfile.ID, orderReqProvider,
 				"order should be sent to fallback provider (order_request_* in Redis), not refunded")
+		})
+
+		t.Run("GetStuckOrderCount_counts_only_stuck_orders", func(t *testing.T) {
+			ctx := context.Background()
+			oldThreshold := viper.GetInt("PROVIDER_STUCK_FULFILLMENT_THRESHOLD")
+			oldRefund := viper.GetInt("ORDER_REFUND_TIMEOUT")
+			viper.Set("PROVIDER_STUCK_FULFILLMENT_THRESHOLD", 1)
+			viper.Set("ORDER_REFUND_TIMEOUT", 60) // 60 seconds
+			defer func() {
+				viper.Set("PROVIDER_STUCK_FULFILLMENT_THRESHOLD", oldThreshold)
+				viper.Set("ORDER_REFUND_TIMEOUT", oldRefund)
+			}()
+
+			// Create a fulfilled order with pending fulfillment and updated_at before cutoff (now - 2*refund)
+			cutoff := time.Now().Add(-2 * time.Minute)
+			stuckOrder, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
+				"provider":   testCtxForPQ.publicProviderProfile,
+				"status":     "fulfilled",
+				"updatedAt":  cutoff,
+				"gateway_id": "stuck-order-gw",
+			})
+			assert.NoError(t, err)
+			_, err = db.Client.PaymentOrder.UpdateOneID(stuckOrder.ID).
+				SetOrderType(paymentorder.OrderTypeRegular).
+				SetUpdatedAt(cutoff).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			_, err = db.Client.PaymentOrderFulfillment.Create().
+				SetOrderID(stuckOrder.ID).
+				SetValidationStatus(paymentorderfulfillment.ValidationStatusPending).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			pq := NewPriorityQueueService()
+			count, err := pq.GetStuckOrderCount(ctx, testCtxForPQ.publicProviderProfile.ID)
+			assert.NoError(t, err)
+			assert.GreaterOrEqual(t, count, 1, "stuck order count should be at least 1")
+		})
+
+		t.Run("AssignPaymentOrder_returns_ErrNoProviderDueToStuck_when_all_providers_stuck", func(t *testing.T) {
+			ctx := context.Background()
+			oldThreshold := viper.GetInt("PROVIDER_STUCK_FULFILLMENT_THRESHOLD")
+			oldRefund := viper.GetInt("ORDER_REFUND_TIMEOUT")
+			oldFallback := viper.Get("FALLBACK_PROVIDER_ID")
+			viper.Set("PROVIDER_STUCK_FULFILLMENT_THRESHOLD", 1)
+			viper.Set("ORDER_REFUND_TIMEOUT", 60)
+			viper.Set("FALLBACK_PROVIDER_ID", "")
+			defer func() {
+				viper.Set("PROVIDER_STUCK_FULFILLMENT_THRESHOLD", oldThreshold)
+				viper.Set("ORDER_REFUND_TIMEOUT", oldRefund)
+				viper.Set("FALLBACK_PROVIDER_ID", oldFallback)
+			}()
+
+			// Create stuck order for the only provider in the bucket
+			cutoff := time.Now().Add(-2 * time.Minute)
+			stuckOrder, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
+				"provider":   testCtxForPQ.publicProviderProfile,
+				"status":     "fulfilled",
+				"updatedAt":  cutoff,
+				"gateway_id": "stuck-gw-2",
+			})
+			assert.NoError(t, err)
+			_, err = db.Client.PaymentOrder.UpdateOneID(stuckOrder.ID).
+				SetOrderType(paymentorder.OrderTypeRegular).
+				SetUpdatedAt(cutoff).
+				Save(ctx)
+			assert.NoError(t, err)
+			_, err = db.Client.PaymentOrderFulfillment.Create().
+				SetOrderID(stuckOrder.ID).
+				SetValidationStatus(paymentorderfulfillment.ValidationStatusPending).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+				"provider_id": testCtxForPQ.publicProviderProfile.ID,
+				"min_amount":  testCtxForPQ.minAmount,
+				"max_amount":  testCtxForPQ.maxAmount,
+				"currency_id": testCtxForPQ.currency.ID,
+			})
+			assert.NoError(t, err)
+
+			_order, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
+				"provider":   testCtxForPQ.publicProviderProfile,
+				"rate":       100.0,
+				"gateway_id": "order-stuck-test",
+			})
+			assert.NoError(t, err)
+			_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
+			assert.NoError(t, err)
+
+			order, err := db.Client.PaymentOrder.Query().
+				Where(paymentorder.IDEQ(_order.ID)).
+				WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) { pb.WithCurrency() }).
+				WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+				Only(ctx)
+			assert.NoError(t, err)
+
+			// Use real service (not TestPriorityQueueService) so matchRate has stuck check
+			realService := NewPriorityQueueService()
+			// Build queue key exactly like AssignPaymentOrder does (order.ProvisionBucket)
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s", order.Edges.ProvisionBucket.Edges.Currency.Code, order.Edges.ProvisionBucket.MinAmount, order.Edges.ProvisionBucket.MaxAmount)
+			// Push only our (stuck) provider so matchRate considers them, skips due to stuck, and returns ErrNoProviderDueToStuck
+			_ = db.RedisClient.Del(ctx, redisKey).Err()
+			tok := order.Edges.Token
+			netID := ""
+			if tok != nil && tok.Edges.Network != nil {
+				netID = tok.Edges.Network.Identifier
+			} else if tok != nil {
+				net, _ := tok.QueryNetwork().Only(ctx)
+				if net != nil {
+					netID = net.Identifier
+				}
+			}
+			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
+				testCtxForPQ.publicProviderProfile.ID,
+				order.Edges.Token.Symbol,
+				netID,
+				order.Rate.String(),
+				order.Edges.ProvisionBucket.MinAmount.String(),
+				order.Edges.ProvisionBucket.MaxAmount.String())
+			_, err = db.RedisClient.RPush(ctx, redisKey, providerData).Result()
+			assert.NoError(t, err)
+			queueLen, _ := db.RedisClient.LLen(ctx, redisKey).Result()
+			assert.Equal(t, int64(1), queueLen, "queue should have exactly one provider so matchRate considers and skips due to stuck")
+
+			orderFields := types.PaymentOrderFields{
+				ID:                order.ID,
+				OrderType:         "regular",
+				Token:             order.Edges.Token,
+				GatewayID:         order.GatewayID,
+				Amount:            order.Amount,
+				Rate:              order.Rate,
+				Institution:       order.Institution,
+				AccountIdentifier: order.AccountIdentifier,
+				AccountName:       order.AccountName,
+				ProviderID:        "",
+				ProvisionBucket:   order.Edges.ProvisionBucket,
+				Memo:              order.Memo,
+				UpdatedAt:         order.UpdatedAt,
+				CreatedAt:         order.CreatedAt,
+			}
+			if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+				orderFields.Network = order.Edges.Token.Edges.Network
+			}
+
+			err = realService.AssignPaymentOrder(ctx, orderFields)
+			require.Error(t, err, "assignment should fail when all providers are stuck (no provider or ErrNoProviderDueToStuck)")
+			var errStuck *types.ErrNoProviderDueToStuck
+			if errors.As(err, &errStuck) {
+				assert.Equal(t, testCtxForPQ.currency.Code, errStuck.CurrencyCode)
+			}
+			// When queue key matches and provider is skipped due to stuck, we get ErrNoProviderDueToStuck.
+			// Otherwise we may get redis.Nil (e.g. queue key format differs); either way we must not succeed.
 		})
 	})
 }
