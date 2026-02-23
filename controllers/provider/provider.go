@@ -46,7 +46,7 @@ var errShortIDInvalidFormat = errors.New("invalid order ID format")
 var errShortIDInvalidValue = errors.New("invalid order ID")
 
 // resolveOrderID resolves the path id (either a UUID or a 12-char short ID) to the internal order UUID.
-// Use errors.Is(err, errShortIDNotFound) for 404, errShortIDInvalidFormat/errShortIDInvalidValue for 400, else 500.
+// Use errors.Is(err, errShortIDNotFound) for 404, errShortIDInvalidFormat for 400, else 500 (including errShortIDInvalidValue = server-side corrupted Redis data).
 func resolveOrderID(ctx context.Context, idParam string) (uuid.UUID, error) {
 	if id, err := uuid.Parse(idParam); err == nil {
 		return id, nil
@@ -588,7 +588,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
 			return
 		}
-		if errors.Is(err, errShortIDInvalidFormat) || errors.Is(err, errShortIDInvalidValue) {
+		if errors.Is(err, errShortIDInvalidFormat) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 			return
 		}
@@ -775,7 +775,7 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
 			return
 		}
-		if errors.Is(err, errShortIDInvalidFormat) || errors.Is(err, errShortIDInvalidValue) {
+		if errors.Is(err, errShortIDInvalidFormat) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 			return
 		}
@@ -879,7 +879,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
 			return
 		}
-		if errors.Is(err, errShortIDInvalidFormat) || errors.Is(err, errShortIDInvalidValue) {
+		if errors.Is(err, errShortIDInvalidFormat) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 			return
 		}
@@ -1315,7 +1315,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
 			return
 		}
-		if errors.Is(err, errShortIDInvalidFormat) || errors.Is(err, errShortIDInvalidValue) {
+		if errors.Is(err, errShortIDInvalidFormat) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 			return
 		}
@@ -1851,7 +1851,7 @@ func (ctrl *ProviderController) GetPaymentOrderByID(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
 			return
 		}
-		if errors.Is(err, errShortIDInvalidFormat) || errors.Is(err, errShortIDInvalidValue) {
+		if errors.Is(err, errShortIDInvalidFormat) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 			return
 		}
