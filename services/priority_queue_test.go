@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -1375,9 +1374,8 @@ func TestPriorityQueueTest(t *testing.T) {
 			err = realService.AssignPaymentOrder(ctx, orderFields)
 			require.Error(t, err, "assignment should fail when all providers are stuck (no provider or ErrNoProviderDueToStuck)")
 			var errStuck *types.ErrNoProviderDueToStuck
-			if errors.As(err, &errStuck) {
-				assert.Equal(t, testCtxForPQ.currency.Code, errStuck.CurrencyCode)
-			}
+			require.ErrorAs(t, err, &errStuck)
+			assert.Equal(t, testCtxForPQ.currency.Code, errStuck.CurrencyCode)
 			// When queue key matches and provider is skipped due to stuck, we get ErrNoProviderDueToStuck.
 			// Otherwise we may get redis.Nil (e.g. queue key format differs); either way we must not succeed.
 		})

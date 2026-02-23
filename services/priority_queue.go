@@ -708,17 +708,18 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 		if shouldSkip {
 			// Provider should be skipped, continue to queue matching
 		} else if order.OrderType != "otc" && orderConf.ProviderStuckFulfillmentThreshold > 0 {
-			// Regular orders: skip pre-set provider if they are at or over stuck fulfillment threshold
+			// Regular orders: skip pre-set provider only when stuck count is at or over threshold
 			stuckCount, errStuck := s.GetStuckOrderCount(ctx, order.ProviderID)
 			if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
 				// Fall through to queue matching
-			} else if errStuck != nil {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", errStuck),
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.ProviderID,
-				}).Errorf("failed to get stuck order count for pre-set provider")
 			} else {
+				if errStuck != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", errStuck),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+					}).Errorf("failed to get stuck order count for pre-set provider")
+				}
 				assigned, provider, _ := s.tryUsePreSetProvider(ctx, order)
 				if assigned {
 					return nil
