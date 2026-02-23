@@ -2493,15 +2493,34 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 				Where(paymentorder.ReceiveAddressEQ(address)).
 				First(ctx)
 
-			if err == nil && paymentOrder != nil {
-				logger.WithFields(logger.Fields{
-					"NetworkParam":   networkParam,
-					"Address":        address,
-					"PaymentOrderID": paymentOrder.ID,
-				}).Infof("Found receive address in database, starting transfer event indexing")
+		if err == nil && paymentOrder != nil {
+			logger.WithFields(logger.Fields{
+				"NetworkParam":   networkParam,
+				"Address":        address,
+				"PaymentOrderID": paymentOrder.ID,
+			}).Infof("Found receive address in database, starting transfer event indexing")
 
-				// This is a receive address, index transfer events
-				wg.Add(1)
+			if paymentOrder.Status == paymentorder.StatusDeposited && paymentOrder.GatewayID == "" {
+				_, clearErr := storage.Client.PaymentOrder.
+					Update().
+					Where(paymentorder.IDEQ(paymentOrder.ID)).
+					ClearMessageHash().
+					Save(ctx)
+				if clearErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":          fmt.Sprintf("%v", clearErr),
+						"PaymentOrderID": paymentOrder.ID,
+					}).Errorf("Failed to clear message hash for retry")
+				} else {
+					logger.WithFields(logger.Fields{
+						"PaymentOrderID": paymentOrder.ID,
+						"Address":        address,
+					}).Infof("Cleared message hash to allow retry")
+				}
+			}
+
+			// This is a receive address, index transfer events
+			wg.Add(1)
 				go func() {
 					defer wg.Done()
 					// Get a token for this network to use with IndexReceiveAddress
