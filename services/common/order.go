@@ -25,7 +25,7 @@ import (
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
-	svc "github.com/paycrest/aggregator/services"
+
 	"github.com/paycrest/aggregator/services/balance"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -843,37 +843,8 @@ func HandleReceiveAddressValidity(ctx context.Context, paymentOrder *ent.Payment
 	return nil
 }
 
-// deleteTransferWebhook deletes the transfer webhook associated with a payment order
-func deleteTransferWebhook(ctx context.Context, txHash string) error {
-	// Get the payment order by txHash
-	paymentOrder, err := db.Client.PaymentOrder.
-		Query().
-		Where(paymentorder.TxHashEQ(txHash)).
-		WithPaymentWebhook().
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			// No payment order found, nothing to delete
-			return nil
-		}
-		return fmt.Errorf("failed to fetch payment order: %w", err)
-	}
-
-	// Check if there's an associated webhook
-	if paymentOrder.Edges.PaymentWebhook == nil {
-		// No webhook found, nothing to delete
-		return nil
-	}
-
-	// Create engine service to delete the webhook
-	engineService := svc.NewEngineService()
-
-	// Delete the webhook from thirdweb and our database
-	err = engineService.DeleteWebhookAndRecord(ctx, paymentOrder.Edges.PaymentWebhook.WebhookID)
-	if err != nil {
-		return fmt.Errorf("failed to delete webhook: %w", err)
-	}
-
+// deleteTransferWebhook is a no-op now
+func deleteTransferWebhook(_ context.Context, _ string) error {
 	return nil
 }
 

@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/paycrest/aggregator/services/starknet"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	tronWallet "github.com/paycrest/tron-wallet"
@@ -12,20 +14,30 @@ import (
 
 // ReceiveAddressService provides functionality related to managing receive addresses
 type ReceiveAddressService struct {
-	engineService  *EngineService
 	starknetClient *starknet.Client
 }
 
 // NewReceiveAddressService creates a new instance of ReceiveAddressService.
 func NewReceiveAddressService() *ReceiveAddressService {
-	return &ReceiveAddressService{
-		engineService: NewEngineService(),
-	}
+	return &ReceiveAddressService{}
 }
 
-// CreateSmartAddress function generates and saves a new EIP-4337 smart contract account address
-func (s *ReceiveAddressService) CreateSmartAddress(ctx context.Context, label string) (string, error) {
-	return s.engineService.CreateServerWallet(ctx, label)
+// CreateSmartAddress generates a fresh EOA and returns its address + encrypted private key as salt.
+func (s *ReceiveAddressService) CreateSmartAddress() (string, []byte, error) {
+	privateKey, err := crypto.GenerateKey()
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to generate EOA key: %w", err)
+	}
+
+	address := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+	privateKeyHex := hex.EncodeToString(crypto.FromECDSA(privateKey))
+	salt, err := cryptoUtils.EncryptPlain([]byte(privateKeyHex))
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to encrypt salt: %w", err)
+	}
+
+	return address.Hex(), salt, nil
 }
 
 // CreateTronAddress generates and saves a new Tron address

@@ -26,6 +26,8 @@ const (
 	FieldRPCEndpoint = "rpc_endpoint"
 	// FieldGatewayContractAddress holds the string denoting the gateway_contract_address field in the database.
 	FieldGatewayContractAddress = "gateway_contract_address"
+	// FieldDelegationContractAddress holds the string denoting the delegation_contract_address field in the database.
+	FieldDelegationContractAddress = "delegation_contract_address"
 	// FieldBlockTime holds the string denoting the block_time field in the database.
 	FieldBlockTime = "block_time"
 	// FieldIsTestnet holds the string denoting the is_testnet field in the database.
@@ -67,6 +69,7 @@ var Columns = []string{
 	FieldIdentifier,
 	FieldRPCEndpoint,
 	FieldGatewayContractAddress,
+	FieldDelegationContractAddress,
 	FieldBlockTime,
 	FieldIsTestnet,
 	FieldBundlerURL,
@@ -93,6 +96,8 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultGatewayContractAddress holds the default value on creation for the "gateway_contract_address" field.
 	DefaultGatewayContractAddress string
+	// DefaultDelegationContractAddress holds the default value on creation for the "delegation_contract_address" field.
+	DefaultDelegationContractAddress string
 )
 
 // OrderOption defines the ordering options for the Network queries.
@@ -131,6 +136,11 @@ func ByRPCEndpoint(opts ...sql.OrderTermOption) OrderOption {
 // ByGatewayContractAddress orders the results by the gateway_contract_address field.
 func ByGatewayContractAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGatewayContractAddress, opts...).ToFunc()
+}
+
+// ByDelegationContractAddress orders the results by the delegation_contract_address field.
+func ByDelegationContractAddress(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDelegationContractAddress, opts...).ToFunc()
 }
 
 // ByBlockTime orders the results by the block_time field.

@@ -86,6 +86,20 @@ func (_c *NetworkCreate) SetNillableGatewayContractAddress(v *string) *NetworkCr
 	return _c
 }
 
+// SetDelegationContractAddress sets the "delegation_contract_address" field.
+func (_c *NetworkCreate) SetDelegationContractAddress(v string) *NetworkCreate {
+	_c.mutation.SetDelegationContractAddress(v)
+	return _c
+}
+
+// SetNillableDelegationContractAddress sets the "delegation_contract_address" field if the given value is not nil.
+func (_c *NetworkCreate) SetNillableDelegationContractAddress(v *string) *NetworkCreate {
+	if v != nil {
+		_c.SetDelegationContractAddress(*v)
+	}
+	return _c
+}
+
 // SetBlockTime sets the "block_time" field.
 func (_c *NetworkCreate) SetBlockTime(v decimal.Decimal) *NetworkCreate {
 	_c.mutation.SetBlockTime(v)
@@ -213,6 +227,10 @@ func (_c *NetworkCreate) defaults() {
 		v := network.DefaultGatewayContractAddress
 		_c.mutation.SetGatewayContractAddress(v)
 	}
+	if _, ok := _c.mutation.DelegationContractAddress(); !ok {
+		v := network.DefaultDelegationContractAddress
+		_c.mutation.SetDelegationContractAddress(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -234,6 +252,9 @@ func (_c *NetworkCreate) check() error {
 	}
 	if _, ok := _c.mutation.GatewayContractAddress(); !ok {
 		return &ValidationError{Name: "gateway_contract_address", err: errors.New(`ent: missing required field "Network.gateway_contract_address"`)}
+	}
+	if _, ok := _c.mutation.DelegationContractAddress(); !ok {
+		return &ValidationError{Name: "delegation_contract_address", err: errors.New(`ent: missing required field "Network.delegation_contract_address"`)}
 	}
 	if _, ok := _c.mutation.BlockTime(); !ok {
 		return &ValidationError{Name: "block_time", err: errors.New(`ent: missing required field "Network.block_time"`)}
@@ -294,6 +315,10 @@ func (_c *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
 		_node.GatewayContractAddress = value
+	}
+	if value, ok := _c.mutation.DelegationContractAddress(); ok {
+		_spec.SetField(network.FieldDelegationContractAddress, field.TypeString, value)
+		_node.DelegationContractAddress = value
 	}
 	if value, ok := _c.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
@@ -462,6 +487,18 @@ func (u *NetworkUpsert) SetGatewayContractAddress(v string) *NetworkUpsert {
 // UpdateGatewayContractAddress sets the "gateway_contract_address" field to the value that was provided on create.
 func (u *NetworkUpsert) UpdateGatewayContractAddress() *NetworkUpsert {
 	u.SetExcluded(network.FieldGatewayContractAddress)
+	return u
+}
+
+// SetDelegationContractAddress sets the "delegation_contract_address" field.
+func (u *NetworkUpsert) SetDelegationContractAddress(v string) *NetworkUpsert {
+	u.Set(network.FieldDelegationContractAddress, v)
+	return u
+}
+
+// UpdateDelegationContractAddress sets the "delegation_contract_address" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateDelegationContractAddress() *NetworkUpsert {
+	u.SetExcluded(network.FieldDelegationContractAddress)
 	return u
 }
 
@@ -668,6 +705,20 @@ func (u *NetworkUpsertOne) SetGatewayContractAddress(v string) *NetworkUpsertOne
 func (u *NetworkUpsertOne) UpdateGatewayContractAddress() *NetworkUpsertOne {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateGatewayContractAddress()
+	})
+}
+
+// SetDelegationContractAddress sets the "delegation_contract_address" field.
+func (u *NetworkUpsertOne) SetDelegationContractAddress(v string) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetDelegationContractAddress(v)
+	})
+}
+
+// UpdateDelegationContractAddress sets the "delegation_contract_address" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateDelegationContractAddress() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateDelegationContractAddress()
 	})
 }
 
@@ -1054,6 +1105,20 @@ func (u *NetworkUpsertBulk) SetGatewayContractAddress(v string) *NetworkUpsertBu
 func (u *NetworkUpsertBulk) UpdateGatewayContractAddress() *NetworkUpsertBulk {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateGatewayContractAddress()
+	})
+}
+
+// SetDelegationContractAddress sets the "delegation_contract_address" field.
+func (u *NetworkUpsertBulk) SetDelegationContractAddress(v string) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetDelegationContractAddress(v)
+	})
+}
+
+// UpdateDelegationContractAddress sets the "delegation_contract_address" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateDelegationContractAddress() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateDelegationContractAddress()
 	})
 }
 

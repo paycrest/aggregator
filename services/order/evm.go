@@ -9,6 +9,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
@@ -24,7 +27,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
-	"github.com/paycrest/aggregator/types"
+	orderTypes "github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 )
@@ -32,16 +35,14 @@ import (
 // OrderEVM provides functionality related to onchain interactions for payment orders
 type OrderEVM struct {
 	priorityQueue *services.PriorityQueueService
-	engineService *services.EngineService
+	nonceManager  *utils.NonceManager
 }
 
 // NewOrderEVM creates a new instance of OrderEVM.
-func NewOrderEVM() types.OrderService {
-	priorityQueue := services.NewPriorityQueueService()
-
+func NewOrderEVM() orderTypes.OrderService {
 	return &OrderEVM{
-		priorityQueue: priorityQueue,
-		engineService: services.NewEngineService(),
+		priorityQueue: services.NewPriorityQueueService(),
+		nonceManager:  utils.DefaultNonceManager,
 	}
 }
 
@@ -50,7 +51,7 @@ var (
 	cryptoConf = config.CryptoConfig()
 )
 
-// CreateOrder creates a new payment order on-chain.
+// CreateOrder creates a new payment order on-chain via EIP-7702 keeper-sponsored transaction.
 func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	var err error
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]
@@ -73,7 +74,6 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	if order.ReceiveAddress == "" {
 		return fmt.Errorf("%s - CreateOrder.missingReceiveAddress: payment order has no receive address", orderIDPrefix)
 	}
-	address := order.ReceiveAddress
 
 	if order.MessageHash != "" {
 		return nil
@@ -81,7 +81,6 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 
 	// Create createOrder data
 	if order.Metadata == nil {
-		// Use the correct map type for order.Metadata
 		order.Metadata = map[string]interface{}{}
 	}
 	if order.Edges.SenderProfile == nil || order.Edges.SenderProfile.Edges.APIKey == nil {
@@ -102,11 +101,51 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("%s - CreateOrder.updateMessageHash: %w", orderIDPrefix, err)
 	}
 
-	_, err = order.Update().
-		SetStatus(paymentorder.StatusDeposited).
-		Save(ctx)
+	// Decrypt the receive address private key from salt
+	saltDecrypted, err := cryptoUtils.DecryptPlain(order.ReceiveAddressSalt)
 	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - CreateOrder.decryptSalt: %w", orderIDPrefix, err)
+	}
+	userKey, err := crypto.HexToECDSA(string(saltDecrypted))
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.parseKey: %w", orderIDPrefix, err)
+	}
+	userAddr := crypto.PubkeyToAddress(userKey.PublicKey)
+
+	// Connect to RPC
+	network := order.Edges.Token.Edges.Network
+	client, err := ethclient.Dial(network.RPCEndpoint)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.dialRPC: %w", orderIDPrefix, err)
+	}
+	defer client.Close()
+
+	chainID := big.NewInt(network.ChainID)
+	delegationContract := ethcommon.HexToAddress(network.DelegationContractAddress)
+
+	// This account is a controlled address so delegation will not be set at this point
+	// Check delegation status
+	// alreadyDelegated, err := utils.CheckDelegation(client, userAddr, delegationContract)
+	// if err != nil {
+	// 	return fmt.Errorf("%s - CreateOrder.checkDelegation: %w", orderIDPrefix, err)
+	// }
+
+	// Sign 7702 authorization
+	// This is a fresh wallet so nonce can be 0 instead of making another client call
+	auth, err := utils.SignAuthorization7702(userKey, chainID, delegationContract, 0)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.signAuth: %w", orderIDPrefix, err)
+	}
+	authList := []types.SetCodeAuthorization{auth}
+
+	// Build batch calls: approve + createOrder
+	gatewayAddr := ethcommon.HexToAddress(network.GatewayContractAddress)
+	orderAmount := utils.ToSubunit(order.Amount.Add(order.SenderFee), order.Edges.Token.Decimals)
+	tokenAddr := ethcommon.HexToAddress(order.Edges.Token.ContractAddress)
+
+	approveData, err := s.approveCallData(gatewayAddr, orderAmount)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.approveCallData: %w", orderIDPrefix, err)
 	}
 
 	createOrderData, err := s.createOrderCallData(order, encryptedOrderRecipient)
@@ -114,32 +153,53 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("%s - CreateOrder.createOrderCallData: %w", orderIDPrefix, err)
 	}
 
-	// Create approve data for gateway contract
-	approveGatewayData, err := s.approveCallData(
-		ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
-		utils.ToSubunit(order.Amount.Add(order.SenderFee), order.Edges.Token.Decimals),
-	)
-	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.approveCallData: %w", orderIDPrefix, err)
+	calls := []utils.Call7702{
+		{To: tokenAddr, Value: big.NewInt(0), Data: approveData},
+		{To: gatewayAddr, Value: big.NewInt(0), Data: createOrderData},
 	}
 
-	// Create order
-	txPayload := []map[string]interface{}{
-		{
-			"to":    order.Edges.Token.ContractAddress,
-			"data":  fmt.Sprintf("0x%x", approveGatewayData),
-			"value": "0",
-		},
-		{
-			"to":    order.Edges.Token.Edges.Network.GatewayContractAddress,
-			"data":  fmt.Sprintf("0x%x", createOrderData),
-			"value": "0",
-		},
+	// Fresh wallet — batch nonce is always 0
+	var batchNonce uint64
+
+	batchSig, err := utils.SignBatch7702(userKey, userAddr, batchNonce, calls)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.signBatch: %w", orderIDPrefix, err)
 	}
 
-	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, address, txPayload)
+	batchData, err := utils.PackExecute(calls, batchSig)
 	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.sendTransactionBatch: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - CreateOrder.packExecute: %w", orderIDPrefix, err)
+	}
+
+	// Send via aggregator key with automatic nonce management
+	aggregatorKey, err := crypto.HexToECDSA(cryptoConf.AggregatorEVMPrivateKey)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.parseAggregatorKey: %w", orderIDPrefix, err)
+	}
+	aggregatorAddr := crypto.PubkeyToAddress(aggregatorKey.PublicKey)
+
+	var receipt *types.Receipt
+	err = s.nonceManager.SubmitWithNonce(ctx, client, network.ChainID, aggregatorAddr, func(nonce uint64) error {
+		var txErr error
+		receipt, txErr = utils.SendKeeperTx(ctx, client, aggregatorKey, nonce, userAddr, batchData, authList, chainID)
+		if txErr != nil {
+			return fmt.Errorf("%s - CreateOrder.sendTx: %w", orderIDPrefix, txErr)
+		}
+		if receipt.Status == 0 {
+			return fmt.Errorf("%s - CreateOrder: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = order.Update().
+		SetStatus(paymentorder.StatusDeposited).
+		SetTxHash(receipt.TxHash.Hex()).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -149,7 +209,6 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderID string) error {
 	orderIDPrefix := strings.Split(orderID, "-")[0]
 
-	// Fetch payment order from db
 	lockOrder, err := db.Client.PaymentOrder.
 		Query().
 		Where(
@@ -173,29 +232,48 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		return fmt.Errorf("%s - RefundOrder.fetchLockOrder: %w", orderIDPrefix, err)
 	}
 
-	// Create refundOrder data
 	fee := utils.ToSubunit(decimal.NewFromInt(0), lockOrder.Edges.Token.Decimals)
 	refundOrderData, err := s.refundCallData(fee, lockOrder.GatewayID)
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.refundCallData: %w", orderIDPrefix, err)
 	}
 
-	// Refund order
-	txPayload := map[string]interface{}{
-		"to":    lockOrder.Edges.Token.Edges.Network.GatewayContractAddress,
-		"data":  fmt.Sprintf("0x%x", refundOrderData),
-		"value": "0",
-	}
-
-	_, err = s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
+	aggregatorKey, err := crypto.HexToECDSA(cryptoConf.AggregatorEVMPrivateKey)
 	if err != nil {
-		return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - RefundOrder.parseAggregatorKey: %w", orderIDPrefix, err)
+	}
+	aggregatorAddr := crypto.PubkeyToAddress(aggregatorKey.PublicKey)
+
+	client, err := ethclient.Dial(lockOrder.Edges.Token.Edges.Network.RPCEndpoint)
+	if err != nil {
+		return fmt.Errorf("%s - RefundOrder.dialRPC: %w", orderIDPrefix, err)
+	}
+	defer client.Close()
+
+	gatewayAddr := ethcommon.HexToAddress(lockOrder.Edges.Token.Edges.Network.GatewayContractAddress)
+	chainID := big.NewInt(lockOrder.Edges.Token.Edges.Network.ChainID)
+
+	var receipt *types.Receipt
+	err = s.nonceManager.SubmitWithNonce(ctx, client, lockOrder.Edges.Token.Edges.Network.ChainID, aggregatorAddr, func(nonce uint64) error {
+		var txErr error
+		receipt, txErr = utils.SendKeeperTx(ctx, client, aggregatorKey, nonce, gatewayAddr, refundOrderData, nil, chainID)
+		if txErr != nil {
+			return fmt.Errorf("%s - RefundOrder.sendTx: %w", orderIDPrefix, txErr)
+		}
+		if receipt.Status == 0 {
+			return fmt.Errorf("%s - RefundOrder: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
-	// Update order status to refunding after transaction submission
+	// TODO: revisit — call IndexGateway with tx hash instead of setting it directly
 	_, err = db.Client.PaymentOrder.
 		UpdateOneID(lockOrder.ID).
 		SetStatus(paymentorder.StatusRefunding).
+		SetTxHash(receipt.TxHash.Hex()).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.updateStatus: %w", orderIDPrefix, err)
@@ -206,11 +284,8 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 
 // SettleOrder settles a payment order on-chain.
 func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
-	var err error
-
 	orderIDPrefix := strings.Split(orderID.String(), "-")[0]
 
-	// Fetch payment order from db
 	order, err := db.Client.PaymentOrder.
 		Query().
 		Where(
@@ -229,28 +304,47 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("%s - SettleOrder.fetchOrder: %w", orderIDPrefix, err)
 	}
 
-	// Create settleOrder data
 	settleOrderData, err := s.settleCallData(ctx, order)
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.settleCallData: %w", orderIDPrefix, err)
 	}
 
-	// Settle order
-	txPayload := map[string]interface{}{
-		"to":    order.Edges.Token.Edges.Network.GatewayContractAddress,
-		"data":  fmt.Sprintf("0x%x", settleOrderData),
-		"value": "0",
-	}
-
-	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
+	aggregatorKey, err := crypto.HexToECDSA(cryptoConf.AggregatorEVMPrivateKey)
 	if err != nil {
-		return fmt.Errorf("%s - SettleOrder.sendTransaction: %w", orderIDPrefix, err)
+		return fmt.Errorf("%s - SettleOrder.parseAggregatorKey: %w", orderIDPrefix, err)
+	}
+	aggregatorAddr := crypto.PubkeyToAddress(aggregatorKey.PublicKey)
+
+	client, err := ethclient.Dial(order.Edges.Token.Edges.Network.RPCEndpoint)
+	if err != nil {
+		return fmt.Errorf("%s - SettleOrder.dialRPC: %w", orderIDPrefix, err)
+	}
+	defer client.Close()
+
+	gatewayAddr := ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress)
+	chainID := big.NewInt(order.Edges.Token.Edges.Network.ChainID)
+
+	var receipt *types.Receipt
+	err = s.nonceManager.SubmitWithNonce(ctx, client, order.Edges.Token.Edges.Network.ChainID, aggregatorAddr, func(nonce uint64) error {
+		var txErr error
+		receipt, txErr = utils.SendKeeperTx(ctx, client, aggregatorKey, nonce, gatewayAddr, settleOrderData, nil, chainID)
+		if txErr != nil {
+			return fmt.Errorf("%s - SettleOrder.sendTx: %w", orderIDPrefix, txErr)
+		}
+		if receipt.Status == 0 {
+			return fmt.Errorf("%s - SettleOrder: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
-	// Update order status to settling after transaction submission
+	// TODO: revisit — call IndexGateway with tx hash instead of setting it directly
 	_, err = db.Client.PaymentOrder.
 		UpdateOneID(order.ID).
 		SetStatus(paymentorder.StatusSettling).
+		SetTxHash(receipt.TxHash.Hex()).
 		Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - SettleOrder.updateStatus: %w", orderIDPrefix, err)
@@ -279,7 +373,7 @@ func (s *OrderEVM) approveCallData(spender ethcommon.Address, amount *big.Int) (
 // createOrderCallData creates the data for the createOrder method
 func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder, encryptedOrderRecipient string) ([]byte, error) {
 	// Define params
-	params := &types.CreateOrderParams{
+	params := &orderTypes.CreateOrderParams{
 		Token:              ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
 		Amount:             utils.ToSubunit(order.Amount, order.Edges.Token.Decimals),
 		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),

@@ -5105,32 +5105,33 @@ func (m *KYBProfileMutation) ResetEdge(name string) error {
 // NetworkMutation represents an operation that mutates the Network nodes in the graph.
 type NetworkMutation struct {
 	config
-	op                       Op
-	typ                      string
-	id                       *int
-	created_at               *time.Time
-	updated_at               *time.Time
-	chain_id                 *int64
-	addchain_id              *int64
-	identifier               *string
-	rpc_endpoint             *string
-	gateway_contract_address *string
-	block_time               *decimal.Decimal
-	addblock_time            *decimal.Decimal
-	is_testnet               *bool
-	bundler_url              *string
-	paymaster_url            *string
-	fee                      *decimal.Decimal
-	addfee                   *decimal.Decimal
-	clearedFields            map[string]struct{}
-	tokens                   map[int]struct{}
-	removedtokens            map[int]struct{}
-	clearedtokens            bool
-	payment_webhook          *uuid.UUID
-	clearedpayment_webhook   bool
-	done                     bool
-	oldValue                 func(context.Context) (*Network, error)
-	predicates               []predicate.Network
+	op                          Op
+	typ                         string
+	id                          *int
+	created_at                  *time.Time
+	updated_at                  *time.Time
+	chain_id                    *int64
+	addchain_id                 *int64
+	identifier                  *string
+	rpc_endpoint                *string
+	gateway_contract_address    *string
+	delegation_contract_address *string
+	block_time                  *decimal.Decimal
+	addblock_time               *decimal.Decimal
+	is_testnet                  *bool
+	bundler_url                 *string
+	paymaster_url               *string
+	fee                         *decimal.Decimal
+	addfee                      *decimal.Decimal
+	clearedFields               map[string]struct{}
+	tokens                      map[int]struct{}
+	removedtokens               map[int]struct{}
+	clearedtokens               bool
+	payment_webhook             *uuid.UUID
+	clearedpayment_webhook      bool
+	done                        bool
+	oldValue                    func(context.Context) (*Network, error)
+	predicates                  []predicate.Network
 }
 
 var _ ent.Mutation = (*NetworkMutation)(nil)
@@ -5465,6 +5466,42 @@ func (m *NetworkMutation) OldGatewayContractAddress(ctx context.Context) (v stri
 // ResetGatewayContractAddress resets all changes to the "gateway_contract_address" field.
 func (m *NetworkMutation) ResetGatewayContractAddress() {
 	m.gateway_contract_address = nil
+}
+
+// SetDelegationContractAddress sets the "delegation_contract_address" field.
+func (m *NetworkMutation) SetDelegationContractAddress(s string) {
+	m.delegation_contract_address = &s
+}
+
+// DelegationContractAddress returns the value of the "delegation_contract_address" field in the mutation.
+func (m *NetworkMutation) DelegationContractAddress() (r string, exists bool) {
+	v := m.delegation_contract_address
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDelegationContractAddress returns the old "delegation_contract_address" field's value of the Network entity.
+// If the Network object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *NetworkMutation) OldDelegationContractAddress(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDelegationContractAddress is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDelegationContractAddress requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDelegationContractAddress: %w", err)
+	}
+	return oldValue.DelegationContractAddress, nil
+}
+
+// ResetDelegationContractAddress resets all changes to the "delegation_contract_address" field.
+func (m *NetworkMutation) ResetDelegationContractAddress() {
+	m.delegation_contract_address = nil
 }
 
 // SetBlockTime sets the "block_time" field.
@@ -5840,7 +5877,7 @@ func (m *NetworkMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *NetworkMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, network.FieldCreatedAt)
 	}
@@ -5858,6 +5895,9 @@ func (m *NetworkMutation) Fields() []string {
 	}
 	if m.gateway_contract_address != nil {
 		fields = append(fields, network.FieldGatewayContractAddress)
+	}
+	if m.delegation_contract_address != nil {
+		fields = append(fields, network.FieldDelegationContractAddress)
 	}
 	if m.block_time != nil {
 		fields = append(fields, network.FieldBlockTime)
@@ -5894,6 +5934,8 @@ func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.RPCEndpoint()
 	case network.FieldGatewayContractAddress:
 		return m.GatewayContractAddress()
+	case network.FieldDelegationContractAddress:
+		return m.DelegationContractAddress()
 	case network.FieldBlockTime:
 		return m.BlockTime()
 	case network.FieldIsTestnet:
@@ -5925,6 +5967,8 @@ func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldRPCEndpoint(ctx)
 	case network.FieldGatewayContractAddress:
 		return m.OldGatewayContractAddress(ctx)
+	case network.FieldDelegationContractAddress:
+		return m.OldDelegationContractAddress(ctx)
 	case network.FieldBlockTime:
 		return m.OldBlockTime(ctx)
 	case network.FieldIsTestnet:
@@ -5985,6 +6029,13 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetGatewayContractAddress(v)
+		return nil
+	case network.FieldDelegationContractAddress:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDelegationContractAddress(v)
 		return nil
 	case network.FieldBlockTime:
 		v, ok := value.(decimal.Decimal)
@@ -6141,6 +6192,9 @@ func (m *NetworkMutation) ResetField(name string) error {
 		return nil
 	case network.FieldGatewayContractAddress:
 		m.ResetGatewayContractAddress()
+		return nil
+	case network.FieldDelegationContractAddress:
+		m.ResetDelegationContractAddress()
 		return nil
 	case network.FieldBlockTime:
 		m.ResetBlockTime()

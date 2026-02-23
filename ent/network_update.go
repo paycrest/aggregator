@@ -101,6 +101,20 @@ func (_u *NetworkUpdate) SetNillableGatewayContractAddress(v *string) *NetworkUp
 	return _u
 }
 
+// SetDelegationContractAddress sets the "delegation_contract_address" field.
+func (_u *NetworkUpdate) SetDelegationContractAddress(v string) *NetworkUpdate {
+	_u.mutation.SetDelegationContractAddress(v)
+	return _u
+}
+
+// SetNillableDelegationContractAddress sets the "delegation_contract_address" field if the given value is not nil.
+func (_u *NetworkUpdate) SetNillableDelegationContractAddress(v *string) *NetworkUpdate {
+	if v != nil {
+		_u.SetDelegationContractAddress(*v)
+	}
+	return _u
+}
+
 // SetBlockTime sets the "block_time" field.
 func (_u *NetworkUpdate) SetBlockTime(v decimal.Decimal) *NetworkUpdate {
 	_u.mutation.ResetBlockTime()
@@ -326,6 +340,9 @@ func (_u *NetworkUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.DelegationContractAddress(); ok {
+		_spec.SetField(network.FieldDelegationContractAddress, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
 	}
@@ -512,6 +529,20 @@ func (_u *NetworkUpdateOne) SetGatewayContractAddress(v string) *NetworkUpdateOn
 func (_u *NetworkUpdateOne) SetNillableGatewayContractAddress(v *string) *NetworkUpdateOne {
 	if v != nil {
 		_u.SetGatewayContractAddress(*v)
+	}
+	return _u
+}
+
+// SetDelegationContractAddress sets the "delegation_contract_address" field.
+func (_u *NetworkUpdateOne) SetDelegationContractAddress(v string) *NetworkUpdateOne {
+	_u.mutation.SetDelegationContractAddress(v)
+	return _u
+}
+
+// SetNillableDelegationContractAddress sets the "delegation_contract_address" field if the given value is not nil.
+func (_u *NetworkUpdateOne) SetNillableDelegationContractAddress(v *string) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetDelegationContractAddress(*v)
 	}
 	return _u
 }
@@ -770,6 +801,9 @@ func (_u *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err er
 	}
 	if value, ok := _u.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.DelegationContractAddress(); ok {
+		_spec.SetField(network.FieldDelegationContractAddress, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)

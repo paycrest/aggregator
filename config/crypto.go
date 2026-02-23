@@ -12,6 +12,7 @@ type CryptoConfiguration struct {
 	AggregatorPublicKey       string
 	AggregatorPrivateKey      string
 	AggregatorAccountEVM      string
+	AggregatorEVMPrivateKey   string
 	AggregatorAccountStarknet string
 	MessageHashMaxSize        int
 }
@@ -26,6 +27,7 @@ func CryptoConfig() *CryptoConfiguration {
 		AggregatorPublicKey:       viper.GetString("AGGREGATOR_PUBLIC_KEY"),
 		AggregatorPrivateKey:      viper.GetString("AGGREGATOR_PRIVATE_KEY"),
 		AggregatorAccountEVM:      viper.GetString("AGGREGATOR_ACCOUNT_EVM"),
+		AggregatorEVMPrivateKey:   viper.GetString("AGGREGATOR_EVM_PRIVATE_KEY"),
 		AggregatorAccountStarknet: viper.GetString("AGGREGATOR_ACCOUNT_STARKNET"),
 		MessageHashMaxSize:        viper.GetInt("MESSAGE_HASH_MAX_SIZE"),
 	}
