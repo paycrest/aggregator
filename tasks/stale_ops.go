@@ -126,7 +126,7 @@ func RetryStaleUserOperations() error {
 				paymentorder.And(
 					paymentorder.StatusEQ(paymentorder.StatusSettling),
 					paymentorder.UpdatedAtLT(time.Now().Add(-10*time.Minute)),
-					paymentorder.UpdatedAtGTE(time.Now().Add(-12*time.Minute)),
+					paymentorder.CreatedAtLTE(time.Now().Add(-15*time.Minute)),
 				),
 			),
 		).
