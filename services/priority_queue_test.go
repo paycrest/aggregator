@@ -1376,8 +1376,7 @@ func TestPriorityQueueTest(t *testing.T) {
 			var errStuck *types.ErrNoProviderDueToStuck
 			require.ErrorAs(t, err, &errStuck)
 			assert.Equal(t, testCtxForPQ.currency.Code, errStuck.CurrencyCode)
-			// When queue key matches and provider is skipped due to stuck, we get ErrNoProviderDueToStuck.
-			// Otherwise we may get redis.Nil (e.g. queue key format differs); either way we must not succeed.
+			assert.Equal(t, testCtxForPQ.currency.Code, errStuck.CurrencyCode)
 		})
 	})
 }
