@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
@@ -36,23 +38,33 @@ import (
 
 var orderConf = config.OrderConfig()
 
+// errShortIDNotFound is returned when the short ID mapping is missing or expired (Redis key not found).
+// Callers should map it to 404; other errors from resolveOrderID indicate client error (400) or infrastructure failure (500).
+var errShortIDNotFound = errors.New("order not found or expired")
+
+var errShortIDInvalidFormat = errors.New("invalid order ID format")
+var errShortIDInvalidValue = errors.New("invalid order ID")
+
 // resolveOrderID resolves the path id (either a UUID or a 12-char short ID) to the internal order UUID.
-// Returns uuid.Nil and an error if the id is invalid or the short ID mapping is missing/expired.
+// Use errors.Is(err, errShortIDNotFound) for 404, errShortIDInvalidFormat/errShortIDInvalidValue for 400, else 500.
 func resolveOrderID(ctx context.Context, idParam string) (uuid.UUID, error) {
 	if id, err := uuid.Parse(idParam); err == nil {
 		return id, nil
 	}
 	if !u.ValidateShortID(idParam) {
-		return uuid.Nil, fmt.Errorf("invalid order ID format")
+		return uuid.Nil, errShortIDInvalidFormat
 	}
 	key := u.ShortIDRedisKey(idParam)
 	val, err := storage.RedisClient.Get(ctx, key).Result()
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("order not found or expired")
+		if errors.Is(err, redis.Nil) {
+			return uuid.Nil, errShortIDNotFound
+		}
+		return uuid.Nil, fmt.Errorf("short ID lookup failed: %w", err)
 	}
 	id, err := uuid.Parse(val)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("invalid order ID")
+		return uuid.Nil, errShortIDInvalidValue
 	}
 	return id, nil
 }
@@ -572,8 +584,16 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	// Resolve order ID (UUID or short ID) to internal UUID
 	orderID, err := resolveOrderID(reqCtx, ctx.Param("id"))
 	if err != nil {
+		if errors.Is(err, errShortIDNotFound) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
+			return
+		}
+		if errors.Is(err, errShortIDInvalidFormat) || errors.Is(err, errShortIDInvalidValue) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			return
+		}
 		logger.Errorf("error resolving order ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
 		return
 	}
 
@@ -751,8 +771,16 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 	// Resolve order ID (UUID or short ID) to internal UUID
 	orderID, err := resolveOrderID(ctx.Request.Context(), ctx.Param("id"))
 	if err != nil {
+		if errors.Is(err, errShortIDNotFound) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
+			return
+		}
+		if errors.Is(err, errShortIDInvalidFormat) || errors.Is(err, errShortIDInvalidValue) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			return
+		}
 		logger.Errorf("error resolving order ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
 		return
 	}
 
@@ -847,11 +875,19 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	reqCtx := ctx.Request.Context()
 	orderID, err := resolveOrderID(reqCtx, ctx.Param("id"))
 	if err != nil {
+		if errors.Is(err, errShortIDNotFound) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
+			return
+		}
+		if errors.Is(err, errShortIDInvalidFormat) || errors.Is(err, errShortIDInvalidValue) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			return
+		}
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
 			"Trx Id": payload.TxID,
 		}).Errorf("Error resolving order ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
 		return
 	}
 
@@ -1275,12 +1311,20 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	reqCtx := ctx.Request.Context()
 	orderID, err := resolveOrderID(reqCtx, idParam)
 	if err != nil {
+		if errors.Is(err, errShortIDNotFound) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
+			return
+		}
+		if errors.Is(err, errShortIDInvalidFormat) || errors.Is(err, errShortIDInvalidValue) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			return
+		}
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
 			"Reason":   payload.Reason,
 			"Order ID": idParam,
 		}).Errorf("Error resolving order ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
 		return
 	}
 
@@ -1803,12 +1847,19 @@ func (ctrl *ProviderController) GetPaymentOrderByID(ctx *gin.Context) {
 	idParam := ctx.Param("id")
 	id, err := resolveOrderID(reqCtx, idParam)
 	if err != nil {
+		if errors.Is(err, errShortIDNotFound) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
+			return
+		}
+		if errors.Is(err, errShortIDInvalidFormat) || errors.Is(err, errShortIDInvalidValue) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			return
+		}
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
 			"Order ID": idParam,
 		}).Errorf("Failed to resolve order ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Invalid order ID", nil)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
 		return
 	}
 
