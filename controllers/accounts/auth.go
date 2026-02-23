@@ -48,6 +48,7 @@ func NewAuthController() *AuthController {
 // It hashes the password provided by the user.
 // It also sends an email to verify the user's email address.
 func (ctrl *AuthController) Register(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	var payload types.RegisterPayload
 
 	serverConf := config.ServerConfig()
@@ -58,7 +59,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	tx, err := db.Client.Tx(ctx)
+	tx, err := db.Client.Tx(reqCtx)
 	if err != nil {
 		logger.Errorf("Error: Failed to create new user: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -72,7 +73,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		Where(
 			userEnt.EmailEQ(strings.ToLower(payload.Email)),
 		).
-		Only(ctx)
+		Only(reqCtx)
 
 	if userTmp != nil {
 		_ = tx.Rollback()
@@ -102,7 +103,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		userCreate = userCreate.SetIsEmailVerified(true)
 	}
 
-	user, err := userCreate.Save(ctx)
+	user, err := userCreate.Save(reqCtx)
 	if err != nil {
 		_ = tx.Rollback()
 		logger.Errorf("Error: Failed to save new user: %v", err)
@@ -133,7 +134,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 					fiatcurrency.IsEnabledEQ(true),
 					fiatcurrency.CodeEQ(strings.ToUpper(currency)),
 				).
-				Only(ctx)
+				Only(reqCtx)
 			if err != nil {
 				if ent.IsNotFound(err) {
 					unsupportedCurrencies = append(unsupportedCurrencies, strings.ToUpper(currency))
@@ -163,7 +164,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			SetVisibilityMode(providerprofile.VisibilityModePrivate).
 			SetUser(user).
 			SetProvisionMode(providerprofile.ProvisionModeAuto).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
@@ -184,7 +185,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 				SetReservedBalance(decimal.Zero).
 				SetIsAvailable(false).
 				SetProviderID(provider.ID).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				_ = tx.Rollback()
 				logger.WithFields(logger.Fields{
@@ -219,7 +220,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		sender, err := tx.SenderProfile.
 			Create().
 			SetUser(user).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
@@ -261,7 +262,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 			SetOwner(user).
 			SetScope(verificationtoken.ScopeEmailVerification).
 			SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			logger.Errorf("Error: Failed to create verification token: %v", err)
 		}
@@ -295,6 +296,7 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 
 // Login controller validates the payload and creates a new user.
 func (ctrl *AuthController) Login(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	var payload types.LoginPayload
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -307,7 +309,7 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 	user, err := db.Client.User.
 		Query().
 		Where(userEnt.EmailEQ(strings.ToLower(payload.Email))).
-		Only(ctx)
+		Only(reqCtx)
 
 	if err != nil {
 		u.APIResponse(ctx, http.StatusUnauthorized, "error",
@@ -389,6 +391,7 @@ func (ctrl *AuthController) RefreshJWT(ctx *gin.Context) {
 
 // ConfirmEmail controller validates the payload and confirm the users email.
 func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	var payload types.ConfirmEmailPayload
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -405,7 +408,7 @@ func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
 			verificationtoken.HasOwnerWith(userEnt.EmailEQ(payload.Email)),
 		).
 		WithOwner().
-		Only(ctx)
+		Only(reqCtx)
 	if vtErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid verification token", vtErr.Error())
 		return
@@ -413,7 +416,7 @@ func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
 
 	if time.Now().After(verificationToken.ExpiryAt) {
 		err := db.Client.VerificationToken.
-			DeleteOneID(verificationToken.ID).Exec(ctx)
+			DeleteOneID(verificationToken.ID).Exec(reqCtx)
 		if err != nil {
 			logger.Errorf("ConfirmEmailError.VerificationToken.Delete: %v", err)
 		}
@@ -425,14 +428,14 @@ func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
 	user, setIfVerifiedErr := verificationToken.Edges.Owner.
 		Update().
 		SetIsEmailVerified(true).
-		Save(ctx)
+		Save(reqCtx)
 	if setIfVerifiedErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to verify user email", setIfVerifiedErr.Error())
 		return
 	}
 
 	err := db.Client.VerificationToken.
-		DeleteOneID(verificationToken.ID).Exec(ctx)
+		DeleteOneID(verificationToken.ID).Exec(reqCtx)
 	if err != nil {
 		logger.Errorf("ConfirmEmailError.VerificationToken.Delete: %v", err)
 	}
@@ -451,6 +454,7 @@ func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
 
 // ResendVerificationToken controller resends the verification token to the users email.
 func (ctrl *AuthController) ResendVerificationToken(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	var payload types.ResendTokenPayload
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -460,7 +464,7 @@ func (ctrl *AuthController) ResendVerificationToken(ctx *gin.Context) {
 	}
 
 	// Fetch User account.
-	user, userErr := db.Client.User.Query().Where(userEnt.EmailEQ(payload.Email)).Only(ctx)
+	user, userErr := db.Client.User.Query().Where(userEnt.EmailEQ(payload.Email)).Only(reqCtx)
 	if userErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid credential", userErr.Error())
 		return
@@ -472,7 +476,7 @@ func (ctrl *AuthController) ResendVerificationToken(ctx *gin.Context) {
 		SetOwner(user).
 		SetScope(verificationtoken.Scope(payload.Scope)).
 		SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
-		Save(ctx)
+		Save(reqCtx)
 	if vtErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to generate verification token", vtErr.Error())
 		return
@@ -489,6 +493,7 @@ func (ctrl *AuthController) ResendVerificationToken(ctx *gin.Context) {
 
 // ResetPassword resets user's password. A valid token is required to set new password
 func (ctrl *AuthController) ResetPassword(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	var payload types.ResetPasswordPayload
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -505,7 +510,7 @@ func (ctrl *AuthController) ResetPassword(ctx *gin.Context) {
 			verificationtoken.ScopeEQ(verificationtoken.ScopeResetPassword),
 		).
 		WithOwner().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil || token == nil || token.Edges.Owner == nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid password reset token", nil)
 		return
@@ -513,7 +518,7 @@ func (ctrl *AuthController) ResetPassword(ctx *gin.Context) {
 
 	if time.Now().After(token.ExpiryAt) {
 		err := db.Client.VerificationToken.
-			DeleteOneID(token.ID).Exec(ctx)
+			DeleteOneID(token.ID).Exec(reqCtx)
 		if err != nil {
 			logger.Errorf("ResetPasswordError.VerificationToken.Delete: %v", err)
 		}
@@ -524,7 +529,7 @@ func (ctrl *AuthController) ResetPassword(ctx *gin.Context) {
 	_, err = db.Client.User.
 		UpdateOne(token.Edges.Owner).
 		SetPassword(payload.Password).
-		Save(ctx)
+		Save(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to reset password", nil)
 		return
@@ -532,7 +537,7 @@ func (ctrl *AuthController) ResetPassword(ctx *gin.Context) {
 
 	// Delete verification token
 	verificationErr := db.Client.VerificationToken.
-		DeleteOneID(token.ID).Exec(ctx)
+		DeleteOneID(token.ID).Exec(reqCtx)
 	if verificationErr != nil {
 		logger.Errorf("ResetPasswordError.VerificationToken.Delete: %v", verificationErr)
 	}
@@ -543,6 +548,7 @@ func (ctrl *AuthController) ResetPassword(ctx *gin.Context) {
 
 // ResetPasswordToken sends a reset password token to user's email
 func (ctrl *AuthController) ResetPasswordToken(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	var payload types.ResetPasswordTokenPayload
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -555,7 +561,7 @@ func (ctrl *AuthController) ResetPasswordToken(ctx *gin.Context) {
 	user, userErr := db.Client.User.
 		Query().
 		Where(userEnt.EmailEQ(payload.Email)).
-		Only(ctx)
+		Only(reqCtx)
 	if userErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Email does not belong to any user", nil)
 		return
@@ -567,7 +573,7 @@ func (ctrl *AuthController) ResetPasswordToken(ctx *gin.Context) {
 		SetOwner(user).
 		SetScope(verificationtoken.ScopeResetPassword).
 		SetExpiryAt(time.Now().Add(authConf.PasswordResetLifespan)).
-		Save(ctx)
+		Save(reqCtx)
 	if rtErr != nil || passwordResetToken == nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to generate reset password token", nil)
 		return
@@ -584,6 +590,7 @@ func (ctrl *AuthController) ResetPasswordToken(ctx *gin.Context) {
 
 // ChangePassword changes user's password. An authorized user is required to change password
 func (ctrl *AuthController) ChangePassword(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	var payload types.ChangePasswordPayload
 
 	if err := ctx.ShouldBindJSON(&payload); err != nil {
@@ -605,7 +612,7 @@ func (ctrl *AuthController) ChangePassword(ctx *gin.Context) {
 	user, err := db.Client.User.
 		Query().
 		Where(userEnt.IDEQ(userID)).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid credential", nil)
 		return
@@ -629,7 +636,7 @@ func (ctrl *AuthController) ChangePassword(ctx *gin.Context) {
 	_, err = db.Client.User.
 		UpdateOne(user).
 		SetPassword(payload.NewPassword).
-		Save(ctx)
+		Save(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to change password", nil)
 		return
@@ -641,6 +648,7 @@ func (ctrl *AuthController) ChangePassword(ctx *gin.Context) {
 
 // DeleteAccount deletes user's account. An authorized user is required to delete account
 func (ctrl *AuthController) DeleteAccount(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// get user id from context
 	user_id := ctx.GetString("user_id")
 	// parse user id to uuid
@@ -654,7 +662,7 @@ func (ctrl *AuthController) DeleteAccount(ctx *gin.Context) {
 	user, err := db.Client.User.
 		Query().
 		Where(userEnt.IDEQ(userID)).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusUnauthorized, "error", "Invalid authorization token", nil)
@@ -668,7 +676,7 @@ func (ctrl *AuthController) DeleteAccount(ctx *gin.Context) {
 	// Delete user account, delete user account will delete all related data via cascade
 	err = db.Client.User.
 		DeleteOne(user).
-		Exec(ctx)
+		Exec(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to delete account", nil)
 		return

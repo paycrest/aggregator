@@ -1,3 +1,8 @@
+---
+description: Conventional commit format and scope for this repo; no Co-authored-by for AI
+alwaysApply: true
+---
+
 # Commit messages
 
 When creating or suggesting git commit messages for this repo, use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
@@ -35,6 +37,37 @@ import (
 )
 
 var orderConf = config.OrderConfig()
+
+// errShortIDNotFound is returned when the short ID mapping is missing or expired (Redis key not found).
+// Callers should map it to 404; other errors from resolveOrderID indicate client error (400) or infrastructure failure (500).
+var errShortIDNotFound = errors.New("order not found or expired")
+
+var errShortIDInvalidFormat = errors.New("invalid order ID format")
+var errShortIDInvalidValue = errors.New("invalid order ID")
+
+// resolveOrderID resolves the path id (either a UUID or a 12-char short ID) to the internal order UUID.
+// Use errors.Is(err, errShortIDNotFound) for 404, errShortIDInvalidFormat for 400, else 500 (including errShortIDInvalidValue = server-side corrupted Redis data).
+func resolveOrderID(ctx context.Context, idParam string) (uuid.UUID, error) {
+	if id, err := uuid.Parse(idParam); err == nil {
+		return id, nil
+	}
+	if !u.ValidateShortID(idParam) {
+		return uuid.Nil, errShortIDInvalidFormat
+	}
+	key := u.ShortIDRedisKey(idParam)
+	val, err := storage.RedisClient.Get(ctx, key).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return uuid.Nil, errShortIDNotFound
+		}
+		return uuid.Nil, fmt.Errorf("short ID lookup failed: %w", err)
+	}
+	id, err := uuid.Parse(val)
+	if err != nil {
+		return uuid.Nil, errShortIDInvalidValue
+	}
+	return id, nil
+}
 
 // ProviderController is a controller type for provider endpoints
 type ProviderController struct {
@@ -98,6 +131,7 @@ func (ctrl *ProviderController) GetPaymentOrders(ctx *gin.Context) {
 
 // handleListPaymentOrders handles normal payment order listing with pagination
 func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provider *ent.ProviderProfile) {
+	reqCtx := ctx.Request.Context()
 	// get page and pageSize query params
 	page, offset, pageSize := u.Paginate(ctx)
 
@@ -119,7 +153,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 		// Check if the provided currency exists in the provider's currencies
 		currencyExists, err := provider.QueryProviderBalances().
 			Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency))).
-			Exist(ctx)
+			Exist(reqCtx)
 		if err != nil {
 			logger.Errorf("error checking provider currency: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check currency", nil)
@@ -140,7 +174,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 				),
 			).
 			Select(institution.FieldCode).
-			Strings(ctx)
+			Strings(reqCtx)
 		if err != nil {
 			logger.Errorf("error fetching institution codes: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch institutions", nil)
@@ -174,7 +208,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 		)
 	}
 
-	count, err := paymentOrderQuery.Count(ctx)
+	count, err := paymentOrderQuery.Count(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
@@ -194,7 +228,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 				query.WithNetwork()
 			},
 		).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.Errorf("error fetching orders: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
@@ -248,6 +282,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 
 // handleSearchPaymentOrders handles search functionality for payment orders
 func (ctrl *ProviderController) handleSearchPaymentOrders(ctx *gin.Context, provider *ent.ProviderProfile, searchText string) {
+	reqCtx := ctx.Request.Context()
 	// Build base query
 	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
 		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
@@ -271,7 +306,7 @@ func (ctrl *ProviderController) handleSearchPaymentOrders(ctx *gin.Context, prov
 	)
 
 	// Get total count
-	count, err := paymentOrderQuery.Count(ctx)
+	count, err := paymentOrderQuery.Count(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to count payment orders: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
@@ -294,7 +329,7 @@ func (ctrl *ProviderController) handleSearchPaymentOrders(ctx *gin.Context, prov
 		}).
 		Limit(maxSearchResults).
 		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to fetch payment orders: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
@@ -336,6 +371,7 @@ func (ctrl *ProviderController) handleSearchPaymentOrders(ctx *gin.Context, prov
 
 // handleExportPaymentOrders handles CSV export functionality for payment orders
 func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, provider *ent.ProviderProfile) {
+	reqCtx := ctx.Request.Context()
 	// Parse date range parameters
 	fromDateStr := ctx.Query("from")
 	toDateStr := ctx.Query("to")
@@ -401,7 +437,7 @@ func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, prov
 	}
 
 	// Get total count first
-	count, err := paymentOrderQuery.Count(ctx)
+	count, err := paymentOrderQuery.Count(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to count payment orders for export: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
@@ -431,7 +467,7 @@ func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, prov
 		}).
 		Limit(maxExportLimit).
 		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to fetch lock payment orders for export: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
@@ -485,7 +521,7 @@ func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, prov
 	}
 
 	for code := range uniqueInstitutions {
-		institution, err := u.GetInstitutionByCode(ctx, code, false)
+		institution, err := u.GetInstitutionByCode(reqCtx, code, false)
 		if err != nil {
 			// Use raw code as fallback
 			institutionMap[code] = code
@@ -544,16 +580,25 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	// Parse the Order ID string into a UUID
-	orderID, err := uuid.Parse(ctx.Param("id"))
+	reqCtx := ctx.Request.Context()
+	// Resolve order ID (UUID or short ID) to internal UUID
+	orderID, err := resolveOrderID(reqCtx, ctx.Param("id"))
 	if err != nil {
-		logger.Errorf("error parsing order ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+		if errors.Is(err, errShortIDNotFound) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
+			return
+		}
+		if errors.Is(err, errShortIDInvalidFormat) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			return
+		}
+		logger.Errorf("error resolving order ID: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
 		return
 	}
 
 	// Get Order request from Redis
-	result, err := storage.RedisClient.HGetAll(ctx, fmt.Sprintf("order_request_%s", orderID)).Result()
+	result, err := storage.RedisClient.HGetAll(reqCtx, fmt.Sprintf("order_request_%s", orderID)).Result()
 	if err != nil {
 		logger.Errorf("error getting order request from Redis: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to accept order request", nil)
@@ -567,24 +612,24 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// Best-effort cleanup of metadata key used for timeout recovery.
-	_, _ = storage.RedisClient.Del(ctx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
+	_, _ = storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
 
 	// Delete order request from Redis
-	_, err = storage.RedisClient.Del(ctx, fmt.Sprintf("order_request_%s", orderID)).Result()
+	_, err = storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_%s", orderID)).Result()
 	if err != nil {
 		logger.Errorf("error deleting order request from Redis: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to accept order request", nil)
 		return
 	}
 
-	tx, err := storage.Client.Tx(ctx)
+	tx, err := storage.Client.Tx(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
 	}
 
 	// Fetch the order to check its current status before accepting
-	currentOrder, err := tx.PaymentOrder.Get(ctx, orderID)
+	currentOrder, err := tx.PaymentOrder.Get(reqCtx, orderID)
 	if err != nil {
 		_ = tx.Rollback()
 		if ent.IsNotFound(err) {
@@ -622,7 +667,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 				transactionlog.StatusEQ(transactionlog.StatusOrderProcessing),
 			),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if !ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
@@ -631,7 +676,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			transactionLog, err = tx.TransactionLog.
 				Create().
 				SetStatus(transactionlog.StatusOrderProcessing).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 				return
@@ -655,7 +700,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		orderBuilder = orderBuilder.AddTransactions(transactionLog)
 	}
 
-	updatedCount, err := orderBuilder.Save(ctx)
+	updatedCount, err := orderBuilder.Save(reqCtx)
 	if err != nil {
 		logger.Errorf("%s - error.AcceptOrder: %v", orderID, err)
 		_ = tx.Rollback()
@@ -667,7 +712,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	if updatedCount == 0 {
 		_ = tx.Rollback()
 		// Re-fetch to get current status for error message
-		currentOrder, _ := storage.Client.PaymentOrder.Get(ctx, orderID)
+		currentOrder, _ := storage.Client.PaymentOrder.Get(reqCtx, orderID)
 		statusMsg := "already accepted"
 		if currentOrder != nil {
 			statusMsg = fmt.Sprintf("already %s", currentOrder.Status)
@@ -682,7 +727,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// Fetch the updated order for response
-	order, err := tx.PaymentOrder.Get(ctx, orderID)
+	order, err := tx.PaymentOrder.Get(reqCtx, orderID)
 	if err != nil {
 		logger.Errorf("%s - error.AcceptOrder.Get: %v", orderID, err)
 		_ = tx.Rollback()
@@ -723,16 +768,25 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	// Parse the Order ID string into a UUID
-	orderID, err := uuid.Parse(ctx.Param("id"))
+	// Resolve order ID (UUID or short ID) to internal UUID
+	orderID, err := resolveOrderID(ctx.Request.Context(), ctx.Param("id"))
 	if err != nil {
-		logger.Errorf("error parsing order ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+		if errors.Is(err, errShortIDNotFound) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
+			return
+		}
+		if errors.Is(err, errShortIDInvalidFormat) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			return
+		}
+		logger.Errorf("error resolving order ID: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
 		return
 	}
 
 	// Get Order request from Redis
-	result, err := storage.RedisClient.HGetAll(ctx, fmt.Sprintf("order_request_%s", orderID)).Result()
+	reqCtx := ctx.Request.Context()
+	result, err := storage.RedisClient.HGetAll(reqCtx, fmt.Sprintf("order_request_%s", orderID)).Result()
 	if err != nil {
 		logger.Errorf("error getting order request from Redis: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to decline order request", nil)
@@ -750,7 +804,7 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 		if amountStr := result["amount"]; amountStr != "" {
 			amt, amtErr := decimal.NewFromString(amountStr)
 			if amtErr == nil {
-				if relErr := ctrl.balanceService.ReleaseFiatBalance(ctx, provider.ID, currency, amt, nil); relErr != nil {
+				if relErr := ctrl.balanceService.ReleaseFiatBalance(reqCtx, provider.ID, currency, amt, nil); relErr != nil {
 					logger.WithFields(logger.Fields{
 						"Error":      fmt.Sprintf("%v", relErr),
 						"OrderID":    orderID.String(),
@@ -764,10 +818,10 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 	}
 
 	// Best-effort cleanup of metadata key used for timeout recovery.
-	_, _ = storage.RedisClient.Del(ctx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
+	_, _ = storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
 
 	// Delete order request from Redis
-	_, err = storage.RedisClient.Del(ctx, fmt.Sprintf("order_request_%s", orderID)).Result()
+	_, err = storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_%s", orderID)).Result()
 	if err != nil {
 		logger.Errorf("error deleting order request from Redis: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to decline order request", nil)
@@ -776,7 +830,7 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 
 	// Push provider ID to order exclude list
 	orderKey := fmt.Sprintf("order_exclude_list_%s", orderID)
-	_, err = storage.RedisClient.RPush(ctx, orderKey, provider.ID).Result()
+	_, err = storage.RedisClient.RPush(reqCtx, orderKey, provider.ID).Result()
 	if err != nil {
 		logger.Errorf("error pushing provider %s to order %s exclude_list on Redis: %v", provider.ID, orderID, err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to decline order request", nil)
@@ -784,7 +838,7 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 	}
 
 	// Set TTL for the exclude list (2x order request validity since orders can be reassigned)
-	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+	err = storage.RedisClient.ExpireAt(reqCtx, orderKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
 	if err != nil {
 		logger.Errorf("error setting TTL for order %s exclude_list on Redis: %v", orderID, err)
 	}
@@ -817,14 +871,23 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	// Parse the Order ID string into a UUID
-	orderID, err := uuid.Parse(ctx.Param("id"))
+	// Resolve order ID (UUID or short ID) to internal UUID
+	reqCtx := ctx.Request.Context()
+	orderID, err := resolveOrderID(reqCtx, ctx.Param("id"))
 	if err != nil {
+		if errors.Is(err, errShortIDNotFound) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
+			return
+		}
+		if errors.Is(err, errShortIDInvalidFormat) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			return
+		}
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
 			"Trx Id": payload.TxID,
-		}).Errorf("Error parsing order ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+		}).Errorf("Error resolving order ID: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
 		return
 	}
 
@@ -851,7 +914,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				pbq.WithCurrency()
 			})
 		}).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			// Check if order already has a fulfillment (pending or success) before creating a new one
@@ -866,7 +929,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 						paymentorderfulfillment.ValidationStatusSuccess,
 					),
 				).
-				Only(ctx)
+				Only(reqCtx)
 
 			if existingFulfillment != nil {
 				logger.WithFields(logger.Fields{
@@ -886,7 +949,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				SetOrderID(orderID).
 				SetTxID(payload.TxID).
 				SetPsp(payload.PSP).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":  fmt.Sprintf("%v", err),
@@ -906,7 +969,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 						pbq.WithCurrency()
 					})
 				}).
-				Only(ctx)
+				Only(reqCtx)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":   fmt.Sprintf("%v", err),
@@ -962,7 +1025,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 
 		// Start a database transaction to ensure consistency
-		tx, err := storage.Client.Tx(ctx)
+		tx, err := storage.Client.Tx(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
@@ -977,7 +1040,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		_, err = tx.PaymentOrderFulfillment.
 			UpdateOneID(fulfillment.ID).
 			SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
@@ -993,7 +1056,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		transactionLog, err := tx.TransactionLog.Create().
 			SetStatus(transactionlog.StatusOrderValidated).
 			SetNetwork(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
@@ -1010,7 +1073,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		currentOrder, err := tx.PaymentOrder.
 			Query().
 			Where(paymentorder.IDEQ(orderID)).
-			Only(ctx)
+			Only(reqCtx)
 		if err == nil && currentOrder != nil {
 			if currentOrder.Status == paymentorder.StatusSettled ||
 				currentOrder.Status == paymentorder.StatusRefunded {
@@ -1031,7 +1094,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 			Where(paymentorder.IDEQ(orderID)).
 			SetStatus(paymentorder.StatusValidated).
 			AddTransactions(transactionLog).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
@@ -1058,14 +1121,14 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
 
-		err = ctrl.balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, tx)
+		err = ctrl.balanceService.ReleaseFiatBalance(reqCtx, providerID, currency, amount, tx)
 		if err != nil {
 			// Check if error is due to order already being settled (balance already released)
 			// If so, check order status and return success instead of error
 			checkOrder, checkErr := tx.PaymentOrder.
 				Query().
 				Where(paymentorder.IDEQ(orderID)).
-				Only(ctx)
+				Only(reqCtx)
 			if checkErr == nil && checkOrder != nil {
 				if checkOrder.Status == paymentorder.StatusSettled ||
 					checkOrder.Status == paymentorder.StatusRefunded {
@@ -1095,7 +1158,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 		// Clean up order exclude list from Redis (best effort, don't fail if it errors)
 		orderKey := fmt.Sprintf("order_exclude_list_%s", orderID)
-		_ = storage.RedisClient.Del(ctx, orderKey).Err()
+		_ = storage.RedisClient.Del(reqCtx, orderKey).Err()
 
 		err = u.SendPaymentOrderWebhook(ctx, fulfillment.Edges.Order)
 		if err != nil {
@@ -1137,7 +1200,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		_, err = fulfillment.Update().
 			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
 			SetValidationError(payload.ValidationError).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
@@ -1150,7 +1213,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 		_, err = updateLockOrder.
 			SetStatus(paymentorder.StatusFulfilled).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
@@ -1175,7 +1238,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
 		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
 
-		err = ctrl.balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, nil)
+		err = ctrl.balanceService.ReleaseFiatBalance(reqCtx, providerID, currency, amount, nil)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":      fmt.Sprintf("%v", err),
@@ -1191,7 +1254,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		transactionLog, err := storage.Client.TransactionLog.Create().
 			SetStatus(transactionlog.StatusOrderFulfilled).
 			SetNetwork(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
@@ -1205,7 +1268,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		_, err = updateLockOrder.
 			SetStatus(paymentorder.StatusFulfilled).
 			AddTransactions(transactionLog).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
@@ -1243,15 +1306,25 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	// Parse the Order ID string into a UUID
-	orderID, err := uuid.Parse(ctx.Param("id"))
+	// Resolve order ID (UUID or short ID) to internal UUID
+	idParam := ctx.Param("id")
+	reqCtx := ctx.Request.Context()
+	orderID, err := resolveOrderID(reqCtx, idParam)
 	if err != nil {
+		if errors.Is(err, errShortIDNotFound) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
+			return
+		}
+		if errors.Is(err, errShortIDInvalidFormat) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			return
+		}
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
 			"Reason":   payload.Reason,
-			"Order ID": orderID.String(),
-		}).Errorf("Error parsing order ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			"Order ID": idParam,
+		}).Errorf("Error resolving order ID: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
 		return
 	}
 
@@ -1269,7 +1342,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
 			pbq.WithCurrency()
 		}).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1295,7 +1368,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 
 		// Check if the provider ID exists in the list
 		for index := -1; ; index-- {
-			providerData, err := storage.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
+			providerData, err := storage.RedisClient.LIndex(reqCtx, redisKey, int64(index)).Result()
 			if err != nil {
 				break
 			}
@@ -1312,7 +1385,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 			if parts[0] == provider.ID {
 				// Remove the provider from the list
 				placeholder := "DELETED_PROVIDER" // Define a placeholder value
-				_, err := storage.RedisClient.LSet(ctx, redisKey, int64(index), placeholder).Result()
+				_, err := storage.RedisClient.LSet(reqCtx, redisKey, int64(index), placeholder).Result()
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error": fmt.Sprintf("%v", err),
@@ -1321,7 +1394,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 				}
 
 				// Remove all occurences of the placeholder from the list
-				_, err = storage.RedisClient.LRem(ctx, redisKey, 0, placeholder).Result()
+				_, err = storage.RedisClient.LRem(reqCtx, redisKey, 0, placeholder).Result()
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":       fmt.Sprintf("%v", err),
@@ -1338,7 +1411,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	_, err = orderUpdate.
 		SetStatus(paymentorder.StatusCancelled).
 		SetCancellationCount(cancellationCount).
-		Save(ctx)
+		Save(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1357,7 +1430,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	currency := order.Edges.ProvisionBucket.Edges.Currency.Code
 	amount := order.Amount.Mul(order.Rate).RoundBank(0)
 
-	err = ctrl.balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, nil)
+	err = ctrl.balanceService.ReleaseFiatBalance(reqCtx, providerID, currency, amount, nil)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -1408,7 +1481,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 
 	// Push provider ID to order exclude list
 	orderKey := fmt.Sprintf("order_exclude_list_%s", orderID)
-	_, err = storage.RedisClient.RPush(ctx, orderKey, provider.ID).Result()
+	_, err = storage.RedisClient.RPush(reqCtx, orderKey, provider.ID).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1420,7 +1493,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	}
 
 	// Set TTL for the exclude list (2x order request validity since orders can be reassigned)
-	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+	err = storage.RedisClient.ExpireAt(reqCtx, orderKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
 	if err != nil {
 		logger.Errorf("error setting TTL for order %s exclude_list on Redis: %v", orderID, err)
 	}
@@ -1432,6 +1505,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 
 // GetMarketRate controller fetches the median rate of the cryptocurrency token against the fiat currency
 func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Parse path parameters
 	tokenObj, err := storage.Client.Token.
 		Query().
@@ -1439,7 +1513,7 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 			token.SymbolEQ(strings.ToUpper(ctx.Param("token"))),
 			token.IsEnabledEQ(true),
 		).
-		First(ctx)
+		First(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Token %s is not supported", strings.ToUpper(ctx.Param("token"))), nil)
@@ -1458,7 +1532,7 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 			fiatcurrency.IsEnabledEQ(true),
 			fiatcurrency.CodeEQ(strings.ToUpper(ctx.Param("fiat"))),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
@@ -1496,6 +1570,7 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 
 // Stats controller fetches provider stats
 func (ctrl *ProviderController) Stats(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get provider profile from the context
 	providerCtx, ok := ctx.Get("provider")
 	if !ok {
@@ -1509,7 +1584,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 	if currency != "" {
 		currencyExists, err := provider.QueryProviderBalances().
 			Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency))).
-			Exist(ctx)
+			Exist(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":    fmt.Sprintf("%v", err),
@@ -1538,7 +1613,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 			),
 		).
 		Select(institution.FieldCode).
-		Strings(ctx)
+		Strings(reqCtx)
 	if err != nil {
 		logger.Errorf("error fetching institution codes: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch institutions", nil)
@@ -1559,11 +1634,11 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Sum decimal.Decimal
 	}
 	err = query.
-		Where(paymentorder.HasTokenWith(token.BaseCurrencyEQ("USD"))).
+		Where(paymentorder.HasTokenWith(token.BaseCurrencyEQ("USD"))		).
 		Aggregate(
 			ent.Sum(paymentorder.FieldAmount),
 		).
-		Scan(ctx, &usdVolume)
+		Scan(reqCtx, &usdVolume)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1586,7 +1661,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Aggregate(
 			ent.Sum(paymentorder.FieldAmount),
 		).
-		Scan(ctx, &localStablecoinVolume)
+		Scan(reqCtx, &localStablecoinVolume)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1601,7 +1676,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		fiatCurrency, err := storage.Client.FiatCurrency.
 			Query().
 			Where(fiatcurrency.CodeEQ(currency)).
-			Only(ctx)
+			Only(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":    fmt.Sprintf("%v", err),
@@ -1622,7 +1697,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 			paymentorder.StatusEQ(paymentorder.StatusSettled),
 			paymentorder.InstitutionIn(institutionCodes...),
 		).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1642,7 +1717,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 			paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 			paymentorder.InstitutionIn(institutionCodes...),
 		).
-		Count(ctx)
+		Count(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1662,6 +1737,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 
 // NodeInfo controller fetches the provision node info
 func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get provider profile from the context
 	providerCtx, ok := ctx.Get("provider")
 	if !ok {
@@ -1678,7 +1754,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 				query.WithFiatCurrency().Where(providerbalances.HasFiatCurrency())
 			},
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
@@ -1766,18 +1842,24 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 
 // GetPaymentOrderByID controller fetches a payment order by ID
 func (ctrl *ProviderController) GetPaymentOrderByID(ctx *gin.Context) {
-	// Get order ID from the URL
-	orderID := ctx.Param("id")
-
-	// Convert order ID to UUID
-	id, err := uuid.Parse(orderID)
+	reqCtx := ctx.Request.Context()
+	// Resolve order ID (UUID or short ID) to internal UUID
+	idParam := ctx.Param("id")
+	id, err := resolveOrderID(reqCtx, idParam)
 	if err != nil {
+		if errors.Is(err, errShortIDNotFound) {
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
+			return
+		}
+		if errors.Is(err, errShortIDInvalidFormat) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
+			return
+		}
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
-			"Order ID": orderID,
-		}).Errorf("Failed to parse order ID: %v", err)
-		u.APIResponse(ctx, http.StatusBadRequest, "error",
-			"Invalid order ID", nil)
+			"Order ID": idParam,
+		}).Errorf("Failed to resolve order ID: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
 		return
 	}
 
@@ -1801,12 +1883,12 @@ func (ctrl *ProviderController) GetPaymentOrderByID(ctx *gin.Context) {
 			tq.WithNetwork()
 		}).
 		WithTransactions().
-		Only(ctx)
+		Only(reqCtx)
 
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
-			"Order ID": orderID,
+			"Order ID": idParam,
 		}).Errorf("Failed to fetch payment order: %v", err)
 		u.APIResponse(ctx, http.StatusNotFound, "error",
 			"Payment order not found", nil)
@@ -1861,6 +1943,8 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 		return
 	}
 
+	reqCtx := ctx.Request.Context()
+
 	// Parse the request payload
 	var payload struct {
 		Currency         string `json:"currency" binding:"required,min=3,max=7"`
@@ -1914,7 +1998,7 @@ func (ctrl *ProviderController) UpdateProviderBalance(ctx *gin.Context) {
 	}
 
 	// Update the balance using the provider ID from context, preserving internal reservations.
-	err = ctrl.balanceService.UpdateProviderFiatBalanceFromProvider(ctx, provider.ID, payload.Currency, availableBalance, totalBalance)
+	err = ctrl.balanceService.UpdateProviderFiatBalanceFromProvider(reqCtx, provider.ID, payload.Currency, availableBalance, totalBalance)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),

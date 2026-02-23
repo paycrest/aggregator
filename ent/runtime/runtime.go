@@ -158,6 +158,8 @@ func init() {
 	// network.DefaultGatewayContractAddress holds the default value on creation for the gateway_contract_address field.
 	network.DefaultGatewayContractAddress = networkDescGatewayContractAddress.Default.(string)
 	paymentorderMixin := schema.PaymentOrder{}.Mixin()
+	paymentorderHooks := schema.PaymentOrder{}.Hooks()
+	paymentorder.Hooks[0] = paymentorderHooks[0]
 	paymentorderMixinFields0 := paymentorderMixin[0].Fields()
 	_ = paymentorderMixinFields0
 	paymentorderFields := schema.PaymentOrder{}.Fields()
