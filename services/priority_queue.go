@@ -867,6 +867,13 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 		if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
 			return &types.ErrNoProviderDueToStuck{CurrencyCode: bucketCurrency.Code}
 		}
+		if errStuck != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", errStuck),
+				"FallbackID": fallbackID,
+				"Currency":   bucketCurrency.Code,
+			}).Errorf("fallback: failed to get stuck order count, proceeding with assignment (fail-open)")
+		}
 	}
 
 	// Resolve fallback provider
