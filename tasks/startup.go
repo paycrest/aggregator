@@ -24,7 +24,14 @@ func SubscribeToRedisKeyspaceEvents() {
 	)
 	orderRequestChan := orderRequest.Channel()
 
-	go ReassignStaleOrderRequest(ctx, orderRequestChan)
+	go func() {
+		defer func() {
+			if err := orderRequest.Close(); err != nil {
+				logger.Errorf("Error closing Redis subscription: %v", err)
+			}
+		}()
+		ReassignStaleOrderRequest(ctx, orderRequestChan)
+	}()
 }
 
 // StartCronJobs starts cron jobs

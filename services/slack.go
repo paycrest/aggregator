@@ -2,10 +2,12 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/utils"
@@ -20,6 +22,21 @@ func NewSlackService(webhookURL string) *SlackService {
 	return &SlackService{
 		SlackWebhookURL: webhookURL,
 	}
+}
+
+// postSlackJSON sends a POST request to Slack with the given payload using a shared HTTP client
+// and a per-request timeout to prevent indefinite hangs
+func (s *SlackService) postSlackJSON(payload []byte) (*http.Response, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.SlackWebhookURL, bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return utils.GetHTTPClient().Do(req)
 }
 
 // SendUserSignupNotification sends a Slack notification when a new user signs up
@@ -91,8 +108,7 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 				"type": "section",
 				"text": map[string]interface{}{
 					"type": "mrkdwn",
-					"text": fmt.Sprintf("*Provider Currencies:* %s", currenciesString),
-				},
+					"text": fmt.Sprintf("*Provider Currencies:* %s", currenciesString)},
 			},
 		)
 	}
@@ -103,7 +119,7 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 		return err
 	}
 
-	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	resp, err := s.postSlackJSON(jsonPayload)
 	if err != nil {
 		logger.Errorf("Failed to send Slack notification: %v", err)
 		return err
@@ -158,7 +174,7 @@ func (s *SlackService) SendActionFeedbackNotification(firstName, email, submissi
 		return fmt.Errorf("failed to marshal payload: %v", err)
 	}
 
-	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	resp, err := s.postSlackJSON(jsonPayload)
 	if err != nil {
 		logger.Errorf("Failed to send Slack feedback notification: %v", err)
 		return fmt.Errorf("failed to send notification: %v", err)
@@ -243,7 +259,7 @@ func (s *SlackService) SendSubmissionNotification(firstName, email, submissionID
 		return fmt.Errorf("failed to marshal payload: %v", err)
 	}
 
-	resp, err := http.Post(s.SlackWebhookURL, "application/json", bytes.NewBuffer(jsonPayload))
+	resp, err := s.postSlackJSON(jsonPayload)
 	if err != nil {
 		logger.Errorf("Failed to send Slack notification: %v", err)
 		return fmt.Errorf("failed to send Slack notification: %v", err)
