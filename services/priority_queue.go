@@ -747,10 +747,6 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 					}
 				}
 			}
-			var errStuck *types.ErrNoProviderDueToStuck
-			if errors.As(matchRateErr, &errStuck) {
-				return matchRateErr
-			}
 			return matchRateErr
 		}
 	}
