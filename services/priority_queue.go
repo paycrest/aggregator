@@ -12,7 +12,6 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -39,30 +38,6 @@ func NewPriorityQueueService() *PriorityQueueService {
 	return &PriorityQueueService{
 		balanceService: balance.New(),
 	}
-}
-
-// GetStuckOrderCount returns the number of "stuck" orders for a provider: status=fulfilled, at least one fulfillment with validation_status=pending, updated_at <= now - OrderRefundTimeout, order_type=regular.
-func (s *PriorityQueueService) GetStuckOrderCount(ctx context.Context, providerID string) (int, error) {
-	conf := config.OrderConfig()
-	if conf.ProviderStuckFulfillmentThreshold <= 0 {
-		return 0, nil
-	}
-	cutoff := time.Now().Add(-conf.OrderRefundTimeout)
-	count, err := storage.Client.PaymentOrder.Query().
-		Where(
-			paymentorder.StatusEQ(paymentorder.StatusFulfilled),
-			paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular),
-			paymentorder.UpdatedAtLTE(cutoff),
-			paymentorder.HasProviderWith(providerprofile.IDEQ(providerID)),
-			paymentorder.HasFulfillmentsWith(
-				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending),
-			),
-		).
-		Count(ctx)
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
 }
 
 // ProcessBucketQueues creates a priority queue for each bucket and saves it to redis
@@ -709,7 +684,7 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 			// Provider should be skipped, continue to queue matching
 		} else if order.OrderType != "otc" && orderConf.ProviderStuckFulfillmentThreshold > 0 {
 			// Regular orders: skip pre-set provider only when stuck count is at or over threshold
-			stuckCount, errStuck := s.GetStuckOrderCount(ctx, order.ProviderID)
+			stuckCount, errStuck := utils.GetProviderStuckOrderCount(ctx, order.ProviderID)
 			if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
 				// Fall through to queue matching
 			} else {
@@ -892,7 +867,7 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 
 	// Skip fallback provider if at or over stuck fulfillment threshold
 	if orderConf.ProviderStuckFulfillmentThreshold > 0 {
-		stuckCount, errStuck := s.GetStuckOrderCount(ctx, fallbackID)
+		stuckCount, errStuck := utils.GetProviderStuckOrderCount(ctx, fallbackID)
 		if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
 			return &types.ErrNoProviderDueToStuck{CurrencyCode: bucketCurrency.Code}
 		}
@@ -1528,7 +1503,7 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			considered++
 			// Regular orders: skip provider if at or over stuck fulfillment threshold
 			if order.OrderType != "otc" && orderConf.ProviderStuckFulfillmentThreshold > 0 {
-				stuckCount, errStuck := s.GetStuckOrderCount(ctx, order.ProviderID)
+				stuckCount, errStuck := utils.GetProviderStuckOrderCount(ctx, order.ProviderID)
 				if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
 					skippedDueToStuck++
 					continue

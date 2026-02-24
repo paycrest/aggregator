@@ -32,6 +32,7 @@ import (
 	userEnt "github.com/paycrest/aggregator/ent/user"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/paycrest/aggregator/utils/test"
@@ -1239,7 +1240,10 @@ func TestPriorityQueueTest(t *testing.T) {
 				viper.Set("ORDER_REFUND_TIMEOUT", oldRefund)
 			}()
 
-			// Create a fulfilled order with pending fulfillment and updated_at before cutoff (now - 2*refund)
+			baseline, err := utils.GetProviderStuckOrderCount(ctx, testCtxForPQ.publicProviderProfile.ID)
+			assert.NoError(t, err)
+
+			// Create a deliberately stuck order: fulfilled, regular, updated_at before cutoff, fulfillment pending
 			cutoff := time.Now().Add(-2 * time.Minute)
 			stuckOrder, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
 				"provider":   testCtxForPQ.publicProviderProfile,
@@ -1253,17 +1257,35 @@ func TestPriorityQueueTest(t *testing.T) {
 				SetUpdatedAt(cutoff).
 				Save(ctx)
 			assert.NoError(t, err)
-
 			_, err = db.Client.PaymentOrderFulfillment.Create().
 				SetOrderID(stuckOrder.ID).
 				SetValidationStatus(paymentorderfulfillment.ValidationStatusPending).
 				Save(ctx)
 			assert.NoError(t, err)
 
-			pq := NewPriorityQueueService()
-			count, err := pq.GetStuckOrderCount(ctx, testCtxForPQ.publicProviderProfile.ID)
+			// Control order: fulfilled + pending fulfillment but updated_at within threshold — must not be counted as stuck
+			recentTime := time.Now()
+			controlOrder, err := test.CreateTestPaymentOrder(testCtxForPQ.token, map[string]interface{}{
+				"provider":   testCtxForPQ.publicProviderProfile,
+				"status":     "fulfilled",
+				"updatedAt":  recentTime,
+				"gateway_id": "control-order-gw",
+			})
 			assert.NoError(t, err)
-			assert.GreaterOrEqual(t, count, 1, "stuck order count should be at least 1")
+			_, err = db.Client.PaymentOrder.UpdateOneID(controlOrder.ID).
+				SetOrderType(paymentorder.OrderTypeRegular).
+				SetUpdatedAt(recentTime).
+				Save(ctx)
+			assert.NoError(t, err)
+			_, err = db.Client.PaymentOrderFulfillment.Create().
+				SetOrderID(controlOrder.ID).
+				SetValidationStatus(paymentorderfulfillment.ValidationStatusPending).
+				Save(ctx)
+			assert.NoError(t, err)
+
+			countAfter, err := utils.GetProviderStuckOrderCount(ctx, testCtxForPQ.publicProviderProfile.ID)
+			assert.NoError(t, err)
+			assert.Equal(t, baseline+1, countAfter, "stuck count should increase by exactly 1 after adding one stuck order; control order (recent updated_at) must not be counted")
 		})
 
 		t.Run("AssignPaymentOrder_returns_ErrNoProviderDueToStuck_when_all_providers_stuck", func(t *testing.T) {

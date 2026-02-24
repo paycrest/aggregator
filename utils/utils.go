@@ -901,7 +901,7 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 	if orderType == paymentorder.OrderTypeRegular {
 		orderConf := config.OrderConfig()
 		if orderConf.ProviderStuckFulfillmentThreshold > 0 {
-			stuckCount, errStuck := getProviderStuckOrderCount(ctx, providerID)
+			stuckCount, errStuck := GetProviderStuckOrderCount(ctx, providerID)
 			if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
 				return RateValidationResult{}, &types.ErrNoProviderDueToStuck{CurrencyCode: currency.Code}
 			}
@@ -1130,8 +1130,9 @@ type ProviderRateResult struct {
 	CurrencyCode         string // set when AllSkippedDueToStuck is true, for 503 response
 }
 
-// getProviderStuckOrderCount returns the number of stuck orders for a provider (status=fulfilled, pending fulfillment, updated_at <= now - OrderRefundTimeout, regular only).
-func getProviderStuckOrderCount(ctx context.Context, providerID string) (int, error) {
+// GetProviderStuckOrderCount returns the number of stuck orders for a provider (status=fulfilled, pending fulfillment, updated_at <= now - OrderRefundTimeout, regular only).
+// Used by both services/priority_queue and rate validation in this package.
+func GetProviderStuckOrderCount(ctx context.Context, providerID string) (int, error) {
 	orderConf := config.OrderConfig()
 	if orderConf.ProviderStuckFulfillmentThreshold <= 0 {
 		return 0, nil
@@ -1331,7 +1332,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 
 			considered++
 			if orderConf.ProviderStuckFulfillmentThreshold > 0 {
-				stuckCount, errStuck := getProviderStuckOrderCount(ctx, providerID)
+				stuckCount, errStuck := GetProviderStuckOrderCount(ctx, providerID)
 				if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
 					skippedDueToStuck++
 					continue
