@@ -2,12 +2,16 @@ package config
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 )
+
+// orderDefaultsOnce ensures viper.SetDefault for order config is only run once.
+var orderDefaultsOnce sync.Once
 
 // OrderConfiguration type defines payment order configurations
 type OrderConfiguration struct {
@@ -32,24 +36,26 @@ type OrderConfiguration struct {
 	ProviderStuckFulfillmentThreshold int
 }
 
-// OrderConfig sets the order configuration
+// OrderConfig returns the order configuration. Defaults are set once; safe for concurrent use.
 func OrderConfig() *OrderConfiguration {
-	viper.SetDefault("RECEIVE_ADDRESS_VALIDITY", 1800)
-	viper.SetDefault("ORDER_REQUEST_VALIDITY", 30)
-	viper.SetDefault("ORDER_REQUEST_VALIDITY_OTC", 300)
-	viper.SetDefault("ORDER_FULFILLMENT_VALIDITY", 60)
-	viper.SetDefault("ORDER_FULFILLMENT_VALIDITY_OTC", 1800)
-	viper.SetDefault("ORDER_REFUND_TIMEOUT", 300)
-	viper.SetDefault("ORDER_REFUND_TIMEOUT_OTC", 5400)
-	viper.SetDefault("BUCKET_QUEUE_REBUILD_INTERVAL", 1)
-	viper.SetDefault("REFUND_CANCELLATION_COUNT", 3)
-	viper.SetDefault("PROVIDER_MAX_RETRY_ATTEMPTS", 3)
-	viper.SetDefault("NETWORK_FEE", 0.05)
-	viper.SetDefault("PERCENT_DEVIATION_FROM_EXTERNAL_RATE", 0.01)
-	viper.SetDefault("PERCENT_DEVIATION_FROM_MARKET_RATE", 0.1)
-	viper.SetDefault("INDEXING_DURATION", 10)
-	viper.SetDefault("FALLBACK_PROVIDER_ID", "")
-	viper.SetDefault("PROVIDER_STUCK_FULFILLMENT_THRESHOLD", 0) // 0 = disabled
+	orderDefaultsOnce.Do(func() {
+		viper.SetDefault("RECEIVE_ADDRESS_VALIDITY", 1800)
+		viper.SetDefault("ORDER_REQUEST_VALIDITY", 30)
+		viper.SetDefault("ORDER_REQUEST_VALIDITY_OTC", 300)
+		viper.SetDefault("ORDER_FULFILLMENT_VALIDITY", 60)
+		viper.SetDefault("ORDER_FULFILLMENT_VALIDITY_OTC", 1800)
+		viper.SetDefault("ORDER_REFUND_TIMEOUT", 300)
+		viper.SetDefault("ORDER_REFUND_TIMEOUT_OTC", 5400)
+		viper.SetDefault("BUCKET_QUEUE_REBUILD_INTERVAL", 1)
+		viper.SetDefault("REFUND_CANCELLATION_COUNT", 3)
+		viper.SetDefault("PROVIDER_MAX_RETRY_ATTEMPTS", 3)
+		viper.SetDefault("NETWORK_FEE", 0.05)
+		viper.SetDefault("PERCENT_DEVIATION_FROM_EXTERNAL_RATE", 0.01)
+		viper.SetDefault("PERCENT_DEVIATION_FROM_MARKET_RATE", 0.1)
+		viper.SetDefault("INDEXING_DURATION", 10)
+		viper.SetDefault("FALLBACK_PROVIDER_ID", "")
+		viper.SetDefault("PROVIDER_STUCK_FULFILLMENT_THRESHOLD", 0) // 0 = disabled
+	})
 
 	// Validate ProviderMaxRetryAttempts to ensure it's at least 1
 	// If invalid (0 or negative), use the default value of 3
