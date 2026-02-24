@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 	"net/url"
@@ -1047,8 +1048,18 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 		}
 	}
 
-	// If no exact match found, return error with details
+	// If no exact match found, try fallback provider (if configured) even though it's not on the bucket queue
 	if !foundExactMatch {
+		if fallbackID := config.OrderConfig().FallbackProviderID; fallbackID != "" {
+			fallbackResult, fallbackErr := validateProviderRate(ctx, token, currency, amount, fallbackID, networkIdentifier)
+			if fallbackErr == nil {
+				return fallbackResult, nil
+			}
+			var errStuck *types.ErrNoProviderDueToStuck
+			if errors.As(fallbackErr, &errStuck) {
+				return RateValidationResult{}, fallbackErr
+			}
+		}
 		if anySkippedDueToStuck && currencyForStuck != "" {
 			return RateValidationResult{}, &types.ErrNoProviderDueToStuck{CurrencyCode: currencyForStuck}
 		}

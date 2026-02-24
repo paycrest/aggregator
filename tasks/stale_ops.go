@@ -122,10 +122,11 @@ func RetryStaleUserOperations() error {
 					paymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
 					paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
 				),
-				// Stuck settling: updated > 10 min ago
+				// Stuck settling: updated > 10 min ago and < 12 min ago. The retry process is called every 60 seconds, so we should only retry once or twice at most.
 				paymentorder.And(
 					paymentorder.StatusEQ(paymentorder.StatusSettling),
 					paymentorder.UpdatedAtLT(time.Now().Add(-10*time.Minute)),
+					paymentorder.CreatedAtLTE(time.Now().Add(-15*time.Minute)),
 				),
 			),
 		).

@@ -2511,11 +2511,19 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 				First(reqCtx)
 
 			if err == nil && paymentOrder != nil {
-				logger.WithFields(logger.Fields{
-					"NetworkParam":   networkParam,
-					"Address":        address,
-					"PaymentOrderID": paymentOrder.ID,
-				}).Infof("Found receive address in database, starting transfer event indexing")
+				if paymentOrder.Status == paymentorder.StatusDeposited && paymentOrder.GatewayID == "" {
+					_, clearErr := storage.Client.PaymentOrder.
+						Update().
+						Where(paymentorder.IDEQ(paymentOrder.ID)).
+						ClearMessageHash().
+						Save(ctx)
+					if clearErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":          fmt.Sprintf("%v", clearErr),
+							"PaymentOrderID": paymentOrder.ID,
+						}).Errorf("Failed to clear message hash for retry")
+					}
+				}
 
 				// This is a receive address, index transfer events
 				wg.Add(1)

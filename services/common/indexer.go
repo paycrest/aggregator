@@ -243,6 +243,11 @@ func UpdateReceiveAddressStatus(
 			return false, nil
 		}
 
+		// Skip dust transfers to prevent address poisoning attacks
+		if event.Value.LessThanOrEqual(decimal.NewFromFloat(0.1)) {
+			return false, nil
+		}
+
 		// This is a transfer to the receive address to create an order on-chain
 		// Compare the transferred value with the expected order amount + fees
 		fees := paymentOrder.NetworkFee.Add(paymentOrder.SenderFee)
