@@ -100,6 +100,20 @@ func (_c *NetworkCreate) SetNillableDelegationContractAddress(v *string) *Networ
 	return _c
 }
 
+// SetSponsorshipMode sets the "sponsorship_mode" field.
+func (_c *NetworkCreate) SetSponsorshipMode(v network.SponsorshipMode) *NetworkCreate {
+	_c.mutation.SetSponsorshipMode(v)
+	return _c
+}
+
+// SetNillableSponsorshipMode sets the "sponsorship_mode" field if the given value is not nil.
+func (_c *NetworkCreate) SetNillableSponsorshipMode(v *network.SponsorshipMode) *NetworkCreate {
+	if v != nil {
+		_c.SetSponsorshipMode(*v)
+	}
+	return _c
+}
+
 // SetBlockTime sets the "block_time" field.
 func (_c *NetworkCreate) SetBlockTime(v decimal.Decimal) *NetworkCreate {
 	_c.mutation.SetBlockTime(v)
@@ -231,6 +245,10 @@ func (_c *NetworkCreate) defaults() {
 		v := network.DefaultDelegationContractAddress
 		_c.mutation.SetDelegationContractAddress(v)
 	}
+	if _, ok := _c.mutation.SponsorshipMode(); !ok {
+		v := network.DefaultSponsorshipMode
+		_c.mutation.SetSponsorshipMode(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -255,6 +273,14 @@ func (_c *NetworkCreate) check() error {
 	}
 	if _, ok := _c.mutation.DelegationContractAddress(); !ok {
 		return &ValidationError{Name: "delegation_contract_address", err: errors.New(`ent: missing required field "Network.delegation_contract_address"`)}
+	}
+	if _, ok := _c.mutation.SponsorshipMode(); !ok {
+		return &ValidationError{Name: "sponsorship_mode", err: errors.New(`ent: missing required field "Network.sponsorship_mode"`)}
+	}
+	if v, ok := _c.mutation.SponsorshipMode(); ok {
+		if err := network.SponsorshipModeValidator(v); err != nil {
+			return &ValidationError{Name: "sponsorship_mode", err: fmt.Errorf(`ent: validator failed for field "Network.sponsorship_mode": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.BlockTime(); !ok {
 		return &ValidationError{Name: "block_time", err: errors.New(`ent: missing required field "Network.block_time"`)}
@@ -319,6 +345,10 @@ func (_c *NetworkCreate) createSpec() (*Network, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.DelegationContractAddress(); ok {
 		_spec.SetField(network.FieldDelegationContractAddress, field.TypeString, value)
 		_node.DelegationContractAddress = value
+	}
+	if value, ok := _c.mutation.SponsorshipMode(); ok {
+		_spec.SetField(network.FieldSponsorshipMode, field.TypeEnum, value)
+		_node.SponsorshipMode = value
 	}
 	if value, ok := _c.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
@@ -499,6 +529,18 @@ func (u *NetworkUpsert) SetDelegationContractAddress(v string) *NetworkUpsert {
 // UpdateDelegationContractAddress sets the "delegation_contract_address" field to the value that was provided on create.
 func (u *NetworkUpsert) UpdateDelegationContractAddress() *NetworkUpsert {
 	u.SetExcluded(network.FieldDelegationContractAddress)
+	return u
+}
+
+// SetSponsorshipMode sets the "sponsorship_mode" field.
+func (u *NetworkUpsert) SetSponsorshipMode(v network.SponsorshipMode) *NetworkUpsert {
+	u.Set(network.FieldSponsorshipMode, v)
+	return u
+}
+
+// UpdateSponsorshipMode sets the "sponsorship_mode" field to the value that was provided on create.
+func (u *NetworkUpsert) UpdateSponsorshipMode() *NetworkUpsert {
+	u.SetExcluded(network.FieldSponsorshipMode)
 	return u
 }
 
@@ -719,6 +761,20 @@ func (u *NetworkUpsertOne) SetDelegationContractAddress(v string) *NetworkUpsert
 func (u *NetworkUpsertOne) UpdateDelegationContractAddress() *NetworkUpsertOne {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateDelegationContractAddress()
+	})
+}
+
+// SetSponsorshipMode sets the "sponsorship_mode" field.
+func (u *NetworkUpsertOne) SetSponsorshipMode(v network.SponsorshipMode) *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetSponsorshipMode(v)
+	})
+}
+
+// UpdateSponsorshipMode sets the "sponsorship_mode" field to the value that was provided on create.
+func (u *NetworkUpsertOne) UpdateSponsorshipMode() *NetworkUpsertOne {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateSponsorshipMode()
 	})
 }
 
@@ -1119,6 +1175,20 @@ func (u *NetworkUpsertBulk) SetDelegationContractAddress(v string) *NetworkUpser
 func (u *NetworkUpsertBulk) UpdateDelegationContractAddress() *NetworkUpsertBulk {
 	return u.Update(func(s *NetworkUpsert) {
 		s.UpdateDelegationContractAddress()
+	})
+}
+
+// SetSponsorshipMode sets the "sponsorship_mode" field.
+func (u *NetworkUpsertBulk) SetSponsorshipMode(v network.SponsorshipMode) *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.SetSponsorshipMode(v)
+	})
+}
+
+// UpdateSponsorshipMode sets the "sponsorship_mode" field to the value that was provided on create.
+func (u *NetworkUpsertBulk) UpdateSponsorshipMode() *NetworkUpsertBulk {
+	return u.Update(func(s *NetworkUpsert) {
+		s.UpdateSponsorshipMode()
 	})
 }
 

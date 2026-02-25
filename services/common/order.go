@@ -18,6 +18,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -26,6 +27,7 @@ import (
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
 
+	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/balance"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -843,9 +845,23 @@ func HandleReceiveAddressValidity(ctx context.Context, paymentOrder *ent.Payment
 	return nil
 }
 
-// deleteTransferWebhook is a no-op now
-func deleteTransferWebhook(_ context.Context, _ string) error {
-	return nil
+// deleteTransferWebhook deletes the Thirdweb transfer webhook for the order when wallet_type is smart_wallet.
+func deleteTransferWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder) error {
+	if paymentOrder.WalletType != paymentorder.WalletTypeSmartWallet {
+		return nil
+	}
+	pw, err := db.Client.PaymentWebhook.
+		Query().
+		Where(paymentwebhook.HasPaymentOrderWith(paymentorder.IDEQ(paymentOrder.ID))).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	engineService := services.NewEngineService()
+	return engineService.DeleteWebhookAndRecord(ctx, pw.WebhookID)
 }
 
 // ensureTransactionLog ensures a transaction log exists for the order, creating it if needed.
@@ -954,8 +970,8 @@ func processPaymentOrderPostCreation(
 	refundOrder func(context.Context, *ent.Network, string) error,
 	assignPaymentOrder func(context.Context, types.PaymentOrderFields) error,
 ) error {
-	// Delete the transfer webhook now that payment order is created/updated
-	err := deleteTransferWebhook(ctx, event.TxHash)
+	// Delete the transfer webhook now that payment order is created/updated (smart_wallet orders only)
+	err := deleteTransferWebhook(ctx, paymentOrder)
 	if err != nil {
 		logger.Errorf("Failed to delete transfer webhook for payment order: %v", err)
 		// Don't fail the entire operation if webhook deletion fails

@@ -450,6 +450,20 @@ func (_c *PaymentOrderCreate) SetNillableOrderType(v *paymentorder.OrderType) *P
 	return _c
 }
 
+// SetWalletType sets the "wallet_type" field.
+func (_c *PaymentOrderCreate) SetWalletType(v paymentorder.WalletType) *PaymentOrderCreate {
+	_c.mutation.SetWalletType(v)
+	return _c
+}
+
+// SetNillableWalletType sets the "wallet_type" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableWalletType(v *paymentorder.WalletType) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetWalletType(*v)
+	}
+	return _c
+}
+
 // SetFallbackTriedAt sets the "fallback_tried_at" field.
 func (_c *PaymentOrderCreate) SetFallbackTriedAt(v time.Time) *PaymentOrderCreate {
 	_c.mutation.SetFallbackTriedAt(v)
@@ -722,6 +736,10 @@ func (_c *PaymentOrderCreate) defaults() error {
 		v := paymentorder.DefaultOrderType
 		_c.mutation.SetOrderType(v)
 	}
+	if _, ok := _c.mutation.WalletType(); !ok {
+		v := paymentorder.DefaultWalletType
+		_c.mutation.SetWalletType(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		if paymentorder.DefaultID == nil {
 			return fmt.Errorf("ent: uninitialized paymentorder.DefaultID (forgotten import ent/runtime?)")
@@ -859,6 +877,14 @@ func (_c *PaymentOrderCreate) check() error {
 	if v, ok := _c.mutation.OrderType(); ok {
 		if err := paymentorder.OrderTypeValidator(v); err != nil {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.WalletType(); !ok {
+		return &ValidationError{Name: "wallet_type", err: errors.New(`ent: missing required field "PaymentOrder.wallet_type"`)}
+	}
+	if v, ok := _c.mutation.WalletType(); ok {
+		if err := paymentorder.WalletTypeValidator(v); err != nil {
+			return &ValidationError{Name: "wallet_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.wallet_type": %w`, err)}
 		}
 	}
 	if len(_c.mutation.TokenIDs()) == 0 {
@@ -1039,6 +1065,10 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
 		_node.OrderType = value
+	}
+	if value, ok := _c.mutation.WalletType(); ok {
+		_spec.SetField(paymentorder.FieldWalletType, field.TypeEnum, value)
+		_node.WalletType = value
 	}
 	if value, ok := _c.mutation.FallbackTriedAt(); ok {
 		_spec.SetField(paymentorder.FieldFallbackTriedAt, field.TypeTime, value)
@@ -1794,6 +1824,18 @@ func (u *PaymentOrderUpsert) UpdateOrderType() *PaymentOrderUpsert {
 	return u
 }
 
+// SetWalletType sets the "wallet_type" field.
+func (u *PaymentOrderUpsert) SetWalletType(v paymentorder.WalletType) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldWalletType, v)
+	return u
+}
+
+// UpdateWalletType sets the "wallet_type" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateWalletType() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldWalletType)
+	return u
+}
+
 // SetFallbackTriedAt sets the "fallback_tried_at" field.
 func (u *PaymentOrderUpsert) SetFallbackTriedAt(v time.Time) *PaymentOrderUpsert {
 	u.Set(paymentorder.FieldFallbackTriedAt, v)
@@ -2539,6 +2581,20 @@ func (u *PaymentOrderUpsertOne) SetOrderType(v paymentorder.OrderType) *PaymentO
 func (u *PaymentOrderUpsertOne) UpdateOrderType() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateOrderType()
+	})
+}
+
+// SetWalletType sets the "wallet_type" field.
+func (u *PaymentOrderUpsertOne) SetWalletType(v paymentorder.WalletType) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetWalletType(v)
+	})
+}
+
+// UpdateWalletType sets the "wallet_type" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateWalletType() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateWalletType()
 	})
 }
 
@@ -3457,6 +3513,20 @@ func (u *PaymentOrderUpsertBulk) SetOrderType(v paymentorder.OrderType) *Payment
 func (u *PaymentOrderUpsertBulk) UpdateOrderType() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateOrderType()
+	})
+}
+
+// SetWalletType sets the "wallet_type" field.
+func (u *PaymentOrderUpsertBulk) SetWalletType(v paymentorder.WalletType) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetWalletType(v)
+	})
+}
+
+// UpdateWalletType sets the "wallet_type" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateWalletType() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateWalletType()
 	})
 }
 

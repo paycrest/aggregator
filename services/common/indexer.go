@@ -333,7 +333,7 @@ func UpdateReceiveAddressStatus(
 			// Webhook for pending status is sent from ProcessPaymentOrderFromBlockchain
 			// when the OrderCreatedEvent is indexed from blockchain (authoritative source)
 
-			err = deleteTransferWebhook(ctx, event.TxHash)
+			err = deleteTransferWebhook(ctx, paymentOrder)
 			if err != nil {
 				logger.Errorf("Failed to delete transfer webhook for transaction %s: %v", event.TxHash, err)
 			}

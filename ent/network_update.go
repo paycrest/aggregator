@@ -115,6 +115,20 @@ func (_u *NetworkUpdate) SetNillableDelegationContractAddress(v *string) *Networ
 	return _u
 }
 
+// SetSponsorshipMode sets the "sponsorship_mode" field.
+func (_u *NetworkUpdate) SetSponsorshipMode(v network.SponsorshipMode) *NetworkUpdate {
+	_u.mutation.SetSponsorshipMode(v)
+	return _u
+}
+
+// SetNillableSponsorshipMode sets the "sponsorship_mode" field if the given value is not nil.
+func (_u *NetworkUpdate) SetNillableSponsorshipMode(v *network.SponsorshipMode) *NetworkUpdate {
+	if v != nil {
+		_u.SetSponsorshipMode(*v)
+	}
+	return _u
+}
+
 // SetBlockTime sets the "block_time" field.
 func (_u *NetworkUpdate) SetBlockTime(v decimal.Decimal) *NetworkUpdate {
 	_u.mutation.ResetBlockTime()
@@ -313,7 +327,20 @@ func (_u *NetworkUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *NetworkUpdate) check() error {
+	if v, ok := _u.mutation.SponsorshipMode(); ok {
+		if err := network.SponsorshipModeValidator(v); err != nil {
+			return &ValidationError{Name: "sponsorship_mode", err: fmt.Errorf(`ent: validator failed for field "Network.sponsorship_mode": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *NetworkUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(network.Table, network.Columns, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -342,6 +369,9 @@ func (_u *NetworkUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.DelegationContractAddress(); ok {
 		_spec.SetField(network.FieldDelegationContractAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SponsorshipMode(); ok {
+		_spec.SetField(network.FieldSponsorshipMode, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
@@ -543,6 +573,20 @@ func (_u *NetworkUpdateOne) SetDelegationContractAddress(v string) *NetworkUpdat
 func (_u *NetworkUpdateOne) SetNillableDelegationContractAddress(v *string) *NetworkUpdateOne {
 	if v != nil {
 		_u.SetDelegationContractAddress(*v)
+	}
+	return _u
+}
+
+// SetSponsorshipMode sets the "sponsorship_mode" field.
+func (_u *NetworkUpdateOne) SetSponsorshipMode(v network.SponsorshipMode) *NetworkUpdateOne {
+	_u.mutation.SetSponsorshipMode(v)
+	return _u
+}
+
+// SetNillableSponsorshipMode sets the "sponsorship_mode" field if the given value is not nil.
+func (_u *NetworkUpdateOne) SetNillableSponsorshipMode(v *network.SponsorshipMode) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetSponsorshipMode(*v)
 	}
 	return _u
 }
@@ -758,7 +802,20 @@ func (_u *NetworkUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *NetworkUpdateOne) check() error {
+	if v, ok := _u.mutation.SponsorshipMode(); ok {
+		if err := network.SponsorshipModeValidator(v); err != nil {
+			return &ValidationError{Name: "sponsorship_mode", err: fmt.Errorf(`ent: validator failed for field "Network.sponsorship_mode": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(network.Table, network.Columns, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -804,6 +861,9 @@ func (_u *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err er
 	}
 	if value, ok := _u.mutation.DelegationContractAddress(); ok {
 		_spec.SetField(network.FieldDelegationContractAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SponsorshipMode(); ok {
+		_spec.SetField(network.FieldSponsorshipMode, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)

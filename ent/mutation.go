@@ -5116,6 +5116,7 @@ type NetworkMutation struct {
 	rpc_endpoint                *string
 	gateway_contract_address    *string
 	delegation_contract_address *string
+	sponsorship_mode            *network.SponsorshipMode
 	block_time                  *decimal.Decimal
 	addblock_time               *decimal.Decimal
 	is_testnet                  *bool
@@ -5504,6 +5505,42 @@ func (m *NetworkMutation) ResetDelegationContractAddress() {
 	m.delegation_contract_address = nil
 }
 
+// SetSponsorshipMode sets the "sponsorship_mode" field.
+func (m *NetworkMutation) SetSponsorshipMode(nm network.SponsorshipMode) {
+	m.sponsorship_mode = &nm
+}
+
+// SponsorshipMode returns the value of the "sponsorship_mode" field in the mutation.
+func (m *NetworkMutation) SponsorshipMode() (r network.SponsorshipMode, exists bool) {
+	v := m.sponsorship_mode
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSponsorshipMode returns the old "sponsorship_mode" field's value of the Network entity.
+// If the Network object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *NetworkMutation) OldSponsorshipMode(ctx context.Context) (v network.SponsorshipMode, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSponsorshipMode is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSponsorshipMode requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSponsorshipMode: %w", err)
+	}
+	return oldValue.SponsorshipMode, nil
+}
+
+// ResetSponsorshipMode resets all changes to the "sponsorship_mode" field.
+func (m *NetworkMutation) ResetSponsorshipMode() {
+	m.sponsorship_mode = nil
+}
+
 // SetBlockTime sets the "block_time" field.
 func (m *NetworkMutation) SetBlockTime(d decimal.Decimal) {
 	m.block_time = &d
@@ -5877,7 +5914,7 @@ func (m *NetworkMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *NetworkMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 13)
 	if m.created_at != nil {
 		fields = append(fields, network.FieldCreatedAt)
 	}
@@ -5898,6 +5935,9 @@ func (m *NetworkMutation) Fields() []string {
 	}
 	if m.delegation_contract_address != nil {
 		fields = append(fields, network.FieldDelegationContractAddress)
+	}
+	if m.sponsorship_mode != nil {
+		fields = append(fields, network.FieldSponsorshipMode)
 	}
 	if m.block_time != nil {
 		fields = append(fields, network.FieldBlockTime)
@@ -5936,6 +5976,8 @@ func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.GatewayContractAddress()
 	case network.FieldDelegationContractAddress:
 		return m.DelegationContractAddress()
+	case network.FieldSponsorshipMode:
+		return m.SponsorshipMode()
 	case network.FieldBlockTime:
 		return m.BlockTime()
 	case network.FieldIsTestnet:
@@ -5969,6 +6011,8 @@ func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldGatewayContractAddress(ctx)
 	case network.FieldDelegationContractAddress:
 		return m.OldDelegationContractAddress(ctx)
+	case network.FieldSponsorshipMode:
+		return m.OldSponsorshipMode(ctx)
 	case network.FieldBlockTime:
 		return m.OldBlockTime(ctx)
 	case network.FieldIsTestnet:
@@ -6036,6 +6080,13 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDelegationContractAddress(v)
+		return nil
+	case network.FieldSponsorshipMode:
+		v, ok := value.(network.SponsorshipMode)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSponsorshipMode(v)
 		return nil
 	case network.FieldBlockTime:
 		v, ok := value.(decimal.Decimal)
@@ -6195,6 +6246,9 @@ func (m *NetworkMutation) ResetField(name string) error {
 		return nil
 	case network.FieldDelegationContractAddress:
 		m.ResetDelegationContractAddress()
+		return nil
+	case network.FieldSponsorshipMode:
+		m.ResetSponsorshipMode()
 		return nil
 	case network.FieldBlockTime:
 		m.ResetBlockTime()
@@ -6372,6 +6426,7 @@ type PaymentOrderMutation struct {
 	appendcancellation_reasons []string
 	status                     *paymentorder.Status
 	order_type                 *paymentorder.OrderType
+	wallet_type                *paymentorder.WalletType
 	fallback_tried_at          *time.Time
 	clearedFields              map[string]struct{}
 	token                      *int
@@ -8244,6 +8299,42 @@ func (m *PaymentOrderMutation) ResetOrderType() {
 	m.order_type = nil
 }
 
+// SetWalletType sets the "wallet_type" field.
+func (m *PaymentOrderMutation) SetWalletType(pt paymentorder.WalletType) {
+	m.wallet_type = &pt
+}
+
+// WalletType returns the value of the "wallet_type" field in the mutation.
+func (m *PaymentOrderMutation) WalletType() (r paymentorder.WalletType, exists bool) {
+	v := m.wallet_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWalletType returns the old "wallet_type" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldWalletType(ctx context.Context) (v paymentorder.WalletType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWalletType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWalletType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWalletType: %w", err)
+	}
+	return oldValue.WalletType, nil
+}
+
+// ResetWalletType resets all changes to the "wallet_type" field.
+func (m *PaymentOrderMutation) ResetWalletType() {
+	m.wallet_type = nil
+}
+
 // SetFallbackTriedAt sets the "fallback_tried_at" field.
 func (m *PaymentOrderMutation) SetFallbackTriedAt(t time.Time) {
 	m.fallback_tried_at = &t
@@ -8630,7 +8721,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 36)
+	fields := make([]string, 0, 37)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -8736,6 +8827,9 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.order_type != nil {
 		fields = append(fields, paymentorder.FieldOrderType)
 	}
+	if m.wallet_type != nil {
+		fields = append(fields, paymentorder.FieldWalletType)
+	}
 	if m.fallback_tried_at != nil {
 		fields = append(fields, paymentorder.FieldFallbackTriedAt)
 	}
@@ -8817,6 +8911,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case paymentorder.FieldOrderType:
 		return m.OrderType()
+	case paymentorder.FieldWalletType:
+		return m.WalletType()
 	case paymentorder.FieldFallbackTriedAt:
 		return m.FallbackTriedAt()
 	}
@@ -8898,6 +8994,8 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldStatus(ctx)
 	case paymentorder.FieldOrderType:
 		return m.OldOrderType(ctx)
+	case paymentorder.FieldWalletType:
+		return m.OldWalletType(ctx)
 	case paymentorder.FieldFallbackTriedAt:
 		return m.OldFallbackTriedAt(ctx)
 	}
@@ -9153,6 +9251,13 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetOrderType(v)
+		return nil
+	case paymentorder.FieldWalletType:
+		v, ok := value.(paymentorder.WalletType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWalletType(v)
 		return nil
 	case paymentorder.FieldFallbackTriedAt:
 		v, ok := value.(time.Time)
@@ -9578,6 +9683,9 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldOrderType:
 		m.ResetOrderType()
+		return nil
+	case paymentorder.FieldWalletType:
+		m.ResetWalletType()
 		return nil
 	case paymentorder.FieldFallbackTriedAt:
 		m.ResetFallbackTriedAt()

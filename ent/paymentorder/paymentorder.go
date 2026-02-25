@@ -88,6 +88,8 @@ const (
 	FieldStatus = "status"
 	// FieldOrderType holds the string denoting the order_type field in the database.
 	FieldOrderType = "order_type"
+	// FieldWalletType holds the string denoting the wallet_type field in the database.
+	FieldWalletType = "wallet_type"
 	// FieldFallbackTriedAt holds the string denoting the fallback_tried_at field in the database.
 	FieldFallbackTriedAt = "fallback_tried_at"
 	// EdgeToken holds the string denoting the token edge name in mutations.
@@ -195,6 +197,7 @@ var Columns = []string{
 	FieldCancellationReasons,
 	FieldStatus,
 	FieldOrderType,
+	FieldWalletType,
 	FieldFallbackTriedAt,
 }
 
@@ -345,6 +348,32 @@ func OrderTypeValidator(ot OrderType) error {
 		return nil
 	default:
 		return fmt.Errorf("paymentorder: invalid enum value for order_type field: %q", ot)
+	}
+}
+
+// WalletType defines the type for the "wallet_type" enum field.
+type WalletType string
+
+// WalletTypeSmartWallet is the default value of the WalletType enum.
+const DefaultWalletType = WalletTypeSmartWallet
+
+// WalletType values.
+const (
+	WalletTypeSmartWallet WalletType = "smart_wallet"
+	WalletTypeEoa7702     WalletType = "eoa_7702"
+)
+
+func (wt WalletType) String() string {
+	return string(wt)
+}
+
+// WalletTypeValidator is a validator for the "wallet_type" field enum values. It is called by the builders before save.
+func WalletTypeValidator(wt WalletType) error {
+	switch wt {
+	case WalletTypeSmartWallet, WalletTypeEoa7702:
+		return nil
+	default:
+		return fmt.Errorf("paymentorder: invalid enum value for wallet_type field: %q", wt)
 	}
 }
 
@@ -514,6 +543,11 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByOrderType orders the results by the order_type field.
 func ByOrderType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOrderType, opts...).ToFunc()
+}
+
+// ByWalletType orders the results by the wallet_type field.
+func ByWalletType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWalletType, opts...).ToFunc()
 }
 
 // ByFallbackTriedAt orders the results by the fallback_tried_at field.

@@ -7,6 +7,7 @@ import (
 
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/routers"
+	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/tasks"
 	"github.com/paycrest/aggregator/utils/logger"
@@ -53,6 +54,12 @@ func main() {
 	// Start initial provider balances warmup asynchronously (readiness-gated).
 	// Sender order creation will return 503 until warmup completes.
 	tasks.StartProviderBalancesWarmup()
+
+	// Create gateway webhooks for Thirdweb (needed when any network uses thirdweb sponsorship_mode)
+	engineService := services.NewEngineService()
+	if err := engineService.CreateGatewayWebhook(); err != nil {
+		logger.Warnf("CreateGatewayWebhook: %v (non-fatal; thirdweb networks may still work with per-order transfer webhooks)", err)
+	}
 
 	// Initialize Redis
 	if err := storage.InitializeRedis(); err != nil {

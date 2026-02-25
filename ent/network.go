@@ -33,6 +33,8 @@ type Network struct {
 	GatewayContractAddress string `json:"gateway_contract_address,omitempty"`
 	// DelegationContractAddress holds the value of the "delegation_contract_address" field.
 	DelegationContractAddress string `json:"delegation_contract_address,omitempty"`
+	// SponsorshipMode holds the value of the "sponsorship_mode" field.
+	SponsorshipMode network.SponsorshipMode `json:"sponsorship_mode,omitempty"`
 	// BlockTime holds the value of the "block_time" field.
 	BlockTime decimal.Decimal `json:"block_time,omitempty"`
 	// IsTestnet holds the value of the "is_testnet" field.
@@ -91,7 +93,7 @@ func (*Network) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case network.FieldID, network.FieldChainID:
 			values[i] = new(sql.NullInt64)
-		case network.FieldIdentifier, network.FieldRPCEndpoint, network.FieldGatewayContractAddress, network.FieldDelegationContractAddress, network.FieldBundlerURL, network.FieldPaymasterURL:
+		case network.FieldIdentifier, network.FieldRPCEndpoint, network.FieldGatewayContractAddress, network.FieldDelegationContractAddress, network.FieldSponsorshipMode, network.FieldBundlerURL, network.FieldPaymasterURL:
 			values[i] = new(sql.NullString)
 		case network.FieldCreatedAt, network.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -157,6 +159,12 @@ func (_m *Network) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field delegation_contract_address", values[i])
 			} else if value.Valid {
 				_m.DelegationContractAddress = value.String
+			}
+		case network.FieldSponsorshipMode:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field sponsorship_mode", values[i])
+			} else if value.Valid {
+				_m.SponsorshipMode = network.SponsorshipMode(value.String)
 			}
 		case network.FieldBlockTime:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
@@ -254,6 +262,9 @@ func (_m *Network) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("delegation_contract_address=")
 	builder.WriteString(_m.DelegationContractAddress)
+	builder.WriteString(", ")
+	builder.WriteString("sponsorship_mode=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SponsorshipMode))
 	builder.WriteString(", ")
 	builder.WriteString("block_time=")
 	builder.WriteString(fmt.Sprintf("%v", _m.BlockTime))

@@ -15,29 +15,46 @@ import (
 // ReceiveAddressService provides functionality related to managing receive addresses
 type ReceiveAddressService struct {
 	starknetClient *starknet.Client
+	engineService  *EngineService
 }
 
 // NewReceiveAddressService creates a new instance of ReceiveAddressService.
-func NewReceiveAddressService() *ReceiveAddressService {
-	return &ReceiveAddressService{}
+// engineService can be nil when not used (e.g. index controller); required for thirdweb mode in sender.
+func NewReceiveAddressService(engineService *EngineService) *ReceiveAddressService {
+	return &ReceiveAddressService{
+		engineService: engineService,
+	}
 }
 
-// CreateSmartAddress generates a fresh EOA and returns its address + encrypted private key as salt.
-func (s *ReceiveAddressService) CreateSmartAddress() (string, []byte, error) {
-	privateKey, err := crypto.GenerateKey()
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to generate EOA key: %w", err)
+// CreateSmartAddress returns (address, saltOrNil, error).
+// thirdweb: uses EngineService.CreateServerWallet; no salt.
+// self_sponsored: generates EOA locally, encrypts key as salt.
+func (s *ReceiveAddressService) CreateSmartAddress(ctx context.Context, label string, mode string) (string, []byte, error) {
+	switch mode {
+	case "thirdweb":
+		if s.engineService == nil {
+			return "", nil, fmt.Errorf("engine service required for thirdweb mode")
+		}
+		address, err := s.engineService.CreateServerWallet(ctx, label)
+		if err != nil {
+			return "", nil, err
+		}
+		return address, nil, nil
+	case "self_sponsored":
+		privateKey, err := crypto.GenerateKey()
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to generate EOA key: %w", err)
+		}
+		address := crypto.PubkeyToAddress(privateKey.PublicKey)
+		privateKeyHex := hex.EncodeToString(crypto.FromECDSA(privateKey))
+		salt, err := cryptoUtils.EncryptPlain([]byte(privateKeyHex))
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to encrypt salt: %w", err)
+		}
+		return address.Hex(), salt, nil
+	default:
+		return "", nil, fmt.Errorf("unsupported sponsorship_mode: %s", mode)
 	}
-
-	address := crypto.PubkeyToAddress(privateKey.PublicKey)
-
-	privateKeyHex := hex.EncodeToString(crypto.FromECDSA(privateKey))
-	salt, err := cryptoUtils.EncryptPlain([]byte(privateKeyHex))
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to encrypt salt: %w", err)
-	}
-
-	return address.Hex(), salt, nil
 }
 
 // CreateTronAddress generates and saves a new Tron address

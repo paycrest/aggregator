@@ -3,6 +3,7 @@
 package network
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -28,6 +29,8 @@ const (
 	FieldGatewayContractAddress = "gateway_contract_address"
 	// FieldDelegationContractAddress holds the string denoting the delegation_contract_address field in the database.
 	FieldDelegationContractAddress = "delegation_contract_address"
+	// FieldSponsorshipMode holds the string denoting the sponsorship_mode field in the database.
+	FieldSponsorshipMode = "sponsorship_mode"
 	// FieldBlockTime holds the string denoting the block_time field in the database.
 	FieldBlockTime = "block_time"
 	// FieldIsTestnet holds the string denoting the is_testnet field in the database.
@@ -70,6 +73,7 @@ var Columns = []string{
 	FieldRPCEndpoint,
 	FieldGatewayContractAddress,
 	FieldDelegationContractAddress,
+	FieldSponsorshipMode,
 	FieldBlockTime,
 	FieldIsTestnet,
 	FieldBundlerURL,
@@ -99,6 +103,32 @@ var (
 	// DefaultDelegationContractAddress holds the default value on creation for the "delegation_contract_address" field.
 	DefaultDelegationContractAddress string
 )
+
+// SponsorshipMode defines the type for the "sponsorship_mode" enum field.
+type SponsorshipMode string
+
+// SponsorshipModeThirdweb is the default value of the SponsorshipMode enum.
+const DefaultSponsorshipMode = SponsorshipModeThirdweb
+
+// SponsorshipMode values.
+const (
+	SponsorshipModeThirdweb      SponsorshipMode = "thirdweb"
+	SponsorshipModeSelfSponsored SponsorshipMode = "self_sponsored"
+)
+
+func (sm SponsorshipMode) String() string {
+	return string(sm)
+}
+
+// SponsorshipModeValidator is a validator for the "sponsorship_mode" field enum values. It is called by the builders before save.
+func SponsorshipModeValidator(sm SponsorshipMode) error {
+	switch sm {
+	case SponsorshipModeThirdweb, SponsorshipModeSelfSponsored:
+		return nil
+	default:
+		return fmt.Errorf("network: invalid enum value for sponsorship_mode field: %q", sm)
+	}
+}
 
 // OrderOption defines the ordering options for the Network queries.
 type OrderOption func(*sql.Selector)
@@ -141,6 +171,11 @@ func ByGatewayContractAddress(opts ...sql.OrderTermOption) OrderOption {
 // ByDelegationContractAddress orders the results by the delegation_contract_address field.
 func ByDelegationContractAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDelegationContractAddress, opts...).ToFunc()
+}
+
+// BySponsorshipMode orders the results by the sponsorship_mode field.
+func BySponsorshipMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSponsorshipMode, opts...).ToFunc()
 }
 
 // ByBlockTime orders the results by the block_time field.

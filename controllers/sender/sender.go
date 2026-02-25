@@ -41,6 +41,7 @@ type SenderController struct {
 	receiveAddressService *svc.ReceiveAddressService
 	orderService          types.OrderService
 	starknetClient        *starknet.Client
+	engineService          *svc.EngineService
 }
 
 // NewSenderController creates a new instance of SenderController
@@ -49,11 +50,12 @@ func NewSenderController() *SenderController {
 	if err != nil {
 		starknetClient = nil
 	}
-
+	engineService := svc.NewEngineService()
 	return &SenderController{
-		receiveAddressService: svc.NewReceiveAddressService(),
+		receiveAddressService: svc.NewReceiveAddressService(engineService),
 		orderService:          orderSvc.NewOrderEVM(),
 		starknetClient:        starknetClient,
+		engineService:         engineService,
 	}
 }
 
@@ -367,6 +369,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	var receiveAddress string
 	var receiveAddressSalt []byte
 	var receiveAddressExpiry time.Time
+	var walletType paymentorder.WalletType = paymentorder.WalletTypeSmartWallet
+	var createTransferWebhook bool
 
 	if strings.HasPrefix(payload.Network, "tron") {
 		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
@@ -414,7 +418,10 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
-		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress()
+		network := token.Edges.Network
+		mode := string(network.SponsorshipMode)
+		label := fmt.Sprintf("order-%s", uuid.New().String())
+		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, label, mode)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -429,6 +436,12 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddress = address
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
+		if mode == "thirdweb" {
+			walletType = paymentorder.WalletTypeSmartWallet
+			createTransferWebhook = true
+		} else {
+			walletType = paymentorder.WalletTypeEoa7702
+		}
 	}
 
 	// Set extended expiry for private orders (10x normal validity)
@@ -522,6 +535,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		SetAccountName(payload.Recipient.AccountName).
 		SetMemo(payload.Recipient.Memo).
 		SetMetadata(payload.Recipient.Metadata).
+		SetWalletType(walletType).
 		AddTransactions(transactionLog)
 
 	if receiveAddressSalt != nil {
@@ -541,6 +555,32 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
+	}
+
+	if createTransferWebhook && ctrl.engineService != nil {
+		webhookID, webhookSecret, webhookErr := ctrl.engineService.CreateTransferWebhook(reqCtx, token.Edges.Network.ChainID, token.ContractAddress, receiveAddress, paymentOrder.ID.String())
+		if webhookErr != nil {
+			logger.WithFields(logger.Fields{
+				"error":    webhookErr,
+				"orderID":  paymentOrder.ID,
+				"network":  token.Edges.Network.Identifier,
+			}).Errorf("Failed to create transfer webhook for order")
+		} else {
+			webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
+			_, err = storage.Client.PaymentWebhook.Create().
+				SetWebhookID(webhookID).
+				SetWebhookSecret(webhookSecret).
+				SetCallbackURL(webhookCallbackURL).
+				SetPaymentOrder(paymentOrder).
+				SetNetwork(token.Edges.Network).
+				Save(reqCtx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"error":   err,
+					"orderID": paymentOrder.ID,
+				}).Errorf("Failed to save payment webhook record")
+			}
+		}
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "Payment order initiated successfully",
@@ -970,6 +1010,8 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 	var receiveAddress string
 	var receiveAddressSalt []byte
 	var receiveAddressExpiry time.Time
+	var walletType paymentorder.WalletType = paymentorder.WalletTypeSmartWallet
+	var createTransferWebhook bool
 
 	if strings.HasPrefix(payload.Source.PaymentRail, "tron") {
 		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
@@ -1015,7 +1057,10 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
-		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress()
+		network := token.Edges.Network
+		mode := string(network.SponsorshipMode)
+		label := fmt.Sprintf("order-%s", uuid.New().String())
+		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, label, mode)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -1030,6 +1075,12 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		receiveAddress = address
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
+		if mode == "thirdweb" {
+			walletType = paymentorder.WalletTypeSmartWallet
+			createTransferWebhook = true
+		} else {
+			walletType = paymentorder.WalletTypeEoa7702
+		}
 	}
 
 	// Set extended expiry for private orders (10x normal validity)
@@ -1096,6 +1147,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		SetAccountName(payload.Destination.Recipient.AccountName).
 		SetMemo(payload.Destination.Recipient.Memo).
 		SetMetadata(metadata).
+		SetWalletType(walletType).
 		AddTransactions(transactionLog)
 
 	// Set provider ID if available from rate validation result
@@ -1120,6 +1172,32 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
+	}
+
+	if createTransferWebhook && ctrl.engineService != nil {
+		webhookID, webhookSecret, webhookErr := ctrl.engineService.CreateTransferWebhook(reqCtx, token.Edges.Network.ChainID, token.ContractAddress, receiveAddress, paymentOrder.ID.String())
+		if webhookErr != nil {
+			logger.WithFields(logger.Fields{
+				"error":    webhookErr,
+				"orderID":  paymentOrder.ID,
+				"network":  token.Edges.Network.Identifier,
+			}).Errorf("Failed to create transfer webhook for order")
+		} else {
+			webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
+			_, err = storage.Client.PaymentWebhook.Create().
+				SetWebhookID(webhookID).
+				SetWebhookSecret(webhookSecret).
+				SetCallbackURL(webhookCallbackURL).
+				SetPaymentOrder(paymentOrder).
+				SetNetwork(token.Edges.Network).
+				Save(reqCtx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"error":   err,
+					"orderID": paymentOrder.ID,
+				}).Errorf("Failed to save payment webhook record")
+			}
+		}
 	}
 
 	// Format sender fee percent for response

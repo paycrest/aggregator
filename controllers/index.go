@@ -77,7 +77,7 @@ func NewController() *Controller {
 	return &Controller{
 		orderService:          orderSvc.NewOrderEVM(),
 		priorityQueueService:  svc.NewPriorityQueueService(),
-		receiveAddressService: svc.NewReceiveAddressService(),
+		receiveAddressService: svc.NewReceiveAddressService(nil),
 		kycService:            smile.NewSmileIDService(),
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),
 		emailService:          email.NewEmailServiceWithProviders(),

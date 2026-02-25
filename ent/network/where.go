@@ -496,6 +496,26 @@ func DelegationContractAddressContainsFold(v string) predicate.Network {
 	return predicate.Network(sql.FieldContainsFold(FieldDelegationContractAddress, v))
 }
 
+// SponsorshipModeEQ applies the EQ predicate on the "sponsorship_mode" field.
+func SponsorshipModeEQ(v SponsorshipMode) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldSponsorshipMode, v))
+}
+
+// SponsorshipModeNEQ applies the NEQ predicate on the "sponsorship_mode" field.
+func SponsorshipModeNEQ(v SponsorshipMode) predicate.Network {
+	return predicate.Network(sql.FieldNEQ(FieldSponsorshipMode, v))
+}
+
+// SponsorshipModeIn applies the In predicate on the "sponsorship_mode" field.
+func SponsorshipModeIn(vs ...SponsorshipMode) predicate.Network {
+	return predicate.Network(sql.FieldIn(FieldSponsorshipMode, vs...))
+}
+
+// SponsorshipModeNotIn applies the NotIn predicate on the "sponsorship_mode" field.
+func SponsorshipModeNotIn(vs ...SponsorshipMode) predicate.Network {
+	return predicate.Network(sql.FieldNotIn(FieldSponsorshipMode, vs...))
+}
+
 // BlockTimeEQ applies the EQ predicate on the "block_time" field.
 func BlockTimeEQ(v decimal.Decimal) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldBlockTime, v))
