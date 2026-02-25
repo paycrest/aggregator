@@ -354,6 +354,9 @@ func OrderTypeValidator(ot OrderType) error {
 // WalletType defines the type for the "wallet_type" enum field.
 type WalletType string
 
+// WalletTypeSmartWallet is the default value of the WalletType enum.
+const DefaultWalletType = WalletTypeSmartWallet
+
 // WalletType values.
 const (
 	WalletTypeSmartWallet WalletType = "smart_wallet"

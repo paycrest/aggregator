@@ -215,7 +215,7 @@ var (
 		{Name: "cancellation_reasons", Type: field.TypeJSON, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "deposited", "pending", "fulfilling", "fulfilled", "validated", "settling", "settled", "cancelled", "refunding", "refunded", "expired"}, Default: "initiated"},
 		{Name: "order_type", Type: field.TypeEnum, Enums: []string{"otc", "regular"}, Default: "regular"},
-		{Name: "wallet_type", Type: field.TypeEnum, Enums: []string{"smart_wallet", "eoa_7702"}},
+		{Name: "wallet_type", Type: field.TypeEnum, Enums: []string{"smart_wallet", "eoa_7702"}, Default: "smart_wallet"},
 		{Name: "fallback_tried_at", Type: field.TypeTime, Nullable: true},
 		{Name: "api_key_payment_orders", Type: field.TypeUUID, Nullable: true},
 		{Name: "provider_profile_assigned_orders", Type: field.TypeString, Nullable: true},
