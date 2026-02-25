@@ -21,6 +21,7 @@ import (
 type IndexerEVM struct {
 	priorityQueue     *services.PriorityQueueService
 	order             types.OrderService
+	engineService     *services.EngineService
 	etherscanService  *explorer.EtherscanService
 	blockscoutService *explorer.BlockscoutService
 }
@@ -29,6 +30,7 @@ type IndexerEVM struct {
 func NewIndexerEVM() (types.Indexer, error) {
 	priorityQueue := services.NewPriorityQueueService()
 	orderService := order.NewOrderEVM()
+	engineService := services.NewEngineService()
 	etherscanService, err := explorer.NewEtherscanService()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create EtherscanService: %w", err)
@@ -38,6 +40,7 @@ func NewIndexerEVM() (types.Indexer, error) {
 	return &IndexerEVM{
 		priorityQueue:     priorityQueue,
 		order:             orderService,
+		engineService:     engineService,
 		etherscanService:  etherscanService,
 		blockscoutService: blockscoutService,
 	}, nil
@@ -79,26 +82,40 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 
 	var gatewayEvents []interface{}
 
-	transferEvents, err := GetContractEventsRPC(
+	transferEvents, err := s.engineService.GetContractEventsWithFallback(
 		ctx,
-		token.Edges.Network.RPCEndpoint,
+		token.Edges.Network,
 		token.ContractAddress,
-		0, 0,
-		[]string{utils.TransferEventSignature},
+		0,
+		0,
+		[]string{utils.TransferEventSignature}, // Include transfer event signature
 		txHash,
+		map[string]string{
+			"filter_transaction_hash": txHash,
+			"sort_by":                 "block_number",
+			"sort_order":              "desc",
+			"decode":                  "true",
+		},
 	)
 	if err != nil && err.Error() != "no events found" {
 		return eventCounts, fmt.Errorf("error getting transfer events for token %s in transaction %s: %w", token.Symbol, txHash[:10]+"...", err)
 	}
 
 	// Find OrderCreated events for this transaction
-	gatewayEvents, err = GetContractEventsRPC(
+	gatewayEvents, err = s.engineService.GetContractEventsWithFallback(
 		ctx,
-		token.Edges.Network.RPCEndpoint,
+		token.Edges.Network,
 		token.Edges.Network.GatewayContractAddress,
-		0, 0,
+		0,
+		0,
 		[]string{utils.OrderCreatedEventSignature},
 		txHash,
+		map[string]string{
+			"filter_transaction_hash": txHash,
+			"sort_by":                 "block_number",
+			"sort_order":              "desc",
+			"decode":                  "true",
+		},
 	)
 	if err != nil && err.Error() != "no events found" {
 		return eventCounts, fmt.Errorf("error getting gateway events for transaction %s: %w", txHash[:10]+"...", err)
@@ -348,7 +365,23 @@ func (s *IndexerEVM) getAddressTransactionHistoryWithFallbackAndBypass(ctx conte
 		logger.Warnf("Blockscout failed for chain %d, falling back to Engine: %v", chainID, err)
 	}
 
-	return nil, fmt.Errorf("transaction history not available for chain %d via etherscan or blockscout: %w", chainID, err)
+	// Try engine service as fallback
+	// Note: Engine doesn't support chain ID 56 (BNB Smart Chain), 1135 (Lisk)
+	if chainID != 56 && chainID != 1135 {
+		transactions, engineErr := s.engineService.GetAddressTransactionHistory(ctx, chainID, address, limit, fromBlock, toBlock)
+		if engineErr != nil {
+			logger.Errorf("Engine failed for chain %d: %v", chainID, engineErr)
+			return nil, fmt.Errorf("both etherscan and engine failed - Etherscan: %w, Engine: %w", err, engineErr)
+		}
+		return transactions, nil
+	}
+
+	// For BSC (chain ID 56), only Etherscan is supported
+	if chainID == 56 {
+		return nil, fmt.Errorf("transaction history not supported for BNB Smart Chain (chain ID 56) via either etherscan or engine")
+	}
+
+	return nil, fmt.Errorf("transaction history not supported for chain %d via any available service", chainID)
 }
 
 // indexReceiveAddressByUserAddressWithBypass processes user's transaction history for receive address transfers with option to bypass queue
@@ -537,13 +570,23 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	orderSettledEvents := []*types.OrderSettledEvent{}
 	orderRefundedEvents := []*types.OrderRefundedEvent{}
 
-	events, err := GetContractEventsRPC(
+	// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
+	eventPayload := map[string]string{
+		"filter_transaction_hash": txHash,
+		"sort_by":                 "block_number",
+		"sort_order":              "desc",
+		"decode":                  "true",
+	}
+
+	events, err := s.engineService.GetContractEventsWithFallback(
 		ctx,
-		network.RPCEndpoint,
+		network,
 		network.GatewayContractAddress,
-		0, 0,
-		[]string{},
+		0,
+		0,
+		[]string{}, // No specific topics filter
 		txHash,
+		eventPayload,
 	)
 	if err != nil {
 		if err.Error() == "no events found" {
@@ -820,13 +863,20 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 	eventCounts := &types.EventCounts{}
 
 	// Get OrderSettled events for this transaction
-	events, err := GetContractEventsRPC(
+	events, err := s.engineService.GetContractEventsWithFallback(
 		ctx,
-		network.RPCEndpoint,
+		network,
 		network.GatewayContractAddress,
-		0, 0,
+		0,
+		0,
 		[]string{utils.OrderSettledEventSignature},
 		txHash,
+		map[string]string{
+			"filter_transaction_hash": txHash,
+			"sort_by":                 "block_number",
+			"sort_order":              "desc",
+			"decode":                  "true",
+		},
 	)
 	if err != nil {
 		if err.Error() == "no events found" {

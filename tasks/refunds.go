@@ -260,7 +260,7 @@ func ProcessExpiredOrdersRefunds() error {
 			_, err = order.Update().
 				SetStatus(paymentorder.StatusRefunded).
 				SetTxHash(receipt.TxHash.Hex()).
-				SetBlockNumber(receipt.BlockNumber).
+				SetBlockNumber(receipt.BlockNumber.Int64()).
 				Save(ctx)
 			if err != nil {
 				logger.WithFields(logger.Fields{

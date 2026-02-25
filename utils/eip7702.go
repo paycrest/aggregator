@@ -82,7 +82,7 @@ func SignBatch7702(privateKey *ecdsa.PrivateKey, signerAddr common.Address, nonc
 	}
 
 	nonceBytes := make([]byte, 32)
-	big.NewInt(int64(nonce)).FillBytes(nonceBytes)
+	new(big.Int).SetUint64(nonce).FillBytes(nonceBytes)
 
 	digest := crypto.Keccak256Hash(append(nonceBytes, packed...))
 	prefix := []byte("\x19Ethereum Signed Message:\n32")
