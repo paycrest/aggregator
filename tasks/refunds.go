@@ -147,7 +147,7 @@ func ProcessExpiredOrdersRefunds() error {
 				logger.WithFields(logger.Fields{
 					"Error":             refundErr.Error(),
 					"OrderID":           order.ID.String(),
-					"ReceiveAddress":    receiveAddress,
+					"ReceiveAddress":    order.ReceiveAddress,
 					"ReturnAddress":     order.ReturnAddress,
 					"Balance":           balance.String(),
 					"TokenContract":     tokenContract,
