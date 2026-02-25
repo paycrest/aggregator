@@ -144,16 +144,18 @@ func ProcessExpiredOrdersRefunds() error {
 				return
 			}
 			if refundErr != nil {
+				logger.WithFields(logger.Fields{
+					"Error":             refundErr.Error(),
+					"OrderID":           order.ID.String(),
+					"ReceiveAddress":    receiveAddress,
+					"ReturnAddress":     order.ReturnAddress,
+					"Balance":           balance.String(),
+					"TokenContract":     tokenContract,
+					"NetworkIdentifier": network.Identifier,
+				}).Errorf("Failed to send refund transfer transaction")
 				return
 			}
 
-			_, err = order.Update().SetStatus(paymentorder.StatusRefunded).Save(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   err.Error(),
-					"OrderID": order.ID.String(),
-				}).Errorf("Failed to update order status after refund")
-			}
 		}(order)
 	}
 
@@ -165,11 +167,7 @@ func ProcessExpiredOrdersRefunds() error {
 func refundExpiredOrderForSmartWallet(ctx context.Context, order *ent.PaymentOrder, network *ent.Network, balance *big.Int, tokenContract string, engineService *services.EngineService) error {
 	_, err := engineService.SendContractCall(ctx, network.ChainID, order.ReceiveAddress, tokenContract, "transfer", []interface{}{order.ReturnAddress, balance.String()})
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":   err.Error(),
-			"OrderID": order.ID.String(),
-		}).Errorf("Failed to send refund transfer via Engine")
-		return err
+		return fmt.Errorf("Failed to send refund transfer via Engine: %w", err)
 	}
 	return nil
 }
@@ -292,8 +290,7 @@ func refundExpiredOrderFor7702(ctx context.Context, order *ent.PaymentOrder, net
 		return nil, err
 	}
 	if receipt.Status == 0 {
-		logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Errorf("Refund transaction reverted on-chain")
-		return nil, fmt.Errorf("refund tx reverted")
+		return nil, fmt.Errorf("Refund 7702: refund tx reverted")
 	}
 
 	return map[string]interface{}{
