@@ -747,7 +747,7 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 					}
 				}
 			}
-			return matchRateErr
+			return fmt.Errorf("no provider matched for order: %w", matchRateErr)
 		}
 	}
 
