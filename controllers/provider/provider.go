@@ -1442,43 +1442,6 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		// Don't return error here as the order status is already updated
 	}
 
-	// Check if order cancellation count is equal or greater than RefundCancellationCount in config,
-	// and the order has not been refunded, then trigger refund
-	if order.CancellationCount >= orderConf.RefundCancellationCount && order.Status == paymentorder.StatusCancelled {
-		go func() {
-			var service types.OrderService
-			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
-				service = orderService.NewOrderTron()
-			} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
-				client, err := starknetService.NewClient()
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":   fmt.Sprintf("%v", err),
-						"OrderID": order.ID.String(),
-					}).Errorf("CancelOrder.RefundOrder.NewStarknetClient")
-					return
-				}
-				service = orderService.NewOrderStarknet(client)
-				logger.WithFields(logger.Fields{
-					"OrderID":           order.ID.String(),
-					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
-					"Status":            order.Status.String(),
-					"GatewayID":         order.GatewayID,
-				}).Errorf("CancelOrder.RefundOrder.NewStarknetClient")
-			} else {
-				service = orderService.NewOrderEVM()
-			}
-			err := service.RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"OrderID": orderID.String(),
-					"Network": order.Edges.Token.Edges.Network.Identifier,
-				}).Errorf("Failed to refund order: %v", err)
-			}
-		}()
-	}
-
 	// Push provider ID to order exclude list
 	orderKey := fmt.Sprintf("order_exclude_list_%s", orderID)
 	_, err = storage.RedisClient.RPush(reqCtx, orderKey, provider.ID).Result()
