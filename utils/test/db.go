@@ -276,6 +276,16 @@ func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) 
 		time.Sleep(time.Second)
 	}
 
+	// Resolve wallet_type (required); default smart_wallet for tests
+	walletType := paymentorder.WalletTypeSmartWallet
+	if v, ok := payload["wallet_type"]; ok && v != nil {
+		if s, ok := v.(string); ok {
+			walletType = paymentorder.WalletType(s)
+		} else if wt, ok := v.(paymentorder.WalletType); ok {
+			walletType = wt
+		}
+	}
+
 	// Build the order
 	orderBuilder := db.Client.PaymentOrder.
 		Create().
@@ -286,7 +296,8 @@ func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) 
 		SetInstitution(payload["institution"].(string)).
 		SetAccountIdentifier(payload["account_identifier"].(string)).
 		SetAccountName(payload["account_name"].(string)).
-		SetToken(tokenToUse)
+		SetToken(tokenToUse).
+		SetWalletType(walletType)
 
 	// Set sender-specific fields
 	if hasSender {

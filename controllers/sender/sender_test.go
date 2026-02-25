@@ -230,6 +230,7 @@ func setup() error {
 			SetAccountName("OK").
 			SetMemo("Test memo").
 			SetStatus("pending").
+			SetWalletType(paymentorder.WalletTypeSmartWallet).
 			Save(context.Background())
 		if err != nil {
 			return err
@@ -1533,6 +1534,7 @@ func TestSender(t *testing.T) {
 				SetAccountName("OK").
 				SetMemo("Test memo").
 				SetStatus("settled").
+				SetWalletType(paymentorder.WalletTypeSmartWallet).
 				Save(context.Background())
 			assert.NoError(t, err)
 			assert.NoError(t, err)
@@ -1724,6 +1726,7 @@ func TestSender(t *testing.T) {
 				SetAccountIdentifier("9876543210").
 				SetAccountName("Second Sender Account").
 				SetStatus("pending").
+				SetWalletType(paymentorder.WalletTypeSmartWallet).
 				Save(context.Background())
 			assert.NoError(t, err)
 

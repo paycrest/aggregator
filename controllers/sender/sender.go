@@ -421,7 +421,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		network := token.Edges.Network
 		mode := string(network.SponsorshipMode)
 		label := fmt.Sprintf("order-%s", uuid.New().String())
-		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, label, mode)
+		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(reqCtx, label, mode)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -1060,7 +1060,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		network := token.Edges.Network
 		mode := string(network.SponsorshipMode)
 		label := fmt.Sprintf("order-%s", uuid.New().String())
-		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, label, mode)
+		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(reqCtx, label, mode)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,

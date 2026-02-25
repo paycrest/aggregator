@@ -130,7 +130,12 @@ func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecds
 	if err != nil {
 		return nil, fmt.Errorf("failed to get block header: %w", err)
 	}
-	gasFeeCap := new(big.Int).Add(new(big.Int).Mul(head.BaseFee, big.NewInt(2)), gasTipCap)
+	var gasFeeCap *big.Int
+	if head.BaseFee != nil {
+		gasFeeCap = new(big.Int).Add(new(big.Int).Mul(head.BaseFee, big.NewInt(2)), gasTipCap)
+	} else {
+		gasFeeCap = new(big.Int).Set(gasTipCap)
+	}
 	gasLimit := uint64(500_000)
 
 	var tx *types.Transaction

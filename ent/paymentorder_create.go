@@ -456,14 +456,6 @@ func (_c *PaymentOrderCreate) SetWalletType(v paymentorder.WalletType) *PaymentO
 	return _c
 }
 
-// SetNillableWalletType sets the "wallet_type" field if the given value is not nil.
-func (_c *PaymentOrderCreate) SetNillableWalletType(v *paymentorder.WalletType) *PaymentOrderCreate {
-	if v != nil {
-		_c.SetWalletType(*v)
-	}
-	return _c
-}
-
 // SetFallbackTriedAt sets the "fallback_tried_at" field.
 func (_c *PaymentOrderCreate) SetFallbackTriedAt(v time.Time) *PaymentOrderCreate {
 	_c.mutation.SetFallbackTriedAt(v)
@@ -735,10 +727,6 @@ func (_c *PaymentOrderCreate) defaults() error {
 	if _, ok := _c.mutation.OrderType(); !ok {
 		v := paymentorder.DefaultOrderType
 		_c.mutation.SetOrderType(v)
-	}
-	if _, ok := _c.mutation.WalletType(); !ok {
-		v := paymentorder.DefaultWalletType
-		_c.mutation.SetWalletType(v)
 	}
 	if _, ok := _c.mutation.ID(); !ok {
 		if paymentorder.DefaultID == nil {

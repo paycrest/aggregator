@@ -108,6 +108,15 @@ func ProcessExpiredOrdersRefunds() error {
 			}
 
 			tokenContract := order.Edges.Token.ContractAddress
+			if !ethcommon.IsHexAddress(order.ReceiveAddress) || !ethcommon.IsHexAddress(order.ReturnAddress) || !ethcommon.IsHexAddress(tokenContract) {
+				logger.WithFields(logger.Fields{
+					"OrderID":        order.ID.String(),
+					"ReceiveAddress": order.ReceiveAddress,
+					"ReturnAddress":  order.ReturnAddress,
+					"TokenContract":  tokenContract,
+				}).Errorf("Invalid hex address format for refund, skipping")
+				return
+			}
 			balance, err := blockchainUtils.GetTokenBalance(network.RPCEndpoint, tokenContract, order.ReceiveAddress)
 			if err != nil {
 				logger.WithFields(logger.Fields{
@@ -171,6 +180,15 @@ func refundExpiredOrderFor7702(ctx context.Context, order *ent.PaymentOrder, net
 		logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Errorf("Refund 7702: receive address salt is empty")
 		return nil, fmt.Errorf("receive address salt is empty")
 	}
+	if !ethcommon.IsHexAddress(order.ReturnAddress) || !ethcommon.IsHexAddress(tokenContract) || !ethcommon.IsHexAddress(network.DelegationContractAddress) {
+		logger.WithFields(logger.Fields{
+			"OrderID":                   order.ID.String(),
+			"ReturnAddress":             order.ReturnAddress,
+			"TokenContract":             tokenContract,
+			"DelegationContractAddress": network.DelegationContractAddress,
+		}).Errorf("Invalid hex address format for 7702 refund")
+		return nil, fmt.Errorf("invalid hex address format for refund")
+	}
 	saltDecrypted, err := cryptoUtils.DecryptPlain(order.ReceiveAddressSalt)
 	if err != nil {
 		logger.WithFields(logger.Fields{"Error": err.Error(), "OrderID": order.ID.String()}).Errorf("Failed to decrypt receive address salt")
@@ -182,6 +200,14 @@ func refundExpiredOrderFor7702(ctx context.Context, order *ent.PaymentOrder, net
 		return nil, err
 	}
 	userAddr := crypto.PubkeyToAddress(userKey.PublicKey)
+	if userAddr != ethcommon.HexToAddress(order.ReceiveAddress) {
+		logger.WithFields(logger.Fields{
+			"OrderID":        order.ID.String(),
+			"ReceiveAddress": order.ReceiveAddress,
+			"DerivedAddress": userAddr.Hex(),
+		}).Errorf("Decrypted receive key does not match receive address")
+		return nil, fmt.Errorf("decrypted receive key does not match receive address")
+	}
 
 	client, err := ethclient.Dial(network.RPCEndpoint)
 	if err != nil {

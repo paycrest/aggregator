@@ -109,6 +109,7 @@ func setup() error {
 		SetAccountName("Test Account").
 		SetMemo("Shola Kehinde - rent for May 2021").
 		SetStatus(paymentorder.StatusPending).
+		SetWalletType(paymentorder.WalletTypeSmartWallet).
 		Save(context.Background())
 	if err != nil {
 		return fmt.Errorf("CreatePaymentOrder.tasks_test: %w", err)
