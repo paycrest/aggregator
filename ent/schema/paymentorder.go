@@ -119,7 +119,8 @@ func (PaymentOrder) Fields() []ent.Field {
 			Values("otc", "regular").
 			Default("regular"),
 		field.Enum("wallet_type").
-			Values("smart_wallet", "eoa_7702"),
+			Values("smart_wallet", "eoa_7702").
+			Default("smart_wallet"),
 		// Fallback assignment: set when order was assigned via fallback provider (DB-level idempotency).
 		field.Time("fallback_tried_at").
 			Optional(),

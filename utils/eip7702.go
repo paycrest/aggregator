@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -183,6 +184,9 @@ func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecds
 		receipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
 		if err == nil {
 			return receipt, nil
+		}
+		if !errors.Is(err, ethereum.NotFound) {
+			return nil, fmt.Errorf("getting receipt for %s: %w", signedTx.Hash().Hex(), err)
 		}
 		select {
 		case <-ctx.Done():
