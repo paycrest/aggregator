@@ -41,7 +41,6 @@ type SenderController struct {
 	receiveAddressService *svc.ReceiveAddressService
 	orderService          types.OrderService
 	starknetClient        *starknet.Client
-	engineService          *svc.EngineService
 }
 
 // NewSenderController creates a new instance of SenderController
@@ -50,12 +49,10 @@ func NewSenderController() *SenderController {
 	if err != nil {
 		starknetClient = nil
 	}
-	engineService := svc.NewEngineService()
 	return &SenderController{
-		receiveAddressService: svc.NewReceiveAddressService(engineService),
+		receiveAddressService: svc.NewReceiveAddressService(),
 		orderService:          orderSvc.NewOrderEVM(),
 		starknetClient:        starknetClient,
-		engineService:         engineService,
 	}
 }
 
@@ -418,10 +415,9 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
-		network := token.Edges.Network
-		mode := string(network.SponsorshipMode)
-		label := fmt.Sprintf("order-%s", uuid.New().String())
-		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(reqCtx, label, mode)
+		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
+		mode := string(token.Edges.Network.SponsorshipMode)
+		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(reqCtx, uniqueLabel, mode)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -437,7 +433,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 		if mode == "thirdweb" {
-			walletType = paymentorder.WalletTypeSmartWallet
 			createTransferWebhook = true
 		} else {
 			walletType = paymentorder.WalletTypeEoa7702
@@ -550,37 +545,44 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
+	if createTransferWebhook {
+		engineService := svc.NewEngineService()
+		webhookID, webhookSecret, webhookErr := engineService.CreateTransferWebhook(reqCtx, token.Edges.Network.ChainID, token.ContractAddress, receiveAddress, paymentOrder.ID.String())
+		if webhookErr != nil {
+			// Check if this is BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) which is not supported by Thirdweb
+			if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
+				logger.WithFields(logger.Fields{
+					"ChainID": token.Edges.Network.ChainID,
+					"Network": token.Edges.Network.Identifier,
+					"Error":   webhookErr.Error(),
+				}).Errorf("Failed to create transfer webhook: %v", webhookErr)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+				_ = tx.Rollback()
+				return
+			}
+		} else {
+			_, err = tx.PaymentWebhook.
+				Create().
+				SetWebhookID(webhookID).
+				SetWebhookSecret(webhookSecret).
+				SetCallbackURL(fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)).
+				SetPaymentOrder(paymentOrder).
+				SetNetwork(token.Edges.Network).
+				Save(ctx)
+			if err != nil {
+				logger.Errorf("Failed to save payment webhook record: %v", err)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+				_ = tx.Rollback()
+				return
+			}
+		}
+	}
+
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
-	}
-
-	if createTransferWebhook && ctrl.engineService != nil {
-		webhookID, webhookSecret, webhookErr := ctrl.engineService.CreateTransferWebhook(reqCtx, token.Edges.Network.ChainID, token.ContractAddress, receiveAddress, paymentOrder.ID.String())
-		if webhookErr != nil {
-			logger.WithFields(logger.Fields{
-				"error":    webhookErr,
-				"orderID":  paymentOrder.ID,
-				"network":  token.Edges.Network.Identifier,
-			}).Errorf("Failed to create transfer webhook for order")
-		} else {
-			webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
-			_, err = storage.Client.PaymentWebhook.Create().
-				SetWebhookID(webhookID).
-				SetWebhookSecret(webhookSecret).
-				SetCallbackURL(webhookCallbackURL).
-				SetPaymentOrder(paymentOrder).
-				SetNetwork(token.Edges.Network).
-				Save(reqCtx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"error":   err,
-					"orderID": paymentOrder.ID,
-				}).Errorf("Failed to save payment webhook record")
-			}
-		}
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "Payment order initiated successfully",
@@ -1057,10 +1059,9 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
-		network := token.Edges.Network
-		mode := string(network.SponsorshipMode)
-		label := fmt.Sprintf("order-%s", uuid.New().String())
-		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(reqCtx, label, mode)
+		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
+		mode := string(token.Edges.Network.SponsorshipMode)
+		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(reqCtx, uniqueLabel, mode)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -1076,7 +1077,6 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 		if mode == "thirdweb" {
-			walletType = paymentorder.WalletTypeSmartWallet
 			createTransferWebhook = true
 		} else {
 			walletType = paymentorder.WalletTypeEoa7702
@@ -1167,37 +1167,48 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		return
 	}
 
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-		return
-	}
-
-	if createTransferWebhook && ctrl.engineService != nil {
-		webhookID, webhookSecret, webhookErr := ctrl.engineService.CreateTransferWebhook(reqCtx, token.Edges.Network.ChainID, token.ContractAddress, receiveAddress, paymentOrder.ID.String())
+	if createTransferWebhook {
+		engineService := svc.NewEngineService()
+		webhookID, webhookSecret, webhookErr := engineService.CreateTransferWebhook(reqCtx, token.Edges.Network.ChainID, token.ContractAddress, receiveAddress, paymentOrder.ID.String())
 		if webhookErr != nil {
-			logger.WithFields(logger.Fields{
-				"error":    webhookErr,
-				"orderID":  paymentOrder.ID,
-				"network":  token.Edges.Network.Identifier,
-			}).Errorf("Failed to create transfer webhook for order")
+			// BNB Smart Chain (56) and Lisk (1135) are not supported by Thirdweb; do not fail the order
+			if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
+				logger.WithFields(logger.Fields{
+					"ChainID": token.Edges.Network.ChainID,
+					"Network": token.Edges.Network.Identifier,
+					"Error":   webhookErr.Error(),
+				}).Errorf("Failed to create transfer webhook: %v", webhookErr)
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+				_ = tx.Rollback()
+				return
+			}
 		} else {
 			webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
-			_, err = storage.Client.PaymentWebhook.Create().
+			_, err = tx.PaymentWebhook.
+				Create().
 				SetWebhookID(webhookID).
 				SetWebhookSecret(webhookSecret).
 				SetCallbackURL(webhookCallbackURL).
 				SetPaymentOrder(paymentOrder).
 				SetNetwork(token.Edges.Network).
-				Save(reqCtx)
+				Save(ctx)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"error":   err,
 					"orderID": paymentOrder.ID,
 				}).Errorf("Failed to save payment webhook record")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+				_ = tx.Rollback()
+				return
 			}
 		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		return
 	}
 
 	// Format sender fee percent for response

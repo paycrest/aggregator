@@ -850,18 +850,30 @@ func deleteTransferWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder) 
 	if paymentOrder.WalletType != paymentorder.WalletTypeSmartWallet {
 		return nil
 	}
-	pw, err := db.Client.PaymentWebhook.
-		Query().
-		Where(paymentwebhook.HasPaymentOrderWith(paymentorder.IDEQ(paymentOrder.ID))).
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil
+
+	var webhookID string
+	if paymentOrder.Edges.PaymentWebhook != nil {
+		webhookID = paymentOrder.Edges.PaymentWebhook.WebhookID
+	} else {
+		paymentWebhook, err := db.Client.PaymentWebhook.
+			Query().
+			Where(paymentwebhook.HasPaymentOrderWith(paymentorder.IDEQ(paymentOrder.ID))).
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return nil
+			}
+			return fmt.Errorf("failed to fetch payment webhook: %w", err)
 		}
-		return err
+		webhookID = paymentWebhook.WebhookID
 	}
+
 	engineService := services.NewEngineService()
-	return engineService.DeleteWebhookAndRecord(ctx, pw.WebhookID)
+	err := engineService.DeleteWebhookAndRecord(ctx, webhookID)
+	if err != nil {
+		return fmt.Errorf("failed to delete webhook: %w", err)
+	}
+	return nil
 }
 
 // ensureTransactionLog ensures a transaction log exists for the order, creating it if needed.

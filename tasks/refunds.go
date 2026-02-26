@@ -27,6 +27,24 @@ import (
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
+// func FixDatabaseMishap() error {
+// 	ctx := context.Background()
+// 	network, err := storage.Client.Network.
+// 		Query().
+// 		Where(networkent.ChainIDEQ(1135)).
+// 		Only(ctx)
+// 	if err != nil {
+// 		return fmt.Errorf("FixDatabaseMishap.fetchNetworks: %w", err)
+// 	}
+//
+// 	indexerInstance := indexer.NewIndexerEVM()
+//
+// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18052684, 18052684, "")
+// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18056857, 18056857, "")
+//
+// 	return nil
+// }
+
 // HandleReceiveAddressValidity handles receive address validity
 func HandleReceiveAddressValidity() error {
 	ctx := context.Background()
@@ -67,7 +85,7 @@ func ProcessExpiredOrdersRefunds() error {
 		Query().
 		Where(
 			paymentorder.StatusEQ(paymentorder.StatusExpired),
-			paymentorder.CreatedAtGTE(time.Now().Add(-(RefundsInterval * time.Minute))),
+			paymentorder.CreatedAtGTE(time.Now().Add(-(RefundsInterval * time.Minute))), // Should match jobs retrying expired orders refunds
 		).
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -91,7 +109,6 @@ func ProcessExpiredOrdersRefunds() error {
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, 5)
 
-	engineService := services.NewEngineService()
 	for _, order := range expiredOrders {
 		wg.Add(1)
 		go func(order *ent.PaymentOrder) {
@@ -132,7 +149,7 @@ func ProcessExpiredOrdersRefunds() error {
 			var refundErr error
 			switch order.WalletType {
 			case paymentorder.WalletTypeSmartWallet:
-				refundErr = refundExpiredOrderForSmartWallet(ctx, order, network, balance, tokenContract, engineService)
+				refundErr = refundExpiredOrderForSmartWallet(ctx, order, network.ChainID, balance, tokenContract)
 			case paymentorder.WalletTypeEoa7702:
 				// @todo will decide how to handle the response later
 				_, refundErr = refundExpiredOrderFor7702(ctx, order, network, balance, tokenContract, aggregatorKeyECDSA, aggregatorAddr)
@@ -164,8 +181,15 @@ func ProcessExpiredOrdersRefunds() error {
 }
 
 // refundExpiredOrderForSmartWallet sends ERC-20 transfer from smart wallet to return address via Thirdweb Engine (fire-and-forget).
-func refundExpiredOrderForSmartWallet(ctx context.Context, order *ent.PaymentOrder, network *ent.Network, balance *big.Int, tokenContract string, engineService *services.EngineService) error {
-	_, err := engineService.SendContractCall(ctx, network.ChainID, order.ReceiveAddress, tokenContract, "transfer", []interface{}{order.ReturnAddress, balance.String()})
+func refundExpiredOrderForSmartWallet(ctx context.Context, order *ent.PaymentOrder, chainId int64, balance *big.Int, tokenContract string) error {
+	// Prepare transfer method call
+	method := "function transfer(address recipient, uint256 amount) public returns (bool)"
+	params := []interface{}{
+		order.ReturnAddress, // recipient address
+		balance.String(),    // amount to transfer
+	}
+	engineService := services.NewEngineService()
+	_, err := engineService.SendContractCall(ctx, chainId, order.ReceiveAddress, tokenContract, method, params)
 	if err != nil {
 		return fmt.Errorf("Failed to send refund transfer via Engine: %w", err)
 	}

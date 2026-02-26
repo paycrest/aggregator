@@ -14,15 +14,15 @@ import (
 
 // ReceiveAddressService provides functionality related to managing receive addresses
 type ReceiveAddressService struct {
-	starknetClient *starknet.Client
 	engineService  *EngineService
+	starknetClient *starknet.Client
 }
 
 // NewReceiveAddressService creates a new instance of ReceiveAddressService.
 // engineService can be nil when not used (e.g. index controller); required for thirdweb mode in sender.
-func NewReceiveAddressService(engineService *EngineService) *ReceiveAddressService {
+func NewReceiveAddressService() *ReceiveAddressService {
 	return &ReceiveAddressService{
-		engineService: engineService,
+		engineService: NewEngineService(),
 	}
 }
 
