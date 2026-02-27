@@ -123,16 +123,16 @@ func ProcessExpiredOrdersRefunds() error {
 				refundErr = refundExpiredOrderForSmartWallet(ctx, order, network.ChainID, balance, tokenContract, engineService)
 			case networkent.WalletServiceNative:
 				_, refundErr = nativeService.RefundExpiredOrder(ctx, map[string]interface{}{
-					"orderIDPrefix":   orderIDPrefix,
-					"order":           order,
-					"network":         network,
-					"tokenContract":   tokenContract,
-					"returnAddress":  order.ReturnAddress,
-					"balance":        balance,
+					"orderIDPrefix": orderIDPrefix,
+					"order":         order,
+					"network":       network,
+					"tokenContract": tokenContract,
+					"returnAddress": order.ReturnAddress,
+					"balance":       balance,
 				})
 			default:
 				logger.WithFields(logger.Fields{
-					"OrderID":        order.ID.String(),
+					"OrderID":       order.ID.String(),
 					"WalletService": network.WalletService,
 				}).Errorf("Unsupported wallet_service for refund, skipping")
 				return

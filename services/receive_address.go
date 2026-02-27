@@ -99,4 +99,3 @@ func (s *ReceiveAddressService) CreateStarknetAddress(client *starknet.Client) (
 	}
 	return cryptoUtils.NormalizeStarknetAddress(accountInfo.NewAccount.Address.String()), saltEncrypted, nil
 }
-

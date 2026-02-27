@@ -2,17 +2,22 @@ package services
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/holiman/uint256"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/services/contracts"
@@ -74,7 +79,7 @@ func (nm *NonceManager) submitWithNonce(
 	addr common.Address,
 	submitFn func(nonce uint64) error,
 ) error {
-	const maxRetries = 3
+	const maxRetries = 8
 
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		nonce, err := nm.acquireNonce(ctx, client, chainID, addr)
@@ -114,6 +119,214 @@ func isNonceTooLow(err error) bool {
 		strings.Contains(msg, "already known")
 }
 
+// --- EIP-7702 batch execute and keeper tx (used by NativeService only) ---
+
+// ErrTxBroadcastNoReceipt is returned when SendTransaction succeeded but the receipt
+// was not obtained (timeout or context cancel). The nonce was consumed on-chain;
+// nonce manager must not release it (use resetNonce so next acquire refetches).
+var ErrTxBroadcastNoReceipt = errors.New("transaction broadcast but receipt not available")
+
+const (
+	batchExecuteABI = `[{"inputs":[{"components":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"bytes","name":"data","type":"bytes"}],"internalType":"struct ProviderBatchCallAndSponsor.Call[]","name":"calls","type":"tuple[]"},{"internalType":"bytes","name":"signature","type":"bytes"}],"name":"execute","outputs":[],"stateMutability":"payable","type":"function"}]`
+	batchNonceABI   = `[{"inputs":[],"name":"nonce","outputs":[{"type":"uint256"}],"stateMutability":"view","type":"function"}]`
+)
+
+// Call7702 is a single call in an EIP-7702 batch execute.
+type Call7702 struct {
+	To    common.Address `abi:"to"`
+	Value *big.Int       `abi:"value"`
+	Data  []byte         `abi:"data"`
+}
+
+// CheckDelegation returns true if the EOA has delegated to the given delegation contract (EIP-7702).
+func CheckDelegation(client *ethclient.Client, eoa, delegationContract common.Address) (bool, error) {
+	code, err := client.CodeAt(context.Background(), eoa, nil)
+	if err != nil {
+		return false, err
+	}
+	if len(code) != 23 {
+		return false, nil
+	}
+	if code[0] != 0xef || code[1] != 0x01 || code[2] != 0x00 {
+		return false, nil
+	}
+	target := common.BytesToAddress(code[3:23])
+	return target == delegationContract, nil
+}
+
+// SignAuthorization7702 signs an EIP-7702 SetCode authorization.
+func SignAuthorization7702(privateKey *ecdsa.PrivateKey, chainID *big.Int, contractAddr common.Address, nonce uint64) (types.SetCodeAuthorization, error) {
+	encoded, err := rlp.EncodeToBytes([]interface{}{
+		chainID, contractAddr, new(big.Int).SetUint64(nonce),
+	})
+	if err != nil {
+		return types.SetCodeAuthorization{}, fmt.Errorf("RLP encode failed: %w", err)
+	}
+
+	hash := crypto.Keccak256Hash(append([]byte{0x05}, encoded...))
+	sig, err := crypto.Sign(hash.Bytes(), privateKey)
+	if err != nil {
+		return types.SetCodeAuthorization{}, fmt.Errorf("signing failed: %w", err)
+	}
+
+	chainID256 := new(uint256.Int)
+	chainID256.SetFromBig(chainID)
+
+	return types.SetCodeAuthorization{
+		ChainID: *chainID256,
+		Address: contractAddr,
+		Nonce:   nonce,
+		V:       sig[64],
+		R:       *new(uint256.Int).SetBytes(sig[:32]),
+		S:       *new(uint256.Int).SetBytes(sig[32:64]),
+	}, nil
+}
+
+// SignBatch7702 signs the batch digest for EIP-7702 execute(calls, signature).
+// The digest is keccak256(nonce || packed_calls) only; the delegation contract must use the same
+// construction when verifying. The signer is recovered on-chain from the signature, not encoded in the digest.
+func SignBatch7702(privateKey *ecdsa.PrivateKey, nonce uint64, calls []Call7702) ([]byte, error) {
+	var packed []byte
+	for _, c := range calls {
+		packed = append(packed, c.To.Bytes()...)
+		valBytes := make([]byte, 32)
+		c.Value.FillBytes(valBytes)
+		packed = append(packed, valBytes...)
+		packed = append(packed, c.Data...)
+	}
+
+	nonceBytes := make([]byte, 32)
+	new(big.Int).SetUint64(nonce).FillBytes(nonceBytes)
+
+	digest := crypto.Keccak256Hash(append(nonceBytes, packed...))
+	prefix := []byte("\x19Ethereum Signed Message:\n32")
+	msgHash := crypto.Keccak256Hash(append(prefix, digest.Bytes()...))
+
+	sig, err := crypto.Sign(msgHash.Bytes(), privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("batch signing failed: %w", err)
+	}
+	sig[64] += 27 // adjust v for OZ ECDSA.recover
+	return sig, nil
+}
+
+// ReadBatchNonce reads the batch nonce from the account (delegated EOA).
+func ReadBatchNonce(client *ethclient.Client, userAddr common.Address) (uint64, error) {
+	parsed, err := abi.JSON(strings.NewReader(batchNonceABI))
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse batch nonce ABI: %w", err)
+	}
+	data, err := parsed.Pack("nonce")
+	if err != nil {
+		return 0, fmt.Errorf("failed to pack nonce call: %w", err)
+	}
+	result, err := client.CallContract(context.Background(), ethereum.CallMsg{To: &userAddr, Data: data}, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read batch nonce: %w", err)
+	}
+	return new(big.Int).SetBytes(result).Uint64(), nil
+}
+
+// PackExecute packs execute(calls, signature) calldata for the batch contract.
+func PackExecute(calls []Call7702, signature []byte) ([]byte, error) {
+	parsed, err := abi.JSON(strings.NewReader(batchExecuteABI))
+	if err != nil {
+		return nil, err
+	}
+	return parsed.Pack("execute", calls, signature)
+}
+
+// SendKeeperTx sends a keeper transaction (with optional EIP-7702 auth list), then polls for the receipt.
+func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecdsa.PrivateKey, keeperNonce uint64, to common.Address, data []byte, authList []types.SetCodeAuthorization, chainID *big.Int) (*types.Receipt, error) {
+	gasTipCap, err := client.SuggestGasTipCap(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to suggest gas tip: %w", err)
+	}
+	head, err := client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get block header: %w", err)
+	}
+	var gasFeeCap *big.Int
+	if head.BaseFee != nil {
+		gasFeeCap = new(big.Int).Add(new(big.Int).Mul(head.BaseFee, big.NewInt(2)), gasTipCap)
+	} else {
+		gasFeeCap = new(big.Int).Set(gasTipCap)
+	}
+	gasLimit := uint64(500_000)
+
+	var tx *types.Transaction
+	if len(authList) > 0 {
+		chainID256 := uint256.MustFromBig(chainID)
+		tip256 := uint256.MustFromBig(gasTipCap)
+		fee256 := uint256.MustFromBig(gasFeeCap)
+		tx = types.NewTx(&types.SetCodeTx{
+			ChainID:   chainID256,
+			Nonce:     keeperNonce,
+			GasTipCap: tip256,
+			GasFeeCap: fee256,
+			Gas:       gasLimit,
+			To:        to,
+			Value:     uint256.NewInt(0),
+			Data:      data,
+			AuthList:  authList,
+		})
+	} else {
+		tx = types.NewTx(&types.DynamicFeeTx{
+			ChainID:   chainID,
+			Nonce:     keeperNonce,
+			GasTipCap: gasTipCap,
+			GasFeeCap: gasFeeCap,
+			Gas:       gasLimit,
+			To:        &to,
+			Value:     big.NewInt(0),
+			Data:      data,
+		})
+	}
+
+	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainID), keeperKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign tx: %w", err)
+	}
+
+	if err := client.SendTransaction(ctx, signedTx); err != nil {
+		return nil, fmt.Errorf("failed to send tx: %w", err)
+	}
+
+	for i := 0; i < 30; i++ {
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("tx %s: %w", signedTx.Hash().Hex(), errors.Join(ErrTxBroadcastNoReceipt, ctx.Err()))
+		}
+		receipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
+		if err == nil {
+			return receipt, nil
+		}
+		if !errors.Is(err, ethereum.NotFound) {
+			return nil, fmt.Errorf("getting receipt for %s: %w", signedTx.Hash().Hex(), err)
+		}
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("tx %s: %w", signedTx.Hash().Hex(), errors.Join(ErrTxBroadcastNoReceipt, ctx.Err()))
+		case <-time.After(2 * time.Second):
+		}
+	}
+	return nil, fmt.Errorf("tx %s: %w", signedTx.Hash().Hex(), ErrTxBroadcastNoReceipt)
+}
+
+// defaultNonceManager is the shared nonce manager used by all NativeService instances
+// so that OrderEVM (order create/settle/refund) and ProcessExpiredOrdersRefunds (cron)
+// use the same nonce state per (chainID, address) and avoid duplicate nonces under concurrency.
+var (
+	defaultNonceManager   *NonceManager
+	defaultNonceManagerOnce sync.Once
+)
+
+func getDefaultNonceManager() *NonceManager {
+	defaultNonceManagerOnce.Do(func() {
+		defaultNonceManager = NewNonceManager()
+	})
+	return defaultNonceManager
+}
+
 // NativeService provides EIP-7702 (native wallet) order operations: CreateOrder, RefundOrder, SettleOrder.
 // All on-chain interaction for native (7702) flows lives here; Engine uses SendTransactionBatch, Native uses
 // CreateOrder (EOA batch) and SendTransaction (single aggregator→gateway tx for refund/settle).
@@ -121,11 +334,17 @@ type NativeService struct {
 	nonceManager *NonceManager
 }
 
-// NewNativeService creates a new NativeService.
+// NewNativeService creates a new NativeService that shares the default NonceManager with all other
+// NativeService instances so aggregator keeper nonces are coordinated across OrderEVM and cron tasks.
 func NewNativeService() *NativeService {
 	return &NativeService{
-		nonceManager: NewNonceManager(),
+		nonceManager: getDefaultNonceManager(),
 	}
+}
+
+// NewNativeServiceWithNonceManager creates a NativeService with the given NonceManager (for tests or custom wiring).
+func NewNativeServiceWithNonceManager(nm *NonceManager) *NativeService {
+	return &NativeService{nonceManager: nm}
 }
 
 // CreateOrder runs the full EIP-7702 flow: decrypt EOA key, check delegation, sign auth if needed,
@@ -195,7 +414,7 @@ func (s *NativeService) CreateOrder(ctx context.Context, params map[string]inter
 			return nil, fmt.Errorf("%s - CreateOrder.readBatchNonce: %w", orderIDPrefix, err)
 		}
 	}
-	batchSig, err := SignBatch7702(userKey, userAddr, batchNonce, calls)
+	batchSig, err := SignBatch7702(userKey, batchNonce, calls)
 	if err != nil {
 		return nil, fmt.Errorf("%s - CreateOrder.signBatch: %w", orderIDPrefix, err)
 	}
@@ -342,7 +561,7 @@ func (s *NativeService) RefundExpiredOrder(ctx context.Context, params map[strin
 			return nil, fmt.Errorf("%s - RefundExpiredOrder.readBatchNonce: %w", orderIDPrefix, err)
 		}
 	}
-	batchSig, err := SignBatch7702(userKey, userAddr, batchNonce, calls)
+	batchSig, err := SignBatch7702(userKey, batchNonce, calls)
 	if err != nil {
 		return nil, fmt.Errorf("%s - RefundExpiredOrder.signBatch: %w", orderIDPrefix, err)
 	}

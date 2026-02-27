@@ -349,7 +349,7 @@ func TestSignBatch7702_RecoversSigner(t *testing.T) {
 		{To: common.HexToAddress("0xgateway"), Value: big.NewInt(0), Data: []byte{0x03, 0x04}},
 	}
 
-	sig, err := SignBatch7702(key, signerAddr, 0, calls)
+	sig, err := SignBatch7702(key, 0, calls)
 	if err != nil {
 		t.Fatalf("SignBatch7702 failed: %v", err)
 	}
@@ -392,14 +392,13 @@ func TestSignBatch7702_RecoversSigner(t *testing.T) {
 
 func TestSignBatch7702_DifferentNoncesProduceDifferentSigs(t *testing.T) {
 	key, _ := crypto.GenerateKey()
-	addr := crypto.PubkeyToAddress(key.PublicKey)
 
 	calls := []Call7702{
 		{To: common.HexToAddress("0xtoken"), Value: big.NewInt(0), Data: []byte{0xab}},
 	}
 
-	sig0, _ := SignBatch7702(key, addr, 0, calls)
-	sig1, _ := SignBatch7702(key, addr, 1, calls)
+	sig0, _ := SignBatch7702(key, 0, calls)
+	sig1, _ := SignBatch7702(key, 1, calls)
 
 	if string(sig0) == string(sig1) {
 		t.Error("different nonces should produce different signatures")
@@ -408,13 +407,12 @@ func TestSignBatch7702_DifferentNoncesProduceDifferentSigs(t *testing.T) {
 
 func TestPackExecute_ProducesValidCalldata(t *testing.T) {
 	key, _ := crypto.GenerateKey()
-	addr := crypto.PubkeyToAddress(key.PublicKey)
 
 	calls := []Call7702{
 		{To: common.HexToAddress("0xtoken"), Value: big.NewInt(0), Data: []byte{0x01}},
 	}
 
-	sig, err := SignBatch7702(key, addr, 0, calls)
+	sig, err := SignBatch7702(key, 0, calls)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,7 +432,6 @@ func TestPackExecute_ProducesValidCalldata(t *testing.T) {
 
 func TestPackExecute_MultipleCalls(t *testing.T) {
 	key, _ := crypto.GenerateKey()
-	addr := crypto.PubkeyToAddress(key.PublicKey)
 
 	oneCalls := []Call7702{
 		{To: common.HexToAddress("0xtoken"), Value: big.NewInt(0), Data: []byte{0x01}},
@@ -444,8 +441,8 @@ func TestPackExecute_MultipleCalls(t *testing.T) {
 		{To: common.HexToAddress("0xgateway"), Value: big.NewInt(0), Data: []byte{0x02, 0x03}},
 	}
 
-	sig1, _ := SignBatch7702(key, addr, 0, oneCalls)
-	sig2, _ := SignBatch7702(key, addr, 0, twoCalls)
+	sig1, _ := SignBatch7702(key, 0, oneCalls)
+	sig2, _ := SignBatch7702(key, 0, twoCalls)
 
 	data1, _ := PackExecute(oneCalls, sig1)
 	data2, _ := PackExecute(twoCalls, sig2)

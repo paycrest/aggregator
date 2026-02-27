@@ -42,15 +42,15 @@ import (
 )
 
 var testCtx = struct {
-	user                   *ent.SenderProfile
-	token                  *ent.Token
-	currency               *ent.FiatCurrency
-	apiKey                 *ent.APIKey
-	apiKeySecret           string
-	client                 types.RPCClient
-	networkIdentifier      string
+	user                    *ent.SenderProfile
+	token                   *ent.Token
+	currency                *ent.FiatCurrency
+	apiKey                  *ent.APIKey
+	apiKeySecret            string
+	client                  types.RPCClient
+	networkIdentifier       string
 	nativeNetworkIdentifier string
-	nativeTokenSymbol      string
+	nativeTokenSymbol       string
 }{}
 
 func setup() error {
@@ -245,12 +245,12 @@ func setup() error {
 		"currency_id":           currency.ID,
 		"fixed_conversion_rate": decimal.NewFromFloat(750.0),
 		"conversion_rate_type":  "fixed",
-		"max_order_amount":     decimal.NewFromFloat(10000.0),
-		"min_order_amount":     decimal.NewFromFloat(1.0),
-		"max_order_amount_otc": decimal.NewFromFloat(10000.0),
-		"min_order_amount_otc": decimal.NewFromFloat(100.0),
-		"settlement_address":   "0x1234567890123456789012345678901234567890",
-		"network":              testCtx.nativeNetworkIdentifier,
+		"max_order_amount":      decimal.NewFromFloat(10000.0),
+		"min_order_amount":      decimal.NewFromFloat(1.0),
+		"max_order_amount_otc":  decimal.NewFromFloat(10000.0),
+		"min_order_amount_otc":  decimal.NewFromFloat(100.0),
+		"settlement_address":    "0x1234567890123456789012345678901234567890",
+		"network":               testCtx.nativeNetworkIdentifier,
 	})
 	if err != nil {
 		return fmt.Errorf("AddProviderOrderTokenNative.sender_test: %w", err)
@@ -408,7 +408,6 @@ func TestSender(t *testing.T) {
 	var paymentOrderUUID uuid.UUID
 
 	t.Run("InitiatePaymentOrder", func(t *testing.T) {
-		
 
 		// EIP-7702: create order on native network, then EOA signs SetCode authorization and batch; verify recovery.
 		t.Run("EIP7702_authorization", func(t *testing.T) {
@@ -474,7 +473,7 @@ func TestSender(t *testing.T) {
 			calls := []services.Call7702{
 				{To: common.HexToAddress("0x0000000000000000000000000000000000000001"), Value: big.NewInt(0), Data: []byte{0x01}},
 			}
-			batchSig, err := services.SignBatch7702(userKey, userAddr, 0, calls)
+			batchSig, err := services.SignBatch7702(userKey, 0, calls)
 			assert.NoError(t, err)
 			assert.Len(t, batchSig, 65, "batch signature must be 65 bytes")
 			batchData, err := services.PackExecute(calls, batchSig)

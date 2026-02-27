@@ -8,13 +8,13 @@ import (
 
 // CryptoConfiguration type defines crypto configurations
 type CryptoConfiguration struct {
-	HDWalletMnemonic          string
-	AggregatorPublicKey       string
-	AggregatorPrivateKey      string
-	AggregatorAccountEVM      string
+	HDWalletMnemonic               string
+	AggregatorPublicKey            string
+	AggregatorPrivateKey           string
+	AggregatorAccountEVM           string
 	AggregatorAccountPrivateKeyEVM string
-	AggregatorAccountStarknet string
-	MessageHashMaxSize        int
+	AggregatorAccountStarknet      string
+	MessageHashMaxSize             int
 }
 
 // CryptoConfig sets the crypto configuration
@@ -23,13 +23,13 @@ func CryptoConfig() *CryptoConfiguration {
 	viper.SetDefault("MESSAGE_HASH_MAX_SIZE", 500)
 
 	return &CryptoConfiguration{
-		HDWalletMnemonic:          viper.GetString("HD_WALLET_MNEMONIC"),
-		AggregatorPublicKey:       viper.GetString("AGGREGATOR_PUBLIC_KEY"),
-		AggregatorPrivateKey:      viper.GetString("AGGREGATOR_PRIVATE_KEY"),
-		AggregatorAccountEVM:      viper.GetString("AGGREGATOR_ACCOUNT_EVM"),
+		HDWalletMnemonic:               viper.GetString("HD_WALLET_MNEMONIC"),
+		AggregatorPublicKey:            viper.GetString("AGGREGATOR_PUBLIC_KEY"),
+		AggregatorPrivateKey:           viper.GetString("AGGREGATOR_PRIVATE_KEY"),
+		AggregatorAccountEVM:           viper.GetString("AGGREGATOR_ACCOUNT_EVM"),
 		AggregatorAccountPrivateKeyEVM: viper.GetString("AGGREGATOR_ACCOUNT_PRIVATE_KEY_EVM"),
-		AggregatorAccountStarknet: viper.GetString("AGGREGATOR_ACCOUNT_STARKNET"),
-		MessageHashMaxSize:        viper.GetInt("MESSAGE_HASH_MAX_SIZE"),
+		AggregatorAccountStarknet:      viper.GetString("AGGREGATOR_ACCOUNT_STARKNET"),
+		MessageHashMaxSize:             viper.GetInt("MESSAGE_HASH_MAX_SIZE"),
 	}
 }
 

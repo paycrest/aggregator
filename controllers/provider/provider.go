@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
@@ -31,6 +30,7 @@ import (
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
+	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"
@@ -1634,7 +1634,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Sum decimal.Decimal
 	}
 	err = query.
-		Where(paymentorder.HasTokenWith(token.BaseCurrencyEQ("USD"))		).
+		Where(paymentorder.HasTokenWith(token.BaseCurrencyEQ("USD"))).
 		Aggregate(
 			ent.Sum(paymentorder.FieldAmount),
 		).

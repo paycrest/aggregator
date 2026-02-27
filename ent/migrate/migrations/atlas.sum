@@ -1,4 +1,4 @@
-h1:9YuiMUHagn36ZtKoRz3v371ifiBz890KfO9vyCSfhAs=
+h1:PCVo9g3rwWwSDBV/uMBg0Eq385mMkyEfT1Oa8S7/w68=
 20240118234246_initial.sql h1:dYuYBqns33WT+3p8VQvbKUP62k3k6w6h8S+FqNqgSvU=
 20240130122324_order_from_address.sql h1:mMVI2iBUd1roIYLUqu0d2jZ7+B6exppRN8qqn+aIHx4=
 20240202010744_fees_on_order.sql h1:P7ngxZKqDKefBM5vk6M3kbWeMPVwbZ4MZVcLBjEfS34=
@@ -76,4 +76,4 @@ h1:9YuiMUHagn36ZtKoRz3v371ifiBz890KfO9vyCSfhAs=
 20260212110620_default_is_available_false.sql h1:qY0tLUMTwQJbSCgNJV0pq28RgkczhWdUDaJ/J03oIW8=
 20260216150716_add_fallback_tried_at.sql h1:uRF9J576E338U5X/ghtVhwAtvUyEPMooRVl80PZJE/I=
 20260219103600_drop_daily_estimated_volume.sql h1:lPK0SOxaScn37xSvXfEJN/4idCmjYyzwTq6pkI+K1Fk=
-20260225165800_add_sponsorship_mode_and_wallet_type.sql h1:DvibS7tmfZyPKu8uO348POveVOXGyUWEK1dlOGnsAFE=
+20260225165800_add_sponsorship_mode_and_wallet_type.sql h1:xbv5S7NYuT00g4x04KCNXc81YHBWLLy4tS/Ujvu1yag=
