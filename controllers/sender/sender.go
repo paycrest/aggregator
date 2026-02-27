@@ -1348,6 +1348,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 		UpdatedAt:      paymentOrder.UpdatedAt,
 		TxHash:         paymentOrder.TxHash,
 		Status:         paymentOrder.Status,
+		RefundReason:   refundReasonFromOrder(paymentOrder.Status, paymentOrder.CancellationReasons),
 		OrderType:      paymentOrder.OrderType,
 	})
 }
@@ -1714,6 +1715,14 @@ func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentO
 	return query
 }
 
+// refundReasonFromOrder returns a joined refund reason string when status is refunded and reasons exist
+func refundReasonFromOrder(status paymentorder.Status, reasons []string) string {
+	if status != paymentorder.StatusRefunded || reasons == nil || len(reasons) == 0 {
+		return ""
+	}
+	return strings.Join(reasons, "; ")
+}
+
 // buildPaymentOrderResponses converts ent PaymentOrder entities to API response format
 func (ctrl *SenderController) buildPaymentOrderResponses(ctx context.Context, paymentOrders []*ent.PaymentOrder) ([]types.SenderOrderResponse, error) {
 	// Batch fetch institutions to avoid N+1 queries
@@ -1786,6 +1795,7 @@ func (ctrl *SenderController) buildPaymentOrderResponses(ctx context.Context, pa
 			UpdatedAt:      paymentOrder.UpdatedAt,
 			TxHash:         paymentOrder.TxHash,
 			Status:         paymentOrder.Status,
+			RefundReason:   refundReasonFromOrder(paymentOrder.Status, paymentOrder.CancellationReasons),
 			OrderType:      paymentOrder.OrderType,
 		})
 	}
