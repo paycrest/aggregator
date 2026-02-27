@@ -87,12 +87,12 @@ func TestReleaseNonce(t *testing.T) {
 		t.Fatalf("expected nonce 5, got %d", nonce)
 	}
 
-	// Internal counter should now be 6; release 5 to roll back
+	// ReleaseNonce is a no-op (no rollback) to avoid re-issuing a nonce that may be in-flight elsewhere.
 	nm.ReleaseNonce(chainID, addr, 5)
 
 	nonce2, _ := nm.AcquireNonce(context.Background(), nil, chainID, addr)
-	if nonce2 != 5 {
-		t.Errorf("after release, expected nonce 5 again, got %d", nonce2)
+	if nonce2 != 6 {
+		t.Errorf("after release (no-op), next acquire should be 6, got %d", nonce2)
 	}
 }
 
@@ -221,13 +221,13 @@ func TestSubmitWithNonce_NonNonceError(t *testing.T) {
 		t.Errorf("expected 'execution reverted', got %v", err)
 	}
 
-	// Nonce should have been released back to 5
+	// ReleaseNonce is a no-op; counter is not rolled back (was 5, acquire made it 6, release does nothing).
 	nm.mu.Lock()
 	current := nm.nonces[nonceKey{chainID, addr}]
 	nm.mu.Unlock()
 
-	if current != 5 {
-		t.Errorf("expected nonce released back to 5, got %d", current)
+	if current != 6 {
+		t.Errorf("after non-nonce error, counter should stay 6 (no rollback), got %d", current)
 	}
 }
 
