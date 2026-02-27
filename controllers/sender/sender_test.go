@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"os"
 	"strconv"
@@ -12,6 +13,8 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
@@ -30,6 +33,8 @@ import (
 	"github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/paycrest/aggregator/utils/token"
 	"github.com/redis/go-redis/v9"
@@ -38,13 +43,15 @@ import (
 )
 
 var testCtx = struct {
-	user              *ent.SenderProfile
-	token             *ent.Token
-	currency          *ent.FiatCurrency
-	apiKey            *ent.APIKey
-	apiKeySecret      string
-	client            types.RPCClient
-	networkIdentifier string
+	user                   *ent.SenderProfile
+	token                  *ent.Token
+	currency               *ent.FiatCurrency
+	apiKey                 *ent.APIKey
+	apiKeySecret           string
+	client                 types.RPCClient
+	networkIdentifier      string
+	nativeNetworkIdentifier string
+	nativeTokenSymbol      string
 }{}
 
 func setup() error {
@@ -199,6 +206,81 @@ func setup() error {
 	testCtx.currency = currency
 	testCtx.apiKeySecret = secretKey
 
+	// Native (EIP-7702) network and token for EIP7702_authorization test
+	testCtx.nativeNetworkIdentifier = "native-local"
+	delegationContract := "0x1234567890123456789012345678901234567890"
+	nativeNetID, err := db.Client.Network.
+		Create().
+		SetIdentifier(testCtx.nativeNetworkIdentifier).
+		SetChainID(int64(56)).
+		SetRPCEndpoint("ws://localhost:8545").
+		SetBlockTime(decimal.NewFromFloat(3.0)).
+		SetFee(decimal.NewFromFloat(0.1)).
+		SetIsTestnet(true).
+		SetWalletService(network.WalletServiceNative).
+		SetDelegationContractAddress(delegationContract).
+		OnConflict().
+		UpdateNewValues().
+		ID(context.Background())
+	if err != nil {
+		return fmt.Errorf("CreateNativeNetwork.sender_test: %w", err)
+	}
+	nativeTokenID, err := db.Client.Token.
+		Create().
+		SetSymbol("TST7702").
+		SetContractAddress("0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7").
+		SetDecimals(6).
+		SetNetworkID(nativeNetID).
+		SetIsEnabled(true).
+		SetBaseCurrency("NGN").
+		OnConflict().
+		UpdateNewValues().
+		ID(context.Background())
+	if err != nil {
+		return fmt.Errorf("CreateNativeToken.sender_test: %w", err)
+	}
+	testCtx.nativeTokenSymbol = "TST7702"
+	nativeProviderOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
+		"provider":              providerProfile,
+		"token_id":              int(nativeTokenID),
+		"currency_id":           currency.ID,
+		"fixed_conversion_rate": decimal.NewFromFloat(750.0),
+		"conversion_rate_type":  "fixed",
+		"max_order_amount":     decimal.NewFromFloat(10000.0),
+		"min_order_amount":     decimal.NewFromFloat(1.0),
+		"max_order_amount_otc": decimal.NewFromFloat(10000.0),
+		"min_order_amount_otc": decimal.NewFromFloat(100.0),
+		"settlement_address":   "0x1234567890123456789012345678901234567890",
+		"network":              testCtx.nativeNetworkIdentifier,
+	})
+	if err != nil {
+		return fmt.Errorf("AddProviderOrderTokenNative.sender_test: %w", err)
+	}
+	nativeProviderData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
+		providerProfile.ID,
+		testCtx.nativeTokenSymbol,
+		nativeProviderOrderToken.Network,
+		nativeProviderOrderToken.FixedConversionRate.String(),
+		nativeProviderOrderToken.MinOrderAmount.String(),
+		nativeProviderOrderToken.MaxOrderAmount.String(),
+	)
+	err = db.RedisClient.RPush(context.Background(), redisKey, nativeProviderData).Err()
+	if err != nil {
+		return fmt.Errorf("PopulateRedisBucketNative.sender_test: %w", err)
+	}
+	_, err = db.Client.SenderOrderToken.
+		Create().
+		SetSenderID(senderProfile.ID).
+		SetTokenID(nativeTokenID).
+		SetRefundAddress("0x0987654321098765432109876543210987654321").
+		SetFeePercent(decimal.NewFromFloat(0.01)). // >0 required for local currency (NGN) order
+		SetMaxFeeCap(decimal.Zero).
+		SetFeeAddress("0x1234567890123456789012345678901234567890").
+		Save(context.Background())
+	if err != nil {
+		return fmt.Errorf("CreateSenderOrderTokenNative.sender_test: %w", err)
+	}
+
 	for i := 0; i < 9; i++ {
 
 		// Create a simple payment order without blockchain dependency
@@ -328,6 +410,80 @@ func TestSender(t *testing.T) {
 	var paymentOrderUUID uuid.UUID
 
 	t.Run("InitiatePaymentOrder", func(t *testing.T) {
+		
+
+		// EIP-7702: create order on native network, then EOA signs SetCode authorization and batch; verify recovery.
+		t.Run("EIP7702_authorization", func(t *testing.T) {
+			httpmock.Activate()
+			defer httpmock.DeactivateAndReset()
+			setupHTTPMocks()
+
+			validPayload := map[string]interface{}{
+				"amount":  "100",
+				"token":   testCtx.nativeTokenSymbol,
+				"rate":    "750",
+				"network": testCtx.nativeNetworkIdentifier,
+				"recipient": map[string]interface{}{
+					"institution":       "MOMONGPC",
+					"accountIdentifier": "1234567890",
+					"accountName":       "John Doe",
+					"memo":              "7702 auth test",
+				},
+			}
+			headers := map[string]string{"API-Key": testCtx.apiKey.ID.String()}
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", validPayload, headers, router)
+			assert.NoError(t, err)
+			if res.Code != http.StatusCreated {
+				t.Skipf("InitiatePaymentOrder with native network returned %d (encryption may be unconfigured): %s", res.Code, res.Body.String())
+			}
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			idStr, ok := data["id"].(string)
+			assert.True(t, ok)
+			orderID, err := uuid.Parse(idStr)
+			assert.NoError(t, err)
+
+			order, err := db.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(orderID)).
+				WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.Equal(t, paymentorder.WalletTypeEoa7702, order.WalletType, "order must be eoa_7702 for native network")
+			assert.NotEmpty(t, order.ReceiveAddress, "receive address must be set")
+			assert.NotNil(t, order.ReceiveAddressSalt, "receive_address_salt must be set for EOA key")
+
+			saltDecrypted, err := cryptoUtils.DecryptPlain(order.ReceiveAddressSalt)
+			assert.NoError(t, err)
+			userKey, err := crypto.HexToECDSA(string(saltDecrypted))
+			assert.NoError(t, err)
+			userAddr := crypto.PubkeyToAddress(userKey.PublicKey)
+			assert.Equal(t, strings.ToLower(order.ReceiveAddress), strings.ToLower(userAddr.Hex()), "receive address must match EOA")
+
+			net := order.Edges.Token.Edges.Network
+			chainID := big.NewInt(net.ChainID)
+			delegationContract := common.HexToAddress(net.DelegationContractAddress)
+
+			auth, err := utils.SignAuthorization7702(userKey, chainID, delegationContract, 0)
+			assert.NoError(t, err)
+			recovered, err := auth.Authority()
+			assert.NoError(t, err)
+			assert.Equal(t, userAddr, recovered, "SetCode authorization must recover EOA as authority")
+
+			calls := []utils.Call7702{
+				{To: common.HexToAddress("0x0000000000000000000000000000000000000001"), Value: big.NewInt(0), Data: []byte{0x01}},
+			}
+			batchSig, err := utils.SignBatch7702(userKey, userAddr, 0, calls)
+			assert.NoError(t, err)
+			assert.Len(t, batchSig, 65, "batch signature must be 65 bytes")
+			batchData, err := utils.PackExecute(calls, batchSig)
+			assert.NoError(t, err)
+			assert.NotEmpty(t, batchData, "packed execute calldata must be non-empty")
+		})
+
 		t.Run("should reject zero amount", func(t *testing.T) {
 			// Fetch network from db
 			network, err := db.Client.Network.

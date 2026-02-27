@@ -99,12 +99,26 @@ func ProcessExpiredOrdersRefunds() error {
 		return nil
 	}
 
-	cryptoConf := config.CryptoConfig()
-	aggregatorKeyECDSA, err := crypto.HexToECDSA(cryptoConf.AggregatorEVMPrivateKey)
-	if err != nil {
-		return fmt.Errorf("ProcessExpiredOrdersRefunds.parseAggregatorKey: %w", err)
+	// Aggregator key is only required for eoa_7702 refunds; smart_wallet uses EngineService.
+	// Parse only when at least one expired order needs it, so Thirdweb-only envs can still run smart_wallet refunds.
+	var aggregatorKeyECDSA *ecdsa.PrivateKey
+	var aggregatorAddr ethcommon.Address
+	hasEoa7702 := false
+	for _, o := range expiredOrders {
+		if o.WalletType == paymentorder.WalletTypeEoa7702 {
+			hasEoa7702 = true
+			break
+		}
 	}
-	aggregatorAddr := crypto.PubkeyToAddress(aggregatorKeyECDSA.PublicKey)
+	if hasEoa7702 {
+		cryptoConf := config.CryptoConfig()
+		key, err := crypto.HexToECDSA(cryptoConf.AggregatorEVMPrivateKey)
+		if err != nil {
+			return fmt.Errorf("ProcessExpiredOrdersRefunds.parseAggregatorKey: %w", err)
+		}
+		aggregatorKeyECDSA = key
+		aggregatorAddr = crypto.PubkeyToAddress(key.PublicKey)
+	}
 
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, 5)
