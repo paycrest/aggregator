@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -47,16 +48,14 @@ func (nm *NonceManager) AcquireNonce(ctx context.Context, client *ethclient.Clie
 	return nonce, nil
 }
 
-// ReleaseNonce returns an unused nonce back to the pool.
-// Call this if transaction submission fails before broadcast.
+// ReleaseNonce is called when transaction submission failed before broadcast.
+// It does not roll back the counter: with concurrent acquirers, rolling back would
+// allow re-issuing a nonce that is still in-flight elsewhere (e.g. A has 7, B releases 6,
+// counter becomes 6, next acquire gets 7 again → two tx with nonce 7).
+// So we no-op here; the released nonce becomes a gap. On next send we may get
+// "nonce too low" and ResetNonce will re-sync from chain.
 func (nm *NonceManager) ReleaseNonce(chainID int64, addr common.Address, nonce uint64) {
-	nm.mu.Lock()
-	defer nm.mu.Unlock()
-
-	key := nonceKey{chainID, addr}
-	if current, ok := nm.nonces[key]; ok && nonce < current {
-		nm.nonces[key] = nonce
-	}
+	// Do not roll back: nm.nonces[key] = nonce would be unsafe under concurrency.
 }
 
 // ResetNonce forces a re-fetch from RPC on next AcquireNonce.
@@ -92,6 +91,12 @@ func (nm *NonceManager) SubmitWithNonce(
 		if isNonceTooLow(err) {
 			nm.ResetNonce(chainID, addr)
 			continue
+		}
+
+		// Tx was broadcast but receipt failed (timeout/context). Nonce consumed on-chain; do not release.
+		if errors.Is(err, ErrTxBroadcastNoReceipt) {
+			nm.ResetNonce(chainID, addr)
+			return err
 		}
 
 		nm.ReleaseNonce(chainID, addr, nonce)

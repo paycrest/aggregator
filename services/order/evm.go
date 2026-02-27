@@ -182,7 +182,11 @@ func (s *OrderEVM) createOrderFor7702(ctx context.Context, orderIDPrefix string,
 
 	var authList []types.SetCodeAuthorization
 	if !alreadyDelegated {
-		auth, err := utils.SignAuthorization7702(userKey, chainID, delegationContract, 0)
+		authNonce, err := client.PendingNonceAt(ctx, userAddr)
+		if err != nil {
+			return nil, fmt.Errorf("%s - CreateOrder.pendingNonce: %w", orderIDPrefix, err)
+		}
+		auth, err := utils.SignAuthorization7702(userKey, chainID, delegationContract, authNonce)
 		if err != nil {
 			return nil, fmt.Errorf("%s - CreateOrder.signAuth: %w", orderIDPrefix, err)
 		}

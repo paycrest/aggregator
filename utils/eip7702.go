@@ -19,6 +19,11 @@ import (
 	"github.com/holiman/uint256"
 )
 
+// ErrTxBroadcastNoReceipt is returned when SendTransaction succeeded but the receipt
+// was not obtained (timeout or context cancel). The nonce was consumed on-chain;
+// NonceManager must not release it (use ResetNonce so next AcquireNonce refetches).
+var ErrTxBroadcastNoReceipt = errors.New("transaction broadcast but receipt not available")
+
 const (
 	batchExecuteABI = `[{"inputs":[{"components":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"bytes","name":"data","type":"bytes"}],"internalType":"struct ProviderBatchCallAndSponsor.Call[]","name":"calls","type":"tuple[]"},{"internalType":"bytes","name":"signature","type":"bytes"}],"name":"execute","outputs":[],"stateMutability":"payable","type":"function"}]`
 	batchNonceABI   = `[{"inputs":[],"name":"nonce","outputs":[{"type":"uint256"}],"stateMutability":"view","type":"function"}]`
@@ -179,7 +184,7 @@ func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecds
 
 	for i := 0; i < 30; i++ {
 		if ctx.Err() != nil {
-			return nil, fmt.Errorf("context cancelled waiting for tx %s: %w", signedTx.Hash().Hex(), ctx.Err())
+			return nil, fmt.Errorf("tx %s: %w", signedTx.Hash().Hex(), errors.Join(ErrTxBroadcastNoReceipt, ctx.Err()))
 		}
 		receipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
 		if err == nil {
@@ -190,9 +195,9 @@ func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecds
 		}
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("context cancelled waiting for tx %s: %w", signedTx.Hash().Hex(), ctx.Err())
+			return nil, fmt.Errorf("tx %s: %w", signedTx.Hash().Hex(), errors.Join(ErrTxBroadcastNoReceipt, ctx.Err()))
 		case <-time.After(2 * time.Second):
 		}
 	}
-	return nil, fmt.Errorf("timeout waiting for tx %s", signedTx.Hash().Hex())
+	return nil, fmt.Errorf("tx %s: %w", signedTx.Hash().Hex(), ErrTxBroadcastNoReceipt)
 }
