@@ -1,4 +1,4 @@
-h1:uulUzn6E9i9paL1g+Y6UZ2yuZ20HkBYbpSkmRBu+Pyk=
+h1:9YuiMUHagn36ZtKoRz3v371ifiBz890KfO9vyCSfhAs=
 20240118234246_initial.sql h1:dYuYBqns33WT+3p8VQvbKUP62k3k6w6h8S+FqNqgSvU=
 20240130122324_order_from_address.sql h1:mMVI2iBUd1roIYLUqu0d2jZ7+B6exppRN8qqn+aIHx4=
 20240202010744_fees_on_order.sql h1:P7ngxZKqDKefBM5vk6M3kbWeMPVwbZ4MZVcLBjEfS34=
@@ -78,3 +78,4 @@ h1:uulUzn6E9i9paL1g+Y6UZ2yuZ20HkBYbpSkmRBu+Pyk=
 20260219103600_drop_daily_estimated_volume.sql h1:lPK0SOxaScn37xSvXfEJN/4idCmjYyzwTq6pkI+K1Fk=
 20260225165800_add_sponsorship_mode_and_wallet_type.sql h1:DvibS7tmfZyPKu8uO348POveVOXGyUWEK1dlOGnsAFE=
 20260226120000_networks_self_sponsored_delegation_check.sql h1:H97PF3CWps9GKZDEErc9DaxjCBjMGHhlMpQjAG+pzAw=
+20260227120000_rename_sponsorship_mode_to_wallet_service.sql h1:KEnGcNx3BypKZtzEqUFlT7s7DWDnQg1c/KK8P+6JFEM=

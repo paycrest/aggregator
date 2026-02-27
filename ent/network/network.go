@@ -29,8 +29,8 @@ const (
 	FieldGatewayContractAddress = "gateway_contract_address"
 	// FieldDelegationContractAddress holds the string denoting the delegation_contract_address field in the database.
 	FieldDelegationContractAddress = "delegation_contract_address"
-	// FieldSponsorshipMode holds the string denoting the sponsorship_mode field in the database.
-	FieldSponsorshipMode = "sponsorship_mode"
+	// FieldWalletService holds the string denoting the wallet_service field in the database.
+	FieldWalletService = "wallet_service"
 	// FieldBlockTime holds the string denoting the block_time field in the database.
 	FieldBlockTime = "block_time"
 	// FieldIsTestnet holds the string denoting the is_testnet field in the database.
@@ -73,7 +73,7 @@ var Columns = []string{
 	FieldRPCEndpoint,
 	FieldGatewayContractAddress,
 	FieldDelegationContractAddress,
-	FieldSponsorshipMode,
+	FieldWalletService,
 	FieldBlockTime,
 	FieldIsTestnet,
 	FieldBundlerURL,
@@ -104,29 +104,29 @@ var (
 	DefaultDelegationContractAddress string
 )
 
-// SponsorshipMode defines the type for the "sponsorship_mode" enum field.
-type SponsorshipMode string
+// WalletService defines the type for the "wallet_service" enum field.
+type WalletService string
 
-// SponsorshipModeThirdweb is the default value of the SponsorshipMode enum.
-const DefaultSponsorshipMode = SponsorshipModeThirdweb
+// WalletServiceEngine is the default value of the WalletService enum.
+const DefaultWalletService = WalletServiceEngine
 
-// SponsorshipMode values.
+// WalletService values.
 const (
-	SponsorshipModeThirdweb      SponsorshipMode = "thirdweb"
-	SponsorshipModeSelfSponsored SponsorshipMode = "self_sponsored"
+	WalletServiceEngine WalletService = "engine"
+	WalletServiceNative WalletService = "native"
 )
 
-func (sm SponsorshipMode) String() string {
-	return string(sm)
+func (ws WalletService) String() string {
+	return string(ws)
 }
 
-// SponsorshipModeValidator is a validator for the "sponsorship_mode" field enum values. It is called by the builders before save.
-func SponsorshipModeValidator(sm SponsorshipMode) error {
-	switch sm {
-	case SponsorshipModeThirdweb, SponsorshipModeSelfSponsored:
+// WalletServiceValidator is a validator for the "wallet_service" field enum values. It is called by the builders before save.
+func WalletServiceValidator(ws WalletService) error {
+	switch ws {
+	case WalletServiceEngine, WalletServiceNative:
 		return nil
 	default:
-		return fmt.Errorf("network: invalid enum value for sponsorship_mode field: %q", sm)
+		return fmt.Errorf("network: invalid enum value for wallet_service field: %q", ws)
 	}
 }
 
@@ -173,9 +173,9 @@ func ByDelegationContractAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDelegationContractAddress, opts...).ToFunc()
 }
 
-// BySponsorshipMode orders the results by the sponsorship_mode field.
-func BySponsorshipMode(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldSponsorshipMode, opts...).ToFunc()
+// ByWalletService orders the results by the wallet_service field.
+func ByWalletService(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWalletService, opts...).ToFunc()
 }
 
 // ByBlockTime orders the results by the block_time field.

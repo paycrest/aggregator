@@ -5116,7 +5116,7 @@ type NetworkMutation struct {
 	rpc_endpoint                *string
 	gateway_contract_address    *string
 	delegation_contract_address *string
-	sponsorship_mode            *network.SponsorshipMode
+	wallet_service              *network.WalletService
 	block_time                  *decimal.Decimal
 	addblock_time               *decimal.Decimal
 	is_testnet                  *bool
@@ -5505,40 +5505,40 @@ func (m *NetworkMutation) ResetDelegationContractAddress() {
 	m.delegation_contract_address = nil
 }
 
-// SetSponsorshipMode sets the "sponsorship_mode" field.
-func (m *NetworkMutation) SetSponsorshipMode(nm network.SponsorshipMode) {
-	m.sponsorship_mode = &nm
+// SetWalletService sets the "wallet_service" field.
+func (m *NetworkMutation) SetWalletService(ns network.WalletService) {
+	m.wallet_service = &ns
 }
 
-// SponsorshipMode returns the value of the "sponsorship_mode" field in the mutation.
-func (m *NetworkMutation) SponsorshipMode() (r network.SponsorshipMode, exists bool) {
-	v := m.sponsorship_mode
+// WalletService returns the value of the "wallet_service" field in the mutation.
+func (m *NetworkMutation) WalletService() (r network.WalletService, exists bool) {
+	v := m.wallet_service
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldSponsorshipMode returns the old "sponsorship_mode" field's value of the Network entity.
+// OldWalletService returns the old "wallet_service" field's value of the Network entity.
 // If the Network object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NetworkMutation) OldSponsorshipMode(ctx context.Context) (v network.SponsorshipMode, err error) {
+func (m *NetworkMutation) OldWalletService(ctx context.Context) (v network.WalletService, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSponsorshipMode is only allowed on UpdateOne operations")
+		return v, errors.New("OldWalletService is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSponsorshipMode requires an ID field in the mutation")
+		return v, errors.New("OldWalletService requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSponsorshipMode: %w", err)
+		return v, fmt.Errorf("querying old value for OldWalletService: %w", err)
 	}
-	return oldValue.SponsorshipMode, nil
+	return oldValue.WalletService, nil
 }
 
-// ResetSponsorshipMode resets all changes to the "sponsorship_mode" field.
-func (m *NetworkMutation) ResetSponsorshipMode() {
-	m.sponsorship_mode = nil
+// ResetWalletService resets all changes to the "wallet_service" field.
+func (m *NetworkMutation) ResetWalletService() {
+	m.wallet_service = nil
 }
 
 // SetBlockTime sets the "block_time" field.
@@ -5936,8 +5936,8 @@ func (m *NetworkMutation) Fields() []string {
 	if m.delegation_contract_address != nil {
 		fields = append(fields, network.FieldDelegationContractAddress)
 	}
-	if m.sponsorship_mode != nil {
-		fields = append(fields, network.FieldSponsorshipMode)
+	if m.wallet_service != nil {
+		fields = append(fields, network.FieldWalletService)
 	}
 	if m.block_time != nil {
 		fields = append(fields, network.FieldBlockTime)
@@ -5976,8 +5976,8 @@ func (m *NetworkMutation) Field(name string) (ent.Value, bool) {
 		return m.GatewayContractAddress()
 	case network.FieldDelegationContractAddress:
 		return m.DelegationContractAddress()
-	case network.FieldSponsorshipMode:
-		return m.SponsorshipMode()
+	case network.FieldWalletService:
+		return m.WalletService()
 	case network.FieldBlockTime:
 		return m.BlockTime()
 	case network.FieldIsTestnet:
@@ -6011,8 +6011,8 @@ func (m *NetworkMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldGatewayContractAddress(ctx)
 	case network.FieldDelegationContractAddress:
 		return m.OldDelegationContractAddress(ctx)
-	case network.FieldSponsorshipMode:
-		return m.OldSponsorshipMode(ctx)
+	case network.FieldWalletService:
+		return m.OldWalletService(ctx)
 	case network.FieldBlockTime:
 		return m.OldBlockTime(ctx)
 	case network.FieldIsTestnet:
@@ -6081,12 +6081,12 @@ func (m *NetworkMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDelegationContractAddress(v)
 		return nil
-	case network.FieldSponsorshipMode:
-		v, ok := value.(network.SponsorshipMode)
+	case network.FieldWalletService:
+		v, ok := value.(network.WalletService)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetSponsorshipMode(v)
+		m.SetWalletService(v)
 		return nil
 	case network.FieldBlockTime:
 		v, ok := value.(decimal.Decimal)
@@ -6247,8 +6247,8 @@ func (m *NetworkMutation) ResetField(name string) error {
 	case network.FieldDelegationContractAddress:
 		m.ResetDelegationContractAddress()
 		return nil
-	case network.FieldSponsorshipMode:
-		m.ResetSponsorshipMode()
+	case network.FieldWalletService:
+		m.ResetWalletService()
 		return nil
 	case network.FieldBlockTime:
 		m.ResetBlockTime()

@@ -30,9 +30,9 @@ func (Network) Fields() []ent.Field {
 		field.String("rpc_endpoint"),
 		field.String("gateway_contract_address").Default(""),
 		field.String("delegation_contract_address").Default(""),
-		field.Enum("sponsorship_mode").
-			Values("thirdweb", "self_sponsored").
-			Default("thirdweb"),
+		field.Enum("wallet_service").
+			Values("engine", "native").
+			Default("engine"),
 		field.Float("block_time").
 			GoType(decimal.Decimal{}),
 		field.Bool("is_testnet"),

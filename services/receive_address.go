@@ -19,7 +19,7 @@ type ReceiveAddressService struct {
 }
 
 // NewReceiveAddressService creates a new instance of ReceiveAddressService.
-// engineService can be nil when not used (e.g. index controller); required for thirdweb mode in sender.
+// engineService can be nil when not used (e.g. index controller); required for engine mode in sender.
 func NewReceiveAddressService() *ReceiveAddressService {
 	return &ReceiveAddressService{
 		engineService: NewEngineService(),
@@ -27,20 +27,20 @@ func NewReceiveAddressService() *ReceiveAddressService {
 }
 
 // CreateSmartAddress returns (address, saltOrNil, error).
-// thirdweb: uses EngineService.CreateServerWallet; no salt.
-// self_sponsored: generates EOA locally, encrypts key as salt.
+// engine: uses EngineService.CreateServerWallet; no salt.
+// native: generates EOA locally, encrypts key as salt.
 func (s *ReceiveAddressService) CreateSmartAddress(ctx context.Context, label string, mode string) (string, []byte, error) {
 	switch mode {
-	case "thirdweb":
+	case "engine":
 		if s.engineService == nil {
-			return "", nil, fmt.Errorf("engine service required for thirdweb mode")
+			return "", nil, fmt.Errorf("engine service required for engine mode")
 		}
 		address, err := s.engineService.CreateServerWallet(ctx, label)
 		if err != nil {
 			return "", nil, err
 		}
 		return address, nil, nil
-	case "self_sponsored":
+	case "native":
 		privateKey, err := crypto.GenerateKey()
 		if err != nil {
 			return "", nil, fmt.Errorf("failed to generate EOA key: %w", err)
@@ -53,7 +53,7 @@ func (s *ReceiveAddressService) CreateSmartAddress(ctx context.Context, label st
 		}
 		return address.Hex(), salt, nil
 	default:
-		return "", nil, fmt.Errorf("unsupported sponsorship_mode: %s", mode)
+		return "", nil, fmt.Errorf("unsupported wallet_service: %s", mode)
 	}
 }
 

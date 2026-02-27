@@ -115,16 +115,16 @@ func (_u *NetworkUpdate) SetNillableDelegationContractAddress(v *string) *Networ
 	return _u
 }
 
-// SetSponsorshipMode sets the "sponsorship_mode" field.
-func (_u *NetworkUpdate) SetSponsorshipMode(v network.SponsorshipMode) *NetworkUpdate {
-	_u.mutation.SetSponsorshipMode(v)
+// SetWalletService sets the "wallet_service" field.
+func (_u *NetworkUpdate) SetWalletService(v network.WalletService) *NetworkUpdate {
+	_u.mutation.SetWalletService(v)
 	return _u
 }
 
-// SetNillableSponsorshipMode sets the "sponsorship_mode" field if the given value is not nil.
-func (_u *NetworkUpdate) SetNillableSponsorshipMode(v *network.SponsorshipMode) *NetworkUpdate {
+// SetNillableWalletService sets the "wallet_service" field if the given value is not nil.
+func (_u *NetworkUpdate) SetNillableWalletService(v *network.WalletService) *NetworkUpdate {
 	if v != nil {
-		_u.SetSponsorshipMode(*v)
+		_u.SetWalletService(*v)
 	}
 	return _u
 }
@@ -329,9 +329,9 @@ func (_u *NetworkUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *NetworkUpdate) check() error {
-	if v, ok := _u.mutation.SponsorshipMode(); ok {
-		if err := network.SponsorshipModeValidator(v); err != nil {
-			return &ValidationError{Name: "sponsorship_mode", err: fmt.Errorf(`ent: validator failed for field "Network.sponsorship_mode": %w`, err)}
+	if v, ok := _u.mutation.WalletService(); ok {
+		if err := network.WalletServiceValidator(v); err != nil {
+			return &ValidationError{Name: "wallet_service", err: fmt.Errorf(`ent: validator failed for field "Network.wallet_service": %w`, err)}
 		}
 	}
 	return nil
@@ -370,8 +370,8 @@ func (_u *NetworkUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.DelegationContractAddress(); ok {
 		_spec.SetField(network.FieldDelegationContractAddress, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.SponsorshipMode(); ok {
-		_spec.SetField(network.FieldSponsorshipMode, field.TypeEnum, value)
+	if value, ok := _u.mutation.WalletService(); ok {
+		_spec.SetField(network.FieldWalletService, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
@@ -577,16 +577,16 @@ func (_u *NetworkUpdateOne) SetNillableDelegationContractAddress(v *string) *Net
 	return _u
 }
 
-// SetSponsorshipMode sets the "sponsorship_mode" field.
-func (_u *NetworkUpdateOne) SetSponsorshipMode(v network.SponsorshipMode) *NetworkUpdateOne {
-	_u.mutation.SetSponsorshipMode(v)
+// SetWalletService sets the "wallet_service" field.
+func (_u *NetworkUpdateOne) SetWalletService(v network.WalletService) *NetworkUpdateOne {
+	_u.mutation.SetWalletService(v)
 	return _u
 }
 
-// SetNillableSponsorshipMode sets the "sponsorship_mode" field if the given value is not nil.
-func (_u *NetworkUpdateOne) SetNillableSponsorshipMode(v *network.SponsorshipMode) *NetworkUpdateOne {
+// SetNillableWalletService sets the "wallet_service" field if the given value is not nil.
+func (_u *NetworkUpdateOne) SetNillableWalletService(v *network.WalletService) *NetworkUpdateOne {
 	if v != nil {
-		_u.SetSponsorshipMode(*v)
+		_u.SetWalletService(*v)
 	}
 	return _u
 }
@@ -804,9 +804,9 @@ func (_u *NetworkUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *NetworkUpdateOne) check() error {
-	if v, ok := _u.mutation.SponsorshipMode(); ok {
-		if err := network.SponsorshipModeValidator(v); err != nil {
-			return &ValidationError{Name: "sponsorship_mode", err: fmt.Errorf(`ent: validator failed for field "Network.sponsorship_mode": %w`, err)}
+	if v, ok := _u.mutation.WalletService(); ok {
+		if err := network.WalletServiceValidator(v); err != nil {
+			return &ValidationError{Name: "wallet_service", err: fmt.Errorf(`ent: validator failed for field "Network.wallet_service": %w`, err)}
 		}
 	}
 	return nil
@@ -862,8 +862,8 @@ func (_u *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err er
 	if value, ok := _u.mutation.DelegationContractAddress(); ok {
 		_spec.SetField(network.FieldDelegationContractAddress, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.SponsorshipMode(); ok {
-		_spec.SetField(network.FieldSponsorshipMode, field.TypeEnum, value)
+	if value, ok := _u.mutation.WalletService(); ok {
+		_spec.SetField(network.FieldWalletService, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)

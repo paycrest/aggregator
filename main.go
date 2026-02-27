@@ -55,10 +55,10 @@ func main() {
 	// Sender order creation will return 503 until warmup completes.
 	tasks.StartProviderBalancesWarmup()
 
-	// Create gateway webhooks for Thirdweb (needed when any network uses thirdweb sponsorship_mode)
+	// Create gateway webhooks for Thirdweb (needed when any network uses engine wallet_service)
 	engineService := services.NewEngineService()
 	if err := engineService.CreateGatewayWebhook(); err != nil {
-		logger.Warnf("CreateGatewayWebhook: %v (non-fatal; thirdweb networks may still work with per-order transfer webhooks)", err)
+		logger.Warnf("CreateGatewayWebhook: %v (non-fatal; engine networks may still work with per-order transfer webhooks)", err)
 	}
 
 	// Initialize Redis

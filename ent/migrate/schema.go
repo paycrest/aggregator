@@ -164,7 +164,7 @@ var (
 		{Name: "rpc_endpoint", Type: field.TypeString},
 		{Name: "gateway_contract_address", Type: field.TypeString, Default: ""},
 		{Name: "delegation_contract_address", Type: field.TypeString, Default: ""},
-		{Name: "sponsorship_mode", Type: field.TypeEnum, Enums: []string{"thirdweb", "self_sponsored"}, Default: "thirdweb"},
+		{Name: "wallet_service", Type: field.TypeEnum, Enums: []string{"engine", "native"}, Default: "engine"},
 		{Name: "block_time", Type: field.TypeFloat64},
 		{Name: "is_testnet", Type: field.TypeBool},
 		{Name: "bundler_url", Type: field.TypeString, Nullable: true},

@@ -416,7 +416,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
 		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
-		mode := string(token.Edges.Network.SponsorshipMode)
+		mode := string(token.Edges.Network.WalletService)
 		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(reqCtx, uniqueLabel, mode)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -432,7 +432,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddress = address
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
-		if mode == "thirdweb" {
+		if mode == "engine" {
 			createTransferWebhook = true
 		} else {
 			walletType = paymentorder.WalletTypeEoa7702
@@ -1060,7 +1060,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
 		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
-		mode := string(token.Edges.Network.SponsorshipMode)
+		mode := string(token.Edges.Network.WalletService)
 		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(reqCtx, uniqueLabel, mode)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -1076,7 +1076,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		receiveAddress = address
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
-		if mode == "thirdweb" {
+		if mode == "engine" {
 			createTransferWebhook = true
 		} else {
 			walletType = paymentorder.WalletTypeEoa7702
