@@ -1641,7 +1641,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 10, int(totalOrders)) // 9 orders from setup + 1 from InitiatePaymentOrder test
+			assert.Equal(t, 11, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 from EIP7702_authorization
 
 			// Assert the totalOrderVolume value
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
@@ -1721,7 +1721,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 11, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 settled order
+			assert.Equal(t, 12, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 from EIP7702_authorization + 1 settled order
 
 			// Assert the totalOrderVolume value (100 NGN / 950 market rate ≈ 0.105 USD)
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
