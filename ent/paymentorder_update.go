@@ -675,20 +675,6 @@ func (_u *PaymentOrderUpdate) SetNillableOrderType(v *paymentorder.OrderType) *P
 	return _u
 }
 
-// SetWalletType sets the "wallet_type" field.
-func (_u *PaymentOrderUpdate) SetWalletType(v paymentorder.WalletType) *PaymentOrderUpdate {
-	_u.mutation.SetWalletType(v)
-	return _u
-}
-
-// SetNillableWalletType sets the "wallet_type" field if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableWalletType(v *paymentorder.WalletType) *PaymentOrderUpdate {
-	if v != nil {
-		_u.SetWalletType(*v)
-	}
-	return _u
-}
-
 // SetFallbackTriedAt sets the "fallback_tried_at" field.
 func (_u *PaymentOrderUpdate) SetFallbackTriedAt(v time.Time) *PaymentOrderUpdate {
 	_u.mutation.SetFallbackTriedAt(v)
@@ -1017,11 +1003,6 @@ func (_u *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.WalletType(); ok {
-		if err := paymentorder.WalletTypeValidator(v); err != nil {
-			return &ValidationError{Name: "wallet_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.wallet_type": %w`, err)}
-		}
-	}
 	if _u.mutation.TokenCleared() && len(_u.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrder.token"`)
 	}
@@ -1233,9 +1214,6 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.WalletType(); ok {
-		_spec.SetField(paymentorder.FieldWalletType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.FallbackTriedAt(); ok {
 		_spec.SetField(paymentorder.FieldFallbackTriedAt, field.TypeTime, value)
@@ -2135,20 +2113,6 @@ func (_u *PaymentOrderUpdateOne) SetNillableOrderType(v *paymentorder.OrderType)
 	return _u
 }
 
-// SetWalletType sets the "wallet_type" field.
-func (_u *PaymentOrderUpdateOne) SetWalletType(v paymentorder.WalletType) *PaymentOrderUpdateOne {
-	_u.mutation.SetWalletType(v)
-	return _u
-}
-
-// SetNillableWalletType sets the "wallet_type" field if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableWalletType(v *paymentorder.WalletType) *PaymentOrderUpdateOne {
-	if v != nil {
-		_u.SetWalletType(*v)
-	}
-	return _u
-}
-
 // SetFallbackTriedAt sets the "fallback_tried_at" field.
 func (_u *PaymentOrderUpdateOne) SetFallbackTriedAt(v time.Time) *PaymentOrderUpdateOne {
 	_u.mutation.SetFallbackTriedAt(v)
@@ -2490,11 +2454,6 @@ func (_u *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.WalletType(); ok {
-		if err := paymentorder.WalletTypeValidator(v); err != nil {
-			return &ValidationError{Name: "wallet_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.wallet_type": %w`, err)}
-		}
-	}
 	if _u.mutation.TokenCleared() && len(_u.mutation.TokenIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "PaymentOrder.token"`)
 	}
@@ -2723,9 +2682,6 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	}
 	if value, ok := _u.mutation.OrderType(); ok {
 		_spec.SetField(paymentorder.FieldOrderType, field.TypeEnum, value)
-	}
-	if value, ok := _u.mutation.WalletType(); ok {
-		_spec.SetField(paymentorder.FieldWalletType, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.FallbackTriedAt(); ok {
 		_spec.SetField(paymentorder.FieldFallbackTriedAt, field.TypeTime, value)

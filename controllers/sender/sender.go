@@ -366,7 +366,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	var receiveAddress string
 	var receiveAddressSalt []byte
 	var receiveAddressExpiry time.Time
-	var walletType paymentorder.WalletType = paymentorder.WalletTypeSmartWallet
 	var createTransferWebhook bool
 
 	if strings.HasPrefix(payload.Network, "tron") {
@@ -417,7 +416,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	} else {
 		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
 		mode := string(token.Edges.Network.WalletService)
-		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(reqCtx, uniqueLabel, mode)
+		address, salt, err := ctrl.receiveAddressService.CreateEVMAddress(reqCtx, mode, uniqueLabel)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -434,8 +433,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 		if mode == "engine" {
 			createTransferWebhook = true
-		} else {
-			walletType = paymentorder.WalletTypeEoa7702
 		}
 	}
 
@@ -530,7 +527,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		SetAccountName(payload.Recipient.AccountName).
 		SetMemo(payload.Recipient.Memo).
 		SetMetadata(payload.Recipient.Metadata).
-		SetWalletType(walletType).
 		AddTransactions(transactionLog)
 
 	if receiveAddressSalt != nil {
@@ -1012,7 +1008,6 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 	var receiveAddress string
 	var receiveAddressSalt []byte
 	var receiveAddressExpiry time.Time
-	var walletType paymentorder.WalletType = paymentorder.WalletTypeSmartWallet
 	var createTransferWebhook bool
 
 	if strings.HasPrefix(payload.Source.PaymentRail, "tron") {
@@ -1061,7 +1056,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 	} else {
 		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
 		mode := string(token.Edges.Network.WalletService)
-		address, salt, err := ctrl.receiveAddressService.CreateSmartAddress(reqCtx, uniqueLabel, mode)
+		address, salt, err := ctrl.receiveAddressService.CreateEVMAddress(reqCtx, mode, uniqueLabel)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -1078,8 +1073,6 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 		if mode == "engine" {
 			createTransferWebhook = true
-		} else {
-			walletType = paymentorder.WalletTypeEoa7702
 		}
 	}
 
@@ -1147,7 +1140,6 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		SetAccountName(payload.Destination.Recipient.AccountName).
 		SetMemo(payload.Destination.Recipient.Memo).
 		SetMetadata(metadata).
-		SetWalletType(walletType).
 		AddTransactions(transactionLog)
 
 	// Set provider ID if available from rate validation result

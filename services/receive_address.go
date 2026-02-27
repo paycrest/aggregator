@@ -26,10 +26,10 @@ func NewReceiveAddressService() *ReceiveAddressService {
 	}
 }
 
-// CreateSmartAddress returns (address, saltOrNil, error).
+// CreateEVMAddress returns (address, saltOrNil, error).
 // engine: uses EngineService.CreateServerWallet; no salt.
 // native: generates EOA locally, encrypts key as salt.
-func (s *ReceiveAddressService) CreateSmartAddress(ctx context.Context, label string, mode string) (string, []byte, error) {
+func (s *ReceiveAddressService) CreateEVMAddress(ctx context.Context, mode string, label string) (string, []byte, error) {
 	switch mode {
 	case "engine":
 		if s.engineService == nil {

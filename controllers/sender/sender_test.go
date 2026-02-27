@@ -33,7 +33,6 @@ import (
 	"github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/test"
 	"github.com/paycrest/aggregator/utils/token"
@@ -312,7 +311,6 @@ func setup() error {
 			SetAccountName("OK").
 			SetMemo("Test memo").
 			SetStatus("pending").
-			SetWalletType(paymentorder.WalletTypeSmartWallet).
 			Save(context.Background())
 		if err != nil {
 			return err
@@ -452,7 +450,7 @@ func TestSender(t *testing.T) {
 				WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
 				Only(context.Background())
 			assert.NoError(t, err)
-			assert.Equal(t, paymentorder.WalletTypeEoa7702, order.WalletType, "order must be eoa_7702 for native network")
+			assert.Equal(t, network.WalletServiceNative, order.Edges.Token.Edges.Network.WalletService, "order's token network must be native")
 			assert.NotEmpty(t, order.ReceiveAddress, "receive address must be set")
 			assert.NotNil(t, order.ReceiveAddressSalt, "receive_address_salt must be set for EOA key")
 
@@ -467,19 +465,19 @@ func TestSender(t *testing.T) {
 			chainID := big.NewInt(net.ChainID)
 			delegationContract := common.HexToAddress(net.DelegationContractAddress)
 
-			auth, err := utils.SignAuthorization7702(userKey, chainID, delegationContract, 0)
+			auth, err := services.SignAuthorization7702(userKey, chainID, delegationContract, 0)
 			assert.NoError(t, err)
 			recovered, err := auth.Authority()
 			assert.NoError(t, err)
 			assert.Equal(t, userAddr, recovered, "SetCode authorization must recover EOA as authority")
 
-			calls := []utils.Call7702{
+			calls := []services.Call7702{
 				{To: common.HexToAddress("0x0000000000000000000000000000000000000001"), Value: big.NewInt(0), Data: []byte{0x01}},
 			}
-			batchSig, err := utils.SignBatch7702(userKey, userAddr, 0, calls)
+			batchSig, err := services.SignBatch7702(userKey, userAddr, 0, calls)
 			assert.NoError(t, err)
 			assert.Len(t, batchSig, 65, "batch signature must be 65 bytes")
-			batchData, err := utils.PackExecute(calls, batchSig)
+			batchData, err := services.PackExecute(calls, batchSig)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, batchData, "packed execute calldata must be non-empty")
 		})
@@ -1690,7 +1688,6 @@ func TestSender(t *testing.T) {
 				SetAccountName("OK").
 				SetMemo("Test memo").
 				SetStatus("settled").
-				SetWalletType(paymentorder.WalletTypeSmartWallet).
 				Save(context.Background())
 			assert.NoError(t, err)
 			assert.NoError(t, err)
@@ -1882,7 +1879,6 @@ func TestSender(t *testing.T) {
 				SetAccountIdentifier("9876543210").
 				SetAccountName("Second Sender Account").
 				SetStatus("pending").
-				SetWalletType(paymentorder.WalletTypeSmartWallet).
 				Save(context.Background())
 			assert.NoError(t, err)
 

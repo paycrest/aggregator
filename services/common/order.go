@@ -845,9 +845,21 @@ func HandleReceiveAddressValidity(ctx context.Context, paymentOrder *ent.Payment
 	return nil
 }
 
-// deleteTransferWebhook deletes the Thirdweb transfer webhook for the order when wallet_type is smart_wallet.
+// deleteTransferWebhook deletes the Thirdweb transfer webhook for the order when token's network is engine (smart_wallet).
 func deleteTransferWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder) error {
-	if paymentOrder.WalletType != paymentorder.WalletTypeSmartWallet {
+	// Derive wallet type from token -> network.wallet_service
+	if paymentOrder.Edges.Token == nil || paymentOrder.Edges.Token.Edges.Network == nil {
+		reloaded, err := db.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(paymentOrder.ID)).
+			WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+			Only(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to load order with token/network: %w", err)
+		}
+		paymentOrder = reloaded
+	}
+	if paymentOrder.Edges.Token.Edges.Network.WalletService != networkent.WalletServiceEngine {
 		return nil
 	}
 

@@ -1,4 +1,4 @@
-package utils
+package services
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 
 // ErrTxBroadcastNoReceipt is returned when SendTransaction succeeded but the receipt
 // was not obtained (timeout or context cancel). The nonce was consumed on-chain;
-// NonceManager must not release it (use ResetNonce so next AcquireNonce refetches).
+// nonce manager must not release it (use resetNonce so next acquire refetches).
 var ErrTxBroadcastNoReceipt = errors.New("transaction broadcast but receipt not available")
 
 const (
@@ -29,12 +29,14 @@ const (
 	batchNonceABI   = `[{"inputs":[],"name":"nonce","outputs":[{"type":"uint256"}],"stateMutability":"view","type":"function"}]`
 )
 
+// Call7702 is a single call in an EIP-7702 batch execute.
 type Call7702 struct {
 	To    common.Address `abi:"to"`
 	Value *big.Int       `abi:"value"`
 	Data  []byte         `abi:"data"`
 }
 
+// CheckDelegation returns true if the EOA has delegated to the given delegation contract (EIP-7702).
 func CheckDelegation(client *ethclient.Client, eoa, delegationContract common.Address) (bool, error) {
 	code, err := client.CodeAt(context.Background(), eoa, nil)
 	if err != nil {
@@ -50,6 +52,7 @@ func CheckDelegation(client *ethclient.Client, eoa, delegationContract common.Ad
 	return target == delegationContract, nil
 }
 
+// SignAuthorization7702 signs an EIP-7702 SetCode authorization.
 func SignAuthorization7702(privateKey *ecdsa.PrivateKey, chainID *big.Int, contractAddr common.Address, nonce uint64) (types.SetCodeAuthorization, error) {
 	encoded, err := rlp.EncodeToBytes([]interface{}{
 		chainID, contractAddr, new(big.Int).SetUint64(nonce),
@@ -77,6 +80,7 @@ func SignAuthorization7702(privateKey *ecdsa.PrivateKey, chainID *big.Int, contr
 	}, nil
 }
 
+// SignBatch7702 signs the batch digest for EIP-7702 execute(calls, signature).
 func SignBatch7702(privateKey *ecdsa.PrivateKey, signerAddr common.Address, nonce uint64, calls []Call7702) ([]byte, error) {
 	var packed []byte
 	for _, c := range calls {
@@ -102,7 +106,7 @@ func SignBatch7702(privateKey *ecdsa.PrivateKey, signerAddr common.Address, nonc
 	return sig, nil
 }
 
-// Mostly used for onramp
+// ReadBatchNonce reads the batch nonce from the account (delegated EOA).
 func ReadBatchNonce(client *ethclient.Client, userAddr common.Address) (uint64, error) {
 	parsed, err := abi.JSON(strings.NewReader(batchNonceABI))
 	if err != nil {
@@ -119,6 +123,7 @@ func ReadBatchNonce(client *ethclient.Client, userAddr common.Address) (uint64, 
 	return new(big.Int).SetBytes(result).Uint64(), nil
 }
 
+// PackExecute packs execute(calls, signature) calldata for the batch contract.
 func PackExecute(calls []Call7702, signature []byte) ([]byte, error) {
 	parsed, err := abi.JSON(strings.NewReader(batchExecuteABI))
 	if err != nil {
@@ -127,6 +132,7 @@ func PackExecute(calls []Call7702, signature []byte) ([]byte, error) {
 	return parsed.Pack("execute", calls, signature)
 }
 
+// SendKeeperTx sends a keeper transaction (with optional EIP-7702 auth list), then polls for the receipt.
 func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecdsa.PrivateKey, keeperNonce uint64, to common.Address, data []byte, authList []types.SetCodeAuthorization, chainID *big.Int) (*types.Receipt, error) {
 	gasTipCap, err := client.SuggestGasTipCap(ctx)
 	if err != nil {

@@ -1982,26 +1982,6 @@ func OrderTypeNotIn(vs ...OrderType) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldNotIn(FieldOrderType, vs...))
 }
 
-// WalletTypeEQ applies the EQ predicate on the "wallet_type" field.
-func WalletTypeEQ(v WalletType) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldEQ(FieldWalletType, v))
-}
-
-// WalletTypeNEQ applies the NEQ predicate on the "wallet_type" field.
-func WalletTypeNEQ(v WalletType) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldNEQ(FieldWalletType, v))
-}
-
-// WalletTypeIn applies the In predicate on the "wallet_type" field.
-func WalletTypeIn(vs ...WalletType) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldIn(FieldWalletType, vs...))
-}
-
-// WalletTypeNotIn applies the NotIn predicate on the "wallet_type" field.
-func WalletTypeNotIn(vs ...WalletType) predicate.PaymentOrder {
-	return predicate.PaymentOrder(sql.FieldNotIn(FieldWalletType, vs...))
-}
-
 // FallbackTriedAtEQ applies the EQ predicate on the "fallback_tried_at" field.
 func FallbackTriedAtEQ(v time.Time) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldFallbackTriedAt, v))

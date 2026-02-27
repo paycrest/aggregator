@@ -6426,7 +6426,6 @@ type PaymentOrderMutation struct {
 	appendcancellation_reasons []string
 	status                     *paymentorder.Status
 	order_type                 *paymentorder.OrderType
-	wallet_type                *paymentorder.WalletType
 	fallback_tried_at          *time.Time
 	clearedFields              map[string]struct{}
 	token                      *int
@@ -8299,42 +8298,6 @@ func (m *PaymentOrderMutation) ResetOrderType() {
 	m.order_type = nil
 }
 
-// SetWalletType sets the "wallet_type" field.
-func (m *PaymentOrderMutation) SetWalletType(pt paymentorder.WalletType) {
-	m.wallet_type = &pt
-}
-
-// WalletType returns the value of the "wallet_type" field in the mutation.
-func (m *PaymentOrderMutation) WalletType() (r paymentorder.WalletType, exists bool) {
-	v := m.wallet_type
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldWalletType returns the old "wallet_type" field's value of the PaymentOrder entity.
-// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PaymentOrderMutation) OldWalletType(ctx context.Context) (v paymentorder.WalletType, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldWalletType is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldWalletType requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldWalletType: %w", err)
-	}
-	return oldValue.WalletType, nil
-}
-
-// ResetWalletType resets all changes to the "wallet_type" field.
-func (m *PaymentOrderMutation) ResetWalletType() {
-	m.wallet_type = nil
-}
-
 // SetFallbackTriedAt sets the "fallback_tried_at" field.
 func (m *PaymentOrderMutation) SetFallbackTriedAt(t time.Time) {
 	m.fallback_tried_at = &t
@@ -8721,7 +8684,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 37)
+	fields := make([]string, 0, 36)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -8827,9 +8790,6 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.order_type != nil {
 		fields = append(fields, paymentorder.FieldOrderType)
 	}
-	if m.wallet_type != nil {
-		fields = append(fields, paymentorder.FieldWalletType)
-	}
 	if m.fallback_tried_at != nil {
 		fields = append(fields, paymentorder.FieldFallbackTriedAt)
 	}
@@ -8911,8 +8871,6 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case paymentorder.FieldOrderType:
 		return m.OrderType()
-	case paymentorder.FieldWalletType:
-		return m.WalletType()
 	case paymentorder.FieldFallbackTriedAt:
 		return m.FallbackTriedAt()
 	}
@@ -8994,8 +8952,6 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldStatus(ctx)
 	case paymentorder.FieldOrderType:
 		return m.OldOrderType(ctx)
-	case paymentorder.FieldWalletType:
-		return m.OldWalletType(ctx)
 	case paymentorder.FieldFallbackTriedAt:
 		return m.OldFallbackTriedAt(ctx)
 	}
@@ -9251,13 +9207,6 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetOrderType(v)
-		return nil
-	case paymentorder.FieldWalletType:
-		v, ok := value.(paymentorder.WalletType)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetWalletType(v)
 		return nil
 	case paymentorder.FieldFallbackTriedAt:
 		v, ok := value.(time.Time)
@@ -9683,9 +9632,6 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldOrderType:
 		m.ResetOrderType()
-		return nil
-	case paymentorder.FieldWalletType:
-		m.ResetWalletType()
 		return nil
 	case paymentorder.FieldFallbackTriedAt:
 		m.ResetFallbackTriedAt()
