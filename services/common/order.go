@@ -18,6 +18,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -25,7 +26,8 @@ import (
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
-	svc "github.com/paycrest/aggregator/services"
+
+	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/balance"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -844,37 +846,46 @@ func HandleReceiveAddressValidity(ctx context.Context, paymentOrder *ent.Payment
 	return nil
 }
 
-// deleteTransferWebhook deletes the transfer webhook associated with a payment order
-func deleteTransferWebhook(ctx context.Context, txHash string) error {
-	// Get the payment order by txHash
-	paymentOrder, err := db.Client.PaymentOrder.
-		Query().
-		Where(paymentorder.TxHashEQ(txHash)).
-		WithPaymentWebhook().
-		Only(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			// No payment order found, nothing to delete
-			return nil
+// deleteTransferWebhook deletes the Thirdweb transfer webhook for the order when token's network is engine (smart_wallet).
+func deleteTransferWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder) error {
+	// Derive wallet type from token -> network.wallet_service
+	if paymentOrder.Edges.Token == nil || paymentOrder.Edges.Token.Edges.Network == nil {
+		reloaded, err := db.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(paymentOrder.ID)).
+			WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+			Only(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to load order with token/network: %w", err)
 		}
-		return fmt.Errorf("failed to fetch payment order: %w", err)
+		paymentOrder = reloaded
 	}
-
-	// Check if there's an associated webhook
-	if paymentOrder.Edges.PaymentWebhook == nil {
-		// No webhook found, nothing to delete
+	if paymentOrder.Edges.Token.Edges.Network.WalletService != networkent.WalletServiceEngine {
 		return nil
 	}
 
-	// Create engine service to delete the webhook
-	engineService := svc.NewEngineService()
+	var webhookID string
+	if paymentOrder.Edges.PaymentWebhook != nil {
+		webhookID = paymentOrder.Edges.PaymentWebhook.WebhookID
+	} else {
+		paymentWebhook, err := db.Client.PaymentWebhook.
+			Query().
+			Where(paymentwebhook.HasPaymentOrderWith(paymentorder.IDEQ(paymentOrder.ID))).
+			Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return nil
+			}
+			return fmt.Errorf("failed to fetch payment webhook: %w", err)
+		}
+		webhookID = paymentWebhook.WebhookID
+	}
 
-	// Delete the webhook from thirdweb and our database
-	err = engineService.DeleteWebhookAndRecord(ctx, paymentOrder.Edges.PaymentWebhook.WebhookID)
+	engineService := services.NewEngineService()
+	err := engineService.DeleteWebhookAndRecord(ctx, webhookID)
 	if err != nil {
 		return fmt.Errorf("failed to delete webhook: %w", err)
 	}
-
 	return nil
 }
 
@@ -984,8 +995,8 @@ func processPaymentOrderPostCreation(
 	refundOrder func(context.Context, *ent.Network, string) error,
 	assignPaymentOrder func(context.Context, types.PaymentOrderFields) error,
 ) error {
-	// Delete the transfer webhook now that payment order is created/updated
-	err := deleteTransferWebhook(ctx, event.TxHash)
+	// Delete the transfer webhook now that payment order is created/updated (smart_wallet orders only)
+	err := deleteTransferWebhook(ctx, paymentOrder)
 	if err != nil {
 		logger.Errorf("Failed to delete transfer webhook for payment order: %v", err)
 		// Don't fail the entire operation if webhook deletion fails

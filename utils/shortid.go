@@ -5,8 +5,8 @@ import (
 	"math/big"
 
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/types"
 )
 
 func init() {
@@ -14,8 +14,8 @@ func init() {
 }
 
 const (
-	shortIDLength = 12
-	base62Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	shortIDLength      = 12
+	base62Alphabet     = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	shortIDRedisPrefix = "short_id_to_uuid:"
 )
 

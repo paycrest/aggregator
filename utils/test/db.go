@@ -276,7 +276,7 @@ func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) 
 		time.Sleep(time.Second)
 	}
 
-	// Build the order
+	// Build the order (wallet_type is derived from token -> network.wallet_service)
 	orderBuilder := db.Client.PaymentOrder.
 		Create().
 		SetAmount(decimal.NewFromFloat(payload["amount"].(float64))).

@@ -435,38 +435,38 @@ func RetryStaleUserOperations() error {
 
 					if order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
 						orderFields := types.PaymentOrderFields{
-						ID:                order.ID,
-						OrderType:         order.OrderType.String(),
-						Token:             order.Edges.Token,
-						GatewayID:         order.GatewayID,
-						Amount:            order.Amount,
-						Rate:              order.Rate,
-						Institution:       order.Institution,
-						AccountIdentifier: order.AccountIdentifier,
-						AccountName:       order.AccountName,
-						ProviderID:        "",
-						ProvisionBucket:   order.Edges.ProvisionBucket,
-						MessageHash:       order.MessageHash,
-						Memo:              order.Memo,
-						UpdatedAt:         order.UpdatedAt,
-						CreatedAt:         order.CreatedAt,
-					}
-					if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
-						orderFields.Network = order.Edges.Token.Edges.Network
-					}
+							ID:                order.ID,
+							OrderType:         order.OrderType.String(),
+							Token:             order.Edges.Token,
+							GatewayID:         order.GatewayID,
+							Amount:            order.Amount,
+							Rate:              order.Rate,
+							Institution:       order.Institution,
+							AccountIdentifier: order.AccountIdentifier,
+							AccountName:       order.AccountName,
+							ProviderID:        "",
+							ProvisionBucket:   order.Edges.ProvisionBucket,
+							MessageHash:       order.MessageHash,
+							Memo:              order.Memo,
+							UpdatedAt:         order.UpdatedAt,
+							CreatedAt:         order.CreatedAt,
+						}
+						if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+							orderFields.Network = order.Edges.Token.Edges.Network
+						}
 
-					err := pq.AssignPaymentOrder(ctx, orderFields)
-					if err == nil {
-						logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Infof("order assigned to provider during refund process; skipping refund")
-						continue
-					}
-					// We tried public reassignment and it failed; set cancellation count to threshold immediately so we can refund.
-					// Any failure should proceed to try fallback, else proceed with refund
-					_, _ = storage.Client.PaymentOrder.
-						Update().
-						Where(paymentorder.IDEQ(order.ID)).
-						SetCancellationCount(orderConf.RefundCancellationCount).
-						Save(ctx)
+						err := pq.AssignPaymentOrder(ctx, orderFields)
+						if err == nil {
+							logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Infof("order assigned to provider during refund process; skipping refund")
+							continue
+						}
+						// We tried public reassignment and it failed; set cancellation count to threshold immediately so we can refund.
+						// Any failure should proceed to try fallback, else proceed with refund
+						_, _ = storage.Client.PaymentOrder.
+							Update().
+							Where(paymentorder.IDEQ(order.ID)).
+							SetCancellationCount(orderConf.RefundCancellationCount).
+							Save(ctx)
 					}
 				}
 			}
@@ -496,7 +496,7 @@ func RetryStaleUserOperations() error {
 						}).Errorf("RetryStaleUserOperations: failed to update cancellation count; continue with refund")
 					}
 				}
-			}				
+			}
 
 			var service types.OrderService
 			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {

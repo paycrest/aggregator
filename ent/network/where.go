@@ -86,6 +86,11 @@ func GatewayContractAddress(v string) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldGatewayContractAddress, v))
 }
 
+// DelegationContractAddress applies equality check predicate on the "delegation_contract_address" field. It's identical to DelegationContractAddressEQ.
+func DelegationContractAddress(v string) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldDelegationContractAddress, v))
+}
+
 // BlockTime applies equality check predicate on the "block_time" field. It's identical to BlockTimeEQ.
 func BlockTime(v decimal.Decimal) predicate.Network {
 	return predicate.Network(sql.FieldEQ(FieldBlockTime, v))
@@ -424,6 +429,91 @@ func GatewayContractAddressEqualFold(v string) predicate.Network {
 // GatewayContractAddressContainsFold applies the ContainsFold predicate on the "gateway_contract_address" field.
 func GatewayContractAddressContainsFold(v string) predicate.Network {
 	return predicate.Network(sql.FieldContainsFold(FieldGatewayContractAddress, v))
+}
+
+// DelegationContractAddressEQ applies the EQ predicate on the "delegation_contract_address" field.
+func DelegationContractAddressEQ(v string) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldDelegationContractAddress, v))
+}
+
+// DelegationContractAddressNEQ applies the NEQ predicate on the "delegation_contract_address" field.
+func DelegationContractAddressNEQ(v string) predicate.Network {
+	return predicate.Network(sql.FieldNEQ(FieldDelegationContractAddress, v))
+}
+
+// DelegationContractAddressIn applies the In predicate on the "delegation_contract_address" field.
+func DelegationContractAddressIn(vs ...string) predicate.Network {
+	return predicate.Network(sql.FieldIn(FieldDelegationContractAddress, vs...))
+}
+
+// DelegationContractAddressNotIn applies the NotIn predicate on the "delegation_contract_address" field.
+func DelegationContractAddressNotIn(vs ...string) predicate.Network {
+	return predicate.Network(sql.FieldNotIn(FieldDelegationContractAddress, vs...))
+}
+
+// DelegationContractAddressGT applies the GT predicate on the "delegation_contract_address" field.
+func DelegationContractAddressGT(v string) predicate.Network {
+	return predicate.Network(sql.FieldGT(FieldDelegationContractAddress, v))
+}
+
+// DelegationContractAddressGTE applies the GTE predicate on the "delegation_contract_address" field.
+func DelegationContractAddressGTE(v string) predicate.Network {
+	return predicate.Network(sql.FieldGTE(FieldDelegationContractAddress, v))
+}
+
+// DelegationContractAddressLT applies the LT predicate on the "delegation_contract_address" field.
+func DelegationContractAddressLT(v string) predicate.Network {
+	return predicate.Network(sql.FieldLT(FieldDelegationContractAddress, v))
+}
+
+// DelegationContractAddressLTE applies the LTE predicate on the "delegation_contract_address" field.
+func DelegationContractAddressLTE(v string) predicate.Network {
+	return predicate.Network(sql.FieldLTE(FieldDelegationContractAddress, v))
+}
+
+// DelegationContractAddressContains applies the Contains predicate on the "delegation_contract_address" field.
+func DelegationContractAddressContains(v string) predicate.Network {
+	return predicate.Network(sql.FieldContains(FieldDelegationContractAddress, v))
+}
+
+// DelegationContractAddressHasPrefix applies the HasPrefix predicate on the "delegation_contract_address" field.
+func DelegationContractAddressHasPrefix(v string) predicate.Network {
+	return predicate.Network(sql.FieldHasPrefix(FieldDelegationContractAddress, v))
+}
+
+// DelegationContractAddressHasSuffix applies the HasSuffix predicate on the "delegation_contract_address" field.
+func DelegationContractAddressHasSuffix(v string) predicate.Network {
+	return predicate.Network(sql.FieldHasSuffix(FieldDelegationContractAddress, v))
+}
+
+// DelegationContractAddressEqualFold applies the EqualFold predicate on the "delegation_contract_address" field.
+func DelegationContractAddressEqualFold(v string) predicate.Network {
+	return predicate.Network(sql.FieldEqualFold(FieldDelegationContractAddress, v))
+}
+
+// DelegationContractAddressContainsFold applies the ContainsFold predicate on the "delegation_contract_address" field.
+func DelegationContractAddressContainsFold(v string) predicate.Network {
+	return predicate.Network(sql.FieldContainsFold(FieldDelegationContractAddress, v))
+}
+
+// WalletServiceEQ applies the EQ predicate on the "wallet_service" field.
+func WalletServiceEQ(v WalletService) predicate.Network {
+	return predicate.Network(sql.FieldEQ(FieldWalletService, v))
+}
+
+// WalletServiceNEQ applies the NEQ predicate on the "wallet_service" field.
+func WalletServiceNEQ(v WalletService) predicate.Network {
+	return predicate.Network(sql.FieldNEQ(FieldWalletService, v))
+}
+
+// WalletServiceIn applies the In predicate on the "wallet_service" field.
+func WalletServiceIn(vs ...WalletService) predicate.Network {
+	return predicate.Network(sql.FieldIn(FieldWalletService, vs...))
+}
+
+// WalletServiceNotIn applies the NotIn predicate on the "wallet_service" field.
+func WalletServiceNotIn(vs ...WalletService) predicate.Network {
+	return predicate.Network(sql.FieldNotIn(FieldWalletService, vs...))
 }
 
 // BlockTimeEQ applies the EQ predicate on the "block_time" field.

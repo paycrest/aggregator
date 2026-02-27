@@ -157,6 +157,10 @@ func init() {
 	networkDescGatewayContractAddress := networkFields[3].Descriptor()
 	// network.DefaultGatewayContractAddress holds the default value on creation for the gateway_contract_address field.
 	network.DefaultGatewayContractAddress = networkDescGatewayContractAddress.Default.(string)
+	// networkDescDelegationContractAddress is the schema descriptor for delegation_contract_address field.
+	networkDescDelegationContractAddress := networkFields[4].Descriptor()
+	// network.DefaultDelegationContractAddress holds the default value on creation for the delegation_contract_address field.
+	network.DefaultDelegationContractAddress = networkDescDelegationContractAddress.Default.(string)
 	paymentorderMixin := schema.PaymentOrder{}.Mixin()
 	paymentorderHooks := schema.PaymentOrder{}.Hooks()
 	paymentorder.Hooks[0] = paymentorderHooks[0]

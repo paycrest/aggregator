@@ -434,17 +434,17 @@ func isHybridEncrypted(data []byte) bool {
 	if len(data) < 4 {
 		return false
 	}
-	
+
 	keyLen := binary.BigEndian.Uint32(data[0:4])
-	
+
 	if keyLen != 256 {
 		return false
 	}
-	
+
 	if len(data) < int(4+keyLen+28) {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -454,7 +454,7 @@ func decryptOrderRecipientWithFallback(encrypted []byte, privateKeyPEM string) (
 	if isHybridEncrypted(encrypted) {
 		return decryptHybridJSON(encrypted, privateKeyPEM)
 	}
-	
+
 	// Fallback to old RSA decryption
 	return PublicKeyDecryptJSON(encrypted, privateKeyPEM)
 }

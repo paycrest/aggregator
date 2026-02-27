@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"entgo.io/ent"
+	"github.com/google/uuid"
 	gen "github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/hook"
 	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/google/uuid"
 )
 
 // OnPaymentOrderTerminalStatus is called when a payment order's status changes to a terminal

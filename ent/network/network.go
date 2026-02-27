@@ -3,6 +3,7 @@
 package network
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -26,6 +27,10 @@ const (
 	FieldRPCEndpoint = "rpc_endpoint"
 	// FieldGatewayContractAddress holds the string denoting the gateway_contract_address field in the database.
 	FieldGatewayContractAddress = "gateway_contract_address"
+	// FieldDelegationContractAddress holds the string denoting the delegation_contract_address field in the database.
+	FieldDelegationContractAddress = "delegation_contract_address"
+	// FieldWalletService holds the string denoting the wallet_service field in the database.
+	FieldWalletService = "wallet_service"
 	// FieldBlockTime holds the string denoting the block_time field in the database.
 	FieldBlockTime = "block_time"
 	// FieldIsTestnet holds the string denoting the is_testnet field in the database.
@@ -67,6 +72,8 @@ var Columns = []string{
 	FieldIdentifier,
 	FieldRPCEndpoint,
 	FieldGatewayContractAddress,
+	FieldDelegationContractAddress,
+	FieldWalletService,
 	FieldBlockTime,
 	FieldIsTestnet,
 	FieldBundlerURL,
@@ -93,7 +100,35 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultGatewayContractAddress holds the default value on creation for the "gateway_contract_address" field.
 	DefaultGatewayContractAddress string
+	// DefaultDelegationContractAddress holds the default value on creation for the "delegation_contract_address" field.
+	DefaultDelegationContractAddress string
 )
+
+// WalletService defines the type for the "wallet_service" enum field.
+type WalletService string
+
+// WalletServiceEngine is the default value of the WalletService enum.
+const DefaultWalletService = WalletServiceEngine
+
+// WalletService values.
+const (
+	WalletServiceEngine WalletService = "engine"
+	WalletServiceNative WalletService = "native"
+)
+
+func (ws WalletService) String() string {
+	return string(ws)
+}
+
+// WalletServiceValidator is a validator for the "wallet_service" field enum values. It is called by the builders before save.
+func WalletServiceValidator(ws WalletService) error {
+	switch ws {
+	case WalletServiceEngine, WalletServiceNative:
+		return nil
+	default:
+		return fmt.Errorf("network: invalid enum value for wallet_service field: %q", ws)
+	}
+}
 
 // OrderOption defines the ordering options for the Network queries.
 type OrderOption func(*sql.Selector)
@@ -131,6 +166,16 @@ func ByRPCEndpoint(opts ...sql.OrderTermOption) OrderOption {
 // ByGatewayContractAddress orders the results by the gateway_contract_address field.
 func ByGatewayContractAddress(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGatewayContractAddress, opts...).ToFunc()
+}
+
+// ByDelegationContractAddress orders the results by the delegation_contract_address field.
+func ByDelegationContractAddress(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDelegationContractAddress, opts...).ToFunc()
+}
+
+// ByWalletService orders the results by the wallet_service field.
+func ByWalletService(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWalletService, opts...).ToFunc()
 }
 
 // ByBlockTime orders the results by the block_time field.
