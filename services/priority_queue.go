@@ -12,6 +12,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -779,7 +780,6 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	}
 
 	// Verify order is still in a state that allows assignment; DB-level idempotency for fallback.
-	// Eagerly load ProvisionBucket+Currency so we never need a separate fallback query for them.
 	currentOrder, err := storage.Client.PaymentOrder.Query().
 		Where(paymentorder.IDEQ(order.ID)).
 		WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
@@ -792,7 +792,28 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	if !currentOrder.FallbackTriedAt.IsZero() {
 		return fmt.Errorf("fallback: order %s already had fallback assignment tried", order.ID)
 	}
-	if currentOrder.Status != paymentorder.StatusPending && currentOrder.Status != paymentorder.StatusCancelled {
+	assignable := currentOrder.Status == paymentorder.StatusPending || currentOrder.Status == paymentorder.StatusCancelled
+	if currentOrder.Status == paymentorder.StatusFulfilled {
+		deleted, err := storage.Client.PaymentOrderFulfillment.Delete().
+			Where(
+				paymentorderfulfillment.HasOrderWith(paymentorder.IDEQ(order.ID)),
+				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+			).Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("fallback: failed to delete fulfillments for order %s: %w", order.ID, err)
+		}
+		if deleted == 0 {
+			return fmt.Errorf("fallback: order %s is fulfilled with no failed fulfillments, not assignable", order.ID)
+		}
+		if _, err := storage.Client.PaymentOrder.UpdateOneID(order.ID).
+			ClearProvider().
+			SetStatus(paymentorder.StatusPending).
+			Save(ctx); err != nil {
+			return fmt.Errorf("fallback: failed to reset order %s to Pending after deleting fulfillments: %w", order.ID, err)
+		}
+		assignable = true
+	}
+	if !assignable {
 		return fmt.Errorf("fallback: order %s is in state %s, not assignable", order.ID, currentOrder.Status)
 	}
 
