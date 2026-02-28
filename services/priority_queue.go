@@ -780,6 +780,7 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	}
 
 	// Verify order is still in a state that allows assignment; DB-level idempotency for fallback.
+	// Eagerly load ProvisionBucket+Currency so we never need a separate fallback query for them.
 	currentOrder, err := storage.Client.PaymentOrder.Query().
 		Where(paymentorder.IDEQ(order.ID)).
 		WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
