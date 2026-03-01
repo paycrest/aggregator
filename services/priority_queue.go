@@ -12,6 +12,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -817,7 +818,38 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 	if !currentOrder.FallbackTriedAt.IsZero() {
 		return fmt.Errorf("fallback: order %s already had fallback assignment tried", order.ID)
 	}
-	if currentOrder.Status != paymentorder.StatusPending && currentOrder.Status != paymentorder.StatusCancelled {
+	assignable := currentOrder.Status == paymentorder.StatusPending || currentOrder.Status == paymentorder.StatusCancelled
+	if currentOrder.Status == paymentorder.StatusFulfilled {
+		tx, txErr := storage.Client.Tx(ctx)
+		if txErr != nil {
+			return fmt.Errorf("fallback: failed to start transaction for order %s: %w", order.ID, txErr)
+		}
+		deleted, delErr := tx.PaymentOrderFulfillment.Delete().
+			Where(
+				paymentorderfulfillment.HasOrderWith(paymentorder.IDEQ(order.ID)),
+				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+			).Exec(ctx)
+		if delErr != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("fallback: failed to delete fulfillments for order %s: %w", order.ID, delErr)
+		}
+		if deleted == 0 {
+			_ = tx.Rollback()
+			return fmt.Errorf("fallback: order %s is fulfilled with no failed fulfillments, not assignable", order.ID)
+		}
+		if _, updErr := tx.PaymentOrder.UpdateOneID(order.ID).
+			ClearProvider().
+			SetStatus(paymentorder.StatusPending).
+			Save(ctx); updErr != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("fallback: failed to reset order %s to Pending after deleting fulfillments: %w", order.ID, updErr)
+		}
+		if commitErr := tx.Commit(); commitErr != nil {
+			return fmt.Errorf("fallback: failed to commit transaction for order %s: %w", order.ID, commitErr)
+		}
+		assignable = true
+	}
+	if !assignable {
 		return fmt.Errorf("fallback: order %s is in state %s, not assignable", order.ID, currentOrder.Status)
 	}
 
