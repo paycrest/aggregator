@@ -175,7 +175,9 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 			Where(
 				paymentorder.IDEQ(orderUUID),
 			).
-			WithProvisionBucket().
+			WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+				pbq.WithCurrency()
+			}).
 			WithProvider().
 			WithToken(func(tq *ent.TokenQuery) {
 				tq.WithNetwork()
@@ -190,17 +192,9 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 			continue
 		}
 
-		// Defensive check: Only reassign if order is in a valid state
-		// Skip if order is already processing, fulfilled, validated, settled, or refunded
-		if order.Status != paymentorder.StatusPending {
-			logger.WithFields(logger.Fields{
-				"OrderID": order.ID.String(),
-				"Status":  order.Status,
-			}).Infof("ReassignStaleOrderRequest: Order is not in pending state, skipping reassignment")
-			continue
-		}
-
 		// Best-effort: release reserved balance for the provider that was previously notified.
+		// Run before any "skip reassignment" checks so we release even when skipping (e.g. FallbackTriedAt
+		// or non-pending status), preventing reserved balance from staying stuck.
 		// For regular (public) assignments, the provider isn't persisted on the order until AcceptOrder,
 		// so we rely on order_request_meta_* as the source of truth.
 		metaKey := fmt.Sprintf("order_request_meta_%s", order.ID)
@@ -236,6 +230,40 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 
 			// Cleanup metadata key regardless of success to avoid stale entries.
 			_, _ = storage.RedisClient.Del(ctx, metaKey).Result()
+		} else if order.Edges.Provider != nil && order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+			// Fallback: no meta (e.g. key missing/expired) but order has provider and bucket (e.g. private/pre-set).
+			// Release so reserved balance is not left stuck.
+			currency := order.Edges.ProvisionBucket.Edges.Currency.Code
+			amount := order.Amount.Mul(order.Rate).RoundBank(0)
+			balanceSvc := balance.New()
+			if relErr := balanceSvc.ReleaseFiatBalance(ctx, order.Edges.Provider.ID, currency, amount, nil); relErr != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", relErr),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.Edges.Provider.ID,
+					"Currency":   currency,
+					"Amount":     amount.String(),
+				}).Warnf("ReassignStaleOrderRequest: failed to release reserved balance from order (best effort)")
+			}
+		}
+
+		// Defensive check: Only reassign if order is in a valid state
+		// Skip if order is already processing, fulfilled, validated, settled, or refunded
+		if order.Status != paymentorder.StatusPending {
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+				"Status":  order.Status,
+			}).Infof("ReassignStaleOrderRequest: Order is not in pending state, skipping reassignment")
+			continue
+		}
+
+		// Skip reassignment if fallback was already tried: the order was sent to fallback and we must not
+		// reassign to another provider (e.g. from queue, including private) when the key expires.
+		if !order.FallbackTriedAt.IsZero() {
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+			}).Infof("ReassignStaleOrderRequest: Order had fallback assignment tried, skipping reassignment")
+			continue
 		}
 
 		// Defensive check: Verify order request doesn't already exist (race condition protection)

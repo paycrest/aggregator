@@ -97,10 +97,10 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 				// Currency edge unloaded or missing; cannot compute overlap. Skip this token so we don't
 				// silently exclude the provider, and log so operators see data/loading issues.
 				logger.WithFields(logger.Fields{
-					"ProviderID":      orderToken.Edges.Provider.ID,
-					"BucketID":        bucket.ID,
-					"BucketCurrency":  bucket.Edges.Currency.Code,
-					"OrderTokenID":    orderToken.ID,
+					"ProviderID":     orderToken.Edges.Provider.ID,
+					"BucketID":       bucket.ID,
+					"BucketCurrency": bucket.Edges.Currency.Code,
+					"OrderTokenID":   orderToken.ID,
 				}).Errorf("Skipping overlap check: token rate is zero (currency edge missing or not loaded for order token)")
 				continue
 			}
@@ -115,8 +115,8 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 					Exist(ctx)
 				if err != nil {
 					logger.WithFields(logger.Fields{
-						"Error":           fmt.Sprintf("%v", err),
-						"ProviderID":      providerID,
+						"Error":          fmt.Sprintf("%v", err),
+						"ProviderID":     providerID,
 						"BucketCurrency": bucket.Edges.Currency.Code,
 					}).Errorf("Failed to check existing bucket for provider")
 					continue
@@ -144,7 +144,7 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 		linkedProviders, err := bucket.QueryProviderProfiles().All(ctx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
-				"Error": fmt.Sprintf("%v", err),
+				"Error":  fmt.Sprintf("%v", err),
 				"Bucket": bucket.ID,
 			}).Errorf("Failed to get linked providers for bucket")
 		} else {
@@ -560,25 +560,37 @@ func (s *PriorityQueueService) tryUsePreSetProvider(ctx context.Context, order t
 	}
 
 	if !order.UpdatedAt.IsZero() && order.UpdatedAt.Before(time.Now().Add(-10*time.Minute)) {
-		order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"OrderID":    order.ID.String(),
-				"ProviderID": order.ProviderID,
-			}).Errorf("failed to get rate for provider")
-		} else {
-			_, err = storage.Client.PaymentOrder.
-				Update().
-				Where(paymentorder.MessageHashEQ(order.MessageHash)).
-				SetRate(order.Rate).
-				Save(ctx)
+		currencyCode := ""
+		if order.ProvisionBucket != nil && order.ProvisionBucket.Edges.Currency != nil {
+			currencyCode = order.ProvisionBucket.Edges.Currency.Code
+		}
+		if currencyCode == "" && order.Institution != "" {
+			institution, instErr := utils.GetInstitutionByCode(ctx, order.Institution, true)
+			if instErr == nil && institution != nil && institution.Edges.FiatCurrency != nil {
+				currencyCode = institution.Edges.FiatCurrency.Code
+			}
+		}
+		if currencyCode != "" {
+			order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, currencyCode)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":      fmt.Sprintf("%v", err),
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.ProviderID,
-				}).Errorf("failed to update rate for provider")
+				}).Errorf("failed to get rate for provider")
+			} else {
+				_, err = storage.Client.PaymentOrder.
+					Update().
+					Where(paymentorder.MessageHashEQ(order.MessageHash)).
+					SetRate(order.Rate).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+					}).Errorf("failed to update rate for provider")
+				}
 			}
 		}
 	}
@@ -606,16 +618,24 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 	orderIDPrefix := strings.Split(order.ID.String(), "-")[0]
 	orderConf := config.OrderConfig()
 
-	// Both regular and OTC orders must have a provision bucket
+	// Both regular and OTC orders must have a provision bucket, unless order has a pre-set private provider (private orders don't require buckets).
+	allowNilBucketForPrivate := false
 	if order.ProvisionBucket == nil {
-		logger.WithFields(logger.Fields{
-			"OrderID":   order.ID.String(),
-			"OrderType": order.OrderType,
-			"Reason":    "internal: Order missing provision bucket",
-		}).Errorf("AssignPaymentOrder.MissingProvisionBucket")
-		return fmt.Errorf("order %s (type: %s) is missing provision bucket", order.ID.String(), order.OrderType)
-	}
-	if order.ProvisionBucket.Edges.Currency == nil {
+		if order.ProviderID != "" {
+			providerForCheck, pErr := storage.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(order.ProviderID)).Only(ctx)
+			if pErr == nil && providerForCheck != nil && providerForCheck.VisibilityMode == providerprofile.VisibilityModePrivate {
+				allowNilBucketForPrivate = true
+			}
+		}
+		if !allowNilBucketForPrivate {
+			logger.WithFields(logger.Fields{
+				"OrderID":   order.ID.String(),
+				"OrderType": order.OrderType,
+				"Reason":    "internal: Order missing provision bucket",
+			}).Errorf("AssignPaymentOrder.MissingProvisionBucket")
+			return fmt.Errorf("order %s (type: %s) is missing provision bucket", order.ID.String(), order.OrderType)
+		}
+	} else if order.ProvisionBucket.Edges.Currency == nil {
 		logger.WithFields(logger.Fields{
 			"OrderID":   order.ID.String(),
 			"OrderType": order.OrderType,
@@ -713,6 +733,11 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 				return nil
 			}
 		}
+	}
+
+	// Private orders with nil bucket only use the pre-set path above; do not run queue matching.
+	if order.ProvisionBucket == nil {
+		return nil
 	}
 
 	// Get the first provider from the circular queue
@@ -1287,40 +1312,8 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 		return err
 	}
 
-	// Short ID for provider/PSP compatibility: send 12-char orderId and store mapping (no TTL; deleted on terminal status).
-	shortId := utils.UUIDToShortID(order.ID)
-	shortIdKey := utils.ShortIDRedisKey(shortId)
-	payloadOrderID := order.ID.String()
-	set, setErr := storage.RedisClient.SetNX(ctx, shortIdKey, order.ID.String(), 0).Result()
-	if setErr != nil {
-		logger.WithFields(logger.Fields{
-			"Error":   fmt.Sprintf("%v", setErr),
-			"OrderID": order.ID.String(),
-			"ShortID": shortId,
-		}).Errorf("Failed to set short_id_to_uuid mapping")
-		_ = storage.RedisClient.Del(ctx, orderKey).Err()
-		_ = storage.RedisClient.Del(ctx, metaKey).Err()
-		return fmt.Errorf("failed to set short_id mapping: %w", setErr)
-	}
-	if set {
-		payloadOrderID = shortId
-	} else {
-		existing, getErr := storage.RedisClient.Get(ctx, shortIdKey).Result()
-		if getErr == nil && existing != order.ID.String() {
-			logger.WithFields(logger.Fields{
-				"OrderID":  order.ID.String(),
-				"ShortID":  shortId,
-				"Existing": existing,
-			}).Warnf("Short ID collision: using full UUID for order payload")
-			payloadOrderID = order.ID.String()
-		} else {
-			// Idempotent: key already set to our UUID
-			payloadOrderID = shortId
-		}
-	}
-
 	// Notify provider
-	orderRequestData["orderId"] = payloadOrderID
+	orderRequestData["orderId"] = order.ID.String()
 	err = s.notifyProvider(ctx, orderRequestData)
 	if err != nil {
 		logger.WithFields(logger.Fields{

@@ -7,8 +7,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/hook"
-	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
 )
 
@@ -154,16 +152,5 @@ func (PaymentOrder) Indexes() []ent.Index {
 		index.Fields("gateway_id", "rate", "tx_hash", "block_number", "institution", "account_identifier", "account_name", "memo").
 			Edges("token").
 			Unique(),
-	}
-}
-
-// Hooks of the PaymentOrder.
-func (PaymentOrder) Hooks() []ent.Hook {
-	return []ent.Hook{
-		// Only run when status is in the mutation (avoids IDs(ctx) when status unchanged).
-		hook.If(
-			hook.On(types.PaymentOrderDeleteShortIDMappingHook(), ent.OpUpdate|ent.OpUpdateOne),
-			hook.HasFields("status"),
-		),
 	}
 }

@@ -47,9 +47,6 @@ var ErrNoProvisionBucketForAmount = errors.New("no provision bucket for this amo
 
 const (
 	CancellationReasonAML = "AML compliance check failed"
-
-	provisionBucketMaxAttempts = 3
-	provisionBucketRetryDelay  = 500 * time.Millisecond
 )
 
 // ProcessPaymentOrderFromBlockchain processes a payment order from blockchain event.
@@ -396,25 +393,32 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			pbq.WithCurrency()
 		}).
 		Only(ctx)
-	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-		// Only attempt balance operations if we have the required edge data
-		// Create a new balance service instance for this transaction
-		balanceService := balance.New()
-
-		providerID := paymentOrder.Edges.Provider.ID
-		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
-
-		err = balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, nil)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"OrderID":    event.OrderId,
-				"ProviderID": providerID,
-				"Currency":   currency,
-				"Amount":     amount.String(),
-			}).Errorf("failed to release reserved balance for refunded order")
-			// Don't return error here as the order status is already updated
+	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil {
+		currency := ""
+		if paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+			currency = paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		}
+		if currency == "" && paymentOrder.Institution != "" {
+			inst, instErr := utils.GetInstitutionByCode(ctx, paymentOrder.Institution, true)
+			if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
+				currency = inst.Edges.FiatCurrency.Code
+			}
+		}
+		if currency != "" {
+			balanceService := balance.New()
+			providerID := paymentOrder.Edges.Provider.ID
+			amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
+			err = balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, nil)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    event.OrderId,
+					"ProviderID": providerID,
+					"Currency":   currency,
+					"Amount":     amount.String(),
+				}).Errorf("failed to release reserved balance for refunded order")
+				// Don't return error here as the order status is already updated
+			}
 		}
 	}
 
@@ -1021,9 +1025,44 @@ func processPaymentOrderPostCreation(
 		}
 	}
 
-	// Assign the payment order to a provider
+	// Fill empty provision bucket so AssignPaymentOrder can run (same as stale_ops nil-bucket resolution)
+	if paymentOrderFields.ProvisionBucket == nil {
+		institution, instErr := utils.GetInstitutionByCode(ctx, paymentOrder.Institution, true)
+		if instErr == nil && institution != nil && institution.Edges.FiatCurrency != nil {
+			fiatAmount := paymentOrder.Amount.Mul(paymentOrder.Rate)
+			bucket, bErr := db.Client.ProvisionBucket.
+				Query().
+				Where(
+					provisionbucket.MaxAmountGTE(fiatAmount),
+					provisionbucket.MinAmountLTE(fiatAmount),
+					provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(institution.Edges.FiatCurrency.ID)),
+				).
+				WithCurrency().
+				First(ctx)
+			if bErr == nil && bucket != nil {
+				if _, upErr := db.Client.PaymentOrder.UpdateOneID(paymentOrder.ID).SetProvisionBucket(bucket).Save(ctx); upErr == nil {
+					paymentOrderFields.ProvisionBucket = bucket
+				}
+			}
+		}
+	}
+
+	// Assign when we have a bucket, or when order is private; private orders don't require buckets.
+	isPrivate := false
+	if paymentOrderFields.ProviderID != "" {
+		provider, pErr := db.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(paymentOrderFields.ProviderID)).Only(ctx)
+		if pErr == nil && provider != nil && provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+			isPrivate = true
+		}
+	}
 	paymentOrderFields.ID = paymentOrder.ID
-	_ = assignPaymentOrder(ctx, *paymentOrderFields)
+	if paymentOrderFields.ProvisionBucket != nil || isPrivate {
+		_ = assignPaymentOrder(ctx, *paymentOrderFields)
+	} else if paymentOrderFields.ProvisionBucket == nil {
+		logger.WithFields(logger.Fields{
+			"OrderID": paymentOrder.ID.String(),
+		}).Errorf("processPaymentOrderPostCreation: could not resolve provision bucket for order; skipping provider assignment")
+	}
 
 	return nil
 }
@@ -1119,24 +1158,10 @@ func validateAndPreparePaymentOrderData(
 	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 	event.ProtocolFee = event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 
-	// Get provision bucket (with retry for transient failures)
+	// Get provision bucket
 	var provisionBucket *ent.ProvisionBucket
 	var isLessThanMin bool
-	err = utils.Retry(provisionBucketMaxAttempts, provisionBucketRetryDelay, func() error {
-		var e error
-		provisionBucket, isLessThanMin, e = GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
-		if e != nil {
-			if ent.IsNotFound(e) {
-				return nil // exit retry; the provision bucket is not found
-			}
-			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", e),
-				"Amount":   event.Amount,
-				"Currency": currency,
-			}).Errorf("provision bucket lookup failed, will retry")
-		}
-		return e
-	})
+	provisionBucket, isLessThanMin, err = GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),

@@ -469,6 +469,42 @@ func RetryStaleUserOperations() error {
 						Save(ctx)
 					}
 				}
+
+				// Private orders: try assignment to pre-set provider (AssignPaymentOrder accepts nil bucket for pre-set provider).
+				if tryFullQueue && !canTryFullQueue && order.Edges.Provider != nil && order.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+					if order.Status == paymentorder.StatusCancelled {
+						_, _ = storage.Client.PaymentOrder.
+							Update().
+							Where(paymentorder.IDEQ(order.ID)).
+							SetStatus(paymentorder.StatusPending).
+							Save(ctx)
+					}
+					orderFields := types.PaymentOrderFields{
+						ID:                order.ID,
+						OrderType:         order.OrderType.String(),
+						Token:             order.Edges.Token,
+						GatewayID:         order.GatewayID,
+						Amount:            order.Amount,
+						Rate:              order.Rate,
+						Institution:       order.Institution,
+						AccountIdentifier: order.AccountIdentifier,
+						AccountName:       order.AccountName,
+						ProviderID:        order.Edges.Provider.ID,
+						ProvisionBucket:   order.Edges.ProvisionBucket,
+						MessageHash:       order.MessageHash,
+						Memo:              order.Memo,
+						UpdatedAt:         order.UpdatedAt,
+						CreatedAt:         order.CreatedAt,
+					}
+					if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+						orderFields.Network = order.Edges.Token.Edges.Network
+					}
+					err := pq.AssignPaymentOrder(ctx, orderFields)
+					if err == nil {
+						logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Infof("stale_ops: private order assigned to pre-set provider; skipping refund")
+						continue
+					}
+				}
 			}
 
 			// 3) Full queue skipped or failed; try fallback (only if configured and not already tried).
