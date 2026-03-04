@@ -1418,15 +1418,18 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 		return err
 	}
 
-	// Exclude PSPs: global high failure-rate only (same order can retry a PSP after transient failure)
-	excludePsps, excludeErr := s.getExcludePsps(ctx, order.ID)
-	if excludeErr != nil {
-		logger.WithFields(logger.Fields{
-			"OrderID": order.ID.String(),
-			"Error":   excludeErr.Error(),
-		}).Errorf("getExcludePsps failed, sending new_order without excludePsps")
-	} else if len(excludePsps) > 0 {
-		orderRequestData["excludePsps"] = excludePsps
+	// Exclude PSPs: global high failure-rate only (same order can retry a PSP after transient failure).
+	// Do not apply excludePsps for the fallback provider so it can try all PSPs.
+	if orderConf.FallbackProviderID == "" || order.ProviderID != orderConf.FallbackProviderID {
+		excludePsps, excludeErr := s.getExcludePsps(ctx, order.ID)
+		if excludeErr != nil {
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+				"Error":   excludeErr.Error(),
+			}).Errorf("getExcludePsps failed, sending new_order without excludePsps")
+		} else if len(excludePsps) > 0 {
+			orderRequestData["excludePsps"] = excludePsps
+		}
 	}
 
 	// Notify provider
