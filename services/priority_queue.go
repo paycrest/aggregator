@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -1160,6 +1161,79 @@ func (s *PriorityQueueService) countProviderInExcludeList(excludeList []string, 
 	return count
 }
 
+// getExcludePsps returns PSP names to exclude for a new_order based only on the global failure-rate threshold
+// PSPs that have high failure rate in the last M minutes. Per-order exclusion is not used so the
+// same order can retry a PSP after a transient failure.
+func (s *PriorityQueueService) getExcludePsps(ctx context.Context, orderID uuid.UUID) ([]string, error) {
+	orderConf := config.OrderConfig()
+	excluded := make(map[string]struct{})
+
+	// PSPs with high failure rate in the last M minutes (any failed fulfillment after disbursement trial)
+	window := time.Duration(orderConf.PspExcludeWindowMinutes) * time.Minute
+	if window <= 0 {
+		window = 120 * time.Minute
+	}
+	since := time.Now().Add(-window)
+
+	fulfillments, err := storage.Client.PaymentOrderFulfillment.Query().
+		Where(paymentorderfulfillment.UpdatedAtGTE(since)).
+		Select(
+			paymentorderfulfillment.FieldPsp,
+			paymentorderfulfillment.FieldValidationStatus,
+		).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("global exclude PSPs: %w", err)
+	}
+
+	// Group by PSP: attempts = count, failures = count where status failed (any error)
+	type stats struct{ attempts, failures int }
+	byPsp := make(map[string]*stats)
+	for _, f := range fulfillments {
+		psp := strings.TrimSpace(f.Psp)
+		if psp == "" {
+			continue
+		}
+		if byPsp[psp] == nil {
+			byPsp[psp] = &stats{}
+		}
+		byPsp[psp].attempts++
+		if f.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed {
+			byPsp[psp].failures++
+		}
+	}
+
+	minAttempts := orderConf.PspExcludeMinAttempts
+	if minAttempts < 1 {
+		minAttempts = 5
+	}
+	minFailures := orderConf.PspExcludeMinFailures
+	if minFailures < 1 {
+		minFailures = 3
+	}
+	minPercent := orderConf.PspExcludeMinFailurePercent
+	if minPercent <= 0 {
+		minPercent = 30
+	}
+	minRate := float64(minPercent) / 100
+
+	for psp, st := range byPsp {
+		if st.attempts < minAttempts || st.failures < minFailures {
+			continue
+		}
+		rate := float64(st.failures) / float64(st.attempts)
+		if rate >= minRate {
+			excluded[psp] = struct{}{}
+		}
+	}
+
+	out := make([]string, 0, len(excluded))
+	for p := range excluded {
+		out = append(out, p)
+	}
+	return out, nil
+}
+
 // addProviderToExcludeList adds a provider to the order exclude list with TTL
 // This is a best-effort operation - errors are logged but don't fail the operation
 func (s *PriorityQueueService) addProviderToExcludeList(ctx context.Context, orderID string, providerID string, ttl time.Duration) {
@@ -1342,6 +1416,17 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 		_ = storage.RedisClient.Del(ctx, orderKey).Err()
 		_ = storage.RedisClient.Del(ctx, metaKey).Err()
 		return err
+	}
+
+	// Exclude PSPs: global high failure-rate only (same order can retry a PSP after transient failure)
+	excludePsps, excludeErr := s.getExcludePsps(ctx, order.ID)
+	if excludeErr != nil {
+		logger.WithFields(logger.Fields{
+			"OrderID": order.ID.String(),
+			"Error":   excludeErr.Error(),
+		}).Errorf("getExcludePsps failed, sending new_order without excludePsps")
+	} else if len(excludePsps) > 0 {
+		orderRequestData["excludePsps"] = excludePsps
 	}
 
 	// Notify provider

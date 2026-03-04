@@ -257,13 +257,41 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 			continue
 		}
 
-		// Skip reassignment if fallback was already tried: the order was sent to fallback and we must not
-		// reassign to another provider (e.g. from queue, including private) when the key expires.
+		// If fallback was already tried, allow retry only if fallback has not exceeded ProviderMaxRetryAttempts
+		// (same as queue providers: exclude list count for fallback < N means we can retry).
 		if !order.FallbackTriedAt.IsZero() {
-			logger.WithFields(logger.Fields{
-				"OrderID": order.ID.String(),
-			}).Infof("ReassignStaleOrderRequest: Order had fallback assignment tried, skipping reassignment")
-			continue
+			if orderConf.FallbackProviderID == "" {
+				continue
+			}
+			excludeKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
+			excludeList, listErr := storage.RedisClient.LRange(ctx, excludeKey, 0, -1).Result()
+			if listErr != nil {
+				continue
+			}
+			fallbackExcludeCount := 0
+			for _, id := range excludeList {
+				if id == orderConf.FallbackProviderID {
+					fallbackExcludeCount++
+				}
+			}
+			if fallbackExcludeCount >= orderConf.ProviderMaxRetryAttempts {
+				continue
+			}
+
+			// Clear FallbackTriedAt so TryFallbackAssignment can run again when AssignPaymentOrder is called
+			_, updErr := storage.Client.PaymentOrder.
+				Update().
+				Where(paymentorder.IDEQ(order.ID)).
+				ClearFallbackTriedAt().
+				Save(ctx)
+			if updErr != nil {
+				logger.WithFields(logger.Fields{
+					"OrderID": order.ID.String(),
+					"Error":   updErr,
+				}).Errorf("ReassignStaleOrderRequest: failed to clear FallbackTriedAt for retry")
+				continue
+			}
+			order.FallbackTriedAt = time.Time{} // so downstream uses updated value if needed
 		}
 
 		// Defensive check: Verify order request doesn't already exist (race condition protection)

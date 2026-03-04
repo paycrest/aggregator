@@ -34,6 +34,16 @@ type OrderConfiguration struct {
 	FallbackProviderID string
 	// ProviderStuckFulfillmentThreshold: skip provider assignment when their stuck order count >= this value. 0 = disabled.
 	ProviderStuckFulfillmentThreshold int
+
+	// PSP global exclusion: exclude PSP from new_order when it has high failure rate in a time window.
+	// PspExcludeWindowMinutes: look-back window in minutes for counting fulfillments.
+	PspExcludeWindowMinutes int
+	// PspExcludeMinAttempts: minimum total attempts in window before considering exclusion (avoids excluding on 1 failure out of 1).
+	PspExcludeMinAttempts int
+	// PspExcludeMinFailures: minimum failed fulfillments in window to exclude (any error after disbursement trial).
+	PspExcludeMinFailures int
+	// PspExcludeMinFailurePercent: minimum failure percent (0–100, e.g. 30 = 30%) in window to exclude. Any failed fulfillment is counted.
+	PspExcludeMinFailurePercent int
 }
 
 // OrderConfig returns the order configuration. Defaults are set once; safe for concurrent use.
@@ -55,6 +65,10 @@ func OrderConfig() *OrderConfiguration {
 		viper.SetDefault("INDEXING_DURATION", 10)
 		viper.SetDefault("FALLBACK_PROVIDER_ID", "")
 		viper.SetDefault("PROVIDER_STUCK_FULFILLMENT_THRESHOLD", 0) // 0 = disabled
+		viper.SetDefault("PSP_EXCLUDE_WINDOW_MINUTES", 120)
+		viper.SetDefault("PSP_EXCLUDE_MIN_ATTEMPTS", 5)
+		viper.SetDefault("PSP_EXCLUDE_MIN_FAILURES", 3)
+		viper.SetDefault("PSP_EXCLUDE_MIN_FAILURE_PERCENT", 30)
 	})
 
 	// Validate ProviderMaxRetryAttempts to ensure it's at least 1
@@ -82,6 +96,10 @@ func OrderConfig() *OrderConfiguration {
 		IndexingDuration:                  time.Duration(viper.GetInt("INDEXING_DURATION")) * time.Second,
 		FallbackProviderID:                viper.GetString("FALLBACK_PROVIDER_ID"),
 		ProviderStuckFulfillmentThreshold: viper.GetInt("PROVIDER_STUCK_FULFILLMENT_THRESHOLD"),
+		PspExcludeWindowMinutes:           viper.GetInt("PSP_EXCLUDE_WINDOW_MINUTES"),
+		PspExcludeMinAttempts:             viper.GetInt("PSP_EXCLUDE_MIN_ATTEMPTS"),
+		PspExcludeMinFailures:             viper.GetInt("PSP_EXCLUDE_MIN_FAILURES"),
+		PspExcludeMinFailurePercent:       viper.GetInt("PSP_EXCLUDE_MIN_FAILURE_PERCENT"),
 	}
 }
 
