@@ -158,8 +158,6 @@ func init() {
 	// network.DefaultGatewayContractAddress holds the default value on creation for the gateway_contract_address field.
 	network.DefaultGatewayContractAddress = networkDescGatewayContractAddress.Default.(string)
 	paymentorderMixin := schema.PaymentOrder{}.Mixin()
-	paymentorderHooks := schema.PaymentOrder{}.Hooks()
-	paymentorder.Hooks[0] = paymentorderHooks[0]
 	paymentorderMixinFields0 := paymentorderMixin[0].Fields()
 	_ = paymentorderMixinFields0
 	paymentorderFields := schema.PaymentOrder{}.Fields()
@@ -374,6 +372,10 @@ func init() {
 	providerbalances.DefaultUpdatedAt = providerbalancesDescUpdatedAt.Default.(func() time.Time)
 	// providerbalances.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	providerbalances.UpdateDefaultUpdatedAt = providerbalancesDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// providerbalancesDescCommitmentBalance is the schema descriptor for commitment_balance field.
+	providerbalancesDescCommitmentBalance := providerbalancesFields[6].Descriptor()
+	// providerbalances.DefaultCommitmentBalance holds the default value on creation for the commitment_balance field.
+	providerbalances.DefaultCommitmentBalance = providerbalancesDescCommitmentBalance.Default.(func() decimal.Decimal)
 	// providerbalancesDescID is the schema descriptor for id field.
 	providerbalancesDescID := providerbalancesFields[0].Descriptor()
 	// providerbalances.DefaultID holds the default value on creation for the id field.

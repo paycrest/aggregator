@@ -15,6 +15,18 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// commitmentForUpdate returns the new commitment (max of existing and new total).
+// If existing is zero (default/unset), returns newTotal. Used so commitment_balance only ever increases.
+func commitmentForUpdate(existing decimal.Decimal, newTotal decimal.Decimal) decimal.Decimal {
+	if existing.IsZero() {
+		return newTotal
+	}
+	if existing.GreaterThan(newTotal) {
+		return existing
+	}
+	return newTotal
+}
+
 // UpdateProviderFiatBalance updates the fiat balance for a specific provider and currency.
 //
 // NOTE: The ReservedBalance field is managed internally by the aggregator (reservations for pending orders).
@@ -31,10 +43,12 @@ func (svc *Service) UpdateProviderFiatBalance(ctx context.Context, providerID st
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": providerID, "Currency": currencyCode}).Errorf("Failed to find provider fiat balance for update")
 		return fmt.Errorf("provider fiat balance not found: %w", err)
 	}
+	newCommitment := commitmentForUpdate(bal.CommitmentBalance, total)
 	_, err = bal.Update().
 		SetAvailableBalance(available).
 		SetTotalBalance(total).
 		SetReservedBalance(reserved).
+		SetCommitmentBalance(newCommitment).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
@@ -133,9 +147,11 @@ func (svc *Service) UpsertProviderFiatBalance(ctx context.Context, providerID st
 		newAvail = decimal.Zero
 	}
 	// Preserve existing is_available status when updating (not modified here)
+	newCommitment := commitmentForUpdate(existing.CommitmentBalance, balance.TotalBalance)
 	_, err = existing.Update().
 		SetTotalBalance(balance.TotalBalance).
 		SetAvailableBalance(newAvail).
+		SetCommitmentBalance(newCommitment).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
@@ -173,10 +189,12 @@ func (svc *Service) UpdateProviderTokenBalance(ctx context.Context, providerID s
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": providerID, "TokenID": tokenID}).Errorf("Failed to find provider token balance for update")
 		return fmt.Errorf("provider token balance not found: %w", err)
 	}
+	newCommitment := commitmentForUpdate(bal.CommitmentBalance, total)
 	_, err = bal.Update().
 		SetAvailableBalance(available).
 		SetTotalBalance(total).
 		SetReservedBalance(reserved).
+		SetCommitmentBalance(newCommitment).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
@@ -230,9 +248,11 @@ func (svc *Service) UpsertProviderTokenBalance(ctx context.Context, providerID s
 		newAvail = decimal.Zero
 	}
 	// Preserve existing is_available status when updating (not modified here)
+	newCommitment := commitmentForUpdate(existing.CommitmentBalance, balance.TotalBalance)
 	_, err = existing.Update().
 		SetTotalBalance(balance.TotalBalance).
 		SetAvailableBalance(newAvail).
+		SetCommitmentBalance(newCommitment).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {

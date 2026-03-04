@@ -8,6 +8,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -25,6 +26,8 @@ const (
 	FieldIsAvailable = "is_available"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// FieldCommitmentBalance holds the string denoting the commitment_balance field in the database.
+	FieldCommitmentBalance = "commitment_balance"
 	// EdgeProvider holds the string denoting the provider edge name in mutations.
 	EdgeProvider = "provider"
 	// EdgeFiatCurrency holds the string denoting the fiat_currency edge name in mutations.
@@ -64,6 +67,7 @@ var Columns = []string{
 	FieldReservedBalance,
 	FieldIsAvailable,
 	FieldUpdatedAt,
+	FieldCommitmentBalance,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_balances"
@@ -96,6 +100,8 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
+	// DefaultCommitmentBalance holds the default value on creation for the "commitment_balance" field.
+	DefaultCommitmentBalance func() decimal.Decimal
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -131,6 +137,11 @@ func ByIsAvailable(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByCommitmentBalance orders the results by the commitment_balance field.
+func ByCommitmentBalance(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCommitmentBalance, opts...).ToFunc()
 }
 
 // ByProviderField orders the results by provider field.

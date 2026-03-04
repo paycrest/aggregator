@@ -74,6 +74,20 @@ func (_c *ProviderBalancesCreate) SetNillableUpdatedAt(v *time.Time) *ProviderBa
 	return _c
 }
 
+// SetCommitmentBalance sets the "commitment_balance" field.
+func (_c *ProviderBalancesCreate) SetCommitmentBalance(v decimal.Decimal) *ProviderBalancesCreate {
+	_c.mutation.SetCommitmentBalance(v)
+	return _c
+}
+
+// SetNillableCommitmentBalance sets the "commitment_balance" field if the given value is not nil.
+func (_c *ProviderBalancesCreate) SetNillableCommitmentBalance(v *decimal.Decimal) *ProviderBalancesCreate {
+	if v != nil {
+		_c.SetCommitmentBalance(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *ProviderBalancesCreate) SetID(v uuid.UUID) *ProviderBalancesCreate {
 	_c.mutation.SetID(v)
@@ -180,6 +194,10 @@ func (_c *ProviderBalancesCreate) defaults() {
 		v := providerbalances.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.CommitmentBalance(); !ok {
+		v := providerbalances.DefaultCommitmentBalance()
+		_c.mutation.SetCommitmentBalance(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := providerbalances.DefaultID()
 		_c.mutation.SetID(v)
@@ -202,6 +220,9 @@ func (_c *ProviderBalancesCreate) check() error {
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderBalances.updated_at"`)}
+	}
+	if _, ok := _c.mutation.CommitmentBalance(); !ok {
+		return &ValidationError{Name: "commitment_balance", err: errors.New(`ent: missing required field "ProviderBalances.commitment_balance"`)}
 	}
 	if len(_c.mutation.ProviderIDs()) == 0 {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderBalances.provider"`)}
@@ -261,6 +282,10 @@ func (_c *ProviderBalancesCreate) createSpec() (*ProviderBalances, *sqlgraph.Cre
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerbalances.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if value, ok := _c.mutation.CommitmentBalance(); ok {
+		_spec.SetField(providerbalances.FieldCommitmentBalance, field.TypeFloat64, value)
+		_node.CommitmentBalance = value
 	}
 	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -443,6 +468,24 @@ func (u *ProviderBalancesUpsert) UpdateUpdatedAt() *ProviderBalancesUpsert {
 	return u
 }
 
+// SetCommitmentBalance sets the "commitment_balance" field.
+func (u *ProviderBalancesUpsert) SetCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsert {
+	u.Set(providerbalances.FieldCommitmentBalance, v)
+	return u
+}
+
+// UpdateCommitmentBalance sets the "commitment_balance" field to the value that was provided on create.
+func (u *ProviderBalancesUpsert) UpdateCommitmentBalance() *ProviderBalancesUpsert {
+	u.SetExcluded(providerbalances.FieldCommitmentBalance)
+	return u
+}
+
+// AddCommitmentBalance adds v to the "commitment_balance" field.
+func (u *ProviderBalancesUpsert) AddCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsert {
+	u.Add(providerbalances.FieldCommitmentBalance, v)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -579,6 +622,27 @@ func (u *ProviderBalancesUpsertOne) SetUpdatedAt(v time.Time) *ProviderBalancesU
 func (u *ProviderBalancesUpsertOne) UpdateUpdatedAt() *ProviderBalancesUpsertOne {
 	return u.Update(func(s *ProviderBalancesUpsert) {
 		s.UpdateUpdatedAt()
+	})
+}
+
+// SetCommitmentBalance sets the "commitment_balance" field.
+func (u *ProviderBalancesUpsertOne) SetCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsertOne {
+	return u.Update(func(s *ProviderBalancesUpsert) {
+		s.SetCommitmentBalance(v)
+	})
+}
+
+// AddCommitmentBalance adds v to the "commitment_balance" field.
+func (u *ProviderBalancesUpsertOne) AddCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsertOne {
+	return u.Update(func(s *ProviderBalancesUpsert) {
+		s.AddCommitmentBalance(v)
+	})
+}
+
+// UpdateCommitmentBalance sets the "commitment_balance" field to the value that was provided on create.
+func (u *ProviderBalancesUpsertOne) UpdateCommitmentBalance() *ProviderBalancesUpsertOne {
+	return u.Update(func(s *ProviderBalancesUpsert) {
+		s.UpdateCommitmentBalance()
 	})
 }
 
@@ -885,6 +949,27 @@ func (u *ProviderBalancesUpsertBulk) SetUpdatedAt(v time.Time) *ProviderBalances
 func (u *ProviderBalancesUpsertBulk) UpdateUpdatedAt() *ProviderBalancesUpsertBulk {
 	return u.Update(func(s *ProviderBalancesUpsert) {
 		s.UpdateUpdatedAt()
+	})
+}
+
+// SetCommitmentBalance sets the "commitment_balance" field.
+func (u *ProviderBalancesUpsertBulk) SetCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsertBulk {
+	return u.Update(func(s *ProviderBalancesUpsert) {
+		s.SetCommitmentBalance(v)
+	})
+}
+
+// AddCommitmentBalance adds v to the "commitment_balance" field.
+func (u *ProviderBalancesUpsertBulk) AddCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsertBulk {
+	return u.Update(func(s *ProviderBalancesUpsert) {
+		s.AddCommitmentBalance(v)
+	})
+}
+
+// UpdateCommitmentBalance sets the "commitment_balance" field to the value that was provided on create.
+func (u *ProviderBalancesUpsertBulk) UpdateCommitmentBalance() *ProviderBalancesUpsertBulk {
+	return u.Update(func(s *ProviderBalancesUpsert) {
+		s.UpdateCommitmentBalance()
 	})
 }
 

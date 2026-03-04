@@ -82,6 +82,11 @@ func UpdatedAt(v time.Time) predicate.ProviderBalances {
 	return predicate.ProviderBalances(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
+// CommitmentBalance applies equality check predicate on the "commitment_balance" field. It's identical to CommitmentBalanceEQ.
+func CommitmentBalance(v decimal.Decimal) predicate.ProviderBalances {
+	return predicate.ProviderBalances(sql.FieldEQ(FieldCommitmentBalance, v))
+}
+
 // AvailableBalanceEQ applies the EQ predicate on the "available_balance" field.
 func AvailableBalanceEQ(v decimal.Decimal) predicate.ProviderBalances {
 	return predicate.ProviderBalances(sql.FieldEQ(FieldAvailableBalance, v))
@@ -250,6 +255,46 @@ func UpdatedAtLT(v time.Time) predicate.ProviderBalances {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.ProviderBalances {
 	return predicate.ProviderBalances(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// CommitmentBalanceEQ applies the EQ predicate on the "commitment_balance" field.
+func CommitmentBalanceEQ(v decimal.Decimal) predicate.ProviderBalances {
+	return predicate.ProviderBalances(sql.FieldEQ(FieldCommitmentBalance, v))
+}
+
+// CommitmentBalanceNEQ applies the NEQ predicate on the "commitment_balance" field.
+func CommitmentBalanceNEQ(v decimal.Decimal) predicate.ProviderBalances {
+	return predicate.ProviderBalances(sql.FieldNEQ(FieldCommitmentBalance, v))
+}
+
+// CommitmentBalanceIn applies the In predicate on the "commitment_balance" field.
+func CommitmentBalanceIn(vs ...decimal.Decimal) predicate.ProviderBalances {
+	return predicate.ProviderBalances(sql.FieldIn(FieldCommitmentBalance, vs...))
+}
+
+// CommitmentBalanceNotIn applies the NotIn predicate on the "commitment_balance" field.
+func CommitmentBalanceNotIn(vs ...decimal.Decimal) predicate.ProviderBalances {
+	return predicate.ProviderBalances(sql.FieldNotIn(FieldCommitmentBalance, vs...))
+}
+
+// CommitmentBalanceGT applies the GT predicate on the "commitment_balance" field.
+func CommitmentBalanceGT(v decimal.Decimal) predicate.ProviderBalances {
+	return predicate.ProviderBalances(sql.FieldGT(FieldCommitmentBalance, v))
+}
+
+// CommitmentBalanceGTE applies the GTE predicate on the "commitment_balance" field.
+func CommitmentBalanceGTE(v decimal.Decimal) predicate.ProviderBalances {
+	return predicate.ProviderBalances(sql.FieldGTE(FieldCommitmentBalance, v))
+}
+
+// CommitmentBalanceLT applies the LT predicate on the "commitment_balance" field.
+func CommitmentBalanceLT(v decimal.Decimal) predicate.ProviderBalances {
+	return predicate.ProviderBalances(sql.FieldLT(FieldCommitmentBalance, v))
+}
+
+// CommitmentBalanceLTE applies the LTE predicate on the "commitment_balance" field.
+func CommitmentBalanceLTE(v decimal.Decimal) predicate.ProviderBalances {
+	return predicate.ProviderBalances(sql.FieldLTE(FieldCommitmentBalance, v))
 }
 
 // HasProvider applies the HasEdge predicate on the "provider" edge.

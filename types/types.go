@@ -1006,12 +1006,14 @@ type WebhookSignatureVerification struct {
 	Secret    string
 }
 
-// ProviderBalance represents a provider's balance for a specific currency
+// ProviderBalance represents a provider's balance for a specific currency.
+// CommitmentBalance is the peak (max) total balance seen; used for low-balance alerts (e.g. 50%/20% of commitment).
 type ProviderBalance struct {
-	AvailableBalance decimal.Decimal `json:"availableBalance"`
-	TotalBalance     decimal.Decimal `json:"totalBalance"`
-	ReservedBalance  decimal.Decimal `json:"reservedBalance"`
-	LastUpdated      time.Time       `json:"lastUpdated"`
+	AvailableBalance   decimal.Decimal `json:"availableBalance"`
+	TotalBalance      decimal.Decimal `json:"totalBalance"`
+	ReservedBalance   decimal.Decimal `json:"reservedBalance"`
+	CommitmentBalance decimal.Decimal `json:"commitmentBalance"`
+	LastUpdated       time.Time       `json:"lastUpdated"`
 }
 
 // ProviderInfoResponse represents the response from provider /info endpoint

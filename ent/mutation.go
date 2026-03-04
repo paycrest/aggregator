@@ -11138,27 +11138,29 @@ func (m *PaymentWebhookMutation) ResetEdge(name string) error {
 // ProviderBalancesMutation represents an operation that mutates the ProviderBalances nodes in the graph.
 type ProviderBalancesMutation struct {
 	config
-	op                   Op
-	typ                  string
-	id                   *uuid.UUID
-	available_balance    *decimal.Decimal
-	addavailable_balance *decimal.Decimal
-	total_balance        *decimal.Decimal
-	addtotal_balance     *decimal.Decimal
-	reserved_balance     *decimal.Decimal
-	addreserved_balance  *decimal.Decimal
-	is_available         *bool
-	updated_at           *time.Time
-	clearedFields        map[string]struct{}
-	provider             *string
-	clearedprovider      bool
-	fiat_currency        *uuid.UUID
-	clearedfiat_currency bool
-	token                *int
-	clearedtoken         bool
-	done                 bool
-	oldValue             func(context.Context) (*ProviderBalances, error)
-	predicates           []predicate.ProviderBalances
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	available_balance     *decimal.Decimal
+	addavailable_balance  *decimal.Decimal
+	total_balance         *decimal.Decimal
+	addtotal_balance      *decimal.Decimal
+	reserved_balance      *decimal.Decimal
+	addreserved_balance   *decimal.Decimal
+	is_available          *bool
+	updated_at            *time.Time
+	commitment_balance    *decimal.Decimal
+	addcommitment_balance *decimal.Decimal
+	clearedFields         map[string]struct{}
+	provider              *string
+	clearedprovider       bool
+	fiat_currency         *uuid.UUID
+	clearedfiat_currency  bool
+	token                 *int
+	clearedtoken          bool
+	done                  bool
+	oldValue              func(context.Context) (*ProviderBalances, error)
+	predicates            []predicate.ProviderBalances
 }
 
 var _ ent.Mutation = (*ProviderBalancesMutation)(nil)
@@ -11505,6 +11507,62 @@ func (m *ProviderBalancesMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
+// SetCommitmentBalance sets the "commitment_balance" field.
+func (m *ProviderBalancesMutation) SetCommitmentBalance(d decimal.Decimal) {
+	m.commitment_balance = &d
+	m.addcommitment_balance = nil
+}
+
+// CommitmentBalance returns the value of the "commitment_balance" field in the mutation.
+func (m *ProviderBalancesMutation) CommitmentBalance() (r decimal.Decimal, exists bool) {
+	v := m.commitment_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCommitmentBalance returns the old "commitment_balance" field's value of the ProviderBalances entity.
+// If the ProviderBalances object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderBalancesMutation) OldCommitmentBalance(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCommitmentBalance is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCommitmentBalance requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCommitmentBalance: %w", err)
+	}
+	return oldValue.CommitmentBalance, nil
+}
+
+// AddCommitmentBalance adds d to the "commitment_balance" field.
+func (m *ProviderBalancesMutation) AddCommitmentBalance(d decimal.Decimal) {
+	if m.addcommitment_balance != nil {
+		*m.addcommitment_balance = m.addcommitment_balance.Add(d)
+	} else {
+		m.addcommitment_balance = &d
+	}
+}
+
+// AddedCommitmentBalance returns the value that was added to the "commitment_balance" field in this mutation.
+func (m *ProviderBalancesMutation) AddedCommitmentBalance() (r decimal.Decimal, exists bool) {
+	v := m.addcommitment_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCommitmentBalance resets all changes to the "commitment_balance" field.
+func (m *ProviderBalancesMutation) ResetCommitmentBalance() {
+	m.commitment_balance = nil
+	m.addcommitment_balance = nil
+}
+
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
 func (m *ProviderBalancesMutation) SetProviderID(id string) {
 	m.provider = &id
@@ -11656,7 +11714,7 @@ func (m *ProviderBalancesMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderBalancesMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.available_balance != nil {
 		fields = append(fields, providerbalances.FieldAvailableBalance)
 	}
@@ -11671,6 +11729,9 @@ func (m *ProviderBalancesMutation) Fields() []string {
 	}
 	if m.updated_at != nil {
 		fields = append(fields, providerbalances.FieldUpdatedAt)
+	}
+	if m.commitment_balance != nil {
+		fields = append(fields, providerbalances.FieldCommitmentBalance)
 	}
 	return fields
 }
@@ -11690,6 +11751,8 @@ func (m *ProviderBalancesMutation) Field(name string) (ent.Value, bool) {
 		return m.IsAvailable()
 	case providerbalances.FieldUpdatedAt:
 		return m.UpdatedAt()
+	case providerbalances.FieldCommitmentBalance:
+		return m.CommitmentBalance()
 	}
 	return nil, false
 }
@@ -11709,6 +11772,8 @@ func (m *ProviderBalancesMutation) OldField(ctx context.Context, name string) (e
 		return m.OldIsAvailable(ctx)
 	case providerbalances.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
+	case providerbalances.FieldCommitmentBalance:
+		return m.OldCommitmentBalance(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProviderBalances field %s", name)
 }
@@ -11753,6 +11818,13 @@ func (m *ProviderBalancesMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetUpdatedAt(v)
 		return nil
+	case providerbalances.FieldCommitmentBalance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCommitmentBalance(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderBalances field %s", name)
 }
@@ -11770,6 +11842,9 @@ func (m *ProviderBalancesMutation) AddedFields() []string {
 	if m.addreserved_balance != nil {
 		fields = append(fields, providerbalances.FieldReservedBalance)
 	}
+	if m.addcommitment_balance != nil {
+		fields = append(fields, providerbalances.FieldCommitmentBalance)
+	}
 	return fields
 }
 
@@ -11784,6 +11859,8 @@ func (m *ProviderBalancesMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedTotalBalance()
 	case providerbalances.FieldReservedBalance:
 		return m.AddedReservedBalance()
+	case providerbalances.FieldCommitmentBalance:
+		return m.AddedCommitmentBalance()
 	}
 	return nil, false
 }
@@ -11813,6 +11890,13 @@ func (m *ProviderBalancesMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddReservedBalance(v)
+		return nil
+	case providerbalances.FieldCommitmentBalance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCommitmentBalance(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderBalances numeric field %s", name)
@@ -11855,6 +11939,9 @@ func (m *ProviderBalancesMutation) ResetField(name string) error {
 		return nil
 	case providerbalances.FieldUpdatedAt:
 		m.ResetUpdatedAt()
+		return nil
+	case providerbalances.FieldCommitmentBalance:
+		m.ResetCommitmentBalance()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderBalances field %s", name)

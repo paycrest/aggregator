@@ -116,6 +116,27 @@ func (_u *ProviderBalancesUpdate) SetUpdatedAt(v time.Time) *ProviderBalancesUpd
 	return _u
 }
 
+// SetCommitmentBalance sets the "commitment_balance" field.
+func (_u *ProviderBalancesUpdate) SetCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpdate {
+	_u.mutation.ResetCommitmentBalance()
+	_u.mutation.SetCommitmentBalance(v)
+	return _u
+}
+
+// SetNillableCommitmentBalance sets the "commitment_balance" field if the given value is not nil.
+func (_u *ProviderBalancesUpdate) SetNillableCommitmentBalance(v *decimal.Decimal) *ProviderBalancesUpdate {
+	if v != nil {
+		_u.SetCommitmentBalance(*v)
+	}
+	return _u
+}
+
+// AddCommitmentBalance adds value to the "commitment_balance" field.
+func (_u *ProviderBalancesUpdate) AddCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpdate {
+	_u.mutation.AddCommitmentBalance(v)
+	return _u
+}
+
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (_u *ProviderBalancesUpdate) SetProviderID(id string) *ProviderBalancesUpdate {
 	_u.mutation.SetProviderID(id)
@@ -267,6 +288,12 @@ func (_u *ProviderBalancesUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerbalances.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.CommitmentBalance(); ok {
+		_spec.SetField(providerbalances.FieldCommitmentBalance, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCommitmentBalance(); ok {
+		_spec.AddField(providerbalances.FieldCommitmentBalance, field.TypeFloat64, value)
 	}
 	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -458,6 +485,27 @@ func (_u *ProviderBalancesUpdateOne) SetUpdatedAt(v time.Time) *ProviderBalances
 	return _u
 }
 
+// SetCommitmentBalance sets the "commitment_balance" field.
+func (_u *ProviderBalancesUpdateOne) SetCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpdateOne {
+	_u.mutation.ResetCommitmentBalance()
+	_u.mutation.SetCommitmentBalance(v)
+	return _u
+}
+
+// SetNillableCommitmentBalance sets the "commitment_balance" field if the given value is not nil.
+func (_u *ProviderBalancesUpdateOne) SetNillableCommitmentBalance(v *decimal.Decimal) *ProviderBalancesUpdateOne {
+	if v != nil {
+		_u.SetCommitmentBalance(*v)
+	}
+	return _u
+}
+
+// AddCommitmentBalance adds value to the "commitment_balance" field.
+func (_u *ProviderBalancesUpdateOne) AddCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpdateOne {
+	_u.mutation.AddCommitmentBalance(v)
+	return _u
+}
+
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (_u *ProviderBalancesUpdateOne) SetProviderID(id string) *ProviderBalancesUpdateOne {
 	_u.mutation.SetProviderID(id)
@@ -639,6 +687,12 @@ func (_u *ProviderBalancesUpdateOne) sqlSave(ctx context.Context) (_node *Provid
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerbalances.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.CommitmentBalance(); ok {
+		_spec.SetField(providerbalances.FieldCommitmentBalance, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCommitmentBalance(); ok {
+		_spec.AddField(providerbalances.FieldCommitmentBalance, field.TypeFloat64, value)
 	}
 	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{

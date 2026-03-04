@@ -27,6 +27,7 @@ func (ProviderBalances) Fields() []ent.Field {
 		field.Float("reserved_balance").GoType(decimal.Decimal{}),
 		field.Bool("is_available").Default(false),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
+		field.Float("commitment_balance").GoType(decimal.Decimal{}).DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
 	}
 }
 

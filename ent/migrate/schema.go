@@ -329,6 +329,7 @@ var (
 		{Name: "reserved_balance", Type: field.TypeFloat64},
 		{Name: "is_available", Type: field.TypeBool, Default: false},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "commitment_balance", Type: field.TypeFloat64},
 		{Name: "fiat_currency_provider_balances", Type: field.TypeUUID, Nullable: true},
 		{Name: "provider_profile_provider_balances", Type: field.TypeString},
 		{Name: "token_provider_balances", Type: field.TypeInt, Nullable: true},
@@ -341,19 +342,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_balances_fiat_currencies_provider_balances",
-				Columns:    []*schema.Column{ProviderBalancesColumns[6]},
+				Columns:    []*schema.Column{ProviderBalancesColumns[7]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_balances_provider_profiles_provider_balances",
-				Columns:    []*schema.Column{ProviderBalancesColumns[7]},
+				Columns:    []*schema.Column{ProviderBalancesColumns[8]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_balances_tokens_provider_balances",
-				Columns:    []*schema.Column{ProviderBalancesColumns[8]},
+				Columns:    []*schema.Column{ProviderBalancesColumns[9]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -362,12 +363,12 @@ var (
 			{
 				Name:    "providerbalances_provider_profile_provider_balances_fiat_currency_provider_balances",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderBalancesColumns[7], ProviderBalancesColumns[6]},
+				Columns: []*schema.Column{ProviderBalancesColumns[8], ProviderBalancesColumns[7]},
 			},
 			{
 				Name:    "providerbalances_provider_profile_provider_balances_token_provider_balances",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderBalancesColumns[7], ProviderBalancesColumns[8]},
+				Columns: []*schema.Column{ProviderBalancesColumns[8], ProviderBalancesColumns[9]},
 			},
 		},
 	}
