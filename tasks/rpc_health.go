@@ -3,15 +3,16 @@ package tasks
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/ethclient"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/storage"
-	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
@@ -61,11 +62,13 @@ func TaskCheckRPCHealth() error {
 			defer cancel()
 
 			if err := checkRPCEndpoint(checkCtx, n); err != nil {
+				masked := maskRPCEndpoint(n.RPCEndpoint)
+				sanitizedErr := strings.ReplaceAll(err.Error(), n.RPCEndpoint, masked)
 				mu.Lock()
 				failures = append(failures, rpcFailure{
 					network:  n.Identifier,
-					endpoint: maskRPCEndpoint(n.RPCEndpoint),
-					err:      err.Error(),
+					endpoint: masked,
+					err:      sanitizedErr,
 				})
 				mu.Unlock()
 			}
@@ -92,10 +95,12 @@ func checkRPCEndpoint(ctx context.Context, network *ent.Network) error {
 }
 
 func checkEVMRPC(ctx context.Context, endpoint string) error {
-	client, err := types.NewEthClient(endpoint)
+	client, err := ethclient.DialContext(ctx, endpoint)
 	if err != nil {
 		return fmt.Errorf("dial failed: %w", err)
 	}
+	defer client.Close()
+
 	_, err = client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("eth_getBlockByNumber failed: %w", err)
@@ -119,16 +124,11 @@ func checkTronRPC(endpoint string) error {
 	return nil
 }
 
-// maskRPCEndpoint redacts path/key portions of an RPC URL for safe logging.
+// maskRPCEndpoint redacts path/query/key portions of an RPC URL for safe logging.
 func maskRPCEndpoint(endpoint string) string {
-	parts := strings.SplitN(endpoint, "//", 2)
-	if len(parts) != 2 {
+	u, err := url.Parse(endpoint)
+	if err != nil || u.Scheme == "" || u.Host == "" {
 		return "***"
 	}
-	rest := parts[1]
-	slashIdx := strings.Index(rest, "/")
-	if slashIdx == -1 {
-		return endpoint
-	}
-	return fmt.Sprintf("%s//%s/***", parts[0], rest[:slashIdx])
+	return fmt.Sprintf("%s://%s/***", u.Scheme, u.Host)
 }
