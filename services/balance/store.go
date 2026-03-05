@@ -15,6 +15,18 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// peakForUpdate returns the new peak (max of existing and new total).
+// If existing is zero (default/unset), returns newTotal. Used so peak_balance only ever increases.
+func peakForUpdate(existing decimal.Decimal, newTotal decimal.Decimal) decimal.Decimal {
+	if existing.IsZero() {
+		return newTotal
+	}
+	if existing.GreaterThan(newTotal) {
+		return existing
+	}
+	return newTotal
+}
+
 // UpdateProviderFiatBalance updates the fiat balance for a specific provider and currency.
 //
 // NOTE: The ReservedBalance field is managed internally by the aggregator (reservations for pending orders).
@@ -31,10 +43,12 @@ func (svc *Service) UpdateProviderFiatBalance(ctx context.Context, providerID st
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": providerID, "Currency": currencyCode}).Errorf("Failed to find provider fiat balance for update")
 		return fmt.Errorf("provider fiat balance not found: %w", err)
 	}
+	newPeak := peakForUpdate(bal.PeakBalance, total)
 	_, err = bal.Update().
 		SetAvailableBalance(available).
 		SetTotalBalance(total).
 		SetReservedBalance(reserved).
+		SetPeakBalance(newPeak).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
@@ -112,6 +126,7 @@ func (svc *Service) UpsertProviderFiatBalance(ctx context.Context, providerID st
 			SetAvailableBalance(availableBalance).
 			SetTotalBalance(balance.TotalBalance).
 			SetReservedBalance(balance.ReservedBalance).
+			SetPeakBalance(balance.TotalBalance).
 			SetIsAvailable(false). // New entries default to false
 			SetUpdatedAt(time.Now()).
 			SetProviderID(provider.ID).
@@ -133,9 +148,11 @@ func (svc *Service) UpsertProviderFiatBalance(ctx context.Context, providerID st
 		newAvail = decimal.Zero
 	}
 	// Preserve existing is_available status when updating (not modified here)
+	newPeak := peakForUpdate(existing.PeakBalance, balance.TotalBalance)
 	_, err = existing.Update().
 		SetTotalBalance(balance.TotalBalance).
 		SetAvailableBalance(newAvail).
+		SetPeakBalance(newPeak).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
@@ -173,10 +190,12 @@ func (svc *Service) UpdateProviderTokenBalance(ctx context.Context, providerID s
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "ProviderID": providerID, "TokenID": tokenID}).Errorf("Failed to find provider token balance for update")
 		return fmt.Errorf("provider token balance not found: %w", err)
 	}
+	newPeak := peakForUpdate(bal.PeakBalance, total)
 	_, err = bal.Update().
 		SetAvailableBalance(available).
 		SetTotalBalance(total).
 		SetReservedBalance(reserved).
+		SetPeakBalance(newPeak).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
@@ -215,6 +234,7 @@ func (svc *Service) UpsertProviderTokenBalance(ctx context.Context, providerID s
 			SetTotalBalance(balance.TotalBalance).
 			SetAvailableBalance(balance.TotalBalance).
 			SetReservedBalance(decimal.Zero).
+			SetPeakBalance(balance.TotalBalance).
 			SetIsAvailable(false). // New entries default to false
 			SetUpdatedAt(time.Now()).
 			SetProviderID(provider.ID).
@@ -230,9 +250,11 @@ func (svc *Service) UpsertProviderTokenBalance(ctx context.Context, providerID s
 		newAvail = decimal.Zero
 	}
 	// Preserve existing is_available status when updating (not modified here)
+	newPeak := peakForUpdate(existing.PeakBalance, balance.TotalBalance)
 	_, err = existing.Update().
 		SetTotalBalance(balance.TotalBalance).
 		SetAvailableBalance(newAvail).
+		SetPeakBalance(newPeak).
 		SetUpdatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {

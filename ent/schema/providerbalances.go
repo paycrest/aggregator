@@ -22,11 +22,22 @@ type ProviderBalances struct {
 func (ProviderBalances) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
-		field.Float("available_balance").GoType(decimal.Decimal{}),
-		field.Float("total_balance").GoType(decimal.Decimal{}),
-		field.Float("reserved_balance").GoType(decimal.Decimal{}),
+		field.Float("available_balance").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("total_balance").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("reserved_balance").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
 		field.Bool("is_available").Default(false),
-		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
+		field.Time("updated_at").
+			Default(time.Now).
+			UpdateDefault(time.Now),
+		field.Float("peak_balance").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
 	}
 }
 
