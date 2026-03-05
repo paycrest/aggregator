@@ -111,6 +111,12 @@ func StartCronJobs() {
 		logger.Errorf("StartCronJobs for cleanupIndexingMaps: %v", err)
 	}
 
+	// Check RPC endpoint health every 2 minutes
+	_, err = scheduler.Every(2).Minutes().Do(TaskCheckRPCHealth)
+	if err != nil {
+		logger.Errorf("StartCronJobs for TaskCheckRPCHealth: %v", err)
+	}
+
 	// Start scheduler
 	scheduler.StartAsync()
 }
