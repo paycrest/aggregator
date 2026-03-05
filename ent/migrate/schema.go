@@ -329,7 +329,7 @@ var (
 		{Name: "reserved_balance", Type: field.TypeFloat64},
 		{Name: "is_available", Type: field.TypeBool, Default: false},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "commitment_balance", Type: field.TypeFloat64},
+		{Name: "peak_balance", Type: field.TypeFloat64},
 		{Name: "fiat_currency_provider_balances", Type: field.TypeUUID, Nullable: true},
 		{Name: "provider_profile_provider_balances", Type: field.TypeString},
 		{Name: "token_provider_balances", Type: field.TypeInt, Nullable: true},

@@ -32,8 +32,8 @@ type ProviderBalances struct {
 	IsAvailable bool `json:"is_available,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// CommitmentBalance holds the value of the "commitment_balance" field.
-	CommitmentBalance decimal.Decimal `json:"commitment_balance,omitempty"`
+	// PeakBalance holds the value of the "peak_balance" field.
+	PeakBalance decimal.Decimal `json:"peak_balance,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderBalancesQuery when eager-loading is set.
 	Edges                              ProviderBalancesEdges `json:"edges"`
@@ -94,7 +94,7 @@ func (*ProviderBalances) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerbalances.FieldAvailableBalance, providerbalances.FieldTotalBalance, providerbalances.FieldReservedBalance, providerbalances.FieldCommitmentBalance:
+		case providerbalances.FieldAvailableBalance, providerbalances.FieldTotalBalance, providerbalances.FieldReservedBalance, providerbalances.FieldPeakBalance:
 			values[i] = new(decimal.Decimal)
 		case providerbalances.FieldIsAvailable:
 			values[i] = new(sql.NullBool)
@@ -159,11 +159,11 @@ func (_m *ProviderBalances) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
-		case providerbalances.FieldCommitmentBalance:
+		case providerbalances.FieldPeakBalance:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field commitment_balance", values[i])
+				return fmt.Errorf("unexpected type %T for field peak_balance", values[i])
 			} else if value != nil {
-				_m.CommitmentBalance = *value
+				_m.PeakBalance = *value
 			}
 		case providerbalances.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -252,8 +252,8 @@ func (_m *ProviderBalances) String() string {
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
-	builder.WriteString("commitment_balance=")
-	builder.WriteString(fmt.Sprintf("%v", _m.CommitmentBalance))
+	builder.WriteString("peak_balance=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PeakBalance))
 	builder.WriteByte(')')
 	return builder.String()
 }

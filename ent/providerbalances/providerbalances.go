@@ -26,8 +26,8 @@ const (
 	FieldIsAvailable = "is_available"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// FieldCommitmentBalance holds the string denoting the commitment_balance field in the database.
-	FieldCommitmentBalance = "commitment_balance"
+	// FieldPeakBalance holds the string denoting the peak_balance field in the database.
+	FieldPeakBalance = "peak_balance"
 	// EdgeProvider holds the string denoting the provider edge name in mutations.
 	EdgeProvider = "provider"
 	// EdgeFiatCurrency holds the string denoting the fiat_currency edge name in mutations.
@@ -67,7 +67,7 @@ var Columns = []string{
 	FieldReservedBalance,
 	FieldIsAvailable,
 	FieldUpdatedAt,
-	FieldCommitmentBalance,
+	FieldPeakBalance,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_balances"
@@ -94,14 +94,20 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultAvailableBalance holds the default value on creation for the "available_balance" field.
+	DefaultAvailableBalance func() decimal.Decimal
+	// DefaultTotalBalance holds the default value on creation for the "total_balance" field.
+	DefaultTotalBalance func() decimal.Decimal
+	// DefaultReservedBalance holds the default value on creation for the "reserved_balance" field.
+	DefaultReservedBalance func() decimal.Decimal
 	// DefaultIsAvailable holds the default value on creation for the "is_available" field.
 	DefaultIsAvailable bool
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
-	// DefaultCommitmentBalance holds the default value on creation for the "commitment_balance" field.
-	DefaultCommitmentBalance func() decimal.Decimal
+	// DefaultPeakBalance holds the default value on creation for the "peak_balance" field.
+	DefaultPeakBalance func() decimal.Decimal
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -139,9 +145,9 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// ByCommitmentBalance orders the results by the commitment_balance field.
-func ByCommitmentBalance(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldCommitmentBalance, opts...).ToFunc()
+// ByPeakBalance orders the results by the peak_balance field.
+func ByPeakBalance(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPeakBalance, opts...).ToFunc()
 }
 
 // ByProviderField orders the results by provider field.

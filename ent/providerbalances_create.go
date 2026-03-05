@@ -34,15 +34,39 @@ func (_c *ProviderBalancesCreate) SetAvailableBalance(v decimal.Decimal) *Provid
 	return _c
 }
 
+// SetNillableAvailableBalance sets the "available_balance" field if the given value is not nil.
+func (_c *ProviderBalancesCreate) SetNillableAvailableBalance(v *decimal.Decimal) *ProviderBalancesCreate {
+	if v != nil {
+		_c.SetAvailableBalance(*v)
+	}
+	return _c
+}
+
 // SetTotalBalance sets the "total_balance" field.
 func (_c *ProviderBalancesCreate) SetTotalBalance(v decimal.Decimal) *ProviderBalancesCreate {
 	_c.mutation.SetTotalBalance(v)
 	return _c
 }
 
+// SetNillableTotalBalance sets the "total_balance" field if the given value is not nil.
+func (_c *ProviderBalancesCreate) SetNillableTotalBalance(v *decimal.Decimal) *ProviderBalancesCreate {
+	if v != nil {
+		_c.SetTotalBalance(*v)
+	}
+	return _c
+}
+
 // SetReservedBalance sets the "reserved_balance" field.
 func (_c *ProviderBalancesCreate) SetReservedBalance(v decimal.Decimal) *ProviderBalancesCreate {
 	_c.mutation.SetReservedBalance(v)
+	return _c
+}
+
+// SetNillableReservedBalance sets the "reserved_balance" field if the given value is not nil.
+func (_c *ProviderBalancesCreate) SetNillableReservedBalance(v *decimal.Decimal) *ProviderBalancesCreate {
+	if v != nil {
+		_c.SetReservedBalance(*v)
+	}
 	return _c
 }
 
@@ -74,16 +98,16 @@ func (_c *ProviderBalancesCreate) SetNillableUpdatedAt(v *time.Time) *ProviderBa
 	return _c
 }
 
-// SetCommitmentBalance sets the "commitment_balance" field.
-func (_c *ProviderBalancesCreate) SetCommitmentBalance(v decimal.Decimal) *ProviderBalancesCreate {
-	_c.mutation.SetCommitmentBalance(v)
+// SetPeakBalance sets the "peak_balance" field.
+func (_c *ProviderBalancesCreate) SetPeakBalance(v decimal.Decimal) *ProviderBalancesCreate {
+	_c.mutation.SetPeakBalance(v)
 	return _c
 }
 
-// SetNillableCommitmentBalance sets the "commitment_balance" field if the given value is not nil.
-func (_c *ProviderBalancesCreate) SetNillableCommitmentBalance(v *decimal.Decimal) *ProviderBalancesCreate {
+// SetNillablePeakBalance sets the "peak_balance" field if the given value is not nil.
+func (_c *ProviderBalancesCreate) SetNillablePeakBalance(v *decimal.Decimal) *ProviderBalancesCreate {
 	if v != nil {
-		_c.SetCommitmentBalance(*v)
+		_c.SetPeakBalance(*v)
 	}
 	return _c
 }
@@ -186,6 +210,18 @@ func (_c *ProviderBalancesCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *ProviderBalancesCreate) defaults() {
+	if _, ok := _c.mutation.AvailableBalance(); !ok {
+		v := providerbalances.DefaultAvailableBalance()
+		_c.mutation.SetAvailableBalance(v)
+	}
+	if _, ok := _c.mutation.TotalBalance(); !ok {
+		v := providerbalances.DefaultTotalBalance()
+		_c.mutation.SetTotalBalance(v)
+	}
+	if _, ok := _c.mutation.ReservedBalance(); !ok {
+		v := providerbalances.DefaultReservedBalance()
+		_c.mutation.SetReservedBalance(v)
+	}
 	if _, ok := _c.mutation.IsAvailable(); !ok {
 		v := providerbalances.DefaultIsAvailable
 		_c.mutation.SetIsAvailable(v)
@@ -194,9 +230,9 @@ func (_c *ProviderBalancesCreate) defaults() {
 		v := providerbalances.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := _c.mutation.CommitmentBalance(); !ok {
-		v := providerbalances.DefaultCommitmentBalance()
-		_c.mutation.SetCommitmentBalance(v)
+	if _, ok := _c.mutation.PeakBalance(); !ok {
+		v := providerbalances.DefaultPeakBalance()
+		_c.mutation.SetPeakBalance(v)
 	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := providerbalances.DefaultID()
@@ -221,8 +257,8 @@ func (_c *ProviderBalancesCreate) check() error {
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProviderBalances.updated_at"`)}
 	}
-	if _, ok := _c.mutation.CommitmentBalance(); !ok {
-		return &ValidationError{Name: "commitment_balance", err: errors.New(`ent: missing required field "ProviderBalances.commitment_balance"`)}
+	if _, ok := _c.mutation.PeakBalance(); !ok {
+		return &ValidationError{Name: "peak_balance", err: errors.New(`ent: missing required field "ProviderBalances.peak_balance"`)}
 	}
 	if len(_c.mutation.ProviderIDs()) == 0 {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderBalances.provider"`)}
@@ -283,9 +319,9 @@ func (_c *ProviderBalancesCreate) createSpec() (*ProviderBalances, *sqlgraph.Cre
 		_spec.SetField(providerbalances.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := _c.mutation.CommitmentBalance(); ok {
-		_spec.SetField(providerbalances.FieldCommitmentBalance, field.TypeFloat64, value)
-		_node.CommitmentBalance = value
+	if value, ok := _c.mutation.PeakBalance(); ok {
+		_spec.SetField(providerbalances.FieldPeakBalance, field.TypeFloat64, value)
+		_node.PeakBalance = value
 	}
 	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -468,21 +504,21 @@ func (u *ProviderBalancesUpsert) UpdateUpdatedAt() *ProviderBalancesUpsert {
 	return u
 }
 
-// SetCommitmentBalance sets the "commitment_balance" field.
-func (u *ProviderBalancesUpsert) SetCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsert {
-	u.Set(providerbalances.FieldCommitmentBalance, v)
+// SetPeakBalance sets the "peak_balance" field.
+func (u *ProviderBalancesUpsert) SetPeakBalance(v decimal.Decimal) *ProviderBalancesUpsert {
+	u.Set(providerbalances.FieldPeakBalance, v)
 	return u
 }
 
-// UpdateCommitmentBalance sets the "commitment_balance" field to the value that was provided on create.
-func (u *ProviderBalancesUpsert) UpdateCommitmentBalance() *ProviderBalancesUpsert {
-	u.SetExcluded(providerbalances.FieldCommitmentBalance)
+// UpdatePeakBalance sets the "peak_balance" field to the value that was provided on create.
+func (u *ProviderBalancesUpsert) UpdatePeakBalance() *ProviderBalancesUpsert {
+	u.SetExcluded(providerbalances.FieldPeakBalance)
 	return u
 }
 
-// AddCommitmentBalance adds v to the "commitment_balance" field.
-func (u *ProviderBalancesUpsert) AddCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsert {
-	u.Add(providerbalances.FieldCommitmentBalance, v)
+// AddPeakBalance adds v to the "peak_balance" field.
+func (u *ProviderBalancesUpsert) AddPeakBalance(v decimal.Decimal) *ProviderBalancesUpsert {
+	u.Add(providerbalances.FieldPeakBalance, v)
 	return u
 }
 
@@ -625,24 +661,24 @@ func (u *ProviderBalancesUpsertOne) UpdateUpdatedAt() *ProviderBalancesUpsertOne
 	})
 }
 
-// SetCommitmentBalance sets the "commitment_balance" field.
-func (u *ProviderBalancesUpsertOne) SetCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsertOne {
+// SetPeakBalance sets the "peak_balance" field.
+func (u *ProviderBalancesUpsertOne) SetPeakBalance(v decimal.Decimal) *ProviderBalancesUpsertOne {
 	return u.Update(func(s *ProviderBalancesUpsert) {
-		s.SetCommitmentBalance(v)
+		s.SetPeakBalance(v)
 	})
 }
 
-// AddCommitmentBalance adds v to the "commitment_balance" field.
-func (u *ProviderBalancesUpsertOne) AddCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsertOne {
+// AddPeakBalance adds v to the "peak_balance" field.
+func (u *ProviderBalancesUpsertOne) AddPeakBalance(v decimal.Decimal) *ProviderBalancesUpsertOne {
 	return u.Update(func(s *ProviderBalancesUpsert) {
-		s.AddCommitmentBalance(v)
+		s.AddPeakBalance(v)
 	})
 }
 
-// UpdateCommitmentBalance sets the "commitment_balance" field to the value that was provided on create.
-func (u *ProviderBalancesUpsertOne) UpdateCommitmentBalance() *ProviderBalancesUpsertOne {
+// UpdatePeakBalance sets the "peak_balance" field to the value that was provided on create.
+func (u *ProviderBalancesUpsertOne) UpdatePeakBalance() *ProviderBalancesUpsertOne {
 	return u.Update(func(s *ProviderBalancesUpsert) {
-		s.UpdateCommitmentBalance()
+		s.UpdatePeakBalance()
 	})
 }
 
@@ -952,24 +988,24 @@ func (u *ProviderBalancesUpsertBulk) UpdateUpdatedAt() *ProviderBalancesUpsertBu
 	})
 }
 
-// SetCommitmentBalance sets the "commitment_balance" field.
-func (u *ProviderBalancesUpsertBulk) SetCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsertBulk {
+// SetPeakBalance sets the "peak_balance" field.
+func (u *ProviderBalancesUpsertBulk) SetPeakBalance(v decimal.Decimal) *ProviderBalancesUpsertBulk {
 	return u.Update(func(s *ProviderBalancesUpsert) {
-		s.SetCommitmentBalance(v)
+		s.SetPeakBalance(v)
 	})
 }
 
-// AddCommitmentBalance adds v to the "commitment_balance" field.
-func (u *ProviderBalancesUpsertBulk) AddCommitmentBalance(v decimal.Decimal) *ProviderBalancesUpsertBulk {
+// AddPeakBalance adds v to the "peak_balance" field.
+func (u *ProviderBalancesUpsertBulk) AddPeakBalance(v decimal.Decimal) *ProviderBalancesUpsertBulk {
 	return u.Update(func(s *ProviderBalancesUpsert) {
-		s.AddCommitmentBalance(v)
+		s.AddPeakBalance(v)
 	})
 }
 
-// UpdateCommitmentBalance sets the "commitment_balance" field to the value that was provided on create.
-func (u *ProviderBalancesUpsertBulk) UpdateCommitmentBalance() *ProviderBalancesUpsertBulk {
+// UpdatePeakBalance sets the "peak_balance" field to the value that was provided on create.
+func (u *ProviderBalancesUpsertBulk) UpdatePeakBalance() *ProviderBalancesUpsertBulk {
 	return u.Update(func(s *ProviderBalancesUpsert) {
-		s.UpdateCommitmentBalance()
+		s.UpdatePeakBalance()
 	})
 }
 
