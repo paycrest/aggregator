@@ -89,11 +89,11 @@ func (svc *Service) FetchProviderFiatBalances(ctx context.Context, providerID st
 		}
 
 		balances[currency] = &types.ProviderBalance{
-			AvailableBalance:   availableBalance,
-			TotalBalance:       totalBalance,
-			ReservedBalance:    decimal.Zero, // Provider doesn't track reserved balance
-			PeakBalance:       decimal.Zero, // Set by store on upsert
-			LastUpdated:        time.Now(),
+			AvailableBalance: availableBalance,
+			TotalBalance:     totalBalance,
+			ReservedBalance:  decimal.Zero, // Provider doesn't track reserved balance
+			PeakBalance:      decimal.Zero, // Set by store on upsert
+			LastUpdated:      time.Now(),
 		}
 	}
 
@@ -160,11 +160,11 @@ func (svc *Service) FetchProviderTokenBalances(ctx context.Context, providerID s
 			}
 		} else {
 			balances[tok.ID] = &types.ProviderBalance{
-				TotalBalance:      bal,
-				AvailableBalance:  bal,
-				ReservedBalance:   decimal.Zero,
-				PeakBalance:       decimal.Zero, // Set by store on upsert
-				LastUpdated:       now,
+				TotalBalance:     bal,
+				AvailableBalance: bal,
+				ReservedBalance:  decimal.Zero,
+				PeakBalance:      decimal.Zero, // Set by store on upsert
+				LastUpdated:      now,
 			}
 		}
 	}
