@@ -117,6 +117,9 @@ func checkTronRPC(endpoint string) error {
 	if err != nil {
 		return fmt.Errorf("tron RPC request failed: %w", err)
 	}
+	if res.StatusCode() < 200 || res.StatusCode() >= 300 {
+		return fmt.Errorf("tron RPC returned HTTP %d", res.StatusCode())
+	}
 	_, err = utils.ParseJSONResponse(res.RawResponse)
 	if err != nil {
 		return fmt.Errorf("tron RPC invalid response: %w", err)
