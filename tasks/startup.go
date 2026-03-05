@@ -11,10 +11,8 @@ import (
 )
 
 // SubscribeToRedisKeyspaceEvents subscribes to redis keyspace events according to redis.conf settings
-func SubscribeToRedisKeyspaceEvents() {
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
-	ctx := context.Background()
+func SubscribeToRedisKeyspaceEvents() context.CancelFunc {
+	ctx, cancel := context.WithCancel(context.Background())
 
 	// Handle expired or deleted order request key events
 	orderRequest := storage.RedisClient.PSubscribe(
@@ -32,6 +30,8 @@ func SubscribeToRedisKeyspaceEvents() {
 		}()
 		ReassignStaleOrderRequest(ctx, orderRequestChan)
 	}()
+
+	return cancel
 }
 
 // StartCronJobs starts cron jobs

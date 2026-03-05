@@ -74,7 +74,7 @@ func TaskIndexBlockchainEvents() error {
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
 				return
 			} else if strings.HasPrefix(network.Identifier, "starknet") {
-				indexerInstance, err = indexer.NewIndexerStarknet()
+				starknetIndexer, err := indexer.NewIndexerStarknet()
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),
@@ -82,9 +82,10 @@ func TaskIndexBlockchainEvents() error {
 					}).Errorf("TaskIndexBlockchainEvents.createStarknetIndexer")
 					return
 				}
+				indexerInstance = starknetIndexer
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
 			} else {
-				indexerInstance, err = indexer.NewIndexerEVM()
+				evmIndexer, err := indexer.NewIndexerEVM()
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),
@@ -92,6 +93,7 @@ func TaskIndexBlockchainEvents() error {
 					}).Errorf("TaskIndexBlockchainEvents.createIndexer")
 					return
 				}
+				indexerInstance = evmIndexer
 				_, _ = indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, 0, 0, "")
 			}
 

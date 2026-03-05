@@ -71,7 +71,8 @@ func main() {
 	}
 
 	// Subscribe to Redis keyspace events
-	tasks.SubscribeToRedisKeyspaceEvents()
+	cancelRedisSubscription := tasks.SubscribeToRedisKeyspaceEvents()
+	defer cancelRedisSubscription()
 
 	// Start cron jobs
 	tasks.StartCronJobs()
