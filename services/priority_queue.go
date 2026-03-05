@@ -795,14 +795,43 @@ func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order 
 		return fmt.Errorf("fallback is only for regular orders, not OTC")
 	}
 
-	// Check idempotency first (before any DB state check) to avoid race: another process may assign between state check and assignment.
+	// If order already has an active order_request, clear it (release reserved balance, delete keys) so we can assign to fallback.
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
 	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
 	if err != nil {
 		return fmt.Errorf("fallback: failed to check order_request: %w", err)
 	}
 	if exists > 0 {
-		return fmt.Errorf("fallback: order %s already has an active order_request", order.ID)
+		metaKey := fmt.Sprintf("order_request_meta_%s", order.ID)
+		meta, metaErr := storage.RedisClient.HGetAll(ctx, metaKey).Result()
+		releaseOK := true // no meta or no amount to release: safe to clear keys
+		if metaErr == nil && len(meta) > 0 {
+			metaProviderID := meta["providerId"]
+			metaCurrency := meta["currency"]
+			metaAmountStr := meta["amount"]
+			if metaProviderID != "" {
+				excludeKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
+				_, _ = storage.RedisClient.RPush(ctx, excludeKey, metaProviderID).Result()
+				_ = storage.RedisClient.ExpireAt(ctx, excludeKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+			}
+			if metaProviderID != "" && metaCurrency != "" && metaAmountStr != "" {
+				amountDec, parseErr := decimal.NewFromString(metaAmountStr)
+				if parseErr == nil {
+					if relErr := s.balanceService.ReleaseFiatBalance(ctx, metaProviderID, metaCurrency, amountDec, nil); relErr != nil {
+						logger.WithFields(logger.Fields{
+							"OrderID": order.ID.String(), "ProviderID": metaProviderID, "Currency": metaCurrency, "Amount": metaAmountStr,
+						}).Errorf("fallback: failed to release reserved balance before reassigning")
+						releaseOK = false
+					}
+				}
+			}
+		}
+		if releaseOK {
+			_, _ = storage.RedisClient.Del(ctx, metaKey).Result()
+			_, _ = storage.RedisClient.Del(ctx, orderKey).Result()
+		} else {
+			return fmt.Errorf("fallback: cannot clear active order_request for order %s: release of reserved balance failed; keys left in place for recovery", order.ID)
+		}
 	}
 
 	// Verify order is still in a state that allows assignment; DB-level idempotency for fallback.

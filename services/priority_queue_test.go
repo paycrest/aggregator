@@ -1079,14 +1079,16 @@ func TestPriorityQueueTest(t *testing.T) {
 			orderKey := fmt.Sprintf("order_request_%s", _order.ID)
 			_, err = db.RedisClient.HSet(ctx, orderKey, "providerId", testCtxForPQ.publicProviderProfile.ID).Result()
 			assert.NoError(t, err)
-			defer db.RedisClient.Del(ctx, orderKey)
 
 			order, err := db.Client.PaymentOrder.Get(ctx, _order.ID)
 			assert.NoError(t, err)
 
 			err = service.TryFallbackAssignment(ctx, order)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "already has an active order_request")
+			// When order_request exists, TryFallbackAssignment clears it and proceeds; may fail later for other reasons (e.g. no token edges).
+			assert.False(t, err != nil && strings.Contains(err.Error(), "already has an active order_request"), "fallback should clear active order_request and attempt assignment, not return this error")
+			// Redis key should have been cleared so fallback could proceed
+			exists, _ := db.RedisClient.Exists(ctx, orderKey).Result()
+			assert.Equal(t, int64(0), exists, "order_request key should be deleted when fallback runs with active request")
 		})
 
 		t.Run("FallbackAlreadyTried", func(t *testing.T) {

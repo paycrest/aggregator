@@ -508,8 +508,7 @@ func RetryStaleUserOperations() error {
 			}
 
 			// 3) Full queue skipped or failed; try fallback (only if configured and not already tried).
-			// Fallback only succeeds when order_request_* key is gone (expired or cleared); TryFallbackAssignment returns error if key exists.
-			// Any failure should proceed with refund
+			// TryFallbackAssignment clears any active order_request (release balance, delete keys) and assigns to fallback.
 			if tryFallback {
 				err := pq.TryFallbackAssignment(ctx, order)
 				if err == nil {
