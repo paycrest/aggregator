@@ -126,6 +126,7 @@ func (svc *Service) UpsertProviderFiatBalance(ctx context.Context, providerID st
 			SetAvailableBalance(availableBalance).
 			SetTotalBalance(balance.TotalBalance).
 			SetReservedBalance(balance.ReservedBalance).
+			SetCommitmentBalance(balance.TotalBalance).
 			SetIsAvailable(false). // New entries default to false
 			SetUpdatedAt(time.Now()).
 			SetProviderID(provider.ID).
@@ -233,6 +234,7 @@ func (svc *Service) UpsertProviderTokenBalance(ctx context.Context, providerID s
 			SetTotalBalance(balance.TotalBalance).
 			SetAvailableBalance(balance.TotalBalance).
 			SetReservedBalance(decimal.Zero).
+			SetCommitmentBalance(balance.TotalBalance).
 			SetIsAvailable(false). // New entries default to false
 			SetUpdatedAt(time.Now()).
 			SetProviderID(provider.ID).
