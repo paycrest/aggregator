@@ -1,0 +1,45 @@
+---
+description: Use request context for storage/Redis/DB in Gin handlers; keep ctx for Gin-only use
+globs: **/controllers/**/*.go
+alwaysApply: false
+---
+
+# Gin handler context usage
+
+In Gin HTTP handlers, **do not** pass `ctx` (the `*gin.Context`) to storage, Redis, or database calls. Use the **request context** so cancellation and timeouts follow the HTTP request.
+
+## Rule
+
+1. At the start of each handler (after auth/params if needed), set:
+   ```go
+   reqCtx := ctx.Request.Context()
+   ```
+2. Use **`reqCtx`** for:
+   - `storage.Client.*` (Tx, Query, Only, First, All, Save, Count, Exist, Exec, etc.)
+   - `db.Client.*` (same)
+   - `storage.RedisClient.*` (Get, Set, Del, HGetAll, Exists, etc.)
+   - Any service or helper that performs I/O and accepts `context.Context`
+3. Keep **`ctx`** (the `*gin.Context`) only for Gin-specific use:
+   - `ctx.Param()`, `ctx.Query()`, `ctx.ShouldBindJSON()`, `ctx.Get()`
+   - `u.APIResponse(ctx, ...)`, `ctx.JSON()`, `ctx.Header()`, `ctx.Writer`
+
+## Example
+
+```go
+func (ctrl *Controller) GetOrder(ctx *gin.Context) {
+    reqCtx := ctx.Request.Context()
+    id := ctx.Param("id")
+
+    order, err := storage.Client.PaymentOrder.Query().Where(...).Only(reqCtx)
+    if err != nil { ... }
+
+    u.APIResponse(ctx, http.StatusOK, "success", "OK", order)
+}
+```
+
+## Helpers and sub-handlers
+
+- If a helper takes `context.Context` (e.g. `resolveOrderID(ctx context.Context, id string)`), call it with **`reqCtx`** from the handler.
+- If a helper is called from a Gin handler and does DB/Redis, it should accept `context.Context` (not `*gin.Context`) and the handler should pass **`reqCtx`**.
+
+Do not use `ctx` (Gin) for storage/Redis/DB; always use `ctx.Request.Context()` for those calls.

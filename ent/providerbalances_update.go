@@ -116,6 +116,27 @@ func (_u *ProviderBalancesUpdate) SetUpdatedAt(v time.Time) *ProviderBalancesUpd
 	return _u
 }
 
+// SetPeakBalance sets the "peak_balance" field.
+func (_u *ProviderBalancesUpdate) SetPeakBalance(v decimal.Decimal) *ProviderBalancesUpdate {
+	_u.mutation.ResetPeakBalance()
+	_u.mutation.SetPeakBalance(v)
+	return _u
+}
+
+// SetNillablePeakBalance sets the "peak_balance" field if the given value is not nil.
+func (_u *ProviderBalancesUpdate) SetNillablePeakBalance(v *decimal.Decimal) *ProviderBalancesUpdate {
+	if v != nil {
+		_u.SetPeakBalance(*v)
+	}
+	return _u
+}
+
+// AddPeakBalance adds value to the "peak_balance" field.
+func (_u *ProviderBalancesUpdate) AddPeakBalance(v decimal.Decimal) *ProviderBalancesUpdate {
+	_u.mutation.AddPeakBalance(v)
+	return _u
+}
+
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (_u *ProviderBalancesUpdate) SetProviderID(id string) *ProviderBalancesUpdate {
 	_u.mutation.SetProviderID(id)
@@ -267,6 +288,12 @@ func (_u *ProviderBalancesUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerbalances.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.PeakBalance(); ok {
+		_spec.SetField(providerbalances.FieldPeakBalance, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedPeakBalance(); ok {
+		_spec.AddField(providerbalances.FieldPeakBalance, field.TypeFloat64, value)
 	}
 	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -458,6 +485,27 @@ func (_u *ProviderBalancesUpdateOne) SetUpdatedAt(v time.Time) *ProviderBalances
 	return _u
 }
 
+// SetPeakBalance sets the "peak_balance" field.
+func (_u *ProviderBalancesUpdateOne) SetPeakBalance(v decimal.Decimal) *ProviderBalancesUpdateOne {
+	_u.mutation.ResetPeakBalance()
+	_u.mutation.SetPeakBalance(v)
+	return _u
+}
+
+// SetNillablePeakBalance sets the "peak_balance" field if the given value is not nil.
+func (_u *ProviderBalancesUpdateOne) SetNillablePeakBalance(v *decimal.Decimal) *ProviderBalancesUpdateOne {
+	if v != nil {
+		_u.SetPeakBalance(*v)
+	}
+	return _u
+}
+
+// AddPeakBalance adds value to the "peak_balance" field.
+func (_u *ProviderBalancesUpdateOne) AddPeakBalance(v decimal.Decimal) *ProviderBalancesUpdateOne {
+	_u.mutation.AddPeakBalance(v)
+	return _u
+}
+
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (_u *ProviderBalancesUpdateOne) SetProviderID(id string) *ProviderBalancesUpdateOne {
 	_u.mutation.SetProviderID(id)
@@ -639,6 +687,12 @@ func (_u *ProviderBalancesUpdateOne) sqlSave(ctx context.Context) (_node *Provid
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerbalances.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.PeakBalance(); ok {
+		_spec.SetField(providerbalances.FieldPeakBalance, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedPeakBalance(); ok {
+		_spec.AddField(providerbalances.FieldPeakBalance, field.TypeFloat64, value)
 	}
 	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{

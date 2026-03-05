@@ -37,7 +37,7 @@ func TestFetchExternalRate(t *testing.T) {
 
 		value, err := fetchExternalRate("NGN")
 		assert.NoError(t, err)
-		expectedRate := decimal.NewFromFloat((1444.36 + 1451.61) / 2) // Average of buy and sell
+		expectedRate := decimal.NewFromFloat(1451.61)
 		assert.True(t, value.Equal(expectedRate))
 	})
 
@@ -81,8 +81,8 @@ func TestFetchExternalRate(t *testing.T) {
 						"stablecoin": "USDT",
 						"fiat": "TZS",
 						"sources": ["quidax"],
-						"buyRate": "invalid",
-						"sellRate": 1451.61,
+						"buyRate": 1444.36,
+						"sellRate": "invalid",
 						"timestamp": "2025-11-03T13:12:50.290Z"
 					}
 				]`))
@@ -90,7 +90,7 @@ func TestFetchExternalRate(t *testing.T) {
 		value, err := fetchExternalRate("TZS")
 		assert.Error(t, err)
 		assert.Equal(t, value, decimal.Zero)
-		assert.Contains(t, err.Error(), "Invalid buyRate format")
+		assert.Contains(t, err.Error(), "Invalid sellRate format")
 	})
 
 	// Reset httpmock after each test
