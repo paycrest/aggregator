@@ -78,7 +78,7 @@ func (s *SendGridProvider) SendTemplateEmail(ctx context.Context, payload types.
 	}
 
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%s", s.config.EmailDomain)).
-		Config().SetTimeout(30*time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 		Auth().BearerToken(s.config.EmailAPIKey).
 		Header().Add("Content-Type", "application/json").
 		Build().POST("/v3/mail/send").
@@ -89,15 +89,15 @@ func (s *SendGridProvider) SendTemplateEmail(ctx context.Context, payload types.
 		return types.SendEmailResponse{}, fmt.Errorf("sendgrid template send error: %w", err)
 	}
 
-	_, err = utils.ParseJSONResponse(res.RawResponse)
+	_, err = utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		logger.Errorf("Failed to decode SendGrid response: %v", err)
 		return types.SendEmailResponse{}, fmt.Errorf("sendgrid response parse error: %w", err)
 	}
 
 	return types.SendEmailResponse{
-		Response: res.RawResponse.Header.Get("X-Message-Id"),
-		Id:       res.RawResponse.Header.Get("X-Message-Id"),
+		Response: res.Raw().Header.Get("X-Message-Id"),
+		Id:       res.Raw().Header.Get("X-Message-Id"),
 	}, nil
 }
 

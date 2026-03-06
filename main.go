@@ -70,7 +70,7 @@ func main() {
 		logger.Errorf("Failed to create gateway webhooks: %v", err)
 	}
 
-	// Subscribe to Redis keyspace events
+	// Subscribe to Redis keyspace events (defer shutdown so subscription and goroutine exit on process exit)
 	cancelRedisSubscription := tasks.SubscribeToRedisKeyspaceEvents()
 	defer cancelRedisSubscription()
 

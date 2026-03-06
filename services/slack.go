@@ -1,8 +1,6 @@
 package services
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +8,7 @@ import (
 	"time"
 
 	"github.com/paycrest/aggregator/ent"
+	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
@@ -24,19 +23,23 @@ func NewSlackService(webhookURL string) *SlackService {
 	}
 }
 
-// postSlackJSON sends a POST request to Slack with the given payload using a shared HTTP client
+// postSlackJSON sends a POST request to Slack with the given payload using fastshot with the shared HTTP transport
 // and a per-request timeout to prevent indefinite hangs
 func (s *SlackService) postSlackJSON(payload []byte) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	var body map[string]interface{}
+	if err := json.Unmarshal(payload, &body); err != nil {
+		return nil, err
+	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.SlackWebhookURL, bytes.NewBuffer(payload))
+	res, err := fastshot.NewClient(s.SlackWebhookURL).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(10 * time.Second).
+		Build().POST("").
+		Header().Add("Content-Type", "application/json").
+		Body().AsJSON(body).Send()
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-
-	return utils.GetHTTPClient().Do(req)
+	return res.Raw(), nil
 }
 
 // SendUserSignupNotification sends a Slack notification when a new user signs up

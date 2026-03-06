@@ -197,7 +197,7 @@ func TaskIndexBlockchainEvents() error {
 // GetTronLatestBlock fetches the latest block (timestamp in milliseconds) for Tron
 func GetTronLatestBlock(endpoint string) (int64, error) {
 	res, err := fastshot.NewClient(endpoint).
-		Config().SetTimeout(15 * time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(15 * time.Second).
 		Build().POST("/wallet/getblockbylatestnum").
 		Body().AsJSON(map[string]interface{}{
 		"num": 1,
@@ -207,7 +207,7 @@ func GetTronLatestBlock(endpoint string) (int64, error) {
 		return 0, fmt.Errorf("failed to get latest block: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -233,7 +233,10 @@ func ResolvePaymentOrderMishaps() error {
 		return fmt.Errorf("ResolvePaymentOrderMishaps.fetchNetworks: %w", err)
 	}
 
-	// Process each network in parallel (EVM and Starknet)
+	runCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	var wg sync.WaitGroup
 	for i, network := range networks {
 		// Skip Tron networks
 		if strings.HasPrefix(network.Identifier, "tron") {
@@ -246,14 +249,14 @@ func ResolvePaymentOrderMishaps() error {
 			time.Sleep(500 * time.Millisecond)
 		}
 
+		wg.Add(1)
 		go func(network *ent.Network) {
-			ctx := context.Background()
-
-			// Only resolve missed Transfer and OrderCreated events
-			resolveMissedEvents(ctx, network)
+			defer wg.Done()
+			resolveMissedEvents(runCtx, network)
 		}(network)
 	}
 
+	wg.Wait()
 	return nil
 }
 
@@ -405,13 +408,19 @@ func ProcessStuckValidatedOrders() error {
 		return fmt.Errorf("ProcessStuckValidatedOrders.getNetworks: %w", err)
 	}
 
+	runCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	var wg sync.WaitGroup
 	for i, network := range networks {
 		// Add a small delay between starting goroutines to prevent overwhelming Etherscan
 		if i > 0 {
 			time.Sleep(100 * time.Millisecond)
 		}
 
-		go func(network *ent.Network) {
+		wg.Add(1)
+		go func(runCtx context.Context, network *ent.Network) {
+			defer wg.Done()
 			// Get stuck validated orders for this network
 			lockOrders, err := storage.Client.PaymentOrder.
 				Query().
@@ -432,7 +441,7 @@ func ProcessStuckValidatedOrders() error {
 				WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
 					pb.WithCurrency()
 				}).
-				All(ctx)
+				All(runCtx)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":             fmt.Sprintf("%v", err),
@@ -477,7 +486,7 @@ func ProcessStuckValidatedOrders() error {
 			// Process each stuck order
 			for _, order := range lockOrders {
 				// Get provider address for this order
-				providerAddress, err := common.GetProviderAddressFromOrder(ctx, order)
+				providerAddress, err := common.GetProviderAddressFromOrder(runCtx, order)
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),
@@ -488,7 +497,7 @@ func ProcessStuckValidatedOrders() error {
 				}
 
 				// Index provider address for OrderSettled events
-				_, err = indexerInstance.IndexProviderAddress(ctx, network, providerAddress, 0, 0, "")
+				_, err = indexerInstance.IndexProviderAddress(runCtx, network, providerAddress, 0, 0, "")
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),
@@ -505,8 +514,9 @@ func ProcessStuckValidatedOrders() error {
 					"NetworkIdentifier": network.Identifier,
 				}).Infof("Successfully indexed provider address for stuck order")
 			}
-		}(network)
+		}(runCtx, network)
 	}
 
+	wg.Wait()
 	return nil
 }

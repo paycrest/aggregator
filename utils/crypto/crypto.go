@@ -315,14 +315,20 @@ func decryptHybridJSON(encrypted []byte, privateKeyPEM string) (interface{}, err
 		return nil, fmt.Errorf("invalid encrypted data")
 	}
 
-	// Extract encrypted key
+	// Extract encrypted key length; use uint64 to avoid overflow when adding to 4
 	keyLen := binary.BigEndian.Uint32(encrypted[0:4])
-	if len(encrypted) < int(4+keyLen) {
+	totalKeyEnd := uint64(4) + uint64(keyLen)
+	if totalKeyEnd > uint64(len(encrypted)) {
 		return nil, fmt.Errorf("invalid encrypted data length")
 	}
+	// Ensure we can safely cast to int for slicing (e.g. on 32-bit)
+	if totalKeyEnd > (1<<31)-1 {
+		return nil, fmt.Errorf("invalid encrypted data: key length too large")
+	}
 
-	encryptedKey := encrypted[4 : 4+keyLen]
-	aesCiphertext := encrypted[4+keyLen:]
+	keyEnd := int(totalKeyEnd)
+	encryptedKey := encrypted[4:keyEnd]
+	aesCiphertext := encrypted[keyEnd:]
 
 	// Decrypt AES key with RSA
 	aesKey, err := PublicKeyDecryptPlain(encryptedKey, privateKeyPEM)
@@ -487,9 +493,8 @@ func GetOrderRecipientFromMessageHash(messageHash string) (*types.PaymentOrderRe
 	}
 
 	var recipient *types.PaymentOrderRecipient
-	err = json.Unmarshal(messageBytes, &recipient)
-	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+	if err = json.Unmarshal(messageBytes, &recipient); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal recipient: %w", err)
 	}
 	return recipient, nil
 }

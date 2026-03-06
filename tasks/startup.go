@@ -10,8 +10,10 @@ import (
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
-// SubscribeToRedisKeyspaceEvents subscribes to redis keyspace events according to redis.conf settings
-func SubscribeToRedisKeyspaceEvents() context.CancelFunc {
+// SubscribeToRedisKeyspaceEvents subscribes to redis keyspace events according to redis.conf settings.
+// It returns a shutdown function that cancels the context and closes the subscription so the
+// ReassignStaleOrderRequest goroutine can exit promptly on application shutdown.
+func SubscribeToRedisKeyspaceEvents() func() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Handle expired or deleted order request key events
@@ -23,15 +25,15 @@ func SubscribeToRedisKeyspaceEvents() context.CancelFunc {
 	orderRequestChan := orderRequest.Channel()
 
 	go func() {
-		defer func() {
-			if err := orderRequest.Close(); err != nil {
-				logger.Errorf("Error closing Redis subscription: %v", err)
-			}
-		}()
 		ReassignStaleOrderRequest(ctx, orderRequestChan)
 	}()
 
-	return cancel
+	return func() {
+		cancel()
+		if err := orderRequest.Close(); err != nil {
+			logger.Errorf("SubscribeToRedisKeyspaceEvents: error closing Redis subscription: %v", err)
+		}
+	}
 }
 
 // StartCronJobs starts cron jobs

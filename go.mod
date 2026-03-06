@@ -1,6 +1,6 @@
 module github.com/paycrest/aggregator
 
-go 1.25.0
+go 1.25.7
 
 require (
 	github.com/JGLTechnologies/gin-rate-limit v1.5.4
@@ -17,7 +17,7 @@ require (
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/mailgun/mailgun-go/v3 v3.6.4
 	github.com/mattn/go-sqlite3 v1.14.17
-	github.com/opus-domini/fast-shot v0.10.0
+	github.com/opus-domini/fast-shot v1.3.1
 	github.com/paycrest/tron-wallet v1.0.13
 	github.com/redis/go-redis/v9 v9.1.0
 	github.com/sendgrid/sendgrid-go v3.14.0+incompatible

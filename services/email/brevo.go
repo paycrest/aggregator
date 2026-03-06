@@ -78,7 +78,7 @@ func (b *BrevoProvider) SendTemplateEmail(ctx context.Context, payload types.Sen
 // sendBrevoRequest sends a request to Brevo API
 func (b *BrevoProvider) sendBrevoRequest(ctx context.Context, reqBody map[string]interface{}) (types.SendEmailResponse, error) {
 	res, err := fastshot.NewClient(fmt.Sprintf("https://%s", b.config.EmailDomain)).
-		Config().SetTimeout(30*time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 		Header().Add("Content-Type", "application/json").
 		Header().Add("api-key", b.config.EmailAPIKey).
 		Build().POST("/v3/smtp/email").
@@ -89,13 +89,13 @@ func (b *BrevoProvider) sendBrevoRequest(ctx context.Context, reqBody map[string
 		return types.SendEmailResponse{}, fmt.Errorf("brevo request error: %w", err)
 	}
 
-	if res.RawResponse.StatusCode >= 400 {
-		logger.Errorf("Brevo API error: %d", res.RawResponse.StatusCode)
-		return types.SendEmailResponse{}, fmt.Errorf("brevo API error: %d", res.RawResponse.StatusCode)
+	if res.Raw().StatusCode >= 400 {
+		logger.Errorf("Brevo API error: %d", res.Raw().StatusCode)
+		return types.SendEmailResponse{}, fmt.Errorf("brevo API error: %d", res.Raw().StatusCode)
 	}
 
 	// Parse response body to extract message ID
-	responseBody, err := utils.ParseJSONResponse(res.RawResponse)
+	responseBody, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		logger.Errorf("Failed to decode Brevo response: %v", err)
 		return types.SendEmailResponse{}, fmt.Errorf("brevo response parse error: %w", err)

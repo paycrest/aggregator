@@ -192,7 +192,7 @@ func SyncPaymentOrderFulfillments() {
 
 			// Send POST request to the provider's node
 			res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-				Config().SetTimeout(10*time.Second).
+				Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(10*time.Second).
 				Header().Add("X-Request-Signature", signature).
 				Build().POST("/tx_status").
 				Body().AsJSON(payload).
@@ -224,7 +224,7 @@ func SyncPaymentOrderFulfillments() {
 				continue
 			}
 
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			data, err := utils.ParseJSONResponse(res.Raw())
 			if err != nil {
 				// Instead of deleting the order, log the error and skip processing
 				// The order will be retried in the next sync cycle or can be manually investigated
@@ -369,7 +369,7 @@ func SyncPaymentOrderFulfillments() {
 
 					// Send POST request to the provider's node
 					res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-						Config().SetTimeout(30*time.Second).
+						Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 						Header().Add("X-Request-Signature", signature).
 						Build().POST("/tx_status").
 						Body().AsJSON(payload).
@@ -378,10 +378,10 @@ func SyncPaymentOrderFulfillments() {
 						continue
 					}
 
-					data, err := utils.ParseJSONResponse(res.RawResponse)
+					data, err := utils.ParseJSONResponse(res.Raw())
 					if err != nil {
 						// Check if it's a 400 error and fulfillment is older than 5 minutes
-						if res.RawResponse.StatusCode == 400 {
+						if res.Raw().StatusCode == 400 {
 							if time.Since(fulfillment.CreatedAt) > 5*time.Minute {
 								// Mark fulfillment as failed
 								_, updateErr := storage.Client.PaymentOrderFulfillment.
@@ -564,13 +564,13 @@ func RetryFailedWebhookNotifications() error {
 	for _, attempt := range attempts {
 		// Send the webhook notification with per-request timeout
 		body, err := fastshot.NewClient(attempt.WebhookURL).
-			Config().SetTimeout(30*time.Second).
+			Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 			Header().Add("X-Paycrest-Signature", attempt.Signature).
 			Build().POST("").
 			Body().AsJSON(attempt.Payload).
 			Send()
 
-		if err != nil || (body.StatusCode() >= 205) {
+		if err != nil || (body.Raw() != nil && body.Raw().StatusCode >= 205) {
 			// Webhook notification failed - use per-operation timeouts to prevent deadline exceeded errors
 			attemptNumber := attempt.AttemptNumber + 1
 			delay := baseDelay * time.Duration(math.Pow(2, float64(attemptNumber-1)))
@@ -586,34 +586,58 @@ func RetryFailedWebhookNotifications() error {
 			// Set status to expired if cumulative time is greater than 24 hours
 			if nextRetryTime.Sub(attempt.CreatedAt.Add(-baseDelay)) > maxCumulativeTime {
 				attemptUpdate.SetStatus(webhookretryattempt.StatusExpired)
-				uid, err := uuid.Parse(attempt.Payload["data"].(map[string]interface{})["senderId"].(string))
-				if err != nil {
-					return fmt.Errorf("RetryFailedWebhookNotifications.FailedExtraction: %w", err)
-				}
 
-				// Use separate context for SenderProfile fetch to avoid deadline pressure
-				profileCtx, profileCancel := context.WithTimeout(context.Background(), 10*time.Second)
-				profile, err := storage.Client.SenderProfile.
-					Query().
-					Where(
-						senderprofile.IDEQ(uid),
-					).
-					WithUser().
-					Only(profileCtx)
-				profileCancel()
+				// Safe payload extraction to avoid panic on bad or corrupted data; log and continue on error so batch is not aborted
+				data, ok := attempt.Payload["data"].(map[string]interface{})
+				if !ok {
+					logger.WithFields(logger.Fields{
+						"AttemptID": attempt.ID,
+						"Payload":   attempt.Payload,
+					}).Errorf("RetryFailedWebhookNotifications: invalid payload structure, missing 'data'")
+					// Fall through to save expired status
+				} else {
+					senderIDStr, ok := data["senderId"].(string)
+					if !ok {
+						logger.WithFields(logger.Fields{
+							"AttemptID": attempt.ID,
+							"Payload":   attempt.Payload,
+						}).Errorf("RetryFailedWebhookNotifications: invalid payload structure, missing 'senderId'")
+					} else if uid, parseErr := uuid.Parse(senderIDStr); parseErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":     fmt.Sprintf("%v", parseErr),
+							"AttemptID": attempt.ID,
+						}).Errorf("RetryFailedWebhookNotifications.FailedExtraction")
+					} else {
+						// Use separate context for SenderProfile fetch to avoid deadline pressure
+						profileCtx, profileCancel := context.WithTimeout(context.Background(), 10*time.Second)
+						profile, profileErr := storage.Client.SenderProfile.
+							Query().
+							Where(senderprofile.IDEQ(uid)).
+							WithUser().
+							Only(profileCtx)
+						profileCancel()
 
-				if err != nil {
-					return fmt.Errorf("RetryFailedWebhookNotifications.CouldNotFetchProfile: %w", err)
-				}
-
-				// Use separate context for email send to avoid deadline pressure
-				emailCtx, emailCancel := context.WithTimeout(context.Background(), 15*time.Second)
-				emailService := email.NewEmailServiceWithProviders()
-				_, err = emailService.SendWebhookFailureEmail(emailCtx, profile.Edges.User.Email, profile.Edges.User.FirstName)
-				emailCancel()
-
-				if err != nil {
-					return fmt.Errorf("RetryFailedWebhookNotifications.SendWebhookFailureEmail: %w", err)
+						if profileErr != nil {
+							logger.WithFields(logger.Fields{
+								"Error":     fmt.Sprintf("%v", profileErr),
+								"AttemptID": attempt.ID,
+							}).Errorf("RetryFailedWebhookNotifications.CouldNotFetchProfile")
+						} else if profile == nil || profile.Edges.User == nil {
+							logger.WithFields(logger.Fields{"AttemptID": attempt.ID}).Errorf("RetryFailedWebhookNotifications: profile or user missing")
+						} else {
+							emailCtx, emailCancel := context.WithTimeout(context.Background(), 15*time.Second)
+							emailService := email.NewEmailServiceWithProviders()
+							_, emailErr := emailService.SendWebhookFailureEmail(emailCtx, profile.Edges.User.Email, profile.Edges.User.FirstName)
+							emailCancel()
+							if emailErr != nil {
+								logger.WithFields(logger.Fields{
+									"Error":     fmt.Sprintf("%v", emailErr),
+									"AttemptID": attempt.ID,
+								}).Errorf("RetryFailedWebhookNotifications.SendWebhookFailureEmail")
+								// Still save expired status below
+							}
+						}
+					}
 				}
 			}
 

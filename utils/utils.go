@@ -357,7 +357,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 
 	// Send the webhook
 	_, err = fastshot.NewClient(profile.WebhookURL).
-		Config().SetTimeout(30*time.Second).
+		Config().SetCustomTransport(GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 		Header().Add("X-Paycrest-Signature", signature).
 		Header().Add("Content-Type", "application/json").
 		Build().POST("").
@@ -505,11 +505,11 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 
 	// Create HTTP client and make request
 	client := fastshot.NewClient(provider.HostIdentifier).
-		Config().SetTimeout(30*time.Second).
+		Config().SetCustomTransport(GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 		Header().Add("X-Request-Signature", signature).
 		Build()
 
-	var res fastshot.Response
+	var res *fastshot.Response
 	var reqErr error
 
 	switch method {
@@ -528,9 +528,12 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 	if reqErr != nil {
 		return nil, fmt.Errorf("failed to make HTTP request: %v", reqErr)
 	}
+	if res == nil {
+		return nil, fmt.Errorf("empty response from provider")
+	}
 
 	// Parse JSON response
-	data, err := ParseJSONResponse(res.RawResponse)
+	data, err := ParseJSONResponse(res.Raw())
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),

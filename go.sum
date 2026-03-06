@@ -350,8 +350,8 @@ github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7J
 github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
 github.com/opentracing/opentracing-go v1.1.0 h1:pWlfV3Bxv7k65HYwkikxat0+s3pV4bsqf19k25Ur8rU=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
-github.com/opus-domini/fast-shot v0.10.0 h1:zWbPy6KJZvNs0pUa0erF9TyeDsLZHDVZf4oDHOd6JGY=
-github.com/opus-domini/fast-shot v0.10.0/go.mod h1:sg5+f0VviAIIdrv24WLHL6kV7kWs4PsVDbSkr2TPYWw=
+github.com/opus-domini/fast-shot v1.3.1 h1:v1nPiIlTrzGgsostQcgqiVZbNH+8lj2HbdMNHJBZlD8=
+github.com/opus-domini/fast-shot v1.3.1/go.mod h1:/CNA+pRwIK1Inhee8S86aslOwsVn4dke+cingSxOgYw=
 github.com/paycrest/tron-wallet v1.0.13 h1:TEkjovg6i2zBTZFMfYpBrwswwnYAy6Q/Vc6g12PZh54=
 github.com/paycrest/tron-wallet v1.0.13/go.mod h1:JPfh2DaXK9/AoP6jFG4YQ4BmrvFcu7I+T7E9feB3Hgg=
 github.com/pelletier/go-toml/v2 v2.2.4 h1:mye9XuhQ6gvn5h28+VilKrrPoQVanw5PMw/TB0t5Ec4=
