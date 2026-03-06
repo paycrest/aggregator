@@ -22,13 +22,16 @@ func GetHTTPClient() *http.Client {
 	once.Do(func() {
 		// Clone the default transport to preserve default behaviors
 		// (proxy, TLS, dial context, etc.) when available in production.
-		// Use a safe type assertion to handle mocked transports in tests.
-		var transport *http.Transport
+		// IMPORTANT for tests:
+		// - httpmock.Activate() replaces http.DefaultTransport with its own RoundTripper.
+		// - In that case http.DefaultTransport is NOT a *http.Transport.
+		//   We MUST use http.DefaultTransport directly so httpmock can intercept all calls.
+		var rt http.RoundTripper
 
 		if defaultTransport, ok := http.DefaultTransport.(*http.Transport); ok {
 			// Copy critical fields to maintain forward compatibility
 			// and reduce coupling to http.Transport implementation details
-			transport = &http.Transport{
+			rt = &http.Transport{
 				Proxy:                 defaultTransport.Proxy,
 				DialContext:           defaultTransport.DialContext,
 				Dial:                  defaultTransport.Dial,
@@ -41,16 +44,12 @@ func GetHTTPClient() *http.Client {
 				IdleConnTimeout:       90 * time.Second,
 			}
 		} else {
-			// Fallback for mocked or wrapped transports in tests.
-			// Preserves connection pooling without assuming default transport type.
-			transport = &http.Transport{
-				MaxIdleConns:        100,
-				MaxIdleConnsPerHost: 10,
-				IdleConnTimeout:     90 * time.Second,
-			}
+			// Fallback for mocked or wrapped transports (e.g. httpmock).
+			// Use http.DefaultTransport directly so any global HTTP mocks still apply.
+			rt = http.DefaultTransport
 		}
 		httpClient = &http.Client{
-			Transport: transport,
+			Transport: rt,
 			Timeout:   30 * time.Second,
 		}
 	})
