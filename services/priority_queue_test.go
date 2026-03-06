@@ -593,10 +593,26 @@ func TestPriorityQueueTest(t *testing.T) {
 		viper.Set("FALLBACK_PROVIDER_ID", "")
 		defer viper.Set("FALLBACK_PROVIDER_ID", oldFallback)
 
-		err = service.ProcessBucketQueues()
+		ctx := context.Background()
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+		// Clear Redis key and aux keys so ProcessBucketQueues starts from a clean state (no leftover from TestCreatePriorityQueueForBucket or concurrent goroutines).
+		for _, k := range []string{redisKey, redisKey + "_temp", redisKey + "_prev"} {
+			_ = db.RedisClient.Del(ctx, k).Err()
+		}
+		// Only one bucket should use this redis key so the queue has deterministic length (1 provider, 1 token).
+		// Delete any other provision bucket with same currency+min+max so we don't race with multiple CreatePriorityQueueForBucket goroutines.
+		_, err = db.Client.ProvisionBucket.Delete().
+			Where(
+				provisionbucket.MinAmountEQ(testCtxForPQ.minAmount),
+				provisionbucket.MaxAmountEQ(testCtxForPQ.maxAmount),
+				provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(testCtxForPQ.currency.ID)),
+				provisionbucket.IDNEQ(testCtxForPQ.bucket.ID),
+			).
+			Exec(ctx)
 		assert.NoError(t, err)
 
-		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+		err = service.ProcessBucketQueues()
+		assert.NoError(t, err)
 
 		// ProcessBucketQueues launches goroutines; wait until the queue is populated.
 		assert.Eventually(t, func() bool {

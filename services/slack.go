@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -27,15 +28,25 @@ func NewSlackService(webhookURL string) *SlackService {
 // postSlackJSON sends a POST request to the exact Slack webhook URL using the shared HTTP client.
 // Uses net/http directly so the full URL (including path) is used; some client libs strip the path when given as base URL.
 // Uses a 10s per-request timeout to prevent indefinite hangs.
-func (s *SlackService) postSlackJSON(payload []byte) (*http.Response, error) {
+// Drains and closes the response body before returning so the request context can be cancelled without
+// forcing the underlying connection to be discarded; the connection is returned to the shared pool.
+func (s *SlackService) postSlackJSON(payload []byte) (statusCode int, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.SlackWebhookURL, bytes.NewReader(payload))
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	return utils.GetHTTPClient().Do(req)
+	resp, err := utils.GetHTTPClient().Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+	return resp.StatusCode, nil
 }
 
 // SendUserSignupNotification sends a Slack notification when a new user signs up
@@ -118,16 +129,13 @@ func (s *SlackService) SendUserSignupNotification(user *ent.User, scopes []strin
 		return err
 	}
 
-	resp, err := s.postSlackJSON(jsonPayload)
+	statusCode, err := s.postSlackJSON(jsonPayload)
 	if err != nil {
 		logger.Errorf("Failed to send Slack notification: %v", err)
 		return err
 	}
-	defer resp.Body.Close()
-
-	// Return error if notification fails, allowing caller to handle it
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("slack notification failed with status: %d", resp.StatusCode)
+	if statusCode != http.StatusOK {
+		return fmt.Errorf("slack notification failed with status: %d", statusCode)
 	}
 
 	return nil
@@ -173,16 +181,14 @@ func (s *SlackService) SendActionFeedbackNotification(firstName, email, submissi
 		return fmt.Errorf("failed to marshal payload: %v", err)
 	}
 
-	resp, err := s.postSlackJSON(jsonPayload)
+	statusCode, err := s.postSlackJSON(jsonPayload)
 	if err != nil {
 		logger.Errorf("Failed to send Slack feedback notification: %v", err)
 		return fmt.Errorf("failed to send notification: %v", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		logger.Errorf("Slack feedback notification failed with status: %d", resp.StatusCode)
-		return fmt.Errorf("notification failed with status: %d", resp.StatusCode)
+	if statusCode != http.StatusOK {
+		logger.Errorf("Slack feedback notification failed with status: %d", statusCode)
+		return fmt.Errorf("notification failed with status: %d", statusCode)
 	}
 	return nil
 }
@@ -258,16 +264,14 @@ func (s *SlackService) SendSubmissionNotification(firstName, email, submissionID
 		return fmt.Errorf("failed to marshal payload: %v", err)
 	}
 
-	resp, err := s.postSlackJSON(jsonPayload)
+	statusCode, err := s.postSlackJSON(jsonPayload)
 	if err != nil {
 		logger.Errorf("Failed to send Slack notification: %v", err)
 		return fmt.Errorf("failed to send Slack notification: %v", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		logger.Errorf("Slack notification failed with status: %d", resp.StatusCode)
-		return fmt.Errorf("slack notification failed with status: %d", resp.StatusCode)
+	if statusCode != http.StatusOK {
+		logger.Errorf("Slack notification failed with status: %d", statusCode)
+		return fmt.Errorf("slack notification failed with status: %d", statusCode)
 	}
 	return nil
 }
