@@ -359,6 +359,13 @@ func TestIndex(t *testing.T) {
 	})
 
 	t.Run("HandleKYBSubmission", func(t *testing.T) {
+		// Mock Slack webhook so handler doesn't fail when SLACK_WEBHOOK_URL is set (e.g. in CI)
+		httpmock.Activate()
+		defer httpmock.DeactivateAndReset()
+		if webhookURL := config.ServerConfig().SlackWebhookURL; webhookURL != "" {
+			httpmock.RegisterResponder("POST", webhookURL, httpmock.NewStringResponder(http.StatusOK, "ok"))
+		}
+
 		// Create a test user first
 		testUser, err := test.CreateTestUser(map[string]interface{}{
 			"firstName": "Test",
