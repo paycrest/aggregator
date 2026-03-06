@@ -18,35 +18,38 @@ var (
 // - MaxIdleConnsPerHost: 10 (max idle connections per host)
 // - IdleConnTimeout: 90 seconds (connections are closed after 90 seconds of inactivity)
 // Preserves default transport behaviors such as proxy handling and TLS settings.
+//
+// When http.DefaultTransport is not a *http.Transport (e.g. httpmock is active), the client
+// is not cached: each call returns a new client using the current DefaultTransport. That way
+// tests can activate/deactivate httpmock and the next GetHTTPClient() always uses the current
+// transport, avoiding a stale or defunct transport after httpmock.Deactivate().
 func GetHTTPClient() *http.Client {
+	if _, ok := http.DefaultTransport.(*http.Transport); !ok {
+		return &http.Client{
+			Transport: http.DefaultTransport,
+			Timeout:   30 * time.Second,
+		}
+	}
 	once.Do(func() {
+		defaultTransport := http.DefaultTransport.(*http.Transport)
 		// Clone the default transport to preserve default behaviors
 		// (proxy, TLS, dial context, etc.) when available in production.
-		// IMPORTANT for tests:
-		// - httpmock.Activate() replaces http.DefaultTransport with its own RoundTripper.
-		// - In that case http.DefaultTransport is NOT a *http.Transport.
-		//   We MUST use http.DefaultTransport directly so httpmock can intercept all calls.
-		var rt http.RoundTripper
-
-		if defaultTransport, ok := http.DefaultTransport.(*http.Transport); ok {
-			// Copy critical fields to maintain forward compatibility
-			// and reduce coupling to http.Transport implementation details
-			rt = &http.Transport{
-				Proxy:                 defaultTransport.Proxy,
-				DialContext:           defaultTransport.DialContext,
-				Dial:                  defaultTransport.Dial,
-				TLSClientConfig:       defaultTransport.TLSClientConfig,
-				TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
-				DisableKeepAlives:     defaultTransport.DisableKeepAlives,
-				DisableCompression:    defaultTransport.DisableCompression,
-				MaxIdleConns:          100,
-				MaxIdleConnsPerHost:   10,
-				IdleConnTimeout:       90 * time.Second,
-			}
-		} else {
-			// Fallback for mocked or wrapped transports (e.g. httpmock).
-			// Use http.DefaultTransport directly so any global HTTP mocks still apply.
-			rt = http.DefaultTransport
+		// Copy critical fields to maintain forward compatibility
+		// and reduce coupling to http.Transport implementation details.
+		// ForceAttemptHTTP2 and ExpectContinueTimeout must be copied so HTTP/2
+		// and 100-Continue behavior match the default transport.
+		rt := &http.Transport{
+			Proxy:                 defaultTransport.Proxy,
+			DialContext:           defaultTransport.DialContext,
+			TLSClientConfig:       defaultTransport.TLSClientConfig,
+			TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
+			DisableKeepAlives:     defaultTransport.DisableKeepAlives,
+			DisableCompression:    defaultTransport.DisableCompression,
+			ForceAttemptHTTP2:     defaultTransport.ForceAttemptHTTP2,
+			ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
+			MaxIdleConns:          100,
+			MaxIdleConnsPerHost:   10,
+			IdleConnTimeout:       90 * time.Second,
 		}
 		httpClient = &http.Client{
 			Transport: rt,
