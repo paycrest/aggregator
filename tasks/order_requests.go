@@ -135,217 +135,248 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 	}
 }
 
+const orderRequestKeyPrefix = "order_request_"
+
 // ReassignStaleOrderRequest reassigns expired order requests to providers
 func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *redis.Message) {
-	for msg := range orderRequestChan {
-		isDelEvent := strings.Contains(msg.Channel, ":del:")
+	priorityQueueSvc := services.NewPriorityQueueService()
+	balanceSvc := balance.New()
 
-		key := strings.Split(msg.Payload, "_")
-		orderID := key[len(key)-1]
-
-		orderUUID, err := uuid.Parse(orderID)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":   fmt.Sprintf("%v", err),
-				"OrderID": orderID,
-			}).Errorf("ReassignStaleOrderRequest: Failed to parse order ID")
-			continue
-		}
-
-		// If this is a DEL event (e.g. provider accept/decline), wait briefly for any concurrent DB update
-		// (AcceptOrder updates order status in a separate transaction after deleting the Redis key).
-		if isDelEvent {
-			shouldSkip := false
-			for i := 0; i < 3; i++ {
-				currentOrder, err := storage.Client.PaymentOrder.Get(ctx, orderUUID)
-				if err == nil && currentOrder != nil && currentOrder.Status != paymentorder.StatusPending {
-					shouldSkip = true
-					break
-				}
-				time.Sleep(250 * time.Millisecond)
+	for {
+		select {
+		case msg, ok := <-orderRequestChan:
+			if !ok {
+				// Channel closed, exit gracefully
+				return
 			}
-			if shouldSkip {
+
+			isDelEvent := strings.Contains(msg.Channel, ":del:")
+
+			if !strings.HasPrefix(msg.Payload, orderRequestKeyPrefix) {
+				logger.WithFields(logger.Fields{"Payload": msg.Payload}).Warnf("ReassignStaleOrderRequest: unexpected payload format, skipping")
 				continue
 			}
-		}
+			orderID := strings.TrimPrefix(msg.Payload, orderRequestKeyPrefix)
 
-		// Get the order from the database
-		order, err := storage.Client.PaymentOrder.
-			Query().
-			Where(
-				paymentorder.IDEQ(orderUUID),
-			).
-			WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-				pbq.WithCurrency()
-			}).
-			WithProvider().
-			WithToken(func(tq *ent.TokenQuery) {
-				tq.WithNetwork()
-			}).
-			Only(ctx)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":   fmt.Sprintf("%v", err),
-				"OrderID": orderUUID.String(),
-				"UUID":    orderUUID,
-			}).Errorf("ReassignStaleOrderRequest: Failed to get order from database")
-			continue
-		}
-
-		// Best-effort: release reserved balance for the provider that was previously notified.
-		// Run before any "skip reassignment" checks so we release even when skipping (e.g. FallbackTriedAt
-		// or non-pending status), preventing reserved balance from staying stuck.
-		// For regular (public) assignments, the provider isn't persisted on the order until AcceptOrder,
-		// so we rely on order_request_meta_* as the source of truth.
-		metaKey := fmt.Sprintf("order_request_meta_%s", order.ID)
-		meta, metaErr := storage.RedisClient.HGetAll(ctx, metaKey).Result()
-		if metaErr == nil && len(meta) > 0 {
-			metaProviderID := meta["providerId"]
-			metaCurrency := meta["currency"]
-			metaAmountStr := meta["amount"]
-
-			// Increment exclude list for this provider (tracks retries and prevents immediate re-selection).
-			if metaProviderID != "" {
-				excludeKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
-				_, _ = storage.RedisClient.RPush(ctx, excludeKey, metaProviderID).Result()
-				_ = storage.RedisClient.ExpireAt(ctx, excludeKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
+			orderUUID, err := uuid.Parse(orderID)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":   fmt.Sprintf("%v", err),
+					"OrderID": orderID,
+				}).Errorf("ReassignStaleOrderRequest: Failed to parse order ID")
+				continue
 			}
 
-			// Release reserved amount (best effort; failures should not block reassignment).
-			if metaProviderID != "" && metaCurrency != "" && metaAmountStr != "" {
-				amountDec, err := decimal.NewFromString(metaAmountStr)
-				if err == nil {
-					balanceSvc := balance.New()
-					if relErr := balanceSvc.ReleaseFiatBalance(ctx, metaProviderID, metaCurrency, amountDec, nil); relErr != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", relErr),
-							"OrderID":    order.ID.String(),
-							"ProviderID": metaProviderID,
-							"Currency":   metaCurrency,
-							"Amount":     metaAmountStr,
-						}).Warnf("ReassignStaleOrderRequest: failed to release reserved balance (best effort)")
+			// If this is a DEL event (e.g. provider accept/decline), wait briefly for any concurrent DB update
+			// (AcceptOrder updates order status in a separate transaction after deleting the Redis key).
+			if isDelEvent {
+				shouldSkip := false
+				for i := 0; i < 3; i++ {
+					currentOrder, err := storage.Client.PaymentOrder.Get(ctx, orderUUID)
+					if err == nil && currentOrder != nil && currentOrder.Status != paymentorder.StatusPending {
+						shouldSkip = true
+						break
+					}
+					if i < 2 {
+						select {
+						case <-time.After(250 * time.Millisecond):
+						case <-ctx.Done():
+							return
+						}
 					}
 				}
-			}
-
-			// Cleanup metadata key regardless of success to avoid stale entries.
-			_, _ = storage.RedisClient.Del(ctx, metaKey).Result()
-		} else if order.Edges.Provider != nil && order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
-			// Fallback: no meta (e.g. key missing/expired) but order has provider and bucket (e.g. private/pre-set).
-			// Release so reserved balance is not left stuck.
-			currency := order.Edges.ProvisionBucket.Edges.Currency.Code
-			amount := order.Amount.Mul(order.Rate).RoundBank(0)
-			balanceSvc := balance.New()
-			if relErr := balanceSvc.ReleaseFiatBalance(ctx, order.Edges.Provider.ID, currency, amount, nil); relErr != nil {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", relErr),
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.Edges.Provider.ID,
-					"Currency":   currency,
-					"Amount":     amount.String(),
-				}).Warnf("ReassignStaleOrderRequest: failed to release reserved balance from order (best effort)")
-			}
-		}
-
-		// Defensive check: Only reassign if order is in a valid state
-		// Skip if order is already processing, fulfilled, validated, settled, or refunded
-		if order.Status != paymentorder.StatusPending {
-			logger.WithFields(logger.Fields{
-				"OrderID": order.ID.String(),
-				"Status":  order.Status,
-			}).Infof("ReassignStaleOrderRequest: Order is not in pending state, skipping reassignment")
-			continue
-		}
-
-		// If fallback was already tried, allow retry only if fallback has not exceeded ProviderMaxRetryAttempts
-		// (same as queue providers: exclude list count for fallback < N means we can retry).
-		if !order.FallbackTriedAt.IsZero() {
-			if orderConf.FallbackProviderID == "" {
-				continue
-			}
-			excludeKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
-			excludeList, listErr := storage.RedisClient.LRange(ctx, excludeKey, 0, -1).Result()
-			if listErr != nil {
-				continue
-			}
-			fallbackExcludeCount := 0
-			for _, id := range excludeList {
-				if id == orderConf.FallbackProviderID {
-					fallbackExcludeCount++
+				if shouldSkip {
+					continue
 				}
 			}
-			if fallbackExcludeCount >= orderConf.ProviderMaxRetryAttempts {
+
+			// Get the order from the database
+			order, err := storage.Client.PaymentOrder.
+				Query().
+				Where(
+					paymentorder.IDEQ(orderUUID),
+				).
+				WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
+					pbq.WithCurrency()
+				}).
+				WithProvider().
+				WithToken(func(tq *ent.TokenQuery) {
+					tq.WithNetwork()
+				}).
+				Only(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":   fmt.Sprintf("%v", err),
+					"OrderID": orderUUID.String(),
+					"UUID":    orderUUID,
+				}).Errorf("ReassignStaleOrderRequest: Failed to get order from database")
 				continue
 			}
 
-			// Clear FallbackTriedAt so TryFallbackAssignment can run again when AssignPaymentOrder is called
-			_, updErr := storage.Client.PaymentOrder.
-				Update().
-				Where(paymentorder.IDEQ(order.ID)).
-				ClearFallbackTriedAt().
-				Save(ctx)
-			if updErr != nil {
+			// Best-effort: release reserved balance for the provider that was previously notified.
+			// Run before any "skip reassignment" checks so we release even when skipping (e.g. FallbackTriedAt
+			// or non-pending status), preventing reserved balance from staying stuck.
+			// For regular (public) assignments, the provider isn't persisted on the order until AcceptOrder,
+			// so we rely on order_request_meta_* as the source of truth.
+			metaKey := fmt.Sprintf("order_request_meta_%s", order.ID)
+			meta, metaErr := storage.RedisClient.HGetAll(ctx, metaKey).Result()
+			if metaErr == nil && len(meta) > 0 {
+				metaProviderID := meta["providerId"]
+				metaCurrency := meta["currency"]
+				metaAmountStr := meta["amount"]
+
+				// Increment exclude list for this provider (tracks retries and prevents immediate re-selection).
+				if metaProviderID != "" {
+					excludeKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
+					_, _ = storage.RedisClient.RPush(ctx, excludeKey, metaProviderID).Result()
+					if expErr := storage.RedisClient.ExpireAt(ctx, excludeKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err(); expErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", expErr),
+							"OrderID":    order.ID.String(),
+							"ExcludeKey": excludeKey,
+						}).Warnf("ReassignStaleOrderRequest: failed to set TTL for order exclude list")
+					}
+				}
+
+				// Release reserved amount (best effort; failures should not block reassignment).
+				if metaProviderID != "" && metaCurrency != "" && metaAmountStr != "" {
+					amountDec, err := decimal.NewFromString(metaAmountStr)
+					if err == nil {
+						if relErr := balanceSvc.ReleaseFiatBalance(ctx, metaProviderID, metaCurrency, amountDec, nil); relErr != nil {
+							logger.WithFields(logger.Fields{
+								"Error":      fmt.Sprintf("%v", relErr),
+								"OrderID":    order.ID.String(),
+								"ProviderID": metaProviderID,
+								"Currency":   metaCurrency,
+								"Amount":     metaAmountStr,
+							}).Warnf("ReassignStaleOrderRequest: failed to release reserved balance (best effort)")
+						}
+					}
+				}
+
+				// Cleanup metadata key regardless of success to avoid stale entries.
+				_, _ = storage.RedisClient.Del(ctx, metaKey).Result()
+			} else if order.Edges.Provider != nil && order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+				// Fallback: no meta (e.g. key missing/expired) but order has provider and bucket (e.g. private/pre-set).
+				// Release so reserved balance is not left stuck.
+				currency := order.Edges.ProvisionBucket.Edges.Currency.Code
+				amount := order.Amount.Mul(order.Rate).RoundBank(0)
+				if relErr := balanceSvc.ReleaseFiatBalance(ctx, order.Edges.Provider.ID, currency, amount, nil); relErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", relErr),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.Edges.Provider.ID,
+						"Currency":   currency,
+						"Amount":     amount.String(),
+					}).Warnf("ReassignStaleOrderRequest: failed to release reserved balance from order (best effort)")
+				}
+			}
+
+			// Defensive check: Only reassign if order is in a valid state
+			// Skip if order is already processing, fulfilled, validated, settled, or refunded
+			if order.Status != paymentorder.StatusPending {
 				logger.WithFields(logger.Fields{
 					"OrderID": order.ID.String(),
-					"Error":   updErr,
-				}).Errorf("ReassignStaleOrderRequest: failed to clear FallbackTriedAt for retry")
+					"Status":  order.Status,
+				}).Infof("ReassignStaleOrderRequest: Order is not in pending state, skipping reassignment")
 				continue
 			}
-			order.FallbackTriedAt = time.Time{} // so downstream uses updated value if needed
-		}
 
-		// Defensive check: Verify order request doesn't already exist (race condition protection)
-		orderKey := fmt.Sprintf("order_request_%s", order.ID)
-		exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
-		if err == nil && exists > 0 {
-			logger.WithFields(logger.Fields{
-				"OrderID": order.ID.String(),
-				"Status":  order.Status,
-			}).Infof("ReassignStaleOrderRequest: Order request already exists, skipping duplicate reassignment")
-			continue
-		}
+			// If fallback was already tried, allow retry only if fallback has not exceeded ProviderMaxRetryAttempts
+			// (same as queue providers: exclude list count for fallback < N means we can retry).
+			if !order.FallbackTriedAt.IsZero() {
+				if orderConf.FallbackProviderID == "" {
+					continue
+				}
+				excludeKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
+				excludeList, listErr := storage.RedisClient.LRange(ctx, excludeKey, 0, -1).Result()
+				if listErr != nil {
+					// Retry LRange up to 2 times; on persistent failure proceed with empty exclude list
+					// so we still attempt reassignment instead of silently skipping the order.
+					for retry := 0; retry < 2 && listErr != nil; retry++ {
+						time.Sleep(100 * time.Millisecond)
+						excludeList, listErr = storage.RedisClient.LRange(ctx, excludeKey, 0, -1).Result()
+					}
+					if listErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":   fmt.Sprintf("%v", listErr),
+							"OrderID": order.ID.String(),
+							"Key":     excludeKey,
+						}).Warnf("ReassignStaleOrderRequest: LRange failed for exclude list, proceeding with empty list")
+						excludeList = nil
+					}
+				}
+				fallbackExcludeCount := 0
+				for _, id := range excludeList {
+					if id == orderConf.FallbackProviderID {
+						fallbackExcludeCount++
+					}
+				}
+				if fallbackExcludeCount >= orderConf.ProviderMaxRetryAttempts {
+					continue
+				}
 
-		// Extract provider ID from relation if available
-		providerID := ""
-		if order.Edges.Provider != nil {
-			providerID = order.Edges.Provider.ID
-		}
-
-		// Build order fields for reassignment
-		orderFields := types.PaymentOrderFields{
-			ID:                order.ID,
-			OrderType:         string(order.OrderType),
-			GatewayID:         order.GatewayID,
-			Amount:            order.Amount,
-			Rate:              order.Rate,
-			BlockNumber:       order.BlockNumber,
-			Institution:       order.Institution,
-			AccountIdentifier: order.AccountIdentifier,
-			AccountName:       order.AccountName,
-			Memo:              order.Memo,
-			ProviderID:        providerID,
-			MessageHash:       order.MessageHash,
-			ProvisionBucket:   order.Edges.ProvisionBucket,
-		}
-
-		// Include token and network if available
-		if order.Edges.Token != nil {
-			orderFields.Token = order.Edges.Token
-			if order.Edges.Token.Edges.Network != nil {
-				orderFields.Network = order.Edges.Token.Edges.Network
+				// Clear FallbackTriedAt so TryFallbackAssignment can run again when AssignPaymentOrder is called
+				_, updErr := storage.Client.PaymentOrder.
+					Update().
+					Where(paymentorder.IDEQ(order.ID)).
+					ClearFallbackTriedAt().
+					Save(ctx)
+				if updErr != nil {
+					logger.WithFields(logger.Fields{
+						"OrderID": order.ID.String(),
+						"Error":   updErr,
+					}).Errorf("ReassignStaleOrderRequest: failed to clear FallbackTriedAt for retry")
+					continue
+				}
+				order.FallbackTriedAt = time.Time{} // so downstream uses updated value if needed
 			}
-		}
 
-		// Assign the order to a provider
-		err = services.NewPriorityQueueService().AssignPaymentOrder(ctx, orderFields)
-		if err != nil {
-			// logger.Errorf("ReassignStaleOrderRequest.AssignPaymentOrder: %v", err)
-			logger.WithFields(logger.Fields{
-				"Error":     fmt.Sprintf("%v", err),
-				"OrderID":   order.ID.String(),
-				"UUID":      orderUUID,
-				"GatewayID": order.GatewayID,
-			}).Errorf("ReassignStaleOrderRequest: Failed to assign order to provider")
+			// Extract provider ID from relation if available
+			providerID := ""
+			if order.Edges.Provider != nil {
+				providerID = order.Edges.Provider.ID
+			}
+
+			// Build order fields for reassignment
+			orderFields := types.PaymentOrderFields{
+				ID:                order.ID,
+				OrderType:         string(order.OrderType),
+				GatewayID:         order.GatewayID,
+				Amount:            order.Amount,
+				Rate:              order.Rate,
+				BlockNumber:       order.BlockNumber,
+				Institution:       order.Institution,
+				AccountIdentifier: order.AccountIdentifier,
+				AccountName:       order.AccountName,
+				Memo:              order.Memo,
+				ProviderID:        providerID,
+				MessageHash:       order.MessageHash,
+				ProvisionBucket:   order.Edges.ProvisionBucket,
+			}
+
+			// Include token and network if available
+			if order.Edges.Token != nil {
+				orderFields.Token = order.Edges.Token
+				if order.Edges.Token.Edges.Network != nil {
+					orderFields.Network = order.Edges.Token.Edges.Network
+				}
+			}
+
+			// Assign the order to a provider
+			err = priorityQueueSvc.AssignPaymentOrder(ctx, orderFields)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":     fmt.Sprintf("%v", err),
+					"OrderID":   order.ID.String(),
+					"UUID":      orderUUID,
+					"GatewayID": order.GatewayID,
+				}).Errorf("ReassignStaleOrderRequest: Failed to assign order to provider")
+			}
+
+		case <-ctx.Done():
+			// Context cancelled, exit gracefully to allow deferred cleanup
+			return
 		}
 	}
 }

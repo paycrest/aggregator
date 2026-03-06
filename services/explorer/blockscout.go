@@ -6,6 +6,7 @@ import (
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/opus-domini/fast-shot/constant/header"
 	"github.com/paycrest/aggregator/utils"
 )
 
@@ -39,17 +40,18 @@ func (s *BlockscoutService) GetAddressTokenTransfers(ctx context.Context, chainI
 
 	// Use Blockscout API
 	res, err := fastshot.NewClient(s.baseURL).
-		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-	}).Build().GET("/api/v2/addresses/" + walletAddress + "/token-transfers").
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[header.Type]string{
+			header.Accept:       "application/json",
+			header.ContentType: "application/json",
+		}).
+		Build().GET("/api/v2/addresses/" + walletAddress + "/token-transfers").
 		Query().AddParams(params).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token transfers from Blockscout: %w", err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response from Blockscout: %w", err)
 	}

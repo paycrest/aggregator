@@ -39,7 +39,7 @@ func (svc *Service) FetchProviderFiatBalances(ctx context.Context, providerID st
 
 	// Call provider /info endpoint without HMAC (endpoint doesn't require authentication)
 	res, err := fastshot.NewClient(provider.HostIdentifier).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
 		Build().GET("/info").
 		Send()
 	if err != nil {
@@ -47,7 +47,7 @@ func (svc *Service) FetchProviderFiatBalances(ctx context.Context, providerID st
 	}
 
 	// Parse JSON response
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse response: %v", err)
 	}

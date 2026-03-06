@@ -10,6 +10,7 @@ import (
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/tasks"
+	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -43,6 +44,7 @@ func main() {
 	if err := storage.DBConnection(DSN); err != nil {
 		logger.Fatalf("database DBConnection: %s", err)
 	}
+	defer utils.CloseHTTPClient()
 	defer storage.GetClient().Close()
 
 	// Fix database mishap
@@ -68,8 +70,9 @@ func main() {
 		logger.Errorf("Failed to create gateway webhooks: %v", err)
 	}
 
-	// Subscribe to Redis keyspace events
-	tasks.SubscribeToRedisKeyspaceEvents()
+	// Subscribe to Redis keyspace events (defer shutdown so subscription and goroutine exit on process exit)
+	cancelRedisSubscription := tasks.SubscribeToRedisKeyspaceEvents()
+	defer cancelRedisSubscription()
 
 	// Start cron jobs
 	tasks.StartCronJobs()

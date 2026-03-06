@@ -1057,7 +1057,14 @@ func processPaymentOrderPostCreation(
 	}
 	paymentOrderFields.ID = paymentOrder.ID
 	if paymentOrderFields.ProvisionBucket != nil || isPrivate {
-		_ = assignPaymentOrder(ctx, *paymentOrderFields)
+		// Run assignment in a goroutine with its own 60s timeout so one slow order doesn't
+		// consume the indexing task's context and cancel other work.
+		fieldsCopy := *paymentOrderFields
+		go func() {
+			assignCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+			_ = assignPaymentOrder(assignCtx, fieldsCopy)
+		}()
 	} else if paymentOrderFields.ProvisionBucket == nil {
 		logger.WithFields(logger.Fields{
 			"OrderID": paymentOrder.ID.String(),

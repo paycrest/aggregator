@@ -1693,7 +1693,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	var currencyCodes []string
 
 	res, err := fastshot.NewClient(provider.HostIdentifier).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetCustomTransport(u.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
 		Build().GET("/info").
 		Send()
 
@@ -1707,7 +1707,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		return
 	}
 
-	data, err = u.ParseJSONResponse(res.RawResponse)
+	data, err = u.ParseJSONResponse(res.Raw())
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),

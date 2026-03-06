@@ -380,8 +380,8 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 
 	// TODO: add also the checks for all the currencies that a provider has
 
-	// Build new queue in temporary key first
-	newQueueEntries := 0
+	// Build entries per provider first (provider ID -> list of queue entry strings)
+	providerEntries := make(map[string][]string)
 	for _, provider := range providers {
 		if orderConf.FallbackProviderID != "" && provider.ID == orderConf.FallbackProviderID {
 			continue
@@ -415,6 +415,7 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 		// Use map to deduplicate by symbol:network combination
 		// This allows same token symbol on different networks (e.g., USDT on Ethereum vs Tron)
 		tokenKeys := make(map[string]bool)
+		var entries []string
 		for _, orderToken := range orderTokens {
 			// Create a unique key combining symbol and network
 			tokenKey := fmt.Sprintf("%s:%s", orderToken.Edges.Token.Symbol, orderToken.Network)
@@ -452,18 +453,46 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 
 			// Serialize the provider ID, token, network, rate, min and max order amount into a single string
 			data := fmt.Sprintf("%s:%s:%s:%s:%s:%s", provider.ID, orderToken.Edges.Token.Symbol, orderToken.Network, rate, orderToken.MinOrderAmount, orderToken.MaxOrderAmount)
+			entries = append(entries, data)
+		}
+		if len(entries) > 0 {
+			providerEntries[provider.ID] = entries
+		}
+	}
 
-			// Enqueue the serialized data into the temporary circular queue
-			err = storage.RedisClient.RPush(ctx, tempRedisKey, data).Err()
-			if err == nil {
-				newQueueEntries++
-			} else if err != context.Canceled {
-				logger.WithFields(logger.Fields{
-					"Error": fmt.Sprintf("%v", err),
-					"Key":   tempRedisKey,
-					"Data":  data,
-				}).Errorf("failed to enqueue provider data to circular queue")
-			}
+	// Normalize so each provider has the same number of slots (fair distribution: one turn per slot).
+	// Cap each provider at maxProviderSlots to bound queue size and keep matchRate fast.
+	const maxProviderSlots = 20
+	var maxLen int
+	for _, entries := range providerEntries {
+		if n := len(entries); n > maxLen {
+			maxLen = n
+		}
+	}
+	if maxLen > maxProviderSlots {
+		maxLen = maxProviderSlots
+	}
+	var normalized []string
+	for _, entries := range providerEntries {
+		if maxLen == 0 {
+			break
+		}
+		for i := 0; i < maxLen; i++ {
+			normalized = append(normalized, entries[i%len(entries)])
+		}
+	}
+	rand.Shuffle(len(normalized), func(i, j int) { normalized[i], normalized[j] = normalized[j], normalized[i] })
+
+	newQueueEntries := len(normalized)
+	for _, data := range normalized {
+		err = storage.RedisClient.RPush(ctx, tempRedisKey, data).Err()
+		if err != nil && err != context.Canceled {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Key":   tempRedisKey,
+				"Data":  data,
+			}).Errorf("failed to enqueue provider data to circular queue")
+			break
 		}
 	}
 

@@ -14,6 +14,7 @@ import (
 	"github.com/NethermindEth/juno/core/felt"
 	"github.com/NethermindEth/starknet.go/utils"
 	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/opus-domini/fast-shot/constant/header"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
@@ -722,26 +723,27 @@ func (w *VoyagerWorker) makeVoyagerTransfersAPICall(request VoyagerRequest) ([]m
 
 	// Make API call
 	res, err := fastshot.NewClient(url).
-		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"x-api-key":    w.APIKey,
-	}).Build().GET("").
+		Config().SetCustomTransport(u.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[header.Type]string{
+			header.Accept:       "application/json",
+			header.ContentType: "application/json",
+			header.Type("x-api-key"): w.APIKey,
+		}).
+		Build().GET("").
 		Query().AddParams(params).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transfers: %w", err)
 	}
 
-	if res.RawResponse.StatusCode == http.StatusTooManyRequests {
+	if res.Raw().StatusCode == http.StatusTooManyRequests {
 		return nil, fmt.Errorf("rate limit exceeded (429) for address %s", request.Address)
 	}
 
-	if res.RawResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP error %d for address %s", res.RawResponse.StatusCode, request.Address)
+	if res.Raw().StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP error %d for address %s", res.Raw().StatusCode, request.Address)
 	}
 
-	data, err := u.ParseJSONResponse(res.RawResponse)
+	data, err := u.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -838,26 +840,27 @@ func (w *VoyagerWorker) makeVoyagerEventsAPICall(request VoyagerRequest) ([]map[
 
 	// Make API call
 	res, err := fastshot.NewClient(url).
-		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"x-api-key":    w.APIKey,
-	}).Build().GET("").
+		Config().SetCustomTransport(u.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[header.Type]string{
+			header.Accept:       "application/json",
+			header.ContentType: "application/json",
+			header.Type("x-api-key"): w.APIKey,
+		}).
+		Build().GET("").
 		Query().AddParams(params).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events: %w", err)
 	}
 
-	if res.RawResponse.StatusCode == http.StatusTooManyRequests {
+	if res.Raw().StatusCode == http.StatusTooManyRequests {
 		return nil, fmt.Errorf("rate limit exceeded (429) for contract %s", request.ContractAddr)
 	}
 
-	if res.RawResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP error %d for contract %s", res.RawResponse.StatusCode, request.ContractAddr)
+	if res.Raw().StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP error %d for contract %s", res.Raw().StatusCode, request.ContractAddr)
 	}
 
-	data, err := u.ParseJSONResponse(res.RawResponse)
+	data, err := u.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -898,26 +901,27 @@ func (w *VoyagerWorker) makeVoyagerEventsByTxAPICall(request VoyagerRequest) ([]
 
 	// Make API call
 	res, err := fastshot.NewClient(url).
-		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"x-api-key":    w.APIKey,
-	}).Build().GET("").
+		Config().SetCustomTransport(u.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[header.Type]string{
+			header.Accept:       "application/json",
+			header.ContentType: "application/json",
+			header.Type("x-api-key"): w.APIKey,
+		}).
+		Build().GET("").
 		Query().AddParams(params).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events by tx: %w", err)
 	}
 
-	if res.RawResponse.StatusCode == http.StatusTooManyRequests {
+	if res.Raw().StatusCode == http.StatusTooManyRequests {
 		return nil, fmt.Errorf("rate limit exceeded (429) for tx %s", request.TxHash)
 	}
 
-	if res.RawResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP error %d for tx %s", res.RawResponse.StatusCode, request.TxHash)
+	if res.Raw().StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP error %d for tx %s", res.Raw().StatusCode, request.TxHash)
 	}
 
-	data, err := u.ParseJSONResponse(res.RawResponse)
+	data, err := u.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -957,26 +961,27 @@ func (w *VoyagerWorker) makeVoyagerBlocksAPICall() (map[string]interface{}, erro
 
 	// Make API call
 	res, err := fastshot.NewClient(url).
-		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"x-api-key":    w.APIKey,
-	}).Build().GET("").
+		Config().SetCustomTransport(u.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[header.Type]string{
+			header.Accept:       "application/json",
+			header.ContentType: "application/json",
+			header.Type("x-api-key"): w.APIKey,
+		}).
+		Build().GET("").
 		Query().AddParams(params).Send()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get blocks: %w", err)
 	}
 
-	if res.RawResponse.StatusCode == http.StatusTooManyRequests {
+	if res.Raw().StatusCode == http.StatusTooManyRequests {
 		return nil, fmt.Errorf("rate limit exceeded (429) for blocks")
 	}
 
-	if res.RawResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP error %d for blocks", res.RawResponse.StatusCode)
+	if res.Raw().StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP error %d for blocks", res.Raw().StatusCode)
 	}
 
-	data, err := u.ParseJSONResponse(res.RawResponse)
+	data, err := u.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
@@ -1013,21 +1018,22 @@ func (w *VoyagerWorker) getBlockByNumber(blockNumber int64) (map[string]interfac
 	url := fmt.Sprintf("https://api.voyager.online/beta/blocks/%d", blockNumber)
 
 	res, err := fastshot.NewClient(url).
-		Config().SetTimeout(10 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-		"x-api-key":    w.APIKey,
-	}).Build().GET("").Send()
+		Config().SetCustomTransport(u.GetHTTPClient().Transport).Config().SetTimeout(10 * time.Second).
+		Header().AddAll(map[header.Type]string{
+			header.Accept:       "application/json",
+			header.ContentType: "application/json",
+			header.Type("x-api-key"): w.APIKey,
+		}).
+		Build().GET("").Send()
 	if err != nil {
 		return nil, err
 	}
 
-	if res.RawResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP error %d for block %d", res.RawResponse.StatusCode, blockNumber)
+	if res.Raw().StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP error %d for block %d", res.Raw().StatusCode, blockNumber)
 	}
 
-	data, err := u.ParseJSONResponse(res.RawResponse)
+	data, err := u.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return nil, err
 	}
