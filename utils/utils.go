@@ -1053,6 +1053,14 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 		if fallbackID := config.OrderConfig().FallbackProviderID; fallbackID != "" {
 			fallbackResult, fallbackErr := validateProviderRate(ctx, token, currency, amount, fallbackID, networkIdentifier)
 			if fallbackErr == nil {
+				// Quote the queue's best rate when amount was below/above queue providers' min/max but fallback accepts it
+				if bestRate.GreaterThan(decimal.Zero) {
+					return RateValidationResult{
+						Rate:       bestRate,
+						ProviderID: fallbackResult.ProviderID,
+						OrderType:  fallbackResult.OrderType,
+					}, nil
+				}
 				return fallbackResult, nil
 			}
 			var errStuck *types.ErrNoProviderDueToStuck
@@ -1279,6 +1287,20 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 			continue
 		}
 
+		// Parse rate early so we can track best queue rate even when skipping due to min/max
+		rate, err := decimal.NewFromString(parts[3])
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Error":        err,
+				"Value":        parts[3],
+			}).Errorf("ValidateRate.InvalidRate: failed to parse rate")
+			continue
+		}
+		if rate.GreaterThan(bestRate) {
+			bestRate = rate
+		}
+
 		// Check if order amount is within provider's regular min/max limits
 		// If not, check OTC limits as fallback
 		if tokenAmount.LessThan(minOrderAmount) {
@@ -1303,22 +1325,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 			// Amount is within OTC limits - proceed to rate parsing
 		}
 
-		// Parse rate
-		rate, err := decimal.NewFromString(parts[3])
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-			}).Errorf("ValidateRate.InvalidRate: failed to parse rate")
-			continue
-		}
-
 		providerID := parts[0]
-
-		// Track the best rate we've seen (for logging purposes)
-		if rate.GreaterThan(bestRate) {
-			bestRate = rate
-		}
 
 		// Calculate fiat equivalent of the token amount
 		fiatAmount := tokenAmount.Mul(rate)
