@@ -493,6 +493,8 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		}
 	}
 
+	// Only add percent_settled when this is the first time we process this event (new log).
+	// Re-processing the same event (e.g. re-index, duplicate path) must not add again.
 	paymentOrderUpdate := tx.PaymentOrder.
 		Update().
 		Where(
@@ -506,8 +508,11 @@ func UpdateOrderStatusSettled(ctx context.Context, network *ent.Network, event *
 		).
 		SetBlockNumber(event.BlockNumber).
 		SetTxHash(event.TxHash).
-		SetStatus(paymentorder.StatusSettled).
-		AddPercentSettled(event.SettlePercent.Div(decimal.NewFromInt(1000)))
+		SetStatus(paymentorder.StatusSettled)
+
+	if updatedLogRows == 0 {
+		paymentOrderUpdate = paymentOrderUpdate.AddPercentSettled(event.SettlePercent.Div(decimal.NewFromInt(1000)))
+	}
 
 	if transactionLog != nil {
 		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
