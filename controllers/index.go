@@ -2218,6 +2218,8 @@ func (ctrl *Controller) handleSettleInEvent(ctx context.Context, event types.Thi
 	if err != nil {
 		return fmt.Errorf("SettleIn: invalid rate %q: %w", rateStr, err)
 	}
+	// Contract stores rate as rate * 100 (uint96 where 100 = 1.00); unscale to match indexer semantics
+	rate = rate.Div(decimal.NewFromInt(100))
 
 	aggregatorFee := decimal.Zero
 	if aggregatorFeeStr, ok := nonIndexedParams["aggregatorFee"].(string); ok && aggregatorFeeStr != "" {
@@ -2498,6 +2500,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 					"EventType":      "Gateway",
 					"OrderCreated":   counts.OrderCreated,
 					"SettleOut":      counts.SettleOut,
+					"SettleIn":       counts.SettleIn,
 					"OrderRefunded":  counts.OrderRefunded,
 				}).Infof("Gateway event indexing completed successfully")
 			}

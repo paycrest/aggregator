@@ -850,6 +850,14 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 				}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: release balance")
 			}
 		}
+		// Emit payment_order.refunded webhook (SendPaymentOrderWebhook reloads by ID and will see StatusRefunded)
+		if err := utils.SendPaymentOrderWebhook(ctx, order); err != nil {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.Edges.Provider.ID,
+				"Error":      fmt.Sprintf("%v", err),
+			}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: webhook")
+		}
 	case "failed":
 		// Do not create failed fulfillment; call /tx_refund to retry. Validate refund account first.
 		if order.AccountIdentifier == "" || order.AccountName == "" || order.Institution == "" {

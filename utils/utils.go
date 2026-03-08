@@ -587,7 +587,9 @@ func BuildV2PaymentOrderGetResponse(
 	source, destination, providerAccount := BuildV2OrderSourceDestinationProviderAccount(paymentOrder, institution)
 	txFee := paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee)
 	senderFeePercentStr := ""
-	if !paymentOrder.Amount.IsZero() {
+	if !paymentOrder.FeePercent.IsZero() {
+		senderFeePercentStr = paymentOrder.FeePercent.String()
+	} else if !paymentOrder.Amount.IsZero() {
 		senderFeePercentStr = paymentOrder.SenderFee.Div(paymentOrder.Amount).Mul(decimal.NewFromInt(100)).String()
 	}
 	resp := &types.V2PaymentOrderGetResponse{
@@ -1335,7 +1337,7 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 	// If no exact match found, try fallback provider (if configured) even though it's not on the bucket queue
 	if !foundExactMatch {
 		if fallbackID := config.OrderConfig().FallbackProviderID; fallbackID != "" {
-			fallbackResult, fallbackErr := validateProviderRate(ctx, token, currency, amount, fallbackID, networkIdentifier)
+			fallbackResult, fallbackErr := validateProviderRate(ctx, token, currency, amount, fallbackID, networkIdentifier, side)
 			if fallbackErr == nil {
 				// Quote the queue's best rate when amount was below/above queue providers' min/max but fallback accepts it
 				if bestRate.GreaterThan(decimal.Zero) {

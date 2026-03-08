@@ -1519,6 +1519,13 @@ func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context,
 				logger.Errorf("Failed to release token balance for refunded order (order %s): %v", orderID, relErr)
 			}
 		}
+		// Notify sender of refund completion (SendPaymentOrderWebhook reloads by ID and will see StatusRefunded)
+		if err := u.SendPaymentOrderWebhook(ctx, order); err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": orderID.String(),
+			}).Errorf("Failed to send webhook notification to sender for refunded order: %v", err)
+		}
 		u.APIResponse(ctx, http.StatusOK, "success", "Refund completed", nil)
 		return
 	case paymentorderfulfillment.ValidationStatusFailed:
@@ -2349,7 +2356,9 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider stats", nil)
 			return
 		}
-		localStablecoinVolume[0].Sum = localStablecoinVolume[0].Sum.Div(fiatCurrency.MarketSellRate)
+		if !fiatCurrency.MarketSellRate.IsZero() {
+			localStablecoinVolume[0].Sum = localStablecoinVolume[0].Sum.Div(fiatCurrency.MarketSellRate)
+		}
 	}
 
 	var totalFiatVolume decimal.Decimal
