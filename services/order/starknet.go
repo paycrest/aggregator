@@ -107,7 +107,7 @@ func (s *OrderStarknet) CreateOrder(ctx context.Context, orderID uuid.UUID) erro
 		return fmt.Errorf("%s - CreateOrder.parseTokenAddress: %w", orderIDPrefix, err)
 	}
 	orderAmountFelt := new(felt.Felt).SetBigInt(u.ToSubunit(order.Amount, order.Edges.Token.Decimals))
-	rateFelt := new(felt.Felt).SetBigInt(order.Rate.Mul(decimal.NewFromInt(100)).BigInt())
+	rateFelt := new(felt.Felt).SetBigInt(order.Rate.Mul(decimal.NewFromInt(100)).RoundBank(0).BigInt())
 	senderFeeRecipientFelt, err := utils.HexToFelt(order.FeeAddress)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.parseFeeAddress: %w", orderIDPrefix, err)

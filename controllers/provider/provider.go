@@ -613,9 +613,11 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order request not found or is expired", nil)
 			return
 		}
-		// Idempotent: already accepted
+		// Idempotent: already accepted; delete Redis keys so repeated retries don't keep returning 201
 		if fallbackOrder.Status == paymentorder.StatusFulfilling {
-			acceptOrderRespondWithOrder(ctx, fallbackOrder, orderID)
+			_, _ = storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
+			_, _ = storage.RedisClient.Del(reqCtx, orderRequestKey).Result()
+			acceptOrderRespondWithOrder(ctx, fallbackOrder, orderID, provider)
 			return
 		}
 		if fallbackOrder.Status != paymentorder.StatusPending {
@@ -960,25 +962,19 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		response.Amount = order.Amount.Mul(order.Rate).RoundBank(0)
 	}
 
-	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling {
-		orderWithProvider, _ := storage.Client.PaymentOrder.
-			Query().
-			Where(paymentorder.IDEQ(orderID)).
-			WithProvider().
-			Only(ctx)
-		if orderWithProvider != nil && orderWithProvider.Edges.Provider != nil && orderWithProvider.Edges.Provider.ID == provider.ID {
-			if response.Metadata == nil {
-				response.Metadata = make(map[string]interface{})
-			}
-			response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
+	// OTC: use in-scope order and provider (order was just accepted by this provider)
+	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling && provider != nil {
+		if response.Metadata == nil {
+			response.Metadata = make(map[string]interface{})
 		}
+		response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
 	}
 
 	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &response)
 }
 
 // acceptOrderRespondWithOrder sends the same AcceptOrder success response using an already-loaded order (e.g. idempotent retry when Redis was cleared).
-func acceptOrderRespondWithOrder(ctx *gin.Context, order *ent.PaymentOrder, orderID uuid.UUID) {
+func acceptOrderRespondWithOrder(ctx *gin.Context, order *ent.PaymentOrder, orderID uuid.UUID, provider *ent.ProviderProfile) {
 	isPayin := order.Direction == paymentorder.DirectionOnramp
 	response := types.AcceptOrderResponse{
 		ID:                orderID.String(),
@@ -1002,18 +998,11 @@ func acceptOrderRespondWithOrder(ctx *gin.Context, order *ent.PaymentOrder, orde
 		response.Amount = order.Amount.Mul(order.Rate).RoundBank(0)
 	}
 	orderConf := config.OrderConfig()
-	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling {
-		orderWithProvider, _ := storage.Client.PaymentOrder.
-			Query().
-			Where(paymentorder.IDEQ(orderID)).
-			WithProvider().
-			Only(ctx.Request.Context())
-		if orderWithProvider != nil && orderWithProvider.Edges.Provider != nil {
-			if response.Metadata == nil {
-				response.Metadata = make(map[string]interface{})
-			}
-			response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
+	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling && provider != nil {
+		if response.Metadata == nil {
+			response.Metadata = make(map[string]interface{})
 		}
+		response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
 	}
 	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &response)
 }
@@ -1696,16 +1685,8 @@ func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context,
 
 // handlePayinFulfillment handles payin (onramp) order fulfillment
 func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
-	// Validate authorization is provided for payin orders
-	if payload.Authorization == nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Authorization is required for payin orders", types.ErrorData{
-			Field:   "Authorization",
-			Message: "EIP-7702 SetCodeAuthorization is required for payin fulfillment",
-		})
-		return
-	}
-
 	// Only proceed to settlement when validation succeeded; reject failed/pending like handlePayoutFulfillment
+	// Authorization is required only for settlement (ValidationStatusSuccess); failed validation reports do not need it
 	switch payload.ValidationStatus {
 	case paymentorderfulfillment.ValidationStatusFailed:
 		_, err := fulfillment.Update().
@@ -1740,6 +1721,15 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 	default:
 		// Pending or unknown: do not attempt settlement
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Fulfillment must have validation status success to settle payin order", nil)
+		return
+	}
+
+	// Authorization required only when proceeding to on-chain settlement
+	if payload.Authorization == nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Authorization is required for payin orders", types.ErrorData{
+			Field:   "Authorization",
+			Message: "EIP-7702 SetCodeAuthorization is required for payin fulfillment",
+		})
 		return
 	}
 
@@ -2012,7 +2002,7 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order 
 	// Convert rate to uint96 (rate is stored as decimal, need to convert to basis points * 100)
 	// Rate format: Gateway expects rate as uint96 where 100 = 1.00 (local transfer)
 	// For FX transfers, rate represents the conversion rate scaled appropriately
-	rateBig := order.Rate.Mul(decimal.NewFromInt(100)).BigInt()
+	rateBig := order.Rate.Mul(decimal.NewFromInt(100)).RoundBank(0).BigInt()
 	if rateBig.Cmp(big.NewInt(0)) == 0 {
 		rateBig = big.NewInt(100) // Default to 1.00 (100 basis points)
 	}
@@ -2089,12 +2079,13 @@ func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *
 	}
 	authorizationList := []map[string]interface{}{authEntry}
 
+	// Single transaction object: authorizationList must be on the same map as to/data/value so the Engine API applies EIP-7702 delegation to this tx
 	params := []map[string]interface{}{
-		{"authorizationList": authorizationList},
 		{
-			"to":    gatewayAddress,
-			"data":  fmt.Sprintf("0x%x", settleInData),
-			"value": "0",
+			"to":                gatewayAddress,
+			"data":              "0x" + hex.EncodeToString(settleInData),
+			"value":             "0",
+			"authorizationList": authorizationList,
 		},
 	}
 

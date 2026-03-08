@@ -449,7 +449,7 @@ func (s *OrderTron) createOrderCallData(order *ent.PaymentOrder) ([]byte, error)
 	params := &types.CreateOrderParams{
 		Token:              common.HexToAddress(tokenContractAddressTron.Hex()[4:]),
 		Amount:             utils.ToSubunit(order.Amount, order.Edges.Token.Decimals),
-		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
+		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).RoundBank(0).BigInt(),
 		SenderFeeRecipient: common.HexToAddress(senderFeeRecipient),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),
 		RefundAddress:      common.HexToAddress(refundAddress),

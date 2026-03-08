@@ -303,7 +303,7 @@ func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder, encryptedOrderRe
 	params := &types.CreateOrderParams{
 		Token:              ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
 		Amount:             utils.ToSubunit(order.Amount, order.Edges.Token.Decimals),
-		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
+		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).RoundBank(0).BigInt(),
 		SenderFeeRecipient: ethcommon.HexToAddress(order.FeeAddress),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),
 		RefundAddress:      ethcommon.HexToAddress(order.RefundOrRecipientAddress),
