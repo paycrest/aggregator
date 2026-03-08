@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -102,23 +101,37 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 		shouldBeLinkedProviderIDs := make(map[string]bool)
 		// TODO: this could be done in batch and processed in parallel for better performance
 		for _, orderToken := range orderTokens {
-			rate := s.tokenRateForBucket(orderToken)
-			if rate.IsZero() {
-				// Currency edge unloaded or missing; cannot compute overlap. Skip this token so we don't
-				// silently exclude the provider, and log so operators see data/loading issues.
-				logger.WithFields(logger.Fields{
-					"ProviderID":     orderToken.Edges.Provider.ID,
-					"BucketID":       bucket.ID,
-					"BucketCurrency": bucket.Edges.Currency.Code,
-					"OrderTokenID":   orderToken.ID,
-				}).Errorf("Skipping overlap check: token rate is zero (currency edge missing or not loaded for order token)")
+			providerID := orderToken.Edges.Provider.ID
+			overlaps := false
+			for _, side := range []RateSide{RateSideBuy, RateSideSell} {
+				rate := s.tokenRateForBucket(orderToken, side)
+				if rate.IsZero() {
+					continue
+				}
+				convertedMin := orderToken.MinOrderAmount.Mul(rate)
+				convertedMax := orderToken.MaxOrderAmount.Mul(rate)
+				// Overlap: bucket [Min, Max] overlaps provider [convertedMin, convertedMax] for this side
+				if bucket.MinAmount.LessThanOrEqual(convertedMax) && bucket.MaxAmount.GreaterThanOrEqual(convertedMin) {
+					overlaps = true
+					break
+				}
+			}
+			if !overlaps {
+				rateBuy := s.tokenRateForBucket(orderToken, RateSideBuy)
+				rateSell := s.tokenRateForBucket(orderToken, RateSideSell)
+				if rateBuy.IsZero() && rateSell.IsZero() {
+					// Cannot compute overlap for either side; log so operators see data/loading issues.
+					logger.WithFields(logger.Fields{
+						"ProviderID":     providerID,
+						"BucketID":       bucket.ID,
+						"BucketCurrency": bucket.Edges.Currency.Code,
+						"OrderTokenID":   orderToken.ID,
+					}).Errorf("Skipping overlap check: token rate is zero for both sides (currency edge missing or not loaded for order token)")
+				}
 				continue
 			}
-			convertedMin := orderToken.MinOrderAmount.Mul(rate)
-			convertedMax := orderToken.MaxOrderAmount.Mul(rate)
-			// Overlap: bucket [Min, Max] overlaps provider [convertedMin, convertedMax]
-			if bucket.MinAmount.LessThanOrEqual(convertedMax) && bucket.MaxAmount.GreaterThanOrEqual(convertedMin) {
-				providerID := orderToken.Edges.Provider.ID
+			{
+				// Overlap on at least one side: link provider to bucket (buy and/or sell queue will include them as appropriate in buildQueueForSide)
 				shouldBeLinkedProviderIDs[providerID] = true
 				exists, err := orderToken.Edges.Provider.QueryProvisionBuckets().
 					Where(provisionbucket.IDEQ(bucket.ID)).
@@ -262,17 +275,30 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 	return buckets, nil
 }
 
-// tokenRateForBucket returns the fiat rate for the order token (token amount -> bucket currency).
-// Uses sell rate (offramp: fiat per token the sender receives when selling crypto). The token must be loaded with WithCurrency().
-// Returns decimal.Zero when the currency edge is missing; callers must treat zero as "cannot compute overlap".
-func (s *PriorityQueueService) tokenRateForBucket(orderToken *ent.ProviderOrderToken) decimal.Decimal {
+// tokenRateForBucket returns the fiat rate for the order token (token amount -> bucket currency) for the given side.
+// Buy: onramp rate (fiat per token when buying). Sell: offramp rate (fiat per token when selling).
+// The token must be loaded with WithCurrency(). Returns decimal.Zero when the currency edge is missing or rate cannot be computed; callers must treat zero as "cannot compute overlap".
+func (s *PriorityQueueService) tokenRateForBucket(orderToken *ent.ProviderOrderToken, side RateSide) decimal.Decimal {
 	if orderToken.Edges.Currency == nil {
 		return decimal.Zero
 	}
+	if side == RateSideBuy {
+		if !orderToken.FixedBuyRate.IsZero() {
+			return orderToken.FixedBuyRate
+		}
+		if !orderToken.Edges.Currency.MarketBuyRate.IsZero() {
+			return orderToken.Edges.Currency.MarketBuyRate.Add(orderToken.FloatingBuyDelta).RoundBank(2)
+		}
+		return decimal.Zero
+	}
+	// RateSideSell
 	if !orderToken.FixedSellRate.IsZero() {
 		return orderToken.FixedSellRate
 	}
-	return orderToken.Edges.Currency.MarketSellRate.Add(orderToken.FloatingSellDelta).RoundBank(2)
+	if !orderToken.Edges.Currency.MarketSellRate.IsZero() {
+		return orderToken.Edges.Currency.MarketSellRate.Add(orderToken.FloatingSellDelta).RoundBank(2)
+	}
+	return decimal.Zero
 }
 
 // GetProviderRate returns the rate for a provider based on the side (buy or sell)
@@ -294,14 +320,15 @@ func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *en
 	var rate decimal.Decimal
 
 	// Two-sided rate calculation based on side
-	if side == RateSideBuy {
+	switch side {
+	case RateSideBuy:
 		if !tokenConfig.FixedBuyRate.IsZero() {
 			rate = tokenConfig.FixedBuyRate
 		} else if !tokenConfig.Edges.Currency.MarketBuyRate.IsZero() {
 			// Floating buy rate: market_buy_rate + floating_buy_delta (delta may be zero)
 			rate = tokenConfig.Edges.Currency.MarketBuyRate.Add(tokenConfig.FloatingBuyDelta).RoundBank(2)
 		}
-	} else if side == RateSideSell {
+	case RateSideSell:
 		if !tokenConfig.FixedSellRate.IsZero() {
 			rate = tokenConfig.FixedSellRate
 		} else if !tokenConfig.Edges.Currency.MarketSellRate.IsZero() {
@@ -1233,7 +1260,7 @@ func (s *PriorityQueueService) countProviderInExcludeList(excludeList []string, 
 // getExcludePsps returns PSP names to exclude for a new_order based only on the global failure-rate threshold
 // PSPs that have high failure rate in the last M minutes. Per-order exclusion is not used so the
 // same order can retry a PSP after a transient failure.
-func (s *PriorityQueueService) getExcludePsps(ctx context.Context, orderID uuid.UUID) ([]string, error) {
+func (s *PriorityQueueService) getExcludePsps(ctx context.Context) ([]string, error) {
 	orderConf := config.OrderConfig()
 	excluded := make(map[string]struct{})
 
@@ -1490,7 +1517,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 	// Exclude PSPs: global high failure-rate only (same order can retry a PSP after transient failure).
 	// Do not apply excludePsps for the fallback provider so it can try all PSPs.
 	if orderConf.FallbackProviderID == "" || order.ProviderID != orderConf.FallbackProviderID {
-		excludePsps, excludeErr := s.getExcludePsps(ctx, order.ID)
+		excludePsps, excludeErr := s.getExcludePsps(ctx)
 		if excludeErr != nil {
 			logger.WithFields(logger.Fields{
 				"OrderID": order.ID.String(),

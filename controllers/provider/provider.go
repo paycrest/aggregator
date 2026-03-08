@@ -582,7 +582,8 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		acceptRequest.Direction = "payout"
 	}
 
-	// Get order request from Redis (offramp: set by assignment; payin: set by sender at creation)
+	// Get order request from Redis (offramp: set by assignment; payin: set by sender at creation).
+	// If Redis key is missing (e.g. expired/deleted), fall back to DB so retries still succeed.
 	orderRequestKey := fmt.Sprintf("order_request_%s", orderID)
 	result, err := storage.RedisClient.HGetAll(reqCtx, orderRequestKey).Result()
 	if err != nil {
@@ -590,7 +591,48 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to accept order request", nil)
 		return
 	}
-	if len(result) == 0 || result["providerId"] != provider.ID {
+	if len(result) == 0 {
+		// Redis miss: try persistent lookup so retries can succeed (e.g. key was deleted after assign)
+		fallbackOrder, fallbackErr := storage.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(orderID)).
+			WithProvider().
+			WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+			WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) { pbq.WithCurrency() }).
+			Only(reqCtx)
+		if fallbackErr != nil || fallbackOrder == nil {
+			if fallbackErr != nil && !ent.IsNotFound(fallbackErr) {
+				logger.Errorf("error fetching order for Redis fallback: %v", fallbackErr)
+			}
+			logger.Errorf("order request not found in Redis and order not found in DB: %v", orderID)
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order request not found or is expired", nil)
+			return
+		}
+		if fallbackOrder.Edges.Provider == nil || fallbackOrder.Edges.Provider.ID != provider.ID {
+			logger.Errorf("order request not found in Redis and order provider mismatch: orderID=%v", orderID)
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order request not found or is expired", nil)
+			return
+		}
+		// Idempotent: already accepted
+		if fallbackOrder.Status == paymentorder.StatusFulfilling {
+			acceptOrderRespondWithOrder(ctx, fallbackOrder, orderID)
+			return
+		}
+		if fallbackOrder.Status != paymentorder.StatusPending {
+			logger.Errorf("order request not found in Redis and order not in Pending/Fulfilling: orderID=%v status=%s", orderID, fallbackOrder.Status)
+			u.APIResponse(ctx, http.StatusNotFound, "error", "Order request not found or is expired", nil)
+			return
+		}
+		// Reconstruct result so the rest of the accept flow runs
+		result = map[string]string{
+			"providerId": fallbackOrder.Edges.Provider.ID,
+			"direction":  string(fallbackOrder.Direction),
+		}
+		if fallbackOrder.Direction == paymentorder.DirectionOnramp && fallbackOrder.Edges.ProvisionBucket != nil && fallbackOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+			result["amount"] = fallbackOrder.Amount.Add(fallbackOrder.SenderFee).Mul(fallbackOrder.Rate).RoundBank(0).String()
+			result["currency"] = fallbackOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		}
+	} else if result["providerId"] != provider.ID {
 		logger.Errorf("order request not found in Redis: %v", orderID)
 		u.APIResponse(ctx, http.StatusNotFound, "error", "Order request not found or is expired", nil)
 		return
@@ -932,6 +974,47 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		}
 	}
 
+	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &response)
+}
+
+// acceptOrderRespondWithOrder sends the same AcceptOrder success response using an already-loaded order (e.g. idempotent retry when Redis was cleared).
+func acceptOrderRespondWithOrder(ctx *gin.Context, order *ent.PaymentOrder, orderID uuid.UUID) {
+	isPayin := order.Direction == paymentorder.DirectionOnramp
+	response := types.AcceptOrderResponse{
+		ID:                orderID.String(),
+		Institution:       order.Institution,
+		AccountIdentifier: order.AccountIdentifier,
+		AccountName:       order.AccountName,
+		Memo:              order.Memo,
+		Metadata:          order.Metadata,
+	}
+	if isPayin {
+		response.Direction = "payin"
+		response.Amount = order.Amount.Add(order.SenderFee).Mul(order.Rate).RoundBank(0)
+		if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+			network := order.Edges.Token.Edges.Network
+			response.ChainId = fmt.Sprintf("%d", network.ChainID)
+			response.RpcUrl = network.RPCEndpoint
+			response.DelegationAddress = network.GatewayContractAddress
+		}
+	} else {
+		response.Direction = "payout"
+		response.Amount = order.Amount.Mul(order.Rate).RoundBank(0)
+	}
+	orderConf := config.OrderConfig()
+	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling {
+		orderWithProvider, _ := storage.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(orderID)).
+			WithProvider().
+			Only(ctx.Request.Context())
+		if orderWithProvider != nil && orderWithProvider.Edges.Provider != nil {
+			if response.Metadata == nil {
+				response.Metadata = make(map[string]interface{})
+			}
+			response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
+		}
+	}
 	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &response)
 }
 

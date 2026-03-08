@@ -1465,6 +1465,24 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		return
 	}
 
+	// Validate refund account identifier (same as offramp recipient validation)
+	refundAccountName, err := u.ValidateAccount(ctx, source.RefundAccount.Institution, source.RefundAccount.AccountIdentifier)
+	if err != nil {
+		if strings.Contains(err.Error(), "not supported") || strings.Contains(err.Error(), "verify account") {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Source",
+				Message: err.Error(),
+			})
+		} else {
+			logger.Errorf("Failed to validate refund account: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate refund account", nil)
+		}
+		return
+	}
+	if refundAccountName != "" && refundAccountName != "OK" {
+		source.RefundAccount.AccountName = refundAccountName
+	}
+
 	// Validate crypto destination (recipient payment rail + address + token/network)
 	token, err := storage.Client.Token.
 		Query().
