@@ -625,10 +625,14 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order request not found or is expired", nil)
 			return
 		}
-		// Reconstruct result so the rest of the accept flow runs
+		// Reconstruct result so the rest of the accept flow runs (direction must be "payin"/"payout" to match isPayin check, not ent enum "onramp"/"offramp")
+		directionStr := "payout"
+		if fallbackOrder.Direction == paymentorder.DirectionOnramp {
+			directionStr = "payin"
+		}
 		result = map[string]string{
 			"providerId": fallbackOrder.Edges.Provider.ID,
-			"direction":  string(fallbackOrder.Direction),
+			"direction":  directionStr,
 		}
 		if fallbackOrder.Direction == paymentorder.DirectionOnramp && fallbackOrder.Edges.ProvisionBucket != nil && fallbackOrder.Edges.ProvisionBucket.Edges.Currency != nil {
 			result["amount"] = fallbackOrder.Amount.Add(fallbackOrder.SenderFee).Mul(fallbackOrder.Rate).RoundBank(0).String()
@@ -2869,37 +2873,7 @@ func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, prov
 
 // buildV2ProviderOrderGetResponses converts payment orders to v2 get response list with OTC expiry and cancellation reasons.
 func (ctrl *ProviderController) buildV2ProviderOrderGetResponses(ctx *gin.Context, paymentOrders []*ent.PaymentOrder) ([]types.V2PaymentOrderGetResponse, error) {
-	if len(paymentOrders) == 0 {
-		return nil, nil
-	}
-	codes := make(map[string]bool)
-	for _, po := range paymentOrders {
-		codes[po.Institution] = true
-	}
-	codeSlice := make([]string, 0, len(codes))
-	for c := range codes {
-		codeSlice = append(codeSlice, c)
-	}
-	institutions, err := storage.Client.Institution.
-		Query().
-		Where(institution.CodeIn(codeSlice...)).
-		WithFiatCurrency().
-		All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	instMap := make(map[string]*ent.Institution)
-	for _, inst := range institutions {
-		instMap[inst.Code] = inst
-	}
-
-	out := make([]types.V2PaymentOrderGetResponse, 0, len(paymentOrders))
-	for _, po := range paymentOrders {
-		inst, _ := instMap[po.Institution]
-		var txLogs []types.TransactionLog
-		for _, tx := range po.Edges.Transactions {
-			txLogs = append(txLogs, types.TransactionLog{ID: tx.ID, GatewayId: tx.GatewayID, Status: tx.Status, TxHash: tx.TxHash, CreatedAt: tx.CreatedAt})
-		}
+	extra := func(po *ent.PaymentOrder) ([]string, *time.Time) {
 		var otcExpiry *time.Time
 		if po.OrderType == paymentorder.OrderTypeOtc {
 			switch po.Status {
@@ -2911,10 +2885,9 @@ func (ctrl *ProviderController) buildV2ProviderOrderGetResponses(ctx *gin.Contex
 				otcExpiry = &exp
 			}
 		}
-		resp := u.BuildV2PaymentOrderGetResponse(po, inst, txLogs, po.CancellationReasons, otcExpiry)
-		out = append(out, *resp)
+		return po.CancellationReasons, otcExpiry
 	}
-	return out, nil
+	return u.BuildV2PaymentOrderGetResponseList(ctx.Request.Context(), paymentOrders, extra)
 }
 
 // UpdateProviderBalance handles the update of provider balance

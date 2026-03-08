@@ -644,6 +644,54 @@ func BuildV2PaymentOrderGetResponse(
 	return resp
 }
 
+// V2OrderListExtra returns optional cancellation reasons and OTC expiry for a payment order (used by provider list).
+type V2OrderListExtra func(po *ent.PaymentOrder) (cancellationReasons []string, otcExpiry *time.Time)
+
+// BuildV2PaymentOrderGetResponseList batch-fetches institutions and builds V2 get responses for the given orders.
+// If extra is non-nil it is called per order to supply cancellationReasons and otcExpiry (e.g. for provider list).
+func BuildV2PaymentOrderGetResponseList(ctx context.Context, paymentOrders []*ent.PaymentOrder, extra V2OrderListExtra) ([]types.V2PaymentOrderGetResponse, error) {
+	if len(paymentOrders) == 0 {
+		return nil, nil
+	}
+	codes := make(map[string]bool)
+	for _, po := range paymentOrders {
+		codes[po.Institution] = true
+	}
+	codeSlice := make([]string, 0, len(codes))
+	for c := range codes {
+		codeSlice = append(codeSlice, c)
+	}
+	institutions, err := storage.Client.Institution.
+		Query().
+		Where(institutionEnt.CodeIn(codeSlice...)).
+		WithFiatCurrency().
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	instMap := make(map[string]*ent.Institution)
+	for _, inst := range institutions {
+		instMap[inst.Code] = inst
+	}
+
+	out := make([]types.V2PaymentOrderGetResponse, 0, len(paymentOrders))
+	for _, po := range paymentOrders {
+		inst := instMap[po.Institution]
+		var txLogs []types.TransactionLog
+		for _, tx := range po.Edges.Transactions {
+			txLogs = append(txLogs, types.TransactionLog{ID: tx.ID, GatewayId: tx.GatewayID, Status: tx.Status, TxHash: tx.TxHash, CreatedAt: tx.CreatedAt})
+		}
+		var cancellationReasons []string
+		var otcExpiry *time.Time
+		if extra != nil {
+			cancellationReasons, otcExpiry = extra(po)
+		}
+		resp := BuildV2PaymentOrderGetResponse(po, inst, txLogs, cancellationReasons, otcExpiry)
+		out = append(out, *resp)
+	}
+	return out, nil
+}
+
 // StructToMap converts a struct to a map[string]interface{}
 func StructToMap(input interface{}) map[string]interface{} {
 	result := make(map[string]interface{})

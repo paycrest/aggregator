@@ -1227,6 +1227,9 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	if destination.Country != "" {
 		metadata["country"] = destination.Country
 	}
+	if payload.AmountIn != "" {
+		metadata["amountIn"] = payload.AmountIn
+	}
 
 	// Create payment order
 	paymentOrderBuilder := tx.PaymentOrder.
@@ -1822,6 +1825,9 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	if source.Country != "" {
 		metadata["country"] = source.Country
 	}
+	if payload.AmountIn != "" {
+		metadata["amountIn"] = payload.AmountIn
+	}
 
 	// Use order type from ValidateRate result
 	orderType := rateValidationResult.OrderType
@@ -2238,44 +2244,7 @@ func (ctrl *SenderController) handleListPaymentOrdersV2(ctx *gin.Context, sender
 
 // buildV2PaymentOrderGetResponses converts payment orders to v2 get response list (batch-fetches institutions).
 func (ctrl *SenderController) buildV2PaymentOrderGetResponses(ctx *gin.Context, paymentOrders []*ent.PaymentOrder) ([]types.V2PaymentOrderGetResponse, error) {
-	if len(paymentOrders) == 0 {
-		return nil, nil
-	}
-	codes := make(map[string]bool)
-	for _, po := range paymentOrders {
-		codes[po.Institution] = true
-	}
-	codeSlice := make([]string, 0, len(codes))
-	for c := range codes {
-		codeSlice = append(codeSlice, c)
-	}
-	institutions, err := storage.Client.Institution.
-		Query().
-		Where(institution.CodeIn(codeSlice...)).
-		WithFiatCurrency().
-		All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	instMap := make(map[string]*ent.Institution)
-	for _, inst := range institutions {
-		instMap[inst.Code] = inst
-	}
-
-	out := make([]types.V2PaymentOrderGetResponse, 0, len(paymentOrders))
-	for _, po := range paymentOrders {
-		inst, ok := instMap[po.Institution]
-		if !ok {
-			inst = nil // institution code not in map; builder handles nil
-		}
-		var txLogs []types.TransactionLog
-		for _, tx := range po.Edges.Transactions {
-			txLogs = append(txLogs, types.TransactionLog{ID: tx.ID, GatewayId: tx.GatewayID, Status: tx.Status, TxHash: tx.TxHash, CreatedAt: tx.CreatedAt})
-		}
-		resp := u.BuildV2PaymentOrderGetResponse(po, inst, txLogs, nil, nil)
-		out = append(out, *resp)
-	}
-	return out, nil
+	return u.BuildV2PaymentOrderGetResponseList(ctx.Request.Context(), paymentOrders, nil)
 }
 
 // GetPaymentOrders controller fetches all payment orders with support for search and export
