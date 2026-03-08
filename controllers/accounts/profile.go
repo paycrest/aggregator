@@ -532,6 +532,7 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		}
 		if conversionRate.IsZero() {
 			conversionRate = decimal.NewFromInt(1)
+			logger.Warnf("Profile: both buy and sell market rates are zero for currency %s, using conversion rate 1", currency)
 		}
 
 		tokenOperations = append(tokenOperations, TokenOperation{

@@ -353,7 +353,9 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 				Status:          paymentOrder.Status,
 			},
 		}
-		payload = StructToMap(payloadStructV2)
+		// Use JSON round-trip so field names honor json tags (e.g. webhookVersion not webhookversion)
+		payloadBytes, _ := json.Marshal(payloadStructV2)
+		_ = json.Unmarshal(payloadBytes, &payload)
 	} else {
 		// V1: current payload (backward compatible)
 		payloadStruct := types.PaymentOrderWebhookPayload{
@@ -389,7 +391,9 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 				Status:        paymentOrder.Status,
 			},
 		}
-		payload = StructToMap(payloadStruct)
+		// Use JSON round-trip so field names honor json tags (e.g. webhookVersion not webhookversion)
+		payloadBytes, _ := json.Marshal(payloadStruct)
+		_ = json.Unmarshal(payloadBytes, &payload)
 	}
 
 	// Compute HMAC signature
@@ -559,6 +563,15 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 				destCountry = c
 			}
 		}
+		// Allowlist recipient metadata to avoid leaking KYC/internal fields
+		recipientMeta := make(map[string]interface{})
+		if paymentOrder.Metadata != nil {
+			for _, key := range []string{"bank_code", "branch", "reference", "reference2"} {
+				if v, ok := paymentOrder.Metadata[key]; ok {
+					recipientMeta[key] = v
+				}
+			}
+		}
 		destination = &types.V2FiatDestination{
 			Type:       "fiat",
 			Currency:   currencyCode,
@@ -569,7 +582,7 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 				AccountIdentifier: paymentOrder.AccountIdentifier,
 				AccountName:       paymentOrder.AccountName,
 				Memo:              paymentOrder.Memo,
-				Metadata:          paymentOrder.Metadata,
+				Metadata:          recipientMeta,
 			},
 		}
 	}
@@ -622,7 +635,11 @@ func BuildV2PaymentOrderGetResponse(
 		}
 	}
 	if resp.AmountIn == "" {
-		resp.AmountIn = paymentOrder.Amount.String()
+		if paymentOrder.Direction == paymentorder.DirectionOnramp {
+			resp.AmountIn = "fiat"
+		} else {
+			resp.AmountIn = "crypto"
+		}
 	}
 	return resp
 }

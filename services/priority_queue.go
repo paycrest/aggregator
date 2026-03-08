@@ -297,15 +297,15 @@ func (s *PriorityQueueService) GetProviderRate(ctx context.Context, provider *en
 	if side == RateSideBuy {
 		if !tokenConfig.FixedBuyRate.IsZero() {
 			rate = tokenConfig.FixedBuyRate
-		} else if !tokenConfig.FloatingBuyDelta.IsZero() && !tokenConfig.Edges.Currency.MarketBuyRate.IsZero() {
-			// Floating buy rate: market_buy_rate + floating_buy_delta
+		} else if !tokenConfig.Edges.Currency.MarketBuyRate.IsZero() {
+			// Floating buy rate: market_buy_rate + floating_buy_delta (delta may be zero)
 			rate = tokenConfig.Edges.Currency.MarketBuyRate.Add(tokenConfig.FloatingBuyDelta).RoundBank(2)
 		}
 	} else if side == RateSideSell {
 		if !tokenConfig.FixedSellRate.IsZero() {
 			rate = tokenConfig.FixedSellRate
-		} else if !tokenConfig.FloatingSellDelta.IsZero() && !tokenConfig.Edges.Currency.MarketSellRate.IsZero() {
-			// Floating sell rate: market_sell_rate + floating_sell_delta
+		} else if !tokenConfig.Edges.Currency.MarketSellRate.IsZero() {
+			// Floating sell rate: market_sell_rate + floating_sell_delta (delta may be zero)
 			rate = tokenConfig.Edges.Currency.MarketSellRate.Add(tokenConfig.FloatingSellDelta).RoundBank(2)
 		}
 	}

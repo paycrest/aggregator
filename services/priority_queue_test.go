@@ -594,8 +594,9 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		ctx := context.Background()
 		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
-		// Clear Redis key and aux keys so ProcessBucketQueues starts from a clean state (no leftover from TestCreatePriorityQueueForBucket or concurrent goroutines).
-		for _, k := range []string{redisKey, redisKey + "_temp", redisKey + "_prev"} {
+		redisKeySell := redisKey + "_sell"
+		// Clear Redis keys (buy and sell) and aux keys so ProcessBucketQueues starts from a clean state (no leftover from TestCreatePriorityQueueForBucket or concurrent goroutines).
+		for _, k := range []string{redisKey, redisKey + "_temp", redisKey + "_prev", redisKeySell, redisKeySell + "_temp", redisKeySell + "_prev"} {
 			_ = db.RedisClient.Del(ctx, k).Err()
 		}
 		// Only one bucket should use this redis key so the queue has deterministic length (1 provider, 1 token).
@@ -1195,18 +1196,19 @@ func TestPriorityQueueTest(t *testing.T) {
 
 			// Fallback provider (private): rate 1388, slippage 2% → order 1390 is within (|1390-1388| <= 1390*0.02)
 			_, err = test.AddProviderOrderTokenToProvider(map[string]interface{}{
-				"provider":                 testCtxForPQ.privateProviderProfile,
-				"token_id":                 int(testCtxForPQ.token.ID),
-				"currency_id":              testCtxForPQ.currency.ID,
-				"network":                  networkID,
-				"fixed_conversion_rate":    decimal.NewFromFloat(1388),
-				"conversion_rate_type":     "fixed",
-				"floating_conversion_rate": decimal.NewFromFloat(1.0),
-				"max_order_amount":         decimal.NewFromFloat(10000),
-				"min_order_amount":         decimal.NewFromFloat(1),
-				"max_order_amount_otc":     decimal.NewFromFloat(10000),
-				"min_order_amount_otc":     decimal.NewFromFloat(100),
-				"settlement_address":       "0xfallback123456789012345678901234567890",
+				"provider":             testCtxForPQ.privateProviderProfile,
+				"token_id":             int(testCtxForPQ.token.ID),
+				"currency_id":          testCtxForPQ.currency.ID,
+				"network":              networkID,
+				"fixed_buy_rate":       decimal.NewFromFloat(1388),
+				"fixed_sell_rate":      decimal.NewFromFloat(1388),
+				"floating_buy_delta":   decimal.Zero,
+				"floating_sell_delta":  decimal.Zero,
+				"max_order_amount":     decimal.NewFromFloat(10000),
+				"min_order_amount":     decimal.NewFromFloat(1),
+				"max_order_amount_otc": decimal.NewFromFloat(10000),
+				"min_order_amount_otc": decimal.NewFromFloat(100),
+				"settlement_address":   "0xfallback123456789012345678901234567890",
 			})
 			assert.NoError(t, err)
 			fallbackToken, err := db.Client.ProviderOrderToken.

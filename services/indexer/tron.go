@@ -328,13 +328,17 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 		}
 
 		if len(settleOutEvents) > 0 {
-			orderIds := []string{}
-			orderIdToEvent := make(map[string]*types.SettleOutEvent)
+			orderIdSet := make(map[string]struct{})
+			orderIdToEvents := make(map[string][]*types.SettleOutEvent)
 			for _, event := range settleOutEvents {
-				orderIds = append(orderIds, event.OrderId)
-				orderIdToEvent[event.OrderId] = event
+				orderIdSet[event.OrderId] = struct{}{}
+				orderIdToEvents[event.OrderId] = append(orderIdToEvents[event.OrderId], event)
 			}
-			err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvent)
+			orderIds := make([]string, 0, len(orderIdSet))
+			for id := range orderIdSet {
+				orderIds = append(orderIds, id)
+			}
+			err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvents)
 			if err != nil {
 				logger.Errorf("Failed to process SettleOut events: %v", err)
 			} else {
@@ -372,6 +376,10 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 			}
 		}
 
+		eventCounts.OrderCreated = len(orderCreatedEvents)
+		eventCounts.SettleOut = len(settleOutEvents)
+		eventCounts.SettleIn = len(settleInEvents)
+		eventCounts.OrderRefunded = len(orderRefundedEvents)
 		return eventCounts, nil
 	}
 
@@ -527,8 +535,8 @@ func (s *IndexerTron) indexSettleOutByBlockRange(ctx context.Context, network *e
 	if err != nil {
 		return fmt.Errorf("indexSettleOutByBlockRange.parseJSONResponse: %w", err)
 	}
-	orderIds := []string{}
-	orderIdToEvent := make(map[string]*types.SettleOutEvent)
+	orderIdSet := make(map[string]struct{})
+	orderIdToEvents := make(map[string][]*types.SettleOutEvent)
 	for _, r := range data["data"].([]interface{}) {
 		if r.(map[string]interface{})["event_name"].(string) == "SettleOut" {
 			res, err := fastshot.NewClient(network.RPCEndpoint).
@@ -564,17 +572,21 @@ func (s *IndexerTron) indexSettleOutByBlockRange(ctx context.Context, network *e
 						SettlePercent:     utils.FromSubunit(settlePercent, 0),
 						RebatePercent:     utils.FromSubunit(rebatePercent, 0),
 					}
-					orderIds = append(orderIds, settledEvent.OrderId)
-					orderIdToEvent[settledEvent.OrderId] = settledEvent
+					orderIdSet[settledEvent.OrderId] = struct{}{}
+					orderIdToEvents[settledEvent.OrderId] = append(orderIdToEvents[settledEvent.OrderId], settledEvent)
 					break
 				}
 			}
 		}
 	}
-	if len(orderIds) == 0 {
+	if len(orderIdToEvents) == 0 {
 		return nil
 	}
-	err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvent)
+	orderIds := make([]string, 0, len(orderIdSet))
+	for id := range orderIdSet {
+		orderIds = append(orderIds, id)
+	}
+	err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvents)
 	if err != nil {
 		return fmt.Errorf("indexSettleOutByBlockRange.processSettleOutOrders: %w", err)
 	}
@@ -596,7 +608,7 @@ func (s *IndexerTron) indexSettleInByBlockRange(ctx context.Context, network *en
 	if err != nil {
 		return fmt.Errorf("indexSettleInByBlockRange.getEvents: %w", err)
 	}
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return fmt.Errorf("indexSettleInByBlockRange.parseJSONResponse: %w", err)
 	}
@@ -612,7 +624,7 @@ func (s *IndexerTron) indexSettleInByBlockRange(ctx context.Context, network *en
 			if err != nil {
 				return fmt.Errorf("indexSettleInByBlockRange.getTransaction: %w", err)
 			}
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			data, err := utils.ParseJSONResponse(res.Raw())
 			if err != nil {
 				return fmt.Errorf("indexSettleInByBlockRange.parseJSONResponse: %w", err)
 			}

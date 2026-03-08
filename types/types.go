@@ -213,7 +213,7 @@ type RegisterResponse struct {
 
 // AcceptOrderRequest is the request payload for the accept order endpoint
 type AcceptOrderRequest struct {
-	Direction string `json:"direction,omitempty"` // "payin" or "payout" (default: "payout" for backward compatibility)
+	Direction string `json:"direction,omitempty" validate:"omitempty,oneof=payin payout"` // "payin" or "payout" (default: "payout" for backward compatibility)
 	Amount    string `json:"amount,omitempty"`    // Required for payin orders
 }
 

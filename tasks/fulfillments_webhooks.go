@@ -782,7 +782,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 	}
 	signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
 	res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-		Config().SetTimeout(10*time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(10*time.Second).
 		Header().Add("X-Request-Signature", signature).
 		Build().POST("/tx_status").
 		Body().AsJSON(payload).
@@ -795,7 +795,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: tx_status request")
 		return
 	}
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"OrderID":    order.ID.String(),
@@ -859,6 +859,15 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 			}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: webhook")
 		}
 	case "failed":
+		// Guard: cap retries for /tx_refund to avoid unbounded calls when provider keeps returning failed
+		if getRefundAttemptCountFromOrder(order) >= maxRefundAttempts {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.Edges.Provider.ID,
+				"Attempts":   maxRefundAttempts,
+			}).Warnf("SyncPaymentOrderFulfillments.syncRefundingOrder: max refund attempts reached, skipping callTxRefundAndStore")
+			return
+		}
 		// Do not create failed fulfillment; call /tx_refund to retry. Validate refund account first.
 		if order.AccountIdentifier == "" || order.AccountName == "" || order.Institution == "" {
 			_, _ = storage.Client.PaymentOrderFulfillment.
@@ -893,6 +902,8 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 	}
 }
 
+const maxRefundAttempts = 3
+
 // getRefundReferenceFromOrder returns order.Metadata["providerAccount"]["refundReference"] if set.
 func getRefundReferenceFromOrder(order *ent.PaymentOrder) string {
 	if order.Metadata == nil {
@@ -904,6 +915,25 @@ func getRefundReferenceFromOrder(order *ent.PaymentOrder) string {
 	}
 	ref, _ := pa["refundReference"].(string)
 	return ref
+}
+
+// getRefundAttemptCountFromOrder returns order.Metadata["providerAccount"]["refundAttemptCount"] (1-based count of callTxRefundAndStore calls).
+func getRefundAttemptCountFromOrder(order *ent.PaymentOrder) int {
+	if order.Metadata == nil {
+		return 0
+	}
+	pa, _ := order.Metadata["providerAccount"].(map[string]interface{})
+	if pa == nil {
+		return 0
+	}
+	switch v := pa["refundAttemptCount"].(type) {
+	case float64:
+		return int(v)
+	case int:
+		return v
+	default:
+		return 0
+	}
 }
 
 // getTxStatusReferenceForVA returns the reference to use for /tx_status when querying VA/deposit (no-fulfillments or fulfillments>0).
@@ -934,7 +964,7 @@ func callRequestAuthorization(ctx context.Context, order *ent.PaymentOrder, psp,
 	}
 	signature := tokenUtils.GenerateHMACSignature(payload, decryptedSecret)
 	res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-		Config().SetTimeout(30*time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 		Header().Add("X-Request-Signature", signature).
 		Build().POST("/request_authorization").
 		Body().AsJSON(payload).
@@ -942,8 +972,8 @@ func callRequestAuthorization(ctx context.Context, order *ent.PaymentOrder, psp,
 	if err != nil {
 		return err
 	}
-	if res.RawResponse.StatusCode != 200 {
-		return fmt.Errorf("request_authorization status %d", res.RawResponse.StatusCode)
+	if res.Raw().StatusCode != 200 {
+		return fmt.Errorf("request_authorization status %d", res.Raw().StatusCode)
 	}
 	return nil
 }
@@ -969,7 +999,7 @@ func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder, decrypte
 	}
 	signature := tokenUtils.GenerateHMACSignature(body, decryptedSecret)
 	res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-		Config().SetTimeout(10*time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(10*time.Second).
 		Header().Add("X-Request-Signature", signature).
 		Build().POST("/tx_refund").
 		Body().AsJSON(body).
@@ -981,11 +1011,11 @@ func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder, decrypte
 		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: tx_refund request")
 		return "", err
 	}
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return "", err
 	}
-	if res.RawResponse.StatusCode != 200 {
+	if res.Raw().StatusCode != 200 {
 		return "", nil
 	}
 	dataMap, _ := data["data"].(map[string]interface{})
@@ -1007,6 +1037,8 @@ func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder, decrypte
 		providerAccount = make(map[string]interface{})
 	}
 	providerAccount["refundReference"] = refundReference
+	attemptCount := getRefundAttemptCountFromOrder(order) + 1
+	providerAccount["refundAttemptCount"] = attemptCount
 	orderMetadata["providerAccount"] = providerAccount
 	_, err = storage.Client.PaymentOrder.UpdateOneID(order.ID).SetMetadata(orderMetadata).Save(ctx)
 	if err != nil {

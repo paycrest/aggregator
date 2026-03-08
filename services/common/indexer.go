@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -119,7 +120,8 @@ func ProcessCreatedOrders(
 }
 
 // ProcessSettleOutOrders processes offramp (SettleOut) events and updates orders to settled.
-func ProcessSettleOutOrders(ctx context.Context, network *ent.Network, orderIds []string, orderIdToEvent map[string]*types.SettleOutEvent) error {
+// orderIdToEvents supports multiple events per order (e.g. split settlements).
+func ProcessSettleOutOrders(ctx context.Context, network *ent.Network, orderIds []string, orderIdToEvents map[string][]*types.SettleOutEvent) error {
 	lockOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
@@ -148,28 +150,45 @@ func ProcessSettleOutOrders(ctx context.Context, network *ent.Network, orderIds 
 		"LockOrders": lockOrderDetails,
 	}).Info("Processing settled orders")
 
+	// Map lock orders by ID so each event can be matched to its split order
+	lockOrderByID := make(map[uuid.UUID]*ent.PaymentOrder)
+	for _, lo := range lockOrders {
+		lockOrderByID[lo.ID] = lo
+	}
+
 	var wg sync.WaitGroup
-	for _, lockOrder := range lockOrders {
-		settledEvent, ok := orderIdToEvent[lockOrder.GatewayID]
-		if !ok {
-			continue
-		}
-
-		wg.Add(1)
-		go func(lo *ent.PaymentOrder, se *types.SettleOutEvent) {
-			defer wg.Done()
-
-			// Update order status
-			err := UpdateOrderStatusSettleOut(ctx, network, se, lockOrder.MessageHash)
+	for _, events := range orderIdToEvents {
+		for _, ev := range events {
+			trimmed := strings.TrimPrefix(ev.SplitOrderId, "0x")
+			splitID, err := uuid.Parse(trimmed)
 			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"OrderID": se.OrderId,
-					"TxHash":  se.TxHash,
-					"Network": network.Identifier,
-				}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
+				// EVM: SplitOrderId may be 32-byte hex; use first 16 bytes as UUID
+				if b, decodeErr := hex.DecodeString(trimmed); decodeErr == nil && len(b) >= 16 {
+					splitID, _ = uuid.FromBytes(b[:16])
+				} else {
+					continue
+				}
 			}
-		}(lockOrder, settledEvent)
+			lockOrder, ok := lockOrderByID[splitID]
+			if !ok {
+				continue
+			}
+			se := ev
+			lo := lockOrder
+			wg.Add(1)
+			go func(lockOrder *ent.PaymentOrder, settledEvent *types.SettleOutEvent) {
+				defer wg.Done()
+				err := UpdateOrderStatusSettleOut(ctx, network, settledEvent, lockOrder.MessageHash)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": settledEvent.OrderId,
+						"TxHash":  settledEvent.TxHash,
+						"Network": network.Identifier,
+					}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
+				}
+			}(lo, se)
+		}
 	}
 	wg.Wait()
 

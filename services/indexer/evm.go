@@ -789,7 +789,11 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			if !ok || orderIdStr == "" {
 				continue
 			}
-			liquidityProviderStr, _ := indexedParams["liquidityProvider"].(string)
+			liquidityProviderStr, ok := indexedParams["liquidityProvider"].(string)
+			if !ok || liquidityProviderStr == "" {
+				logger.WithFields(logger.Fields{"orderId": orderIdStr, "txHash": txHashFromEvent}).Warnf("SettleIn: missing or invalid liquidityProvider, skipping event")
+				continue
+			}
 			recipientStr, ok := indexedParams["recipient"].(string)
 			if !ok || recipientStr == "" {
 				continue
@@ -803,8 +807,9 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 				continue
 			}
 			tokenStr, ok := nonIndexedParams["token"].(string)
-			if !ok {
-				tokenStr = ""
+			if !ok || tokenStr == "" {
+				logger.WithFields(logger.Fields{"orderId": orderIdStr, "txHash": txHashFromEvent}).Warnf("SettleIn: missing or invalid token, skipping event")
+				continue
 			}
 			aggregatorFeeStr, _ := nonIndexedParams["aggregatorFee"].(string)
 			var aggregatorFee decimal.Decimal
@@ -898,15 +903,19 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	}
 	eventCounts.OrderCreated = len(orderCreatedEvents)
 
-	// Process SettleOut (offramp) events
+	// Process SettleOut (offramp) events (multiple events per orderId for splits)
 	if len(settleOutEvents) > 0 {
-		orderIds := []string{}
-		orderIdToEvent := make(map[string]*types.SettleOutEvent)
+		orderIdSet := make(map[string]struct{})
+		orderIdToEvents := make(map[string][]*types.SettleOutEvent)
 		for _, event := range settleOutEvents {
-			orderIds = append(orderIds, event.OrderId)
-			orderIdToEvent[event.OrderId] = event
+			orderIdSet[event.OrderId] = struct{}{}
+			orderIdToEvents[event.OrderId] = append(orderIdToEvents[event.OrderId], event)
 		}
-		err := common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvent)
+		orderIds := make([]string, 0, len(orderIdSet))
+		for id := range orderIdSet {
+			orderIds = append(orderIds, id)
+		}
+		err := common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvents)
 		if err != nil {
 			logger.Errorf("Failed to process SettleOut events: %v", err)
 		} else {
@@ -1075,15 +1084,19 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 		settleOutEvents = append(settleOutEvents, settledEvent)
 	}
 
-	// Process SettleOut events
+	// Process SettleOut events (multiple events per orderId for splits)
 	if len(settleOutEvents) > 0 {
-		orderIds := []string{}
-		orderIdToEvent := make(map[string]*types.SettleOutEvent)
+		orderIdSet := make(map[string]struct{})
+		orderIdToEvents := make(map[string][]*types.SettleOutEvent)
 		for _, event := range settleOutEvents {
-			orderIds = append(orderIds, event.OrderId)
-			orderIdToEvent[event.OrderId] = event
+			orderIdSet[event.OrderId] = struct{}{}
+			orderIdToEvents[event.OrderId] = append(orderIdToEvents[event.OrderId], event)
 		}
-		err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvent)
+		orderIds := make([]string, 0, len(orderIdSet))
+		for id := range orderIdSet {
+			orderIds = append(orderIds, id)
+		}
+		err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvents)
 		if err != nil {
 			logger.Errorf("Failed to process SettleOut events: %v", err)
 		} else {

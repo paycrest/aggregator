@@ -124,6 +124,7 @@ func TestIndex(t *testing.T) {
 			assert.Equal(t, nairaCurrency.Decimals, response.Data[0].Decimals)
 			assert.Equal(t, nairaCurrency.Symbol, response.Data[0].Symbol)
 			assert.True(t, response.Data[0].MarketSellRate.Equal(nairaCurrency.MarketSellRate))
+			assert.True(t, response.Data[0].MarketBuyRate.Equal(nairaCurrency.MarketBuyRate))
 		})
 	})
 

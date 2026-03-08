@@ -97,7 +97,7 @@ func TestFetchExternalRate(t *testing.T) {
 		assert.Error(t, err)
 		assert.Equal(t, buy, decimal.Zero)
 		assert.Equal(t, sell, decimal.Zero)
-		assert.Contains(t, err.Error(), "Invalid buyRate format")
+		assert.Contains(t, err.Error(), "Invalid sellRate format")
 	})
 
 	// Reset httpmock after each test

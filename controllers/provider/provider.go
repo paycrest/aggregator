@@ -599,17 +599,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	// Payin vs payout: payin has direction=payin in order_request
 	isPayin := result["direction"] == "payin"
 
-	// Best-effort cleanup of metadata key used for timeout recovery.
-	_, _ = storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
-
-	// Delete order request from Redis after validation (both payin and offramp)
-	_, err = storage.RedisClient.Del(reqCtx, orderRequestKey).Result()
-	if err != nil {
-		logger.Errorf("error deleting order request from Redis: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to accept order request", nil)
-		return
-	}
-
 	tx, err := storage.Client.Tx(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
@@ -665,7 +654,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 				providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerbalances.HasTokenWith(token.IDEQ(currentOrder.Edges.Token.ID)),
 			).
-			Only(ctx)
+			Only(reqCtx)
 		if err != nil {
 			_ = tx.Rollback()
 			logger.Errorf("Failed to get provider token balance: %v", err)
@@ -673,8 +662,36 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			return
 		}
 
-		// Check if reserved balance is sufficient
-		if providerBalance.ReservedBalance.LessThan(totalCryptoNeeded) {
+		// Sum expected reserved amount across this provider's active onramp orders for the same token.
+		// This ensures we do not accept an order when its reservation was already released or when
+		// reserved balance cannot cover the aggregate of all active onramp reservations.
+		activeOnrampOrders, err := tx.PaymentOrder.
+			Query().
+			Where(
+				paymentorder.DirectionEQ(paymentorder.DirectionOnramp),
+				paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				paymentorder.HasTokenWith(token.IDEQ(currentOrder.Edges.Token.ID)),
+				paymentorder.StatusIn(
+					paymentorder.StatusPending,
+					paymentorder.StatusFulfilling,
+					paymentorder.StatusRefunding,
+				),
+			).
+			All(reqCtx)
+		if err != nil {
+			_ = tx.Rollback()
+			logger.Errorf("Failed to query active onramp orders for reservation check: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to check provider balance", nil)
+			return
+		}
+
+		totalReservedRequired := decimal.Zero
+		for _, activeOrder := range activeOnrampOrders {
+			totalReservedRequired = totalReservedRequired.Add(activeOrder.Amount.Add(activeOrder.SenderFee))
+		}
+
+		// Reject if reserved balance cannot cover this order or the sum of all active onramp reservations
+		if providerBalance.ReservedBalance.LessThan(totalCryptoNeeded) || providerBalance.ReservedBalance.LessThan(totalReservedRequired) {
 			// Create order_refunding transaction log and set order to REFUNDING under the same transaction
 			networkID := ""
 			if currentOrder.Edges.Token != nil && currentOrder.Edges.Token.Edges.Network != nil {
@@ -684,7 +701,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 				SetStatus(transactionlog.StatusOrderRefunding).
 				SetGatewayID(orderID.String()).
 				SetNetwork(networkID).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				_ = tx.Rollback()
 				logger.Errorf("Failed to create order_refunding transaction log: %v", err)
@@ -695,7 +712,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 				UpdateOneID(orderID).
 				SetStatus(paymentorder.StatusRefunding).
 				AddTransactions(transactionLog).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				_ = tx.Rollback()
 				logger.Errorf("Failed to set order status to refunding: %v", err)
@@ -706,6 +723,13 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 				logger.Errorf("Failed to commit transaction: %v", err)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 				return
+			}
+			// Delete order request keys only after commit so retries can still find the order
+			if _, err := storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result(); err != nil {
+				logger.Errorf("error deleting order request meta from Redis: %v", err)
+			}
+			if _, err := storage.RedisClient.Del(reqCtx, orderRequestKey).Result(); err != nil {
+				logger.Errorf("error deleting order request from Redis: %v", err)
 			}
 
 			// Return 4XX with refund details
@@ -862,6 +886,13 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	if err := tx.Commit(); err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
+	}
+	// Delete order request keys only after commit so retries can still find the order
+	if _, err := storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result(); err != nil {
+		logger.Errorf("error deleting order request meta from Redis: %v", err)
+	}
+	if _, err := storage.RedisClient.Del(reqCtx, orderRequestKey).Result(); err != nil {
+		logger.Errorf("error deleting order request from Redis: %v", err)
 	}
 
 	// Unified AcceptOrder response for both payin and payout
@@ -1945,6 +1976,9 @@ func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *
 	orderChainID := order.Edges.Token.Edges.Network.ChainID
 	if fmt.Sprintf("%d", orderChainID) != authorization.ChainID {
 		return fmt.Errorf("authorization chain ID does not match order network")
+	}
+	if !strings.EqualFold(strings.TrimPrefix(authorization.Address, "0x"), strings.TrimPrefix(gatewayAddress, "0x")) {
+		return fmt.Errorf("authorization address does not match order network gateway address")
 	}
 
 	// Validate V and derive yParity: only 0, 1, 27, 28 are accepted (EIP-155 and legacy)

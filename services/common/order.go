@@ -309,6 +309,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 	var transactionLog *ent.TransactionLog
 
 	// Update any existing order_refunding log (created when refund tx was submitted) by setting tx_hash.
+	// Note: TransactionLog status is not updated here; the ent TransactionLogUpdate builder may not expose SetStatus. Order status is set to Refunded via PaymentOrder update.
 	updatedRefundingRows, err := tx.TransactionLog.
 		Update().
 		Where(
