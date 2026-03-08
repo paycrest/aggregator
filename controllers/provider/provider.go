@@ -799,28 +799,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	// For payin: if order is already Fulfilling and same provider, return 201 + lock payload (idempotent retry after settlement failure)
 	if isPayin && currentOrder.Direction == paymentorder.DirectionOnramp && currentOrder.Status == paymentorder.StatusFulfilling && currentOrder.Edges.Provider != nil && currentOrder.Edges.Provider.ID == provider.ID {
 		_ = tx.Rollback()
-		response := types.AcceptOrderResponse{
-			ID:                orderID.String(),
-			Institution:       currentOrder.Institution,
-			AccountIdentifier: currentOrder.AccountIdentifier,
-			AccountName:       currentOrder.AccountName,
-			Memo:              currentOrder.Memo,
-			Metadata:          currentOrder.Metadata,
-		}
-		response.Direction = "payin"
-		response.Amount = currentOrder.Amount.Add(currentOrder.SenderFee).Mul(currentOrder.Rate).RoundBank(0)
-		if currentOrder.Edges.Token != nil && currentOrder.Edges.Token.Edges.Network != nil {
-			network := currentOrder.Edges.Token.Edges.Network
-			response.ChainId = fmt.Sprintf("%d", network.ChainID)
-			response.RpcUrl = network.RPCEndpoint
-			response.DelegationAddress = network.GatewayContractAddress
-		}
-		if currentOrder.OrderType == paymentorder.OrderTypeOtc {
-			if response.Metadata == nil {
-				response.Metadata = make(map[string]interface{})
-			}
-			response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
-		}
+		response := buildAcceptOrderResponse(currentOrder, orderID, provider)
 		u.APIResponse(ctx, http.StatusCreated, "success", "Order accepted", response)
 		return
 	}
@@ -944,7 +923,14 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// Unified AcceptOrder response for both payin and payout
-	response := types.AcceptOrderResponse{
+	response := buildAcceptOrderResponse(order, orderID, provider)
+	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", response)
+}
+
+// buildAcceptOrderResponse builds the shared AcceptOrderResponse from an order (used by idempotent path, main accept path, and acceptOrderRespondWithOrder).
+func buildAcceptOrderResponse(order *ent.PaymentOrder, orderID uuid.UUID, provider *ent.ProviderProfile) *types.AcceptOrderResponse {
+	isPayin := order.Direction == paymentorder.DirectionOnramp
+	response := &types.AcceptOrderResponse{
 		ID:                orderID.String(),
 		Institution:       order.Institution,
 		AccountIdentifier: order.AccountIdentifier,
@@ -965,50 +951,19 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		response.Direction = "payout"
 		response.Amount = order.Amount.Mul(order.Rate).RoundBank(0)
 	}
-
-	// OTC: use in-scope order and provider (order was just accepted by this provider)
 	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling && provider != nil {
 		if response.Metadata == nil {
 			response.Metadata = make(map[string]interface{})
 		}
 		response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
 	}
-
-	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &response)
+	return response
 }
 
 // acceptOrderRespondWithOrder sends the same AcceptOrder success response using an already-loaded order (e.g. idempotent retry when Redis was cleared).
 func acceptOrderRespondWithOrder(ctx *gin.Context, order *ent.PaymentOrder, orderID uuid.UUID, provider *ent.ProviderProfile) {
-	isPayin := order.Direction == paymentorder.DirectionOnramp
-	response := types.AcceptOrderResponse{
-		ID:                orderID.String(),
-		Institution:       order.Institution,
-		AccountIdentifier: order.AccountIdentifier,
-		AccountName:       order.AccountName,
-		Memo:              order.Memo,
-		Metadata:          order.Metadata,
-	}
-	if isPayin {
-		response.Direction = "payin"
-		response.Amount = order.Amount.Add(order.SenderFee).Mul(order.Rate).RoundBank(0)
-		if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
-			network := order.Edges.Token.Edges.Network
-			response.ChainId = fmt.Sprintf("%d", network.ChainID)
-			response.RpcUrl = network.RPCEndpoint
-			response.DelegationAddress = network.GatewayContractAddress
-		}
-	} else {
-		response.Direction = "payout"
-		response.Amount = order.Amount.Mul(order.Rate).RoundBank(0)
-	}
-	orderConf := config.OrderConfig()
-	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling && provider != nil {
-		if response.Metadata == nil {
-			response.Metadata = make(map[string]interface{})
-		}
-		response.Metadata["otcFulfillmentExpiry"] = time.Now().Add(orderConf.OrderFulfillmentValidityOtc)
-	}
-	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", &response)
+	response := buildAcceptOrderResponse(order, orderID, provider)
+	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", response)
 }
 
 // DeclineOrder controller declines an order

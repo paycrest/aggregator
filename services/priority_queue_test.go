@@ -722,10 +722,11 @@ func TestPriorityQueueTest(t *testing.T) {
 			Only(ctx)
 		assert.NoError(t, err)
 
-		// Ensure both current and prev queues are empty for this bucket
+		// Ensure current and prev queues are empty for this bucket (side-suffixed keys used by AssignPaymentOrder)
 		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, bucket.MinAmount, bucket.MaxAmount)
-		db.RedisClient.Del(ctx, redisKey)
-		db.RedisClient.Del(ctx, redisKey+"_prev")
+		for _, suffix := range []string{"", "_sell", "_sell_prev", "_sell_temp", "_buy", "_buy_prev", "_buy_temp", "_prev"} {
+			db.RedisClient.Del(ctx, redisKey+suffix)
+		}
 
 		err = service.AssignPaymentOrder(ctx, types.PaymentOrderFields{
 			ID:                order.ID,

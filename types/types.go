@@ -1120,8 +1120,7 @@ type IndexTransactionResponse struct {
 type EventCounts struct {
 	Transfer      int `json:"Transfer"`
 	OrderCreated  int `json:"OrderCreated"`
-	OrderSettled  int `json:"OrderSettled"`
-	SettleOut     int `json:"SettleOut"` // SettleOut (offramp)
+	SettleOut     int `json:"SettleOut"` // SettleOut (offramp); Starknet OrderSettled is mapped here
 	SettleIn      int `json:"SettleIn"`  // SettleIn (onramp)
 	OrderRefunded int `json:"OrderRefunded"`
 }

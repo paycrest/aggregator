@@ -507,7 +507,7 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 			}
 		}
 	}
-	eventCounts.OrderSettled = len(orderSettledEvents)
+	eventCounts.SettleOut = len(orderSettledEvents)
 
 	// Process OrderRefunded events
 	if len(orderRefundedEvents) > 0 {
@@ -577,7 +577,7 @@ func (s *IndexerStarknet) IndexGateway(ctx context.Context, network *ent.Network
 			return eventCounts, fmt.Errorf("failed to index gateway by transaction: %w", err)
 		}
 		eventCounts.OrderCreated += eventsCounts.OrderCreated
-		eventCounts.OrderSettled += eventsCounts.OrderSettled
+		eventCounts.SettleOut += eventsCounts.SettleOut
 		eventCounts.OrderRefunded += eventsCounts.OrderRefunded
 	}
 
@@ -643,7 +643,7 @@ func (s *IndexerStarknet) IndexProviderSettlementAddress(ctx context.Context, ne
 			}).Error("Failed to index provider transfer transaction by hash")
 			return eventCounts, err
 		}
-		eventCounts.OrderSettled += eventsCounts.OrderSettled
+		eventCounts.SettleOut += eventsCounts.SettleOut
 	}
 
 	return eventCounts, nil
@@ -759,7 +759,7 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 			}
 		}
 	}
-	eventCounts.OrderSettled = len(orderSettledEvents)
+	eventCounts.SettleOut = len(orderSettledEvents)
 
 	return eventCounts, nil
 }
