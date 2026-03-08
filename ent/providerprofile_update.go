@@ -104,20 +104,6 @@ func (_u *ProviderProfileUpdate) SetNillableIsActive(v *bool) *ProviderProfileUp
 	return _u
 }
 
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (_u *ProviderProfileUpdate) SetIsKybVerified(v bool) *ProviderProfileUpdate {
-	_u.mutation.SetIsKybVerified(v)
-	return _u
-}
-
-// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (_u *ProviderProfileUpdate) SetNillableIsKybVerified(v *bool) *ProviderProfileUpdate {
-	if v != nil {
-		_u.SetIsKybVerified(*v)
-	}
-	return _u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *ProviderProfileUpdate) SetUpdatedAt(v time.Time) *ProviderProfileUpdate {
 	_u.mutation.SetUpdatedAt(v)
@@ -461,9 +447,6 @@ func (_u *ProviderProfileUpdate) sqlSave(ctx context.Context) (_node int, err er
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
-	}
-	if value, ok := _u.mutation.IsKybVerified(); ok {
-		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)
@@ -842,20 +825,6 @@ func (_u *ProviderProfileUpdateOne) SetNillableIsActive(v *bool) *ProviderProfil
 	return _u
 }
 
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (_u *ProviderProfileUpdateOne) SetIsKybVerified(v bool) *ProviderProfileUpdateOne {
-	_u.mutation.SetIsKybVerified(v)
-	return _u
-}
-
-// SetNillableIsKybVerified sets the "is_kyb_verified" field if the given value is not nil.
-func (_u *ProviderProfileUpdateOne) SetNillableIsKybVerified(v *bool) *ProviderProfileUpdateOne {
-	if v != nil {
-		_u.SetIsKybVerified(*v)
-	}
-	return _u
-}
-
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *ProviderProfileUpdateOne) SetUpdatedAt(v time.Time) *ProviderProfileUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
@@ -1229,9 +1198,6 @@ func (_u *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provide
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(providerprofile.FieldIsActive, field.TypeBool, value)
-	}
-	if value, ok := _u.mutation.IsKybVerified(); ok {
-		_spec.SetField(providerprofile.FieldIsKybVerified, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerprofile.FieldUpdatedAt, field.TypeTime, value)

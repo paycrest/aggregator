@@ -1,6 +1,7 @@
 package sender
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -99,6 +100,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 	sender := senderCtx.(*ent.SenderProfile)
+	reqCtx := ctx.Request.Context()
 
 	// Get token from DB
 	token, err := storage.Client.Token.
@@ -109,7 +111,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			tokenEnt.IsEnabledEQ(true),
 		).
 		WithNetwork().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -134,7 +136,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 				senderprofile.IDEQ(sender.ID),
 			),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 			Field:   "Token",
@@ -232,7 +234,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			Where(
 				paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
 			).
-			Exist(ctx)
+			Exist(reqCtx)
 		if err != nil {
 			logger.Errorf("Reference check error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", map[string]interface{}{
@@ -261,7 +263,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 				q.Where(fiatcurrency.IsEnabledEQ(true))
 			},
 		).
-		First(ctx)
+		First(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -470,7 +472,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	// Create payment order and recipient in a transaction
-	tx, err := storage.Client.Tx(ctx)
+	tx, err := storage.Client.Tx(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -531,7 +533,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		paymentOrderBuilder = paymentOrderBuilder.SetReceiveAddressSalt(receiveAddressSalt)
 	}
 
-	paymentOrder, err := paymentOrderBuilder.Save(ctx)
+	paymentOrder, err := paymentOrderBuilder.Save(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -543,7 +545,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	if !strings.HasPrefix(payload.Network, "tron") && !strings.HasPrefix(payload.Network, "starknet") {
 		engineService := svc.NewEngineService()
 		webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
-			ctx,
+			reqCtx,
 			token.Edges.Network.ChainID,
 			token.ContractAddress,    // Token contract address
 			receiveAddress,           // Smart address to monitor
@@ -705,6 +707,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		return
 	}
 	sender := senderCtx.(*ent.SenderProfile)
+	reqCtx := ctx.Request.Context()
 
 	// Validate source configuration
 	token, err := storage.Client.Token.
@@ -715,7 +718,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 			tokenEnt.IsEnabledEQ(true),
 		).
 		WithNetwork().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -771,7 +774,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 				senderprofile.IDEQ(sender.ID),
 			),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 			Field:   "Source",
@@ -807,7 +810,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 				q.Where(fiatcurrency.IsEnabledEQ(true))
 			},
 		).
-		First(ctx)
+		First(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -855,7 +858,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 			Where(
 				paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
 			).
-			Exist(ctx)
+			Exist(reqCtx)
 		if err != nil {
 			logger.Errorf("Reference check error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -1181,7 +1184,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	}
 
 	// Create payment order in a transaction
-	tx, err := storage.Client.Tx(ctx)
+	tx, err := storage.Client.Tx(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -1193,7 +1196,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		Create().
 		SetStatus(transactionlog.StatusOrderInitiated).
 		SetNetwork(token.Edges.Network.Identifier).
-		Save(ctx)
+		Save(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -1252,7 +1255,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		paymentOrderBuilder = paymentOrderBuilder.SetReceiveAddressSalt(receiveAddressSalt)
 	}
 
-	paymentOrder, err := paymentOrderBuilder.Save(ctx)
+	paymentOrder, err := paymentOrderBuilder.Save(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -1264,7 +1267,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	if !strings.HasPrefix(source.Network, "tron") && !strings.HasPrefix(source.Network, "starknet") {
 		engineService := svc.NewEngineService()
 		webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
-			ctx,
+			reqCtx,
 			token.Edges.Network.ChainID,
 			token.ContractAddress,
 			receiveAddress,
@@ -1971,6 +1974,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 
 // GetPaymentOrderByID controller fetches a payment order by ID
 func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get order ID from the URL
 	orderID := ctx.Param("id")
 	isUUID := true
@@ -2006,7 +2010,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 			tq.WithNetwork()
 		}).
 		WithTransactions().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusNotFound, "error",
@@ -2034,7 +2038,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 		Query().
 		Where(institution.CodeEQ(paymentOrder.Institution)).
 		WithFiatCurrency().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment order", nil)
@@ -2296,6 +2300,7 @@ func (ctrl *SenderController) GetPaymentOrders(ctx *gin.Context) {
 
 // handleListPaymentOrders handles normal payment order listing with pagination
 func (ctrl *SenderController) handleListPaymentOrders(ctx *gin.Context, sender *ent.SenderProfile) {
+	reqCtx := ctx.Request.Context()
 	// Get ordering query param
 	ordering := ctx.Query("ordering")
 	order := ent.Desc(paymentorder.FieldCreatedAt)
@@ -2316,7 +2321,7 @@ func (ctrl *SenderController) handleListPaymentOrders(ctx *gin.Context, sender *
 	// Apply filters from query parameters
 	paymentOrderQuery = ctrl.applyFilters(ctx, paymentOrderQuery)
 
-	count, err := paymentOrderQuery.Count(ctx)
+	count, err := paymentOrderQuery.Count(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment orders", nil)
@@ -2331,7 +2336,7 @@ func (ctrl *SenderController) handleListPaymentOrders(ctx *gin.Context, sender *
 		Limit(pageSize).
 		Offset(offset).
 		Order(order).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error",
@@ -2339,7 +2344,7 @@ func (ctrl *SenderController) handleListPaymentOrders(ctx *gin.Context, sender *
 		return
 	}
 
-	orders, err := ctrl.buildPaymentOrderResponses(ctx, paymentOrders)
+	orders, err := ctrl.buildPaymentOrderResponses(reqCtx, paymentOrders)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch payment orders", nil)
@@ -2356,6 +2361,7 @@ func (ctrl *SenderController) handleListPaymentOrders(ctx *gin.Context, sender *
 
 // handleSearchPaymentOrders handles text search functionality for payment orders
 func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender *ent.SenderProfile, searchText string) {
+	reqCtx := ctx.Request.Context()
 	// Build base query
 	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
 		paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
@@ -2386,7 +2392,7 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 	)
 
 	// Get total count
-	count, err := paymentOrderQuery.Count(ctx)
+	count, err := paymentOrderQuery.Count(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to count payment orders: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
@@ -2409,14 +2415,14 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 		}).
 		Limit(maxSearchResults).
 		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to fetch payment orders: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
 		return
 	}
 
-	orders, err := ctrl.buildPaymentOrderResponses(ctx, paymentOrders)
+	orders, err := ctrl.buildPaymentOrderResponses(reqCtx, paymentOrders)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
@@ -2431,6 +2437,7 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 
 // handleExportPaymentOrders handles CSV export functionality
 func (ctrl *SenderController) handleExportPaymentOrders(ctx *gin.Context, sender *ent.SenderProfile) {
+	reqCtx := ctx.Request.Context()
 	// Parse date range parameters
 	fromDateStr := ctx.Query("from")
 	toDateStr := ctx.Query("to")
@@ -2506,7 +2513,7 @@ func (ctrl *SenderController) handleExportPaymentOrders(ctx *gin.Context, sender
 	}
 
 	// Get total count to validate export size
-	count, err := paymentOrderQuery.Count(ctx)
+	count, err := paymentOrderQuery.Count(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to count payment orders", nil)
@@ -2532,7 +2539,7 @@ func (ctrl *SenderController) handleExportPaymentOrders(ctx *gin.Context, sender
 			tq.WithNetwork()
 		}).
 		Order(ent.Desc(paymentorder.FieldCreatedAt)).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to export payment orders", nil)
@@ -2545,6 +2552,7 @@ func (ctrl *SenderController) handleExportPaymentOrders(ctx *gin.Context, sender
 
 // applyFilters applies common filters to payment order query
 func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentOrderQuery) *ent.PaymentOrderQuery {
+	reqCtx := ctx.Request.Context()
 	// Filter by status
 	statusQueryParam := ctx.Query("status")
 	statusMap := map[string]paymentorder.Status{
@@ -2572,7 +2580,7 @@ func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentO
 		tokenExists, err := storage.Client.Token.
 			Query().
 			Where(tokenEnt.SymbolEQ(tokenQueryParam)).
-			Exist(ctx)
+			Exist(reqCtx)
 		if err != nil {
 			logger.Errorf("error checking token existence: %v", err)
 		} else if tokenExists {
@@ -2588,7 +2596,7 @@ func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentO
 		networkExists, err := storage.Client.Network.
 			Query().
 			Where(network.IdentifierEQ(networkQueryParam)).
-			Exist(ctx)
+			Exist(reqCtx)
 		if err != nil {
 			logger.Errorf("error checking network existence: %v", err)
 		} else if networkExists {
@@ -2604,7 +2612,7 @@ func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentO
 }
 
 // buildPaymentOrderResponses converts ent PaymentOrder entities to API response format
-func (ctrl *SenderController) buildPaymentOrderResponses(ctx *gin.Context, paymentOrders []*ent.PaymentOrder) ([]types.SenderOrderResponse, error) {
+func (ctrl *SenderController) buildPaymentOrderResponses(ctx context.Context, paymentOrders []*ent.PaymentOrder) ([]types.SenderOrderResponse, error) {
 	// Batch fetch institutions to avoid N+1 queries
 	institutionCodes := make(map[string]bool)
 	for _, paymentOrder := range paymentOrders {
@@ -2803,6 +2811,7 @@ func (ctrl *SenderController) generateCSVResponse(ctx *gin.Context, paymentOrder
 
 // Stats controller fetches sender stats
 func (ctrl *SenderController) Stats(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get sender profile from the context
 	senderCtx, ok := ctx.Get("sender")
 	if !ok {
@@ -2829,7 +2838,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 			ent.Sum(paymentorder.FieldAmount),
 			ent.As(ent.Sum(paymentorder.FieldSenderFee), "SumFieldSenderFee"),
 		).
-		Scan(ctx, &w)
+		Scan(reqCtx, &w)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
@@ -2844,7 +2853,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 			paymentorder.HasTokenWith(tokenEnt.BaseCurrencyNEQ("USD")),
 			paymentorder.StatusEQ(paymentorder.StatusSettled),
 		).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
@@ -2856,7 +2865,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 
 	// Convert local stablecoin volume to USD (direction-aware: onramp use buy rate, offramp use sell rate)
 	for _, paymentOrder := range paymentOrders {
-		institution, err := u.GetInstitutionByCode(ctx, paymentOrder.Institution, true)
+		institution, err := u.GetInstitutionByCode(reqCtx, paymentOrder.Institution, true)
 		if err != nil {
 			logger.Errorf("error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
@@ -2888,7 +2897,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 		Where(
 			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
 		).
-		Count(ctx)
+		Count(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch sender stats", nil)
@@ -2911,6 +2920,8 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		return
 	}
 	sender := senderCtx.(*ent.SenderProfile)
+
+	reqCtx := ctx.Request.Context()
 
 	// Parse the PaymentOrder ID string into a UUID
 	paymentOrderID, err := uuid.Parse(ctx.Param("id"))
@@ -2939,7 +2950,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		WithFulfillments(func(fq *ent.PaymentOrderFulfillmentQuery) {
 			fq.Where(paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusSuccess))
 		}).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or not eligible for validation", nil)
@@ -2978,7 +2989,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 	}
 
 	// Start a database transaction to ensure consistency
-	tx, err := storage.Client.Tx(ctx)
+	tx, err := storage.Client.Tx(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":          fmt.Sprintf("%v", err),
@@ -2992,7 +3003,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 	transactionLog, err := tx.TransactionLog.Create().
 		SetStatus(transactionlog.StatusOrderValidated).
 		SetNetwork(paymentOrder.Edges.Token.Edges.Network.Identifier).
-		Save(ctx)
+		Save(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":          fmt.Sprintf("%v", err),
@@ -3010,7 +3021,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		Where(paymentorder.IDEQ(paymentOrder.ID)).
 		SetStatus(paymentorder.StatusValidated).
 		AddTransactions(transactionLog).
-		Save(ctx)
+		Save(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":          fmt.Sprintf("%v", err),
@@ -3033,7 +3044,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 
 	// Clean up order exclude list from Redis (best effort, don't fail if it errors)
 	orderKey := fmt.Sprintf("order_exclude_list_%s", paymentOrder.ID)
-	_ = storage.RedisClient.Del(ctx, orderKey).Err()
+	_ = storage.RedisClient.Del(reqCtx, orderKey).Err()
 
 	// Send webhook notification to sender
 	err = u.SendPaymentOrderWebhook(ctx, paymentOrder)

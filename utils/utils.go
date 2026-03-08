@@ -1,12 +1,17 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"math/big"
+	"net/http"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -19,10 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	institutionEnt "github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -405,7 +412,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 
 	// Send the webhook
 	_, err = fastshot.NewClient(profile.WebhookURL).
-		Config().SetTimeout(30*time.Second).
+		Config().SetCustomTransport(GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 		Header().Add("X-Paycrest-Signature", signature).
 		Header().Add("Content-Type", "application/json").
 		Build().POST("").
@@ -741,34 +748,36 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 	// Generate HMAC signature
 	signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
 
-	// Create HTTP client and make request
-	client := fastshot.NewClient(provider.HostIdentifier).
-		Config().SetTimeout(30*time.Second).
-		Header().Add("X-Request-Signature", signature).
-		Build()
-
-	var res fastshot.Response
-	var reqErr error
-
-	switch method {
-	case "GET":
-		res, reqErr = client.GET(path).
-			Body().AsJSON(payload).
-			Send()
-	case "POST":
-		res, reqErr = client.POST(path).
-			Body().AsJSON(payload).
-			Send()
-	default:
-		return nil, fmt.Errorf("unsupported HTTP method: %s", method)
+	// Build URL and body so the request respects ctx (client disconnect / deadline cancels the call)
+	base := strings.TrimSuffix(provider.HostIdentifier, "/")
+	pathPart := strings.TrimPrefix(path, "/")
+	reqURL := base
+	if pathPart != "" {
+		reqURL = base + "/" + pathPart
 	}
+	var bodyReader io.Reader
+	if payload != nil && len(payload) > 0 {
+		jsonBody, jErr := json.Marshal(payload)
+		if jErr != nil {
+			return nil, fmt.Errorf("failed to marshal request body: %v", jErr)
+		}
+		bodyReader = bytes.NewReader(jsonBody)
+	}
+	req, reqErr := http.NewRequestWithContext(ctx, method, reqURL, bodyReader)
+	if reqErr != nil {
+		return nil, fmt.Errorf("failed to create request: %v", reqErr)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Request-Signature", signature)
 
+	resp, reqErr := GetHTTPClient().Do(req)
 	if reqErr != nil {
 		return nil, fmt.Errorf("failed to make HTTP request: %v", reqErr)
 	}
+	defer func() { _ = resp.Body.Close() }()
 
 	// Parse JSON response
-	data, err := ParseJSONResponse(res.RawResponse)
+	data, err := ParseJSONResponse(resp)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -1172,6 +1181,17 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		return RateValidationResult{}, fmt.Errorf("internal server error")
 	}
 
+	// Regular orders: reject if provider is at or over stuck fulfillment threshold
+	if orderType == paymentorder.OrderTypeRegular {
+		orderConf := config.OrderConfig()
+		if orderConf.ProviderStuckFulfillmentThreshold > 0 {
+			stuckCount, errStuck := GetProviderStuckOrderCount(ctx, providerID)
+			if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+				return RateValidationResult{}, &types.ErrNoProviderDueToStuck{CurrencyCode: currency.Code}
+			}
+		}
+	}
+
 	return RateValidationResult{
 		Rate:       rateResponse,
 		ProviderID: providerID,
@@ -1268,6 +1288,8 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 	var foundExactMatch bool
 	var selectedProviderID string
 	var selectedOrderType paymentorder.OrderType
+	var anySkippedDueToStuck bool
+	var currencyForStuck string
 
 	// Scan through the buckets to find a matching rate
 	for _, key := range keys {
@@ -1299,6 +1321,10 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 			selectedOrderType = result.OrderType
 			break // Found exact match, no need to continue
 		}
+		if result.AllSkippedDueToStuck && result.CurrencyCode != "" {
+			anySkippedDueToStuck = true
+			currencyForStuck = result.CurrencyCode
+		}
 
 		// Track the best available rate for logging purposes
 		if result.Rate.GreaterThan(bestRate) {
@@ -1306,8 +1332,29 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 		}
 	}
 
-	// If no exact match found, return error with details
+	// If no exact match found, try fallback provider (if configured) even though it's not on the bucket queue
 	if !foundExactMatch {
+		if fallbackID := config.OrderConfig().FallbackProviderID; fallbackID != "" {
+			fallbackResult, fallbackErr := validateProviderRate(ctx, token, currency, amount, fallbackID, networkIdentifier)
+			if fallbackErr == nil {
+				// Quote the queue's best rate when amount was below/above queue providers' min/max but fallback accepts it
+				if bestRate.GreaterThan(decimal.Zero) {
+					return RateValidationResult{
+						Rate:       bestRate,
+						ProviderID: fallbackResult.ProviderID,
+						OrderType:  fallbackResult.OrderType,
+					}, nil
+				}
+				return fallbackResult, nil
+			}
+			var errStuck *types.ErrNoProviderDueToStuck
+			if errors.As(fallbackErr, &errStuck) {
+				return RateValidationResult{}, fallbackErr
+			}
+		}
+		if anySkippedDueToStuck && currencyForStuck != "" {
+			return RateValidationResult{}, &types.ErrNoProviderDueToStuck{CurrencyCode: currencyForStuck}
+		}
 		logger.WithFields(logger.Fields{
 			"Token":         token.Symbol,
 			"Currency":      currency.Code,
@@ -1381,10 +1428,37 @@ func parseBucketKey(key string) (*BucketData, error) {
 
 // ProviderRateResult contains the result of finding a suitable provider rate
 type ProviderRateResult struct {
-	Rate       decimal.Decimal
-	ProviderID string
-	OrderType  paymentorder.OrderType
-	Found      bool
+	Rate                 decimal.Decimal
+	ProviderID           string
+	OrderType            paymentorder.OrderType
+	Found                bool
+	AllSkippedDueToStuck bool   // true when no match because every considered provider was skipped due to stuck threshold
+	CurrencyCode         string // set when AllSkippedDueToStuck is true, for 503 response
+}
+
+// GetProviderStuckOrderCount returns the number of stuck orders for a provider (status=fulfilled, pending fulfillment, updated_at <= now - OrderRefundTimeout, regular only).
+// Used by both services/priority_queue and rate validation in this package.
+func GetProviderStuckOrderCount(ctx context.Context, providerID string) (int, error) {
+	orderConf := config.OrderConfig()
+	if orderConf.ProviderStuckFulfillmentThreshold <= 0 {
+		return 0, nil
+	}
+	cutoff := time.Now().Add(-orderConf.OrderRefundTimeout)
+	count, err := storage.Client.PaymentOrder.Query().
+		Where(
+			paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+			paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular),
+			paymentorder.UpdatedAtLTE(cutoff),
+			paymentorder.HasProviderWith(providerprofile.IDEQ(providerID)),
+			paymentorder.HasFulfillmentsWith(
+				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending),
+			),
+		).
+		Count(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // findSuitableProviderRate finds the first suitable provider rate from the provider list
@@ -1395,6 +1469,8 @@ func findSuitableProviderRate(ctx context.Context, providers []string, token *en
 	tokenSymbol := token.Symbol
 	var bestRate decimal.Decimal
 	var foundExactMatch bool
+	var considered, skippedDueToStuck int
+	orderConf := config.OrderConfig()
 
 	// Track reasons for debugging when no match is found
 	var skipReasons []string
@@ -1538,6 +1614,20 @@ func findSuitableProviderRate(ctx context.Context, providers []string, token *en
 			continue
 		}
 
+		// Parse rate early so we can track best queue rate even when skipping due to min/max
+		rate, err := decimal.NewFromString(parts[3])
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Error":        err,
+				"Value":        parts[3],
+			}).Errorf("ValidateRate.InvalidRate: failed to parse rate")
+			continue
+		}
+		if rate.GreaterThan(bestRate) {
+			bestRate = rate
+		}
+
 		// Check if order amount is within provider's regular min/max limits
 		// If not, check OTC limits as fallback
 		if tokenAmount.LessThan(minOrderAmount) {
@@ -1562,22 +1652,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, token *en
 			// Amount is within OTC limits - proceed to rate parsing
 		}
 
-		// Parse rate
-		rate, err := decimal.NewFromString(parts[3])
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-			}).Errorf("ValidateRate.InvalidRate: failed to parse rate")
-			continue
-		}
-
 		providerID := parts[0]
-
-		// Track the best rate we've seen (for logging purposes)
-		if rate.GreaterThan(bestRate) {
-			bestRate = rate
-		}
 
 		// Calculate fiat equivalent of the token amount
 		fiatAmount := tokenAmount.Mul(rate)
@@ -1616,6 +1691,15 @@ func findSuitableProviderRate(ctx context.Context, providers []string, token *en
 				return ProviderRateResult{Found: false}
 			}
 
+			considered++
+			if orderConf.ProviderStuckFulfillmentThreshold > 0 {
+				stuckCount, errStuck := GetProviderStuckOrderCount(ctx, providerID)
+				if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+					skippedDueToStuck++
+					continue
+				}
+			}
+
 			// Determine order type for this provider
 			orderType := DetermineOrderType(providerOrderToken, tokenAmount)
 
@@ -1647,9 +1731,12 @@ func findSuitableProviderRate(ctx context.Context, providers []string, token *en
 		}).Debugf("ValidateRate.NoSuitableProvider: providers skipped due to limits/balance")
 	}
 
+	allSkippedDueToStuck := considered > 0 && skippedDueToStuck == considered
 	return ProviderRateResult{
-		Rate:  bestRate,
-		Found: foundExactMatch,
+		Rate:                 bestRate,
+		Found:                foundExactMatch,
+		AllSkippedDueToStuck: allSkippedDueToStuck,
+		CurrencyCode:         bucketData.Currency,
 	}
 }
 
@@ -1703,10 +1790,15 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 		"accountIdentifier": accountIdentifier,
 	}
 
-	// Try each provider until one succeeds
+	// Overall deadline so we don't exceed typical client/LB timeout (e.g. 60s)
+	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
+	defer cancel()
+
+	// Try each provider until one succeeds (10s per provider so we can try several within the overall deadline)
 	for _, provider := range providers {
-		// Call provider /verify_account endpoint using utility function
-		data, err := CallProviderWithHMAC(ctx, provider.ID, "POST", "/verify_account", payload)
+		providerCtx, providerCancel := context.WithTimeout(ctx, 10*time.Second)
+		data, err := CallProviderWithHMAC(providerCtx, provider.ID, "POST", "/verify_account", payload)
+		providerCancel()
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":             fmt.Sprintf("%v", err),
@@ -1716,7 +1808,6 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 			}).Warnf("Failed to verify account with provider %s", provider.ID)
 			continue
 		}
-
 		// Extract account name from response
 		if accountName, ok := data["data"].(string); ok && accountName != "" && accountName != "OK" {
 			return accountName, nil

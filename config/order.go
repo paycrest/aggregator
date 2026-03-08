@@ -2,12 +2,16 @@ package config
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 )
+
+// orderDefaultsOnce ensures viper.SetDefault for order config is only run once.
+var orderDefaultsOnce sync.Once
 
 // OrderConfiguration type defines payment order configurations
 type OrderConfiguration struct {
@@ -26,24 +30,46 @@ type OrderConfiguration struct {
 	PercentDeviationFromExternalRate decimal.Decimal
 	PercentDeviationFromMarketRate   decimal.Decimal
 	IndexingDuration                 time.Duration
+	// FallbackProviderID is the ID of the provider to use as a fallback for orders that cannot be fulfilled by any other provider.
+	FallbackProviderID string
+	// ProviderStuckFulfillmentThreshold: skip provider assignment when their stuck order count >= this value. 0 = disabled.
+	ProviderStuckFulfillmentThreshold int
+
+	// PSP global exclusion: exclude PSP from new_order when it has high failure rate in a time window.
+	// PspExcludeWindowMinutes: look-back window in minutes for counting fulfillments.
+	PspExcludeWindowMinutes int
+	// PspExcludeMinAttempts: minimum total attempts in window before considering exclusion (avoids excluding on 1 failure out of 1).
+	PspExcludeMinAttempts int
+	// PspExcludeMinFailures: minimum failed fulfillments in window to exclude (any error after disbursement trial).
+	PspExcludeMinFailures int
+	// PspExcludeMinFailurePercent: minimum failure percent (0–100, e.g. 30 = 30%) in window to exclude. Any failed fulfillment is counted.
+	PspExcludeMinFailurePercent int
 }
 
-// OrderConfig sets the order configuration
+// OrderConfig returns the order configuration. Defaults are set once; safe for concurrent use.
 func OrderConfig() *OrderConfiguration {
-	viper.SetDefault("RECEIVE_ADDRESS_VALIDITY", 1800)
-	viper.SetDefault("ORDER_REQUEST_VALIDITY", 30)
-	viper.SetDefault("ORDER_REQUEST_VALIDITY_OTC", 300)
-	viper.SetDefault("ORDER_FULFILLMENT_VALIDITY", 60)
-	viper.SetDefault("ORDER_FULFILLMENT_VALIDITY_OTC", 1800)
-	viper.SetDefault("ORDER_REFUND_TIMEOUT", 300)
-	viper.SetDefault("ORDER_REFUND_TIMEOUT_OTC", 5400)
-	viper.SetDefault("BUCKET_QUEUE_REBUILD_INTERVAL", 1)
-	viper.SetDefault("REFUND_CANCELLATION_COUNT", 3)
-	viper.SetDefault("PROVIDER_MAX_RETRY_ATTEMPTS", 3)
-	viper.SetDefault("NETWORK_FEE", 0.05)
-	viper.SetDefault("PERCENT_DEVIATION_FROM_EXTERNAL_RATE", 0.01)
-	viper.SetDefault("PERCENT_DEVIATION_FROM_MARKET_RATE", 0.1)
-	viper.SetDefault("INDEXING_DURATION", 10)
+	orderDefaultsOnce.Do(func() {
+		viper.SetDefault("RECEIVE_ADDRESS_VALIDITY", 1800)
+		viper.SetDefault("ORDER_REQUEST_VALIDITY", 30)
+		viper.SetDefault("ORDER_REQUEST_VALIDITY_OTC", 300)
+		viper.SetDefault("ORDER_FULFILLMENT_VALIDITY", 60)
+		viper.SetDefault("ORDER_FULFILLMENT_VALIDITY_OTC", 1800)
+		viper.SetDefault("ORDER_REFUND_TIMEOUT", 300)
+		viper.SetDefault("ORDER_REFUND_TIMEOUT_OTC", 5400)
+		viper.SetDefault("BUCKET_QUEUE_REBUILD_INTERVAL", 1)
+		viper.SetDefault("REFUND_CANCELLATION_COUNT", 3)
+		viper.SetDefault("PROVIDER_MAX_RETRY_ATTEMPTS", 3)
+		viper.SetDefault("NETWORK_FEE", 0.05)
+		viper.SetDefault("PERCENT_DEVIATION_FROM_EXTERNAL_RATE", 0.01)
+		viper.SetDefault("PERCENT_DEVIATION_FROM_MARKET_RATE", 0.1)
+		viper.SetDefault("INDEXING_DURATION", 10)
+		viper.SetDefault("FALLBACK_PROVIDER_ID", "")
+		viper.SetDefault("PROVIDER_STUCK_FULFILLMENT_THRESHOLD", 0) // 0 = disabled
+		viper.SetDefault("PSP_EXCLUDE_WINDOW_MINUTES", 120)
+		viper.SetDefault("PSP_EXCLUDE_MIN_ATTEMPTS", 5)
+		viper.SetDefault("PSP_EXCLUDE_MIN_FAILURES", 3)
+		viper.SetDefault("PSP_EXCLUDE_MIN_FAILURE_PERCENT", 30)
+	})
 
 	// Validate ProviderMaxRetryAttempts to ensure it's at least 1
 	// If invalid (0 or negative), use the default value of 3
@@ -53,21 +79,27 @@ func OrderConfig() *OrderConfiguration {
 	}
 
 	return &OrderConfiguration{
-		OrderFulfillmentValidity:         time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY")) * time.Second,
-		OrderFulfillmentValidityOtc:      time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY_OTC")) * time.Second,
-		OrderRefundTimeout:               time.Duration(viper.GetInt("ORDER_REFUND_TIMEOUT")) * time.Second,
-		OrderRefundTimeoutOtc:            time.Duration(viper.GetInt("ORDER_REFUND_TIMEOUT_OTC")) * time.Second,
-		ReceiveAddressValidity:           time.Duration(viper.GetInt("RECEIVE_ADDRESS_VALIDITY")) * time.Second,
-		OrderRequestValidity:             time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY")) * time.Second,
-		OrderRequestValidityOtc:          time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY_OTC")) * time.Second,
-		TronProApiKey:                    viper.GetString("TRON_PRO_API_KEY"),
-		EntryPointContractAddress:        common.HexToAddress(viper.GetString("ENTRY_POINT_CONTRACT_ADDRESS")),
-		BucketQueueRebuildInterval:       viper.GetInt("BUCKET_QUEUE_REBUILD_INTERVAL"),
-		RefundCancellationCount:          viper.GetInt("REFUND_CANCELLATION_COUNT"),
-		ProviderMaxRetryAttempts:         providerMaxRetryAttempts,
-		PercentDeviationFromExternalRate: decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_EXTERNAL_RATE")),
-		PercentDeviationFromMarketRate:   decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_MARKET_RATE")),
-		IndexingDuration:                 time.Duration(viper.GetInt("INDEXING_DURATION")) * time.Second,
+		OrderFulfillmentValidity:          time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY")) * time.Second,
+		OrderFulfillmentValidityOtc:       time.Duration(viper.GetInt("ORDER_FULFILLMENT_VALIDITY_OTC")) * time.Second,
+		OrderRefundTimeout:                time.Duration(viper.GetInt("ORDER_REFUND_TIMEOUT")) * time.Second,
+		OrderRefundTimeoutOtc:             time.Duration(viper.GetInt("ORDER_REFUND_TIMEOUT_OTC")) * time.Second,
+		ReceiveAddressValidity:            time.Duration(viper.GetInt("RECEIVE_ADDRESS_VALIDITY")) * time.Second,
+		OrderRequestValidity:              time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY")) * time.Second,
+		OrderRequestValidityOtc:           time.Duration(viper.GetInt("ORDER_REQUEST_VALIDITY_OTC")) * time.Second,
+		TronProApiKey:                     viper.GetString("TRON_PRO_API_KEY"),
+		EntryPointContractAddress:         common.HexToAddress(viper.GetString("ENTRY_POINT_CONTRACT_ADDRESS")),
+		BucketQueueRebuildInterval:        viper.GetInt("BUCKET_QUEUE_REBUILD_INTERVAL"),
+		RefundCancellationCount:           viper.GetInt("REFUND_CANCELLATION_COUNT"),
+		ProviderMaxRetryAttempts:          providerMaxRetryAttempts,
+		PercentDeviationFromExternalRate:  decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_EXTERNAL_RATE")),
+		PercentDeviationFromMarketRate:    decimal.NewFromFloat(viper.GetFloat64("PERCENT_DEVIATION_FROM_MARKET_RATE")),
+		IndexingDuration:                  time.Duration(viper.GetInt("INDEXING_DURATION")) * time.Second,
+		FallbackProviderID:                viper.GetString("FALLBACK_PROVIDER_ID"),
+		ProviderStuckFulfillmentThreshold: viper.GetInt("PROVIDER_STUCK_FULFILLMENT_THRESHOLD"),
+		PspExcludeWindowMinutes:           viper.GetInt("PSP_EXCLUDE_WINDOW_MINUTES"),
+		PspExcludeMinAttempts:             viper.GetInt("PSP_EXCLUDE_MIN_ATTEMPTS"),
+		PspExcludeMinFailures:             viper.GetInt("PSP_EXCLUDE_MIN_FAILURES"),
+		PspExcludeMinFailurePercent:       viper.GetInt("PSP_EXCLUDE_MIN_FAILURE_PERCENT"),
 	}
 }
 

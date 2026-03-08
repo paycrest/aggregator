@@ -97,6 +97,8 @@ type PaymentOrder struct {
 	Direction paymentorder.Direction `json:"direction,omitempty"`
 	// OrderType holds the value of the "order_type" field.
 	OrderType paymentorder.OrderType `json:"order_type,omitempty"`
+	// FallbackTriedAt holds the value of the "fallback_tried_at" field.
+	FallbackTriedAt time.Time `json:"fallback_tried_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PaymentOrderQuery when eager-loading is set.
 	Edges                            PaymentOrderEdges `json:"edges"`
@@ -215,7 +217,7 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case paymentorder.FieldTxHash, paymentorder.FieldMessageHash, paymentorder.FieldGatewayID, paymentorder.FieldFromAddress, paymentorder.FieldRefundOrRecipientAddress, paymentorder.FieldReceiveAddress, paymentorder.FieldFeeAddress, paymentorder.FieldInstitution, paymentorder.FieldAccountIdentifier, paymentorder.FieldAccountName, paymentorder.FieldSender, paymentorder.FieldReference, paymentorder.FieldMemo, paymentorder.FieldStatus, paymentorder.FieldDirection, paymentorder.FieldOrderType:
 			values[i] = new(sql.NullString)
-		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt, paymentorder.FieldReceiveAddressExpiry, paymentorder.FieldIndexerCreatedAt:
+		case paymentorder.FieldCreatedAt, paymentorder.FieldUpdatedAt, paymentorder.FieldReceiveAddressExpiry, paymentorder.FieldIndexerCreatedAt, paymentorder.FieldFallbackTriedAt:
 			values[i] = new(sql.NullTime)
 		case paymentorder.FieldID:
 			values[i] = new(uuid.UUID)
@@ -470,6 +472,12 @@ func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.OrderType = paymentorder.OrderType(value.String)
 			}
+		case paymentorder.FieldFallbackTriedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field fallback_tried_at", values[i])
+			} else if value.Valid {
+				_m.FallbackTriedAt = value.Time
+			}
 		case paymentorder.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field api_key_payment_orders", values[i])
@@ -683,6 +691,9 @@ func (_m *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("order_type=")
 	builder.WriteString(fmt.Sprintf("%v", _m.OrderType))
+	builder.WriteString(", ")
+	builder.WriteString("fallback_tried_at=")
+	builder.WriteString(_m.FallbackTriedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

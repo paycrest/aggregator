@@ -362,6 +362,18 @@ func init() {
 	paymentwebhook.DefaultID = paymentwebhookDescID.Default.(func() uuid.UUID)
 	providerbalancesFields := schema.ProviderBalances{}.Fields()
 	_ = providerbalancesFields
+	// providerbalancesDescAvailableBalance is the schema descriptor for available_balance field.
+	providerbalancesDescAvailableBalance := providerbalancesFields[1].Descriptor()
+	// providerbalances.DefaultAvailableBalance holds the default value on creation for the available_balance field.
+	providerbalances.DefaultAvailableBalance = providerbalancesDescAvailableBalance.Default.(func() decimal.Decimal)
+	// providerbalancesDescTotalBalance is the schema descriptor for total_balance field.
+	providerbalancesDescTotalBalance := providerbalancesFields[2].Descriptor()
+	// providerbalances.DefaultTotalBalance holds the default value on creation for the total_balance field.
+	providerbalances.DefaultTotalBalance = providerbalancesDescTotalBalance.Default.(func() decimal.Decimal)
+	// providerbalancesDescReservedBalance is the schema descriptor for reserved_balance field.
+	providerbalancesDescReservedBalance := providerbalancesFields[3].Descriptor()
+	// providerbalances.DefaultReservedBalance holds the default value on creation for the reserved_balance field.
+	providerbalances.DefaultReservedBalance = providerbalancesDescReservedBalance.Default.(func() decimal.Decimal)
 	// providerbalancesDescIsAvailable is the schema descriptor for is_available field.
 	providerbalancesDescIsAvailable := providerbalancesFields[4].Descriptor()
 	// providerbalances.DefaultIsAvailable holds the default value on creation for the is_available field.
@@ -372,6 +384,10 @@ func init() {
 	providerbalances.DefaultUpdatedAt = providerbalancesDescUpdatedAt.Default.(func() time.Time)
 	// providerbalances.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	providerbalances.UpdateDefaultUpdatedAt = providerbalancesDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// providerbalancesDescPeakBalance is the schema descriptor for peak_balance field.
+	providerbalancesDescPeakBalance := providerbalancesFields[6].Descriptor()
+	// providerbalances.DefaultPeakBalance holds the default value on creation for the peak_balance field.
+	providerbalances.DefaultPeakBalance = providerbalancesDescPeakBalance.Default.(func() decimal.Decimal)
 	// providerbalancesDescID is the schema descriptor for id field.
 	providerbalancesDescID := providerbalancesFields[0].Descriptor()
 	// providerbalances.DefaultID holds the default value on creation for the id field.
@@ -474,12 +490,8 @@ func init() {
 	providerprofileDescIsActive := providerprofileFields[4].Descriptor()
 	// providerprofile.DefaultIsActive holds the default value on creation for the is_active field.
 	providerprofile.DefaultIsActive = providerprofileDescIsActive.Default.(bool)
-	// providerprofileDescIsKybVerified is the schema descriptor for is_kyb_verified field.
-	providerprofileDescIsKybVerified := providerprofileFields[5].Descriptor()
-	// providerprofile.DefaultIsKybVerified holds the default value on creation for the is_kyb_verified field.
-	providerprofile.DefaultIsKybVerified = providerprofileDescIsKybVerified.Default.(bool)
 	// providerprofileDescUpdatedAt is the schema descriptor for updated_at field.
-	providerprofileDescUpdatedAt := providerprofileFields[6].Descriptor()
+	providerprofileDescUpdatedAt := providerprofileFields[5].Descriptor()
 	// providerprofile.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	providerprofile.DefaultUpdatedAt = providerprofileDescUpdatedAt.Default.(func() time.Time)
 	// providerprofile.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

@@ -73,7 +73,7 @@ func (s *IndexerTron) IndexReceiveAddress(ctx context.Context, token *ent.Token,
 func (s *IndexerTron) indexReceiveAddressByTransaction(ctx context.Context, token *ent.Token, txHash string) error {
 	// For Tron, we need to get the transaction info and look for transfer events
 	res, err := fastshot.NewClient(token.Edges.Network.RPCEndpoint).
-		Config().SetTimeout(15 * time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(15 * time.Second).
 		Build().POST("/wallet/gettransactioninfobyid").
 		Body().AsJSON(map[string]interface{}{
 		"value": txHash,
@@ -83,7 +83,7 @@ func (s *IndexerTron) indexReceiveAddressByTransaction(ctx context.Context, toke
 		return fmt.Errorf("error getting transaction info for token %s: %w", token.Symbol, err)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return fmt.Errorf("error parsing transaction response for token %s: %w", token.Symbol, err)
 	}
@@ -162,7 +162,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 	if txHash != "" {
 		// If txHash is provided, get transaction info directly
 		res, err := fastshot.NewClient(network.RPCEndpoint).
-			Config().SetTimeout(15 * time.Second).
+			Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(15 * time.Second).
 			Build().POST("/wallet/gettransactioninfobyid").
 			Body().AsJSON(map[string]interface{}{
 			"value": txHash,
@@ -172,7 +172,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 			return eventCounts, fmt.Errorf("IndexGateway.getTransaction: %w", err)
 		}
 
-		data, err := utils.ParseJSONResponse(res.RawResponse)
+		data, err := utils.ParseJSONResponse(res.Raw())
 		if err != nil {
 			return eventCounts, fmt.Errorf("IndexGateway.parseJSONResponse: %w", err)
 		}
@@ -440,7 +440,7 @@ func (s *IndexerTron) IndexProviderSettlementAddress(ctx context.Context, networ
 // indexOrderCreatedByBlockRange indexes OrderCreated events for a block range
 func (s *IndexerTron) indexOrderCreatedByBlockRange(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
 	res, err := fastshot.NewClient(network.RPCEndpoint).
-		Config().SetTimeout(15 * time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(15 * time.Second).
 		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
 		Query().AddParams(map[string]string{
 		"min_block_timestamp": strconv.FormatInt(fromBlock, 10),
@@ -452,7 +452,7 @@ func (s *IndexerTron) indexOrderCreatedByBlockRange(ctx context.Context, network
 	if err != nil {
 		return fmt.Errorf("indexOrderCreatedByBlockRange.getEvents: %w", err)
 	}
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return fmt.Errorf("indexOrderCreatedByBlockRange.parseJSONResponse: %w", err)
 	}
@@ -461,14 +461,14 @@ func (s *IndexerTron) indexOrderCreatedByBlockRange(ctx context.Context, network
 	for _, r := range data["data"].([]interface{}) {
 		if r.(map[string]interface{})["event_name"].(string) == "OrderCreated" {
 			res, err := fastshot.NewClient(network.RPCEndpoint).
-				Config().SetTimeout(15 * time.Second).
+				Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(15 * time.Second).
 				Build().POST("/wallet/gettransactioninfobyid").
 				Body().AsJSON(map[string]interface{}{"value": r.(map[string]interface{})["transaction_id"].(string)}).
 				Send()
 			if err != nil {
 				return fmt.Errorf("indexOrderCreatedByBlockRange.getTransaction: %w", err)
 			}
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			data, err := utils.ParseJSONResponse(res.Raw())
 			if err != nil {
 				return fmt.Errorf("indexOrderCreatedByBlockRange.parseJSONResponse: %w", err)
 			}
@@ -511,7 +511,7 @@ func (s *IndexerTron) indexOrderCreatedByBlockRange(ctx context.Context, network
 // indexSettleOutByBlockRange indexes SettleOut events for a block range
 func (s *IndexerTron) indexSettleOutByBlockRange(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
 	res, err := fastshot.NewClient(network.RPCEndpoint).
-		Config().SetTimeout(15 * time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(15 * time.Second).
 		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
 		Query().AddParams(map[string]string{
 		"min_block_timestamp": strconv.FormatInt(fromBlock, 10),
@@ -523,7 +523,7 @@ func (s *IndexerTron) indexSettleOutByBlockRange(ctx context.Context, network *e
 	if err != nil {
 		return fmt.Errorf("indexSettleOutByBlockRange.getEvents: %w", err)
 	}
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return fmt.Errorf("indexSettleOutByBlockRange.parseJSONResponse: %w", err)
 	}
@@ -532,14 +532,14 @@ func (s *IndexerTron) indexSettleOutByBlockRange(ctx context.Context, network *e
 	for _, r := range data["data"].([]interface{}) {
 		if r.(map[string]interface{})["event_name"].(string) == "SettleOut" {
 			res, err := fastshot.NewClient(network.RPCEndpoint).
-				Config().SetTimeout(15 * time.Second).
+				Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(15 * time.Second).
 				Build().POST("/wallet/gettransactioninfobyid").
 				Body().AsJSON(map[string]interface{}{"value": r.(map[string]interface{})["transaction_id"].(string)}).
 				Send()
 			if err != nil {
 				return fmt.Errorf("indexSettleOutByBlockRange.getTransaction: %w", err)
 			}
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			data, err := utils.ParseJSONResponse(res.Raw())
 			if err != nil {
 				return fmt.Errorf("indexSettleOutByBlockRange.parseJSONResponse: %w", err)
 			}
@@ -671,7 +671,7 @@ func (s *IndexerTron) indexSettleInByBlockRange(ctx context.Context, network *en
 // indexOrderRefundedByBlockRange indexes OrderRefunded events for a block range
 func (s *IndexerTron) indexOrderRefundedByBlockRange(ctx context.Context, network *ent.Network, fromBlock int64, toBlock int64) error {
 	res, err := fastshot.NewClient(network.RPCEndpoint).
-		Config().SetTimeout(15 * time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(15 * time.Second).
 		Build().GET(fmt.Sprintf("/v1/contracts/%s/events", network.GatewayContractAddress)).
 		Query().AddParams(map[string]string{
 		"min_block_timestamp": strconv.FormatInt(fromBlock, 10),
@@ -683,7 +683,7 @@ func (s *IndexerTron) indexOrderRefundedByBlockRange(ctx context.Context, networ
 	if err != nil {
 		return fmt.Errorf("indexOrderRefundedByBlockRange.getEvents: %w", err)
 	}
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return fmt.Errorf("indexOrderRefundedByBlockRange.parseJSONResponse: %w", err)
 	}
@@ -692,14 +692,14 @@ func (s *IndexerTron) indexOrderRefundedByBlockRange(ctx context.Context, networ
 	for _, r := range data["data"].([]interface{}) {
 		if r.(map[string]interface{})["event_name"].(string) == "OrderRefunded" {
 			res, err := fastshot.NewClient(network.RPCEndpoint).
-				Config().SetTimeout(15 * time.Second).
+				Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(15 * time.Second).
 				Build().POST("/wallet/gettransactioninfobyid").
 				Body().AsJSON(map[string]interface{}{"value": r.(map[string]interface{})["transaction_id"].(string)}).
 				Send()
 			if err != nil {
 				return fmt.Errorf("indexOrderRefundedByBlockRange.getTransaction: %w", err)
 			}
-			data, err := utils.ParseJSONResponse(res.RawResponse)
+			data, err := utils.ParseJSONResponse(res.Raw())
 			if err != nil {
 				return fmt.Errorf("indexOrderRefundedByBlockRange.parseJSONResponse: %w", err)
 			}

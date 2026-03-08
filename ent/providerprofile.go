@@ -29,8 +29,6 @@ type ProviderProfile struct {
 	ProvisionMode providerprofile.ProvisionMode `json:"provision_mode,omitempty"`
 	// IsActive holds the value of the "is_active" field.
 	IsActive bool `json:"is_active,omitempty"`
-	// IsKybVerified holds the value of the "is_kyb_verified" field.
-	IsKybVerified bool `json:"is_kyb_verified,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// VisibilityMode holds the value of the "visibility_mode" field.
@@ -148,7 +146,7 @@ func (*ProviderProfile) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerprofile.FieldIsActive, providerprofile.FieldIsKybVerified:
+		case providerprofile.FieldIsActive:
 			values[i] = new(sql.NullBool)
 		case providerprofile.FieldID, providerprofile.FieldTradingName, providerprofile.FieldHostIdentifier, providerprofile.FieldProvisionMode, providerprofile.FieldVisibilityMode:
 			values[i] = new(sql.NullString)
@@ -200,12 +198,6 @@ func (_m *ProviderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_active", values[i])
 			} else if value.Valid {
 				_m.IsActive = value.Bool
-			}
-		case providerprofile.FieldIsKybVerified:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field is_kyb_verified", values[i])
-			} else if value.Valid {
-				_m.IsKybVerified = value.Bool
 			}
 		case providerprofile.FieldUpdatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -313,9 +305,6 @@ func (_m *ProviderProfile) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_active=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsActive))
-	builder.WriteString(", ")
-	builder.WriteString("is_kyb_verified=")
-	builder.WriteString(fmt.Sprintf("%v", _m.IsKybVerified))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))

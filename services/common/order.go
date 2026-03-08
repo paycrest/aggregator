@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -49,6 +50,13 @@ func normalizeGatewayID(orderID string) string {
 	}
 	return strings.ToLower(s)
 }
+
+// ErrNoProvisionBucketForAmount is returned when the amount falls in a gap between tier ranges (no bucket contains it).
+var ErrNoProvisionBucketForAmount = errors.New("no provision bucket for this amount")
+
+const (
+	CancellationReasonAML = "AML compliance check failed"
+)
 
 // ProcessPaymentOrderFromBlockchain processes a payment order from blockchain event.
 // It either creates a new order or updates an existing API-created order (with messageHash but no gatewayID)
@@ -108,6 +116,7 @@ func ProcessPaymentOrderFromBlockchain(
 				Update().
 				Where(paymentorder.IDEQ(existingOrderWithMessageHash.ID)).
 				SetGatewayID(normalizedGatewayID).
+				SetOrderPercent(decimal.NewFromInt(100)).
 				SetTxHash(event.TxHash).
 				SetBlockNumber(int64(event.BlockNumber)).
 				SetStatus(paymentorder.StatusPending).
@@ -411,25 +420,32 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			pbq.WithCurrency()
 		}).
 		Only(ctx)
-	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-		// Only attempt balance operations if we have the required edge data
-		// Create a new balance service instance for this transaction
-		balanceService := balance.New()
-
-		providerID := paymentOrder.Edges.Provider.ID
-		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
-
-		err = balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, nil)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"OrderID":    event.OrderId,
-				"ProviderID": providerID,
-				"Currency":   currency,
-				"Amount":     amount.String(),
-			}).Errorf("failed to release reserved balance for refunded order")
-			// Don't return error here as the order status is already updated
+	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil {
+		currency := ""
+		if paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+			currency = paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		}
+		if currency == "" && paymentOrder.Institution != "" {
+			inst, instErr := utils.GetInstitutionByCode(ctx, paymentOrder.Institution, true)
+			if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
+				currency = inst.Edges.FiatCurrency.Code
+			}
+		}
+		if currency != "" {
+			balanceService := balance.New()
+			providerID := paymentOrder.Edges.Provider.ID
+			amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
+			err = balanceService.ReleaseFiatBalance(ctx, providerID, currency, amount, nil)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    event.OrderId,
+					"ProviderID": providerID,
+					"Currency":   currency,
+					"Amount":     amount.String(),
+				}).Errorf("failed to release reserved balance for refunded order")
+				// Don't return error here as the order status is already updated
+			}
 		}
 	}
 
@@ -508,6 +524,8 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 		}
 	}
 
+	// Only add percent_settled when this is the first time we process this event (new log).
+	// Re-processing the same event (e.g. re-index, duplicate path) must not add again.
 	paymentOrderUpdate := tx.PaymentOrder.
 		Update().
 		Where(
@@ -521,8 +539,11 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 		).
 		SetBlockNumber(event.BlockNumber).
 		SetTxHash(event.TxHash).
-		SetStatus(paymentorder.StatusSettled).
-		AddPercentSettled(event.SettlePercent.Div(decimal.NewFromInt(1000)))
+		SetStatus(paymentorder.StatusSettled)
+
+	if updatedLogRows == 0 {
+		paymentOrderUpdate = paymentOrderUpdate.AddPercentSettled(event.SettlePercent.Div(decimal.NewFromInt(1000)))
+	}
 
 	if transactionLog != nil {
 		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
@@ -726,11 +747,12 @@ func GetProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *e
 			),
 		).
 		WithCurrency().
-		Only(ctx)
+		Order(ent.Asc(provisionbucket.FieldID)).
+		First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			// Check if the amount is less than the minimum bucket
-			minBucket, err := db.Client.ProvisionBucket.
+			// No bucket contains this amount: distinguish below min, above max, or gap between tiers
+			minBucket, minErr := db.Client.ProvisionBucket.
 				Query().
 				Where(
 					provisionbucket.HasCurrencyWith(
@@ -739,12 +761,30 @@ func GetProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *e
 				).
 				Order(ent.Asc(provisionbucket.FieldMinAmount)).
 				First(ctx)
-			if err != nil {
-				return nil, false, fmt.Errorf("failed to fetch minimum bucket: %w", err)
+			if minErr != nil {
+				return nil, false, fmt.Errorf("failed to fetch minimum bucket: %w", minErr)
 			}
 			if amount.LessThan(minBucket.MinAmount) {
 				return nil, true, nil
 			}
+			maxBucket, maxErr := db.Client.ProvisionBucket.
+				Query().
+				Where(
+					provisionbucket.HasCurrencyWith(
+						fiatcurrency.IDEQ(currency.ID),
+					),
+				).
+				Order(ent.Desc(provisionbucket.FieldMaxAmount)).
+				First(ctx)
+			if maxErr != nil {
+				return nil, false, fmt.Errorf("failed to fetch maximum bucket: %w", maxErr)
+			}
+			if amount.GreaterThan(maxBucket.MaxAmount) {
+				// Above highest tier: return nil bucket, no error; caller will cancel with "Amount is larger than the maximum bucket"
+				return nil, false, nil
+			}
+			// Amount is within [minBucket.MinAmount, maxBucket.MaxAmount] but no bucket contains it (gap between tiers)
+			return nil, false, ErrNoProvisionBucketForAmount
 		}
 		return nil, false, fmt.Errorf("failed to fetch provision bucket: %w", err)
 	}
@@ -759,7 +799,13 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 		return nil
 	}
 
+	isAML := cancellationReason == CancellationReasonAML
+
 	if paymentOrderFields != nil {
+		cancellationCount := 1
+		if isAML {
+			cancellationCount = orderConf.RefundCancellationCount
+		}
 		orderBuilder := db.Client.PaymentOrder.
 			Create().
 			SetToken(paymentOrderFields.Token).
@@ -777,7 +823,7 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			SetAmountInUsd(paymentOrderFields.AmountInUSD).
 			SetMemo(paymentOrderFields.Memo).
 			SetMetadata(paymentOrderFields.Metadata).
-			SetCancellationCount(3).
+			SetCancellationCount(cancellationCount).
 			SetCancellationReasons([]string{cancellationReason}).
 			SetStatus(paymentorder.StatusCancelled)
 
@@ -799,28 +845,32 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			return fmt.Errorf("%s - failed to create payment order: %w", paymentOrderFields.GatewayID, err)
 		}
 
-		network, err := paymentOrderFields.Token.QueryNetwork().Only(ctx)
-		if err != nil {
-			return fmt.Errorf("%s - failed to fetch network: %w", paymentOrderFields.GatewayID, err)
-		}
-
-		err = refundOrder(ctx, network, paymentOrderFields.GatewayID)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"OrderID":      order.ID.String(),
-				"OrderTrxHash": order.TxHash,
-				"GatewayID":    order.GatewayID,
-			}).Errorf("Handle cancellation failed to refund order")
+		// Refund immediately only for AML; other cancellations are refunded via the refund path (with fallback first). See tasks.RetryStaleUserOperations.
+		if isAML {
+			network, err := paymentOrderFields.Token.QueryNetwork().Only(ctx)
+			if err != nil {
+				return fmt.Errorf("%s - failed to fetch network: %w", paymentOrderFields.GatewayID, err)
+			}
+			err = refundOrder(ctx, network, paymentOrderFields.GatewayID)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":        fmt.Sprintf("%v", err),
+					"OrderID":      order.ID.String(),
+					"OrderTrxHash": order.TxHash,
+					"GatewayID":    order.GatewayID,
+				}).Errorf("Handle cancellation failed to refund order")
+			}
 		}
 
 	} else if createdPaymentOrder != nil {
+		cancellationCount := 1
+		if isAML {
+			cancellationCount = orderConf.RefundCancellationCount
+		}
 		_, err := db.Client.PaymentOrder.
 			Update().
-			Where(
-				paymentorder.IDEQ(createdPaymentOrder.ID),
-			).
-			SetCancellationCount(3).
+			Where(paymentorder.IDEQ(createdPaymentOrder.ID)).
+			SetCancellationCount(cancellationCount).
 			SetCancellationReasons([]string{cancellationReason}).
 			SetStatus(paymentorder.StatusCancelled).
 			Save(ctx)
@@ -828,19 +878,21 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			return fmt.Errorf("%s - failed to update payment order: %w", createdPaymentOrder.GatewayID, err)
 		}
 
-		network, err := createdPaymentOrder.QueryToken().QueryNetwork().Only(ctx)
-		if err != nil {
-			return fmt.Errorf("%s - failed to fetch network: %w", createdPaymentOrder.GatewayID, err)
-		}
-
-		err = refundOrder(ctx, network, createdPaymentOrder.GatewayID)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":        fmt.Sprintf("%v", err),
-				"OrderID":      fmt.Sprintf("0x%v", hex.EncodeToString(createdPaymentOrder.ID[:])),
-				"OrderTrxHash": createdPaymentOrder.TxHash,
-				"GatewayID":    createdPaymentOrder.GatewayID,
-			}).Errorf("Handle cancellation failed to refund order")
+		// Refund immediately only for AML; other cancellations are refunded via the refund path (with fallback first). See tasks.RetryStaleUserOperations.
+		if isAML {
+			network, err := createdPaymentOrder.QueryToken().QueryNetwork().Only(ctx)
+			if err != nil {
+				return fmt.Errorf("%s - failed to fetch network: %w", createdPaymentOrder.GatewayID, err)
+			}
+			err = refundOrder(ctx, network, createdPaymentOrder.GatewayID)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":        fmt.Sprintf("%v", err),
+					"OrderID":      fmt.Sprintf("0x%v", hex.EncodeToString(createdPaymentOrder.ID[:])),
+					"OrderTrxHash": createdPaymentOrder.TxHash,
+					"GatewayID":    createdPaymentOrder.GatewayID,
+				}).Errorf("Handle cancellation failed to refund order")
+			}
 		}
 	}
 
@@ -1103,7 +1155,7 @@ func processPaymentOrderPostCreation(
 		}
 
 		if !ok && err == nil {
-			err := HandleCancellation(ctx, paymentOrder, nil, "AML compliance check failed", refundOrder)
+			err := HandleCancellation(ctx, paymentOrder, nil, CancellationReasonAML, refundOrder)
 			if err != nil {
 				return fmt.Errorf("checkAMLCompliance.RefundOrder: %w", err)
 			}
@@ -1111,9 +1163,51 @@ func processPaymentOrderPostCreation(
 		}
 	}
 
-	// Assign the payment order to a provider
+	// Fill empty provision bucket so AssignPaymentOrder can run (same as stale_ops nil-bucket resolution)
+	if paymentOrderFields.ProvisionBucket == nil {
+		institution, instErr := utils.GetInstitutionByCode(ctx, paymentOrder.Institution, true)
+		if instErr == nil && institution != nil && institution.Edges.FiatCurrency != nil {
+			fiatAmount := paymentOrder.Amount.Mul(paymentOrder.Rate)
+			bucket, bErr := db.Client.ProvisionBucket.
+				Query().
+				Where(
+					provisionbucket.MaxAmountGTE(fiatAmount),
+					provisionbucket.MinAmountLTE(fiatAmount),
+					provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(institution.Edges.FiatCurrency.ID)),
+				).
+				WithCurrency().
+				First(ctx)
+			if bErr == nil && bucket != nil {
+				if _, upErr := db.Client.PaymentOrder.UpdateOneID(paymentOrder.ID).SetProvisionBucket(bucket).Save(ctx); upErr == nil {
+					paymentOrderFields.ProvisionBucket = bucket
+				}
+			}
+		}
+	}
+
+	// Assign when we have a bucket, or when order is private; private orders don't require buckets.
+	isPrivate := false
+	if paymentOrderFields.ProviderID != "" {
+		provider, pErr := db.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(paymentOrderFields.ProviderID)).Only(ctx)
+		if pErr == nil && provider != nil && provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+			isPrivate = true
+		}
+	}
 	paymentOrderFields.ID = paymentOrder.ID
-	_ = assignPaymentOrder(ctx, *paymentOrderFields)
+	if paymentOrderFields.ProvisionBucket != nil || isPrivate {
+		// Run assignment in a goroutine with its own 60s timeout so one slow order doesn't
+		// consume the indexing task's context and cancel other work.
+		fieldsCopy := *paymentOrderFields
+		go func() {
+			assignCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+			_ = assignPaymentOrder(assignCtx, fieldsCopy)
+		}()
+	} else if paymentOrderFields.ProvisionBucket == nil {
+		logger.WithFields(logger.Fields{
+			"OrderID": paymentOrder.ID.String(),
+		}).Errorf("processPaymentOrderPostCreation: could not resolve provision bucket for order; skipping provider assignment")
+	}
 
 	return nil
 }
@@ -1210,7 +1304,9 @@ func validateAndPreparePaymentOrderData(
 	event.ProtocolFee = event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 
 	// Get provision bucket
-	provisionBucket, isLessThanMin, err := GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
+	var provisionBucket *ent.ProvisionBucket
+	var isLessThanMin bool
+	provisionBucket, isLessThanMin, err = GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":    fmt.Sprintf("%v", err),
@@ -1218,7 +1314,11 @@ func validateAndPreparePaymentOrderData(
 			"Currency": currency,
 		}).Errorf("failed to fetch provision bucket when creating payment order")
 
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Provision bucket lookup failed", refundOrder, existingOrder)
+		cancellationReason := "Provision bucket lookup failed"
+		if errors.Is(err, ErrNoProvisionBucketForAmount) {
+			cancellationReason = "No provision bucket for this amount"
+		}
+		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, cancellationReason, refundOrder, existingOrder)
 	}
 
 	// Create payment order fields (normalize gateway ID for case-insensitive DB storage/lookup)
@@ -1459,7 +1559,6 @@ func getSenderProfileFromAPIKey(ctx context.Context, apiKeyUUID uuid.UUID) (*ent
 			spq.WithUser() // Load User edge for KYB status if needed in the future
 		}).
 		Only(ctx)
-
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, fmt.Errorf("API key not found")

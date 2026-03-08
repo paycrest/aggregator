@@ -94,7 +94,7 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, req types.Veri
 
 	smileIDSignature := s.getSmileIDSignature(timestamp.Format(time.RFC3339Nano))
 	res, err := fastshot.NewClient(s.identityConf.SmileIdentityBaseUrl).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
 		Build().POST("/v1/smile_links").
 		Body().AsJSON(map[string]interface{}{
 		"partner_id":              s.identityConf.SmileIdentityPartnerId,
@@ -115,7 +115,7 @@ func (s *SmileIDService) RequestVerification(ctx context.Context, req types.Veri
 		return nil, kycErrors.ErrProviderUnreachable{Err: err}
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return nil, kycErrors.ErrProviderResponse{Err: fmt.Errorf("%v, %v", err, data)}
 	}

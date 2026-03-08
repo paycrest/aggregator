@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,6 +27,8 @@ import (
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
@@ -87,11 +90,12 @@ func NewController() *Controller {
 
 // GetFiatCurrencies controller fetches the supported fiat currencies
 func (ctrl *Controller) GetFiatCurrencies(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// fetch stored fiat currencies.
 	fiatcurrencies, err := storage.Client.FiatCurrency.
 		Query().
 		Where(fiatcurrency.IsEnabledEQ(true)).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.Errorf("Error: Failed to fetch fiat currencies: %v", err)
 
@@ -118,6 +122,7 @@ func (ctrl *Controller) GetFiatCurrencies(ctx *gin.Context) {
 
 // GetInstitutionsByCurrency controller fetches the supported institutions for a given currency
 func (ctrl *Controller) GetInstitutionsByCurrency(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get currency code from the URL
 	currencyCode := ctx.Param("currency_code")
 
@@ -126,7 +131,7 @@ func (ctrl *Controller) GetInstitutionsByCurrency(ctx *gin.Context) {
 		Where(institution.HasFiatCurrencyWith(
 			fiatcurrency.CodeEQ(strings.ToUpper(currencyCode)),
 		)).
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.Errorf("Error: Failed to fetch institutions: %v", err)
 		u.APIResponse(ctx, http.StatusBadRequest, "error",
@@ -148,6 +153,7 @@ func (ctrl *Controller) GetInstitutionsByCurrency(ctx *gin.Context) {
 
 // GetTokenRate controller fetches the current rate of the cryptocurrency token against the fiat currency
 func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Parse path parameters
 	tokenSymbol := strings.ToUpper(ctx.Param("token"))
 	networkFilter := ctx.Query("network")
@@ -168,7 +174,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		))
 	}
 
-	token, err := tokenQuery.First(ctx)
+	token, err := tokenQuery.First(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			errorMsg := fmt.Sprintf("Token %s is not supported", tokenSymbol)
@@ -194,7 +200,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 			fiatcurrency.IsEnabledEQ(true),
 			fiatcurrency.CodeEQ(strings.ToUpper(ctx.Param("fiat"))),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Fiat currency %s is not supported", strings.ToUpper(ctx.Param("fiat"))), nil)
@@ -219,6 +225,12 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	// Validate rate using extracted logic
 	rateResult, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter, u.RateSideSell)
 	if err != nil {
+		var errStuck *types.ErrNoProviderDueToStuck
+		if errors.As(err, &errStuck) && errStuck.CurrencyCode != "" {
+			msg := fmt.Sprintf("There's a banking/mobile network issue affecting %s providers", errStuck.CurrencyCode)
+			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", msg, nil)
+			return
+		}
 		// Return 404 if no provider found, else 500 for other errors
 		if strings.Contains(err.Error(), "no provider available") {
 			u.APIResponse(ctx, http.StatusNotFound, "error", err.Error(), nil)
@@ -256,6 +268,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 
 // GetSupportedTokens controller fetches supported cryptocurrency tokens
 func (ctrl *Controller) GetSupportedTokens(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get network filter from query parameter
 	networkFilter := ctx.Query("network")
 
@@ -273,7 +286,7 @@ func (ctrl *Controller) GetSupportedTokens(ctx *gin.Context) {
 	}
 
 	// Execute query
-	tokens, err := query.All(ctx)
+	tokens, err := query.All(reqCtx)
 	if err != nil {
 		logger.Errorf("Error: Failed to fetch tokens: error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch tokens", nil)
@@ -332,6 +345,7 @@ func (ctrl *Controller) VerifyAccount(ctx *gin.Context) {
 
 // GetProviderOrderStatus controller fetches a payment order status by ID
 func (ctrl *Controller) GetProviderOrderStatus(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get order and chain ID from the URL
 	orderID := ctx.Param("id")
 	chainID, err := strconv.ParseInt(ctx.Param("chain_id"), 10, 64)
@@ -355,7 +369,7 @@ func (ctrl *Controller) GetProviderOrderStatus(ctx *gin.Context) {
 			tq.WithNetwork()
 		}).
 		WithTransactions().
-		All(ctx)
+		All(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":   fmt.Sprintf("%v", err),
@@ -582,6 +596,7 @@ func (ctrl *Controller) KYCWebhook(ctx *gin.Context) {
 
 // SlackInteractionHandler handles Slack interaction requests
 func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	startTime := time.Now()
 	cnfg := config.AuthConfig()
 
@@ -664,7 +679,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			Where(kybprofile.IDEQ(kybProfileUUID)).
 			WithUser().
 			WithBeneficialOwners().
-			Only(ctx)
+			Only(reqCtx)
 		if err != nil {
 			if ent.IsNotFound(err) {
 				logger.Errorf("KYB Profile not found: %s", kybProfileID)
@@ -1055,7 +1070,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				Query().
 				Where(kybprofile.IDEQ(kybProfileUUID)).
 				WithUser().
-				Only(ctx)
+				Only(reqCtx)
 			if qerr != nil || kyb.Edges.User == nil {
 				logger.Errorf("Failed to resolve KYB profile %s: %v", kybProfileID, qerr)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve KYB profile"})
@@ -1155,11 +1170,29 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				Update().
 				Where(user.EmailEQ(email)).
 				SetKybVerificationStatus(user.KybVerificationStatusRejected).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				logger.Errorf("Failed to reject KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
 				return
+			}
+
+			// Set provider profile inactive when KYB is rejected
+			_, err = storage.Client.ProviderProfile.Update().
+				Where(providerprofile.HasUserWith(user.EmailEQ(email))).
+				SetIsActive(false).
+				Save(reqCtx)
+			if err != nil {
+				logger.Errorf("Failed to set provider profile inactive for user %s (KYB Profile %s): %v", email, kybProfileID, err)
+			}
+
+			// Set sender profile inactive when KYB is rejected
+			_, err = storage.Client.SenderProfile.Update().
+				Where(senderprofile.HasUserWith(user.EmailEQ(email))).
+				SetIsActive(false).
+				Save(reqCtx)
+			if err != nil {
+				logger.Errorf("Failed to set sender profile inactive for user %s (KYB Profile %s): %v", email, kybProfileID, err)
 			}
 
 			// Combine reason and comment for storage
@@ -1175,7 +1208,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				Update().
 				Where(kybprofile.IDEQ(kybProfileUUID)).
 				SetKybRejectionComment(finalRejectionComment).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				logger.Errorf("Failed to update KYB Profile with rejection comment %s: %v", kybProfileID, err)
 			}
@@ -1184,7 +1217,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			userRecord, err := storage.Client.User.
 				Query().
 				Where(user.EmailEQ(email)).
-				Only(ctx)
+				Only(reqCtx)
 
 			var additionalData map[string]interface{}
 			if err == nil && userRecord != nil && userRecord.ReferralID != "" {
@@ -1192,11 +1225,11 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				senderProfile, err := storage.Client.SenderProfile.
 					Query().
 					Where(senderprofile.HasUserWith(user.IDEQ(userRecord.ID))).
-					Only(ctx)
+					Only(reqCtx)
 				if err == nil && senderProfile != nil {
-					apiKey, err := senderProfile.QueryAPIKey().Only(ctx)
+					apiKey, err := senderProfile.QueryAPIKey().Only(reqCtx)
 					if err == nil && apiKey != nil {
-						err = storage.Client.APIKey.DeleteOneID(apiKey.ID).Exec(ctx)
+						err = storage.Client.APIKey.DeleteOneID(apiKey.ID).Exec(reqCtx)
 						if err != nil {
 							logger.Errorf("Failed to delete API key for partner onboarding user %s: %v", email, err)
 						} else {
@@ -1248,7 +1281,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				Query().
 				Where(kybprofile.IDEQ(kybProfileUUID)).
 				WithUser().
-				Only(ctx)
+				Only(reqCtx)
 			if qerr != nil || kyb.Edges.User == nil {
 				logger.Errorf("Failed to resolve KYB profile %s: %v", kybProfileID, qerr)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve KYB profile"})
@@ -1297,11 +1330,29 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			_, err = storage.Client.User.
 				UpdateOneID(kyb.Edges.User.ID).
 				SetKybVerificationStatus(user.KybVerificationStatusApproved).
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				logger.Errorf("Failed to approve KYB for user %s (KYB Profile %s): %v", email, kybProfileID, err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user KYB status"})
 				return
+			}
+
+			// Set provider profile active when KYB is approved
+			_, err = storage.Client.ProviderProfile.Update().
+				Where(providerprofile.HasUserWith(user.IDEQ(kyb.Edges.User.ID))).
+				SetIsActive(true).
+				Save(reqCtx)
+			if err != nil {
+				logger.Errorf("Failed to set provider profile active for user %s (KYB Profile %s): %v", email, kybProfileID, err)
+			}
+
+			// Set sender profile active when KYB is approved
+			_, err = storage.Client.SenderProfile.Update().
+				Where(senderprofile.HasUserWith(user.IDEQ(kyb.Edges.User.ID))).
+				SetIsActive(true).
+				Save(reqCtx)
+			if err != nil {
+				logger.Errorf("Failed to set sender profile active for user %s (KYB Profile %s): %v", email, kybProfileID, err)
 			}
 
 			// Update KYB Profile status and clear rejection comment
@@ -1309,7 +1360,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				Update().
 				Where(kybprofile.IDEQ(kybProfileUUID)).
 				ClearKybRejectionComment().
-				Save(ctx)
+				Save(reqCtx)
 			if err != nil {
 				logger.Errorf("Failed to update KYB Profile status %s: %v", kybProfileID, err)
 			}
@@ -1320,7 +1371,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				senderProfile, err := storage.Client.SenderProfile.
 					Query().
 					Where(senderprofile.HasUserWith(user.IDEQ(kyb.Edges.User.ID))).
-					Only(ctx)
+					Only(reqCtx)
 				if err == nil && senderProfile != nil {
 					apiKeyResponse, err := ctrl.apiKeyService.GetAPIKey(ctx, senderProfile, nil)
 					if err == nil && apiKeyResponse != nil {
@@ -1393,6 +1444,7 @@ func (ctrl *Controller) clearActionProcessed(submissionID string) {
 
 // HandleKYBSubmission handles the POST request for KYB submission
 func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	var input types.KYBSubmissionInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		logger.WithFields(logger.Fields{
@@ -1426,7 +1478,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 	userRecord, err := storage.Client.User.
 		Query().
 		Where(user.IDEQ(userID)).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "User not found", nil)
@@ -1445,7 +1497,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		Query().
 		Where(kybprofile.HasUserWith(user.IDEQ(userRecord.ID))).
 		WithUser().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil && !ent.IsNotFound(err) {
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
@@ -1466,7 +1518,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 	}
 
 	// --- Begin Transaction ---
-	tx, err := storage.Client.Tx(ctx)
+	tx, err := storage.Client.Tx(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":  fmt.Sprintf("%v", err),
@@ -1514,7 +1566,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			updateBuilder = updateBuilder.ClearKycPolicyURL()
 		}
 
-		kybSubmission, err = updateBuilder.Save(ctx)
+		kybSubmission, err = updateBuilder.Save(reqCtx)
 	} else {
 		// Create new submission
 		kybBuilder := tx.KYBProfile.
@@ -1537,7 +1589,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			kybBuilder.SetKycPolicyURL(*input.KycPolicyUrl)
 		}
 
-		kybSubmission, err = kybBuilder.Save(ctx)
+		kybSubmission, err = kybBuilder.Save(reqCtx)
 	}
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
@@ -1557,7 +1609,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		_, err = tx.BeneficialOwner.
 			Delete().
 			Where(beneficialowner.HasKybProfileWith(kybprofile.IDEQ(kybSubmission.ID))).
-			Exec(ctx)
+			Exec(reqCtx)
 		if err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
 				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -1583,7 +1635,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			SetOwnershipPercentage(owner.OwnershipPercentage).
 			SetGovernmentIssuedIDType(beneficialowner.GovernmentIssuedIDType(owner.GovernmentIssuedIdType)).
 			SetKybProfileID(kybSubmission.ID).
-			Save(ctx)
+			Save(reqCtx)
 		if err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
 				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -1602,7 +1654,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		Update().
 		Where(user.IDEQ(userRecord.ID)).
 		SetKybVerificationStatus(user.KybVerificationStatusPending).
-		Save(ctx)
+		Save(reqCtx)
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
@@ -1651,6 +1703,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 
 // GetKYBDocuments retrieves KYB documents for rejected users
 func (ctrl *Controller) GetKYBDocuments(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get user ID from the context
 	userIDValue, exists := ctx.Get("user_id")
 	if !exists {
@@ -1669,7 +1722,7 @@ func (ctrl *Controller) GetKYBDocuments(ctx *gin.Context) {
 	userRecord, err := storage.Client.User.
 		Query().
 		Where(user.IDEQ(userID)).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "User not found", nil)
@@ -1694,7 +1747,7 @@ func (ctrl *Controller) GetKYBDocuments(ctx *gin.Context) {
 		Query().
 		Where(kybprofile.HasUserWith(user.IDEQ(userRecord.ID))).
 		WithBeneficialOwners().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusNotFound, "error", "No KYB submission found", nil)
@@ -1740,6 +1793,7 @@ func (ctrl *Controller) GetKYBDocuments(ctx *gin.Context) {
 
 // InsightWebhook handles the webhook callback from thirdweb insight, including signature verification and event processing
 func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get raw body for signature verification
 	rawBody, err := ctx.GetRawData()
 	if err != nil {
@@ -1792,7 +1846,7 @@ func (ctrl *Controller) InsightWebhook(ctx *gin.Context) {
 	}
 
 	// Process webhook events
-	err = ctrl.processWebhookEvents(ctx, webhookPayload)
+	err = ctrl.processWebhookEvents(reqCtx, webhookPayload)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":   err,
@@ -1843,7 +1897,7 @@ func (ctrl *Controller) isWebhookPayloadExpired(timestamp int64, expirationInSec
 }
 
 // processWebhookEvents processes the webhook events based on their type
-func (ctrl *Controller) processWebhookEvents(ctx *gin.Context, payload types.ThirdwebWebhookPayload) error {
+func (ctrl *Controller) processWebhookEvents(ctx context.Context, payload types.ThirdwebWebhookPayload) error {
 	for _, event := range payload.Data {
 		// Handle reverted events (blockchain reorganization)
 		if event.Status == "reverted" {
@@ -1873,7 +1927,7 @@ func (ctrl *Controller) processWebhookEvents(ctx *gin.Context, payload types.Thi
 }
 
 // handleNewEvent processes a new webhook event
-func (ctrl *Controller) handleNewEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+func (ctrl *Controller) handleNewEvent(ctx context.Context, event types.ThirdwebWebhookEvent) error {
 	// Determine event type based on event signature (first topic)
 	var eventSignature string
 	if len(event.Data.Topics) > 0 {
@@ -1930,7 +1984,7 @@ func (ctrl *Controller) handleNewEvent(ctx *gin.Context, event types.ThirdwebWeb
 }
 
 // handleRevertedEvent handles reverted events by reverting any actions taken
-func (ctrl *Controller) handleRevertedEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+func (ctrl *Controller) handleRevertedEvent(ctx context.Context, event types.ThirdwebWebhookEvent) error {
 	// For now, just log the reverted event
 	// In the future, this could implement rollback logic
 	logger.Infof("Event reverted - txHash: %s, eventID: %s", event.Data.TransactionHash, event.ID)
@@ -1938,7 +1992,7 @@ func (ctrl *Controller) handleRevertedEvent(ctx *gin.Context, event types.Thirdw
 }
 
 // handleTransferEvent processes Transfer events from webhook
-func (ctrl *Controller) handleTransferEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+func (ctrl *Controller) handleTransferEvent(ctx context.Context, event types.ThirdwebWebhookEvent) error {
 	// Convert chain ID from string to int64
 	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
 	if err != nil {
@@ -2002,7 +2056,7 @@ func (ctrl *Controller) handleTransferEvent(ctx *gin.Context, event types.Thirdw
 }
 
 // handleOrderCreatedEvent processes OrderCreated events from webhook
-func (ctrl *Controller) handleOrderCreatedEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+func (ctrl *Controller) handleOrderCreatedEvent(ctx context.Context, event types.ThirdwebWebhookEvent) error {
 	// Convert chain ID from string to int64
 	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
 	if err != nil {
@@ -2065,7 +2119,7 @@ func (ctrl *Controller) handleOrderCreatedEvent(ctx *gin.Context, event types.Th
 }
 
 // handleSettleOutEvent processes SettleOut (offramp) events from webhook
-func (ctrl *Controller) handleSettleOutEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+func (ctrl *Controller) handleSettleOutEvent(ctx context.Context, event types.ThirdwebWebhookEvent) error {
 	// Convert chain ID from string to int64
 	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
 	if err != nil {
@@ -2124,7 +2178,7 @@ func (ctrl *Controller) handleSettleOutEvent(ctx *gin.Context, event types.Third
 }
 
 // handleSettleInEvent processes SettleIn (onramp) events from webhook
-func (ctrl *Controller) handleSettleInEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+func (ctrl *Controller) handleSettleInEvent(ctx context.Context, event types.ThirdwebWebhookEvent) error {
 	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
 	if err != nil {
 		return fmt.Errorf("invalid chain ID: %w", err)
@@ -2189,7 +2243,7 @@ func (ctrl *Controller) handleSettleInEvent(ctx *gin.Context, event types.Thirdw
 }
 
 // handleOrderRefundedEvent processes OrderRefunded events from webhook
-func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.ThirdwebWebhookEvent) error {
+func (ctrl *Controller) handleOrderRefundedEvent(ctx context.Context, event types.ThirdwebWebhookEvent) error {
 	// Convert chain ID from string to int64
 	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
 	if err != nil {
@@ -2249,6 +2303,7 @@ func (ctrl *Controller) handleOrderRefundedEvent(ctx *gin.Context, event types.T
 
 // IndexTransaction controller indexes a specific transaction for blockchain events
 func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Get network from URL parameters
 	networkParam := ctx.Param("network")
 
@@ -2308,7 +2363,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 				networkent.ChainIDEQ(chainID),
 				networkent.IsTestnetEQ(isTestnet),
 			).
-			Only(ctx)
+			Only(reqCtx)
 	} else {
 		// networkParam is an identifier (e.g., "base", "ethereum")
 		network, err = storage.Client.Network.
@@ -2317,7 +2372,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 				networkent.IdentifierEqualFold(networkParam),
 				networkent.IsTestnetEQ(isTestnet),
 			).
-			Only(ctx)
+			Only(reqCtx)
 	}
 
 	if err != nil {
@@ -2405,7 +2460,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 				"EventType":      "Gateway",
 			}).Infof("Starting Gateway event indexing for transaction")
 
-			counts, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, txHash)
+			counts, err := indexerInstance.IndexGateway(reqCtx, network, network.GatewayContractAddress, fromBlock, toBlock, txHash)
 			if err != nil && err.Error() != "no events found" {
 				logger.WithFields(logger.Fields{
 					"Error":          fmt.Sprintf("%v", err),
@@ -2473,7 +2528,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 					"EventType":      "Gateway",
 				}).Infof("Starting Gateway event indexing for gateway contract address")
 
-				counts, err := indexerInstance.IndexGateway(ctx, network, network.GatewayContractAddress, fromBlock, toBlock, "")
+				counts, err := indexerInstance.IndexGateway(reqCtx, network, network.GatewayContractAddress, fromBlock, toBlock, "")
 				if err != nil && err.Error() != "no events found" {
 					logger.WithFields(logger.Fields{
 						"Error":          fmt.Sprintf("%v", err),
@@ -2521,14 +2576,22 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 			paymentOrder, err := storage.Client.PaymentOrder.
 				Query().
 				Where(paymentorder.ReceiveAddressEQ(address)).
-				First(ctx)
+				First(reqCtx)
 
 			if err == nil && paymentOrder != nil {
-				logger.WithFields(logger.Fields{
-					"NetworkParam":   networkParam,
-					"Address":        address,
-					"PaymentOrderID": paymentOrder.ID,
-				}).Infof("Found receive address in database, starting transfer event indexing")
+				if paymentOrder.Status == paymentorder.StatusDeposited && paymentOrder.GatewayID == "" {
+					_, clearErr := storage.Client.PaymentOrder.
+						Update().
+						Where(paymentorder.IDEQ(paymentOrder.ID)).
+						ClearMessageHash().
+						Save(ctx)
+					if clearErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":          fmt.Sprintf("%v", clearErr),
+							"PaymentOrderID": paymentOrder.ID,
+						}).Errorf("Failed to clear message hash for retry")
+					}
+				}
 
 				// This is a receive address, index transfer events
 				wg.Add(1)
@@ -2544,7 +2607,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 							),
 						).
 						WithNetwork().
-						First(ctx)
+						First(reqCtx)
 					if err != nil {
 						logger.WithFields(logger.Fields{
 							"Error":        fmt.Sprintf("%v", err),
@@ -2564,7 +2627,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 						"EventType":    "ReceiveAddress",
 					}).Infof("Starting transfer event indexing for receive address")
 
-					counts, err := indexerInstance.(*indexer.IndexerEVM).IndexReceiveAddressWithBypass(ctx, token, address, fromBlock, toBlock, txHash, true)
+					counts, err := indexerInstance.(*indexer.IndexerEVM).IndexReceiveAddressWithBypass(reqCtx, token, address, fromBlock, toBlock, txHash, true)
 					if err != nil && err.Error() != "no events found" {
 						logger.WithFields(logger.Fields{
 							"Error":        fmt.Sprintf("%v", err),
@@ -2632,8 +2695,107 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", responseMsg, response)
 }
 
+// IndexProviderSettlementAddress controller indexes provider settlement (payout) addresses for SettleOut events
+func (ctrl *Controller) IndexProviderSettlementAddress(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
+	var request struct {
+		Network      string `json:"network" binding:"required"`
+		ProviderID   string `json:"providerId" binding:"required"`
+		TokenSymbol  string `json:"tokenSymbol" binding:"required"`
+		CurrencyCode string `json:"currencyCode" binding:"required"`
+		FromBlock    int64  `json:"fromBlock"`
+		ToBlock      int64  `json:"toBlock"`
+		TxHash       string `json:"txHash"`
+	}
+
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid request payload", nil)
+		return
+	}
+
+	// Get network
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.IdentifierEQ(request.Network)).
+		Only(reqCtx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Network not found", nil)
+		return
+	}
+
+	// Get token
+	token, err := storage.Client.Token.
+		Query().
+		Where(
+			tokenEnt.SymbolEQ(request.TokenSymbol),
+			tokenEnt.HasNetworkWith(networkent.IDEQ(network.ID)),
+		).
+		WithNetwork().
+		Only(reqCtx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Token not found", nil)
+		return
+	}
+
+	// Get provider order token to find the provider settlement address
+	providerOrderToken, err := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(request.ProviderID)),
+			providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(request.CurrencyCode)),
+			providerordertoken.SettlementAddressNEQ(""),
+		).
+		Only(reqCtx)
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider order token not found", nil)
+		return
+	}
+
+	// Create indexer instance
+	var indexerInstance types.Indexer
+	if strings.HasPrefix(network.Identifier, "tron") {
+		indexerInstance = indexer.NewIndexerTron()
+	} else if strings.HasPrefix(network.Identifier, "starknet") {
+		indexerInstance, err = indexer.NewIndexerStarknet()
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Network": network.Identifier,
+			}).Errorf("Failed to create Starknet indexer")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
+			return
+		}
+	} else {
+		indexerInstance, err = indexer.NewIndexerEVM()
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Network": network.Identifier,
+			}).Errorf("Failed to create EVM indexer")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initialize indexer", nil)
+			return
+		}
+	}
+
+	// Index provider settlement address (SettleOut events)
+	eventCounts, err := indexerInstance.IndexProviderSettlementAddress(reqCtx, network, providerOrderToken.SettlementAddress, request.FromBlock, request.ToBlock, request.TxHash)
+	if err != nil {
+		logger.Errorf("Failed to index provider settlement address: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to index provider settlement address", nil)
+		return
+	}
+
+	response := types.IndexTransactionResponse{
+		Events: *eventCounts,
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Provider settlement address indexed successfully", response)
+}
+
 // GetEtherscanQueueStats controller returns statistics about the Etherscan queue
 func (ctrl *Controller) GetEtherscanQueueStats(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
 	// Create Etherscan service instance
 	etherscanService, err := explorer.NewEtherscanService()
 	if err != nil {
@@ -2643,7 +2805,7 @@ func (ctrl *Controller) GetEtherscanQueueStats(ctx *gin.Context) {
 	}
 
 	// Get queue statistics
-	stats, err := etherscanService.GetQueueStats(ctx)
+	stats, err := etherscanService.GetQueueStats(reqCtx)
 	if err != nil {
 		logger.Errorf("Error: Failed to get Etherscan queue stats: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to get queue stats", err.Error())

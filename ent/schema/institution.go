@@ -25,7 +25,7 @@ func (Institution) Fields() []ent.Field {
 		field.String("name"),
 		field.Enum("type").
 			Values("bank", "mobile_money").
-			Default("bank"), 
+			Default("bank"),
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	fastshot "github.com/opus-domini/fast-shot"
+	"github.com/opus-domini/fast-shot/constant/header"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
@@ -837,11 +838,12 @@ func (w *EtherscanWorker) makeEtherscanAPICall(request EtherscanRequest) ([]map[
 
 	// Use Etherscan API with chain ID
 	res, err := fastshot.NewClient("https://api.etherscan.io").
-		Config().SetTimeout(30 * time.Second).
-		Header().AddAll(map[string]string{
-		"Accept":       "application/json",
-		"Content-Type": "application/json",
-	}).Build().GET("/v2/api").
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
+		Header().AddAll(map[header.Type]string{
+			header.Accept:       "application/json",
+			header.ContentType: "application/json",
+		}).
+		Build().GET("/v2/api").
 		Query().AddParams(params).Send()
 
 	if err != nil {
@@ -849,12 +851,12 @@ func (w *EtherscanWorker) makeEtherscanAPICall(request EtherscanRequest) ([]map[
 	}
 
 	// Check HTTP status code
-	if res.RawResponse.StatusCode != http.StatusOK {
+	if res.Raw().StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP error %d for chain %d, address %s",
-			res.RawResponse.StatusCode, request.ChainID, request.WalletAddress)
+			res.Raw().StatusCode, request.ChainID, request.WalletAddress)
 	}
 
-	data, err := utils.ParseJSONResponse(res.RawResponse)
+	data, err := utils.ParseJSONResponse(res.Raw())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}

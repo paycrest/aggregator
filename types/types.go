@@ -3,6 +3,7 @@ package types
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -23,6 +24,16 @@ import (
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/shopspring/decimal"
 )
+
+// ErrNoProviderDueToStuck is returned when no provider can be assigned for a currency because all candidates are at or over the stuck fulfillment threshold.
+// API handlers should return 503 with message: "There's a banking/mobile network issue affecting {CurrencyCode} providers".
+type ErrNoProviderDueToStuck struct {
+	CurrencyCode string
+}
+
+func (e *ErrNoProviderDueToStuck) Error() string {
+	return fmt.Sprintf("no provider available for currency %s: all at or over stuck fulfillment threshold", e.CurrencyCode)
+}
 
 // RPCClient is an interface for interacting with the blockchain.
 type RPCClient interface {
@@ -1062,7 +1073,6 @@ type KYBSubmissionInput struct {
 	ArticlesOfIncorporationUrl    string                 `json:"articlesOfIncorporationUrl" binding:"required"`
 	BusinessLicenseUrl            *string                `json:"businessLicenseUrl"`
 	ProofOfBusinessAddressUrl     string                 `json:"proofOfBusinessAddressUrl" binding:"required"`
-	ProofOfResidentialAddressUrl  string                 `json:"proofOfResidentialAddressUrl" binding:"required"`
 	AmlPolicyUrl                  *string                `json:"amlPolicyUrl"`
 	KycPolicyUrl                  *string                `json:"kycPolicyUrl"`
 	BeneficialOwners              []BeneficialOwnerInput `json:"beneficialOwners" binding:"required,dive"`
@@ -1172,11 +1182,13 @@ type WebhookSignatureVerification struct {
 	Secret    string
 }
 
-// ProviderBalance represents a provider's balance for a specific currency
+// ProviderBalance represents a provider's balance for a specific currency.
+// PeakBalance is the peak (max) total balance seen; used for low-balance alerts (e.g. 50%/20% of peak).
 type ProviderBalance struct {
 	AvailableBalance decimal.Decimal `json:"availableBalance"`
 	TotalBalance     decimal.Decimal `json:"totalBalance"`
 	ReservedBalance  decimal.Decimal `json:"reservedBalance"`
+	PeakBalance      decimal.Decimal `json:"peakBalance"`
 	LastUpdated      time.Time       `json:"lastUpdated"`
 }
 

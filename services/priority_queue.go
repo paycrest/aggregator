@@ -2,21 +2,23 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/token"
-	"github.com/paycrest/aggregator/ent/user"
 	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -27,7 +29,6 @@ import (
 
 var (
 	serverConf = config.ServerConfig()
-	orderConf  = config.OrderConfig()
 )
 
 // RateSide represents the direction of the rate (buy for onramp, sell for offramp)
@@ -74,13 +75,110 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 		return nil, err
 	}
 
-	// Filter providers by currency availability and balance for each bucket
+	// Filter providers by currency availability and balance for each bucket.
+	// Always reconcile provider-bucket links from order tokens (overlap rule, same as profile)
+	// so missing links are fixed on each run without waiting for profile updates.
 	for _, bucket := range buckets {
-		var availableProviders []*ent.ProviderProfile
+		// 1. Reconcile links: find providers whose order tokens overlap this bucket (in bucket currency)
+		// and add missing links; optionally remove links for providers who no longer qualify.
+		orderTokens, err := storage.Client.ProviderOrderToken.Query().
+			Where(
+				providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
+				providerordertoken.HasProviderWith(providerprofile.IsActive(true)),
+			).
+			WithProvider().
+			WithCurrency().
+			All(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":           fmt.Sprintf("%v", err),
+				"BucketMinAmount": bucket.MinAmount,
+				"BucketMaxAmount": bucket.MaxAmount,
+				"Currency":        bucket.Edges.Currency.Code,
+			}).Errorf("Failed to get order tokens for bucket reconciliation")
+			continue
+		}
+
+		shouldBeLinkedProviderIDs := make(map[string]bool)
+		// TODO: this could be done in batch and processed in parallel for better performance
+		for _, orderToken := range orderTokens {
+			rate := s.tokenRateForBucket(orderToken)
+			if rate.IsZero() {
+				// Currency edge unloaded or missing; cannot compute overlap. Skip this token so we don't
+				// silently exclude the provider, and log so operators see data/loading issues.
+				logger.WithFields(logger.Fields{
+					"ProviderID":     orderToken.Edges.Provider.ID,
+					"BucketID":       bucket.ID,
+					"BucketCurrency": bucket.Edges.Currency.Code,
+					"OrderTokenID":   orderToken.ID,
+				}).Errorf("Skipping overlap check: token rate is zero (currency edge missing or not loaded for order token)")
+				continue
+			}
+			convertedMin := orderToken.MinOrderAmount.Mul(rate)
+			convertedMax := orderToken.MaxOrderAmount.Mul(rate)
+			// Overlap: bucket [Min, Max] overlaps provider [convertedMin, convertedMax]
+			if bucket.MinAmount.LessThanOrEqual(convertedMax) && bucket.MaxAmount.GreaterThanOrEqual(convertedMin) {
+				providerID := orderToken.Edges.Provider.ID
+				shouldBeLinkedProviderIDs[providerID] = true
+				exists, err := orderToken.Edges.Provider.QueryProvisionBuckets().
+					Where(provisionbucket.IDEQ(bucket.ID)).
+					Exist(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":          fmt.Sprintf("%v", err),
+						"ProviderID":     providerID,
+						"BucketCurrency": bucket.Edges.Currency.Code,
+					}).Errorf("Failed to check existing bucket for provider")
+					continue
+				}
+				if exists {
+					continue
+				}
+				_, err = storage.Client.ProviderProfile.Update().
+					Where(providerprofile.IDEQ(providerID)).
+					AddProvisionBuckets(bucket).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":           fmt.Sprintf("%v", err),
+						"ProviderID":      providerID,
+						"BucketCurrency":  bucket.Edges.Currency.Code,
+						"BucketMinAmount": bucket.MinAmount,
+						"BucketMaxAmount": bucket.MaxAmount,
+					}).Errorf("Failed to add provision bucket to provider")
+				}
+			}
+		}
+
+		// 2. Remove stale links: providers linked to this bucket but no longer having an overlapping token.
+		linkedProviders, err := bucket.QueryProviderProfiles().All(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":  fmt.Sprintf("%v", err),
+				"Bucket": bucket.ID,
+			}).Errorf("Failed to get linked providers for bucket")
+		} else {
+			for _, p := range linkedProviders {
+				if !shouldBeLinkedProviderIDs[p.ID] {
+					_, err = storage.Client.ProviderProfile.Update().
+						Where(providerprofile.IDEQ(p.ID)).
+						RemoveProvisionBuckets(bucket).
+						Save(ctx)
+					if err != nil {
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", err),
+							"ProviderID": p.ID,
+							"BucketID":   bucket.ID,
+						}).Errorf("Failed to remove stale provision bucket link")
+					}
+				}
+			}
+		}
+
+		// 3. Get available providers (linked + balance + active); requery so newly linked are included.
 		availableProviders, err := bucket.QueryProviderProfiles().
 			Where(
 				providerprofile.IsActive(true),
-				providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
 				providerprofile.HasProviderBalancesWith(
 					providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
@@ -99,91 +197,6 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 			continue
 		}
 
-		if len(availableProviders) == 0 {
-			// if no providers are available, get the order tokens for the bucket
-			orderTokens, err := storage.Client.ProviderOrderToken.Query().
-				Where(
-					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucket.Edges.Currency.Code)),
-					providerordertoken.HasProviderWith(providerprofile.IsActive(true)),
-					providerordertoken.HasProviderWith(
-						providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
-					),
-					providerordertoken.MinOrderAmountLTE(bucket.MinAmount),
-					providerordertoken.MaxOrderAmountGTE(bucket.MaxAmount),
-				).
-				WithProvider().
-				All(ctx)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":           fmt.Sprintf("%v", err),
-					"BucketMinAmount": bucket.MinAmount,
-					"BucketMaxAmount": bucket.MaxAmount,
-					"Currency":        bucket.Edges.Currency.Code,
-				}).Errorf("Failed to get available providers for bucket")
-				continue
-			}
-			if len(orderTokens) > 0 {
-				for _, orderToken := range orderTokens {
-					// Avoid duplicate M2M inserts for the same provider/bucket pair
-					exists, err := orderToken.Edges.Provider.QueryProvisionBuckets().
-						Where(provisionbucket.IDEQ(bucket.ID)).
-						Exist(ctx)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":           fmt.Sprintf("%v", err),
-							"ProviderID":      orderToken.Edges.Provider.ID,
-							"BucketCurrency":  bucket.Edges.Currency.Code,
-							"BucketMinAmount": bucket.MinAmount,
-							"BucketMaxAmount": bucket.MaxAmount,
-						}).Errorf("Failed to check existing bucket for provider")
-						continue
-					}
-					if exists {
-						// Already linked; skip re-adding
-						continue
-					}
-
-					_, err = storage.Client.ProviderProfile.Update().
-						Where(providerprofile.IDEQ(orderToken.Edges.Provider.ID)).
-						AddProvisionBuckets(bucket).
-						Save(ctx)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":           fmt.Sprintf("%v", err),
-							"ProviderID":      orderToken.Edges.Provider.ID,
-							"BucketCurrency":  bucket.Edges.Currency.Code,
-							"BucketMinAmount": bucket.MinAmount,
-							"BucketMaxAmount": bucket.MaxAmount,
-						}).Errorf("Failed to add provision bucket to provider")
-					}
-
-					provider, err := storage.Client.ProviderProfile.Query().
-						Where(
-							providerprofile.IDEQ(orderToken.Edges.Provider.ID),
-							providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
-							providerprofile.HasProviderBalancesWith(
-								providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID)),
-								providerbalances.AvailableBalanceGT(bucket.MinAmount),
-								providerbalances.IsAvailableEQ(true),
-							),
-						).
-						Only(ctx)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":           fmt.Sprintf("%v", err),
-							"ProviderID":      orderToken.Edges.Provider.ID,
-							"BucketCurrency":  bucket.Edges.Currency.Code,
-							"BucketMinAmount": bucket.MinAmount,
-							"BucketMaxAmount": bucket.MaxAmount,
-						}).Errorf("Failed to get provider")
-					}
-					if provider != nil {
-						availableProviders = append(availableProviders, provider)
-					}
-				}
-			}
-		}
-
 		bucket.Edges.ProviderProfiles = availableProviders
 
 		// If no providers are eligible for this bucket, log balance health for a small sample of
@@ -199,7 +212,6 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 			candidates, candErr := bucket.QueryProviderProfiles().
 				Where(
 					providerprofile.IsActive(true),
-					providerprofile.HasUserWith(user.KybVerificationStatusEQ(user.KybVerificationStatusApproved)),
 					providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
 				).
 				Limit(3).
@@ -215,13 +227,13 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 						"ProviderID": p.ID,
 						"Currency":   bucket.Edges.Currency.Code,
 						"Error":      fmt.Sprintf("%v", balErr),
-					}).Warnf("Balance health check: failed to load provider balances")
+					}).Errorf("Balance health check: failed to load provider balances")
 					continue
 				}
 
 				for _, b := range bals {
 					// Only inspect the relevant fiat currency for this bucket.
-					if b.Edges.FiatCurrency == nil || b.Edges.FiatCurrency.Code != bucket.Edges.Currency.Code {
+					if b.Edges.FiatCurrency == nil || !b.IsAvailable || b.Edges.FiatCurrency.Code != bucket.Edges.Currency.Code {
 						continue
 					}
 					report := s.balanceService.CheckBalanceHealth(b)
@@ -248,6 +260,19 @@ func (s *PriorityQueueService) GetProvisionBuckets(ctx context.Context) ([]*ent.
 	}
 
 	return buckets, nil
+}
+
+// tokenRateForBucket returns the fiat rate for the order token (token amount -> bucket currency).
+// Uses sell rate (offramp: fiat per token the sender receives when selling crypto). The token must be loaded with WithCurrency().
+// Returns decimal.Zero when the currency edge is missing; callers must treat zero as "cannot compute overlap".
+func (s *PriorityQueueService) tokenRateForBucket(orderToken *ent.ProviderOrderToken) decimal.Decimal {
+	if orderToken.Edges.Currency == nil {
+		return decimal.Zero
+	}
+	if !orderToken.FixedSellRate.IsZero() {
+		return orderToken.FixedSellRate
+	}
+	return orderToken.Edges.Currency.MarketSellRate.Add(orderToken.FloatingSellDelta).RoundBank(2)
 }
 
 // GetProviderRate returns the rate for a provider based on the side (buy or sell)
@@ -304,6 +329,7 @@ func (s *PriorityQueueService) buildQueueForSide(ctx context.Context, bucket *en
 	redisKey := baseRedisKey + "_" + string(side)
 	prevRedisKey := redisKey + "_prev"
 	tempRedisKey := redisKey + "_temp"
+	orderConf := config.OrderConfig()
 
 	// Copy the current queue to the previous queue (backup before rebuilding)
 	prevData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
@@ -354,9 +380,14 @@ func (s *PriorityQueueService) buildQueueForSide(ctx context.Context, bucket *en
 		}).Errorf("failed to delete temporary provider queue")
 	}
 
-	// Build new queue in temporary key first
-	newQueueEntries := 0
+	// TODO: add also the checks for all the currencies that a provider has
+
+	// Build entries per provider first (provider ID -> list of queue entry strings) for equal slots with cap
+	providerEntries := make(map[string][]string)
 	for _, provider := range providers {
+		if orderConf.FallbackProviderID != "" && provider.ID == orderConf.FallbackProviderID {
+			continue
+		}
 		exists, err := provider.QueryProviderBalances().
 			Where(providerbalances.HasFiatCurrencyWith(fiatcurrency.IDEQ(bucket.Edges.Currency.ID))).
 			Exist(ctx)
@@ -387,6 +418,7 @@ func (s *PriorityQueueService) buildQueueForSide(ctx context.Context, bucket *en
 		// Use map to deduplicate by symbol:network combination
 		// This allows same token symbol on different networks (e.g., USDT on Ethereum vs Tron)
 		tokenKeys := make(map[string]bool)
+		var entries []string
 		for _, orderToken := range orderTokens {
 			// Create a unique key combining symbol and network
 			tokenKey := fmt.Sprintf("%s:%s", orderToken.Edges.Token.Symbol, orderToken.Network)
@@ -432,18 +464,46 @@ func (s *PriorityQueueService) buildQueueForSide(ctx context.Context, bucket *en
 
 			// Serialize the provider ID, token, network, rate, min and max order amount into a single string
 			data := fmt.Sprintf("%s:%s:%s:%s:%s:%s", provider.ID, orderToken.Edges.Token.Symbol, orderToken.Network, rate, orderToken.MinOrderAmount, orderToken.MaxOrderAmount)
+			entries = append(entries, data)
+		}
+		if len(entries) > 0 {
+			providerEntries[provider.ID] = entries
+		}
+	}
 
-			// Enqueue the serialized data into the temporary circular queue
-			err = storage.RedisClient.RPush(ctx, tempRedisKey, data).Err()
-			if err == nil {
-				newQueueEntries++
-			} else if err != context.Canceled {
-				logger.WithFields(logger.Fields{
-					"Error": fmt.Sprintf("%v", err),
-					"Key":   tempRedisKey,
-					"Data":  data,
-				}).Errorf("failed to enqueue provider data to circular queue")
-			}
+	// Normalize so each provider has the same number of slots (fair distribution: one turn per slot).
+	// Cap each provider at maxProviderSlots to bound queue size and keep matchRate fast.
+	const maxProviderSlots = 20
+	var maxLen int
+	for _, entries := range providerEntries {
+		if n := len(entries); n > maxLen {
+			maxLen = n
+		}
+	}
+	if maxLen > maxProviderSlots {
+		maxLen = maxProviderSlots
+	}
+	var normalized []string
+	for _, entries := range providerEntries {
+		if maxLen == 0 {
+			break
+		}
+		for i := 0; i < maxLen; i++ {
+			normalized = append(normalized, entries[i%len(entries)])
+		}
+	}
+	rand.Shuffle(len(normalized), func(i, j int) { normalized[i], normalized[j] = normalized[j], normalized[i] })
+
+	newQueueEntries := len(normalized)
+	for _, data := range normalized {
+		err = storage.RedisClient.RPush(ctx, tempRedisKey, data).Err()
+		if err != nil && err != context.Canceled {
+			logger.WithFields(logger.Fields{
+				"Error": fmt.Sprintf("%v", err),
+				"Key":   tempRedisKey,
+				"Data":  data,
+			}).Errorf("failed to enqueue provider data to circular queue")
+			break
 		}
 	}
 
@@ -498,11 +558,30 @@ func (s *PriorityQueueService) buildQueueForSide(ctx context.Context, bucket *en
 			logger.WithFields(logger.Fields{
 				"Error": fmt.Sprintf("%v", err),
 				"Key":   tempRedisKey,
-			}).Warnf("failed to delete temporary queue after swap (non-critical)")
+			}).Errorf("failed to delete temporary queue after swap (non-critical)")
 		}
 	} else {
 		// New queue is empty, keep the old queue and clean up temp
 		_ = s.deleteQueue(ctx, tempRedisKey)
+		// Sanitize retained queue: remove fallback provider entries when config dictates
+		if orderConf.FallbackProviderID != "" {
+			oldData, err := storage.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
+			if err == nil && len(oldData) > 0 {
+				var filtered []interface{}
+				for _, entry := range oldData {
+					parts := strings.SplitN(entry, ":", 2)
+					if len(parts) >= 1 && parts[0] != orderConf.FallbackProviderID {
+						filtered = append(filtered, entry)
+					}
+				}
+				if len(filtered) < len(oldData) {
+					_ = s.deleteQueue(ctx, redisKey)
+					if len(filtered) > 0 {
+						_ = storage.RedisClient.RPush(ctx, redisKey, filtered...).Err()
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -520,20 +599,100 @@ func (s *PriorityQueueService) CreatePriorityQueueForBucket(ctx context.Context,
 	s.buildQueueForSide(ctx, bucket, providers, RateSideSell)
 }
 
+// tryUsePreSetProvider fetches the provider by order.ProviderID, optionally refreshes rate, then assigns (OTC or sendOrderRequest).
+// Returns (true, provider, nil) if assignment succeeded; (false, provider, err) otherwise. Caller uses provider to decide private early-return.
+func (s *PriorityQueueService) tryUsePreSetProvider(ctx context.Context, order types.PaymentOrderFields) (assigned bool, provider *ent.ProviderProfile, err error) {
+	provider, err = storage.Client.ProviderProfile.
+		Query().
+		Where(providerprofile.IDEQ(order.ProviderID)).
+		Only(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+		}).Errorf("failed to get provider")
+		return false, nil, err
+	}
+
+	if !order.UpdatedAt.IsZero() && order.UpdatedAt.Before(time.Now().Add(-10*time.Minute)) {
+		currencyCode := ""
+		if order.ProvisionBucket != nil && order.ProvisionBucket.Edges.Currency != nil {
+			currencyCode = order.ProvisionBucket.Edges.Currency.Code
+		}
+		if currencyCode == "" && order.Institution != "" {
+			institution, instErr := utils.GetInstitutionByCode(ctx, order.Institution, true)
+			if instErr == nil && institution != nil && institution.Edges.FiatCurrency != nil {
+				currencyCode = institution.Edges.FiatCurrency.Code
+			}
+		}
+		if currencyCode != "" {
+			// PaymentOrderFields does not have Direction; use sell rate for pre-set provider refresh (payout is common)
+			order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, currencyCode, RateSideSell)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+				}).Errorf("failed to get rate for provider")
+			} else {
+				_, err = storage.Client.PaymentOrder.
+					Update().
+					Where(paymentorder.MessageHashEQ(order.MessageHash)).
+					SetRate(order.Rate).
+					Save(ctx)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", err),
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+					}).Errorf("failed to update rate for provider")
+				}
+			}
+		}
+	}
+
+	if order.OrderType == "otc" {
+		if err := s.assignOtcOrder(ctx, order); err != nil {
+			return false, provider, err
+		}
+		return true, provider, nil
+	}
+	err = s.sendOrderRequest(ctx, order)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+		}).Errorf("failed to send order request to specific provider")
+		return false, provider, err
+	}
+	return true, provider, nil
+}
+
 // AssignPaymentOrder assigns payment orders to providers
 func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order types.PaymentOrderFields) error {
 	orderIDPrefix := strings.Split(order.ID.String(), "-")[0]
+	orderConf := config.OrderConfig()
 
-	// Both regular and OTC orders must have a provision bucket
+	// Both regular and OTC orders must have a provision bucket, unless order has a pre-set private provider (private orders don't require buckets).
+	allowNilBucketForPrivate := false
 	if order.ProvisionBucket == nil {
-		logger.WithFields(logger.Fields{
-			"OrderID":   order.ID.String(),
-			"OrderType": order.OrderType,
-			"Reason":    "internal: Order missing provision bucket",
-		}).Errorf("AssignPaymentOrder.MissingProvisionBucket")
-		return fmt.Errorf("order %s (type: %s) is missing provision bucket", order.ID.String(), order.OrderType)
-	}
-	if order.ProvisionBucket.Edges.Currency == nil {
+		if order.ProviderID != "" {
+			providerForCheck, pErr := storage.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(order.ProviderID)).Only(ctx)
+			if pErr == nil && providerForCheck != nil && providerForCheck.VisibilityMode == providerprofile.VisibilityModePrivate {
+				allowNilBucketForPrivate = true
+			}
+		}
+		if !allowNilBucketForPrivate {
+			logger.WithFields(logger.Fields{
+				"OrderID":   order.ID.String(),
+				"OrderType": order.OrderType,
+				"Reason":    "internal: Order missing provision bucket",
+			}).Errorf("AssignPaymentOrder.MissingProvisionBucket")
+			return fmt.Errorf("order %s (type: %s) is missing provision bucket", order.ID.String(), order.OrderType)
+		}
+	} else if order.ProvisionBucket.Edges.Currency == nil {
 		logger.WithFields(logger.Fields{
 			"OrderID":   order.ID.String(),
 			"OrderType": order.OrderType,
@@ -551,7 +710,7 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 			logger.WithFields(logger.Fields{
 				"OrderID": order.ID.String(),
 				"Status":  currentOrder.Status,
-			}).Warnf("AssignPaymentOrder: Order is not in pending state, skipping assignment")
+			}).Errorf("AssignPaymentOrder: Order is not in pending state, skipping assignment")
 			return nil // Not an error, just skip
 		}
 
@@ -562,7 +721,7 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 			logger.WithFields(logger.Fields{
 				"OrderID": order.ID.String(),
 				"Status":  currentOrder.Status,
-			}).Warnf("AssignPaymentOrder: Order request already exists, skipping duplicate assignment")
+			}).Errorf("AssignPaymentOrder: Order request already exists, skipping duplicate assignment")
 			return nil // Not an error, already assigned
 		}
 	} else if !ent.IsNotFound(err) {
@@ -615,70 +774,42 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 		}
 		if shouldSkip {
 			// Provider should be skipped, continue to queue matching
-		} else {
-			provider, err := storage.Client.ProviderProfile.
-				Query().
-				Where(
-					providerprofile.IDEQ(order.ProviderID),
-				).
-				Only(ctx)
-
-			if err == nil {
-				// TODO: check for provider's minimum and maximum rate for negotiation
-				// Update the rate with the current rate if order was last updated more than 10 mins ago
-				if !order.UpdatedAt.IsZero() && order.UpdatedAt.Before(time.Now().Add(-10*time.Minute)) {
-					order.Rate, err = s.GetProviderRate(ctx, provider, order.Token.Symbol, order.ProvisionBucket.Edges.Currency.Code, rateSide)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.ProviderID,
-						}).Errorf("failed to get rate for provider")
-					}
-					_, err = storage.Client.PaymentOrder.
-						Update().
-						Where(paymentorder.MessageHashEQ(order.MessageHash)).
-						SetRate(order.Rate).
-						Save(ctx)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.ProviderID,
-						}).Errorf("failed to update rate for provider")
-					}
-				}
-
-				// Handle OTC orders differently - no balance reservation, no provision node request
-				if order.OrderType == "otc" {
-					if err := s.assignOtcOrder(ctx, order); err != nil {
-						return err
-					}
-					return nil
-				} else {
-					// Regular orders: send order request (balance reservation + provision node)
-					err = s.sendOrderRequest(ctx, order)
-					if err == nil {
-						return nil
-					}
+		} else if order.OrderType != "otc" && orderConf.ProviderStuckFulfillmentThreshold > 0 {
+			// Regular orders: skip pre-set provider only when stuck count is at or over threshold
+			stuckCount, errStuck := utils.GetProviderStuckOrderCount(ctx, order.ProviderID)
+			if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+				// Fall through to queue matching
+			} else {
+				if errStuck != nil {
 					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", err),
+						"Error":      fmt.Sprintf("%v", errStuck),
 						"OrderID":    order.ID.String(),
 						"ProviderID": order.ProviderID,
-					}).Errorf("failed to send order request to specific provider")
+					}).Errorf("failed to get stuck order count for pre-set provider")
 				}
-			} else {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.ProviderID,
-				}).Errorf("failed to get provider")
+				assigned, provider, _ := s.tryUsePreSetProvider(ctx, order)
+				if assigned {
+					return nil
+				}
+				if provider != nil && provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+					return nil
+				}
 			}
-
+		} else {
+			// OTC or threshold 0: use pre-set provider without stuck check
+			assigned, provider, _ := s.tryUsePreSetProvider(ctx, order)
+			if assigned {
+				return nil
+			}
 			if provider != nil && provider.VisibilityMode == providerprofile.VisibilityModePrivate {
 				return nil
 			}
 		}
+	}
+
+	// Private orders with nil bucket only use the pre-set path above; do not run queue matching.
+	if order.ProvisionBucket == nil {
+		return nil
 	}
 
 	// Use same side-suffixed key as buildQueueForSide so reads/writes use identical keys (rateSide computed above)
@@ -689,17 +820,280 @@ func (s *PriorityQueueService) AssignPaymentOrder(ctx context.Context, order typ
 	if err != nil {
 		prevRedisKey := redisKey + "_prev"
 		err = s.matchRate(ctx, prevRedisKey, orderIDPrefix, order, excludeList)
-		if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "redis: nil") {
-			return err
+		if err != nil {
+			// Both matchRate attempts failed; try fallback once for regular orders
+			matchRateErr := err
+			if order.OrderType != "otc" {
+				orderEnt, loadErr := storage.Client.PaymentOrder.Query().
+					Where(paymentorder.IDEQ(order.ID)).
+					WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+					Only(ctx)
+				if loadErr == nil {
+					if fallbackErr := s.TryFallbackAssignment(ctx, orderEnt); fallbackErr == nil {
+						return nil
+					} else {
+						logger.WithFields(logger.Fields{
+							"OrderID": order.ID.String(),
+							"Error":   fallbackErr.Error(),
+						}).Errorf("AssignPaymentOrder: TryFallbackAssignment failed after no provider in queue")
+						var errStuck *types.ErrNoProviderDueToStuck
+						if errors.As(fallbackErr, &errStuck) {
+							return fallbackErr
+						}
+					}
+				}
+			}
+			return fmt.Errorf("no provider matched for order: %w", matchRateErr)
 		}
 	}
 
 	return nil
 }
 
-// assignOtcOrder assigns an OTC order to a provider and creates a Redis key for reassignment
+// TryFallbackAssignment attempts to assign the order to the configured fallback provider using only rate and balance checks.
+// It accepts *ent.PaymentOrder and converts to the internal assignment type; callers do not need to build PaymentOrderFields.
+// Slippage is taken from the fallback provider's ProviderOrderToken (rate_slippage). Returns a clear error if fallback
+// was attempted but order rate is outside the fallback provider's acceptable slippage.
+func (s *PriorityQueueService) TryFallbackAssignment(ctx context.Context, order *ent.PaymentOrder) error {
+	orderConf := config.OrderConfig()
+	fallbackID := orderConf.FallbackProviderID
+	if fallbackID == "" {
+		return fmt.Errorf("fallback provider not configured")
+	}
+	if order.OrderType == paymentorder.OrderTypeOtc {
+		return fmt.Errorf("fallback is only for regular orders, not OTC")
+	}
+
+	// Check idempotency first (before any DB state check) to avoid race: another process may assign between state check and assignment.
+	orderKey := fmt.Sprintf("order_request_%s", order.ID)
+	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
+	if err != nil {
+		return fmt.Errorf("fallback: failed to check order_request: %w", err)
+	}
+	if exists > 0 {
+		return fmt.Errorf("fallback: order %s already has an active order_request", order.ID)
+	}
+
+	// Verify order is still in a state that allows assignment; DB-level idempotency for fallback.
+	// Eagerly load ProvisionBucket+Currency so we never need a separate fallback query for them.
+	currentOrder, err := storage.Client.PaymentOrder.Query().
+		Where(paymentorder.IDEQ(order.ID)).
+		WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
+			pb.WithCurrency()
+		}).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("fallback: failed to load order: %w", err)
+	}
+	if !currentOrder.FallbackTriedAt.IsZero() {
+		return fmt.Errorf("fallback: order %s already had fallback assignment tried", order.ID)
+	}
+	assignable := currentOrder.Status == paymentorder.StatusPending || currentOrder.Status == paymentorder.StatusCancelled
+	if currentOrder.Status == paymentorder.StatusFulfilled {
+		tx, txErr := storage.Client.Tx(ctx)
+		if txErr != nil {
+			return fmt.Errorf("fallback: failed to start transaction for order %s: %w", order.ID, txErr)
+		}
+		deleted, delErr := tx.PaymentOrderFulfillment.Delete().
+			Where(
+				paymentorderfulfillment.HasOrderWith(paymentorder.IDEQ(order.ID)),
+				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusFailed),
+			).Exec(ctx)
+		if delErr != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("fallback: failed to delete fulfillments for order %s: %w", order.ID, delErr)
+		}
+		if deleted == 0 {
+			_ = tx.Rollback()
+			return fmt.Errorf("fallback: order %s is fulfilled with no failed fulfillments, not assignable", order.ID)
+		}
+		if _, updErr := tx.PaymentOrder.UpdateOneID(order.ID).
+			ClearProvider().
+			SetStatus(paymentorder.StatusPending).
+			Save(ctx); updErr != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("fallback: failed to reset order %s to Pending after deleting fulfillments: %w", order.ID, updErr)
+		}
+		if commitErr := tx.Commit(); commitErr != nil {
+			return fmt.Errorf("fallback: failed to commit transaction for order %s: %w", order.ID, commitErr)
+		}
+		assignable = true
+	}
+	if !assignable {
+		return fmt.Errorf("fallback: order %s is in state %s, not assignable", order.ID, currentOrder.Status)
+	}
+
+	// Convert ent order to PaymentOrderFields for the rest of the fallback logic
+	if order.AccountIdentifier == "" || order.Institution == "" || order.AccountName == "" {
+		return fmt.Errorf("fallback: order %s has no recipient information", order.ID.String())
+	}
+	fields := types.PaymentOrderFields{
+		ID:                order.ID,
+		OrderType:         order.OrderType.String(),
+		Token:             order.Edges.Token,
+		Network:           nil,
+		GatewayID:         order.GatewayID,
+		Amount:            order.Amount,
+		Rate:              order.Rate,
+		Institution:       order.Institution,
+		AccountIdentifier: order.AccountIdentifier,
+		AccountName:       order.AccountName,
+		ProviderID:        "",
+		ProvisionBucket:   currentOrder.Edges.ProvisionBucket,
+		MessageHash:       order.MessageHash,
+		Memo:              order.Memo,
+		UpdatedAt:         order.UpdatedAt,
+		CreatedAt:         order.CreatedAt,
+	}
+	if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+		fields.Network = order.Edges.Token.Edges.Network
+	}
+
+	if fields.Token == nil {
+		return fmt.Errorf("fallback: order %s has no token", order.ID.String())
+	}
+
+	// If order has no bucket yet, resolve one from institution currency + fiat amount.
+	if fields.ProvisionBucket == nil {
+		institution, instErr := utils.GetInstitutionByCode(ctx, order.Institution, true)
+		if instErr != nil {
+			return fmt.Errorf("fallback: cannot resolve bucket for order %s: institution lookup failed: %w", fields.ID.String(), instErr)
+		}
+		if institution.Edges.FiatCurrency == nil {
+			return fmt.Errorf("fallback: cannot resolve bucket for order %s: institution %s has no fiat currency", fields.ID.String(), order.Institution)
+		}
+		fiatAmount := order.Amount.Mul(order.Rate)
+		bucket, bErr := storage.Client.ProvisionBucket.
+			Query().
+			Where(
+				provisionbucket.MaxAmountGTE(fiatAmount),
+				provisionbucket.MinAmountLTE(fiatAmount),
+				provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(institution.Edges.FiatCurrency.ID)),
+			).
+			WithCurrency().
+			Only(ctx)
+		if bErr != nil {
+			return fmt.Errorf("fallback: no matching provision bucket for order %s (fiat %s %s): %w",
+				fields.ID.String(), fiatAmount.String(), institution.Edges.FiatCurrency.Code, bErr)
+		}
+		fields.ProvisionBucket = bucket
+		// Persist so later flows (e.g. FulfillOrder) see the bucket and do not panic on nil ProvisionBucket
+		if _, upErr := storage.Client.PaymentOrder.UpdateOneID(fields.ID).SetProvisionBucket(bucket).Save(ctx); upErr != nil {
+			return fmt.Errorf("fallback: failed to set provision bucket on order %s: %w", fields.ID.String(), upErr)
+		}
+	}
+
+	bucketCurrency := fields.ProvisionBucket.Edges.Currency
+	if bucketCurrency == nil {
+		return fmt.Errorf("fallback: provision bucket %d missing currency", fields.ProvisionBucket.ID)
+	}
+
+	// Skip fallback provider if at or over stuck fulfillment threshold
+	if orderConf.ProviderStuckFulfillmentThreshold > 0 {
+		stuckCount, errStuck := utils.GetProviderStuckOrderCount(ctx, fallbackID)
+		if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+			return &types.ErrNoProviderDueToStuck{CurrencyCode: bucketCurrency.Code}
+		}
+		if errStuck != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", errStuck),
+				"FallbackID": fallbackID,
+				"Currency":   bucketCurrency.Code,
+			}).Errorf("fallback: failed to get stuck order count, proceeding with assignment (fail-open)")
+		}
+	}
+
+	// Resolve fallback provider
+	provider, err := storage.Client.ProviderProfile.Get(ctx, fallbackID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return fmt.Errorf("fallback provider %s not found", fallbackID)
+		}
+		return fmt.Errorf("failed to get fallback provider: %w", err)
+	}
+
+	network := fields.Token.Edges.Network
+	if network == nil {
+		var nErr error
+		network, nErr = fields.Token.QueryNetwork().Only(ctx)
+		if nErr != nil {
+			return fmt.Errorf("fallback: token missing network: %w", nErr)
+		}
+	}
+
+	// ProviderOrderToken for fallback (token, network, currency) – same pattern as matchRate, carries provider-configured rate_slippage.
+	// IsAvailableEQ(true) is intentional: fallback is only used when it has available balance for the currency, same as regular queue.
+	providerToken, err := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.NetworkEQ(network.Identifier),
+			providerordertoken.HasProviderWith(
+				providerprofile.IDEQ(fallbackID),
+				providerprofile.HasProviderBalancesWith(
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+					providerbalances.IsAvailableEQ(true),
+				),
+			),
+			providerordertoken.HasTokenWith(token.IDEQ(fields.Token.ID)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketCurrency.Code)),
+			providerordertoken.SettlementAddressNEQ(""),
+		).
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return fmt.Errorf("fallback provider %s has no order token for %s/%s/%s", fallbackID, fields.Token.Symbol, network.Identifier, bucketCurrency.Code)
+		}
+		return fmt.Errorf("fallback: failed to get provider order token: %w", err)
+	}
+
+	// Rate check: must match what fallback provider can take (use token's rate_slippage)
+	providerRate, err := s.GetProviderRate(ctx, provider, fields.Token.Symbol, bucketCurrency.Code, RateSideSell)
+	if err != nil {
+		return fmt.Errorf("fallback: failed to get provider rate: %w", err)
+	}
+	allowedDeviation := fields.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
+	if providerRate.Sub(fields.Rate).Abs().GreaterThan(allowedDeviation) {
+		logger.WithFields(logger.Fields{
+			"OrderID":      fields.ID.String(),
+			"FallbackID":   fallbackID,
+			"OrderRate":    fields.Rate.String(),
+			"ProviderRate": providerRate.String(),
+			"SlippagePct":  providerToken.RateSlippage.String(),
+		}).Errorf("[FALLBACK_ASSIGNMENT] fallback assignment attempted but order rate is too far from what fallback node can fulfill")
+		return fmt.Errorf("fallback assignment attempted for order %s but order rate is too far from what fallback provider %s can fulfill (provider rate %s, order rate %s, allowed slippage %s%%)",
+			fields.ID.String(), fallbackID, providerRate.String(), fields.Rate.String(), providerToken.RateSlippage.String())
+	}
+
+	// Balance check (same as matchRate)
+	bal, err := s.balanceService.GetProviderFiatBalance(ctx, fallbackID, bucketCurrency.Code)
+	if err != nil {
+		return fmt.Errorf("fallback: failed to get provider balance: %w", err)
+	}
+	if !s.balanceService.CheckBalanceSufficiency(bal, fields.Amount.Mul(fields.Rate).RoundBank(0)) {
+		return fmt.Errorf("fallback provider %s has insufficient balance for order %s", fallbackID, fields.ID.String())
+	}
+
+	// Assign to fallback (regular orders only; OTC excluded above)
+	fields.ProviderID = fallbackID
+
+	if err := s.sendOrderRequest(ctx, fields); err != nil {
+		return fmt.Errorf("fallback: send order request: %w", err)
+	}
+	if _, setErr := storage.Client.PaymentOrder.UpdateOneID(fields.ID).
+		SetFallbackTriedAt(time.Now()).
+		SetOrderPercent(decimal.NewFromInt(100)).
+		Save(ctx); setErr != nil {
+		logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": setErr}).Errorf("[FALLBACK_ASSIGNMENT] failed to set fallback_tried_at on order")
+		return fmt.Errorf("fallback: failed to set fallback_tried_at (idempotency): %w", setErr)
+	}
+	logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "FallbackID": fallbackID}).Infof("[FALLBACK_ASSIGNMENT] successful fallback assignment")
+	return nil
+}
+
+// assignOtcOrder assigns an OTC order to a provider and creates a Redis key for reassignment.
+// DB updates are committed first; Redis operations run afterward to avoid mixing transaction scope with Redis.
 func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.PaymentOrderFields) error {
-	// Start a transaction for the entire operation
+	orderConf := config.OrderConfig()
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -715,34 +1109,45 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 		}
 	}()
 
-	// Assign OTC order to provider (no balance reservation, no provision node request)
-	// Set provider if ProviderID exists
+	// DB only: assign OTC order to provider (no balance reservation, no provision node request)
 	if order.ProviderID != "" {
-		provider, err := tx.ProviderProfile.Query().Where(providerprofile.IDEQ(order.ProviderID)).Only(ctx)
-		if err == nil && provider != nil {
+		provider, qErr := tx.ProviderProfile.Query().Where(providerprofile.IDEQ(order.ProviderID)).Only(ctx)
+		if qErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", qErr),
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+			}).Errorf("failed to get provider for OTC order assignment")
+			return fmt.Errorf("failed to get provider: %w", qErr)
+		}
+		if provider != nil {
 			_, err = tx.PaymentOrder.
 				Update().
 				Where(paymentorder.IDEQ(order.ID)).
 				SetProvider(provider).
 				Save(ctx)
 			if err != nil {
-				return err
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+				}).Errorf("failed to assign OTC order to provider")
+				return fmt.Errorf("failed to assign OTC order: %w", err)
 			}
 		}
 	}
-	if err != nil {
+
+	if err = tx.Commit(); err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
-		}).Errorf("failed to assign OTC order to provider")
-		return err
+		}).Errorf("Failed to commit OTC order assignment transaction")
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Create Redis key with TTL for OTC order reassignment (similar to regular orders)
+	// Redis operations after DB commit to avoid mixing transaction scope with Redis
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
-
-	// Check if order request already exists to prevent duplicate processing
 	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -751,78 +1156,64 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 			"ProviderID": order.ProviderID,
 			"OrderKey":   orderKey,
 		}).Errorf("Failed to check if OTC order request exists in Redis")
-		return err
+		return fmt.Errorf("failed to check order_request in Redis: %w", err)
 	}
 	if exists > 0 {
-		// Order request already exists - skip duplicate creation
+		// Verify provider matches to avoid DB/Redis inconsistency (same as sendOrderRequest).
+		existingProviderID, hgetErr := storage.RedisClient.HGet(ctx, orderKey, "providerId").Result()
+		if hgetErr == nil && existingProviderID == order.ProviderID {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+				"OrderKey":   orderKey,
+			}).Warnf("OTC order request already exists in Redis for same provider - skipping duplicate creation")
+			return nil
+		}
+		if hgetErr == nil && existingProviderID != order.ProviderID {
+			logger.WithFields(logger.Fields{
+				"OrderID":            order.ID.String(),
+				"ProviderID":         order.ProviderID,
+				"ExistingProviderID": existingProviderID,
+				"OrderKey":           orderKey,
+			}).Errorf("OTC order request exists for different provider - DB/Redis consistency issue")
+			return fmt.Errorf("order_request exists for different provider (redis=%s, current=%s)", existingProviderID, order.ProviderID)
+		}
+		// HGet failed or key has no providerId - treat as inconsistency
+		verifyErr := hgetErr
+		if verifyErr == nil {
+			verifyErr = fmt.Errorf("providerId missing in Redis hash")
+		}
 		logger.WithFields(logger.Fields{
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 			"OrderKey":   orderKey,
-		}).Warnf("OTC order request already exists in Redis - skipping duplicate creation")
-		// Commit transaction and return success
-		err = tx.Commit()
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"OrderID":    order.ID.String(),
-				"ProviderID": order.ProviderID,
-			}).Errorf("Failed to commit transaction for existing OTC order request")
-			return fmt.Errorf("failed to commit transaction: %w", err)
-		}
-		return nil
+			"Error":      verifyErr,
+		}).Errorf("OTC order request exists but could not verify provider - skipping to avoid inconsistency")
+		return fmt.Errorf("order_request exists but provider could not be verified: %w", verifyErr)
 	}
 
 	orderRequestData := map[string]interface{}{
 		"type":       "otc",
 		"providerId": order.ProviderID,
 	}
-	err = storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err()
-	if err != nil {
+	if err = storage.RedisClient.HSet(ctx, orderKey, orderRequestData).Err(); err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 			"OrderKey":   orderKey,
 		}).Errorf("Failed to create Redis key for OTC order")
-		return err
+		return fmt.Errorf("failed to create order_request in Redis: %w", err)
 	}
-
-	// Set TTL for OTC order request (uses separate OTC validity timeout)
-	err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidityOtc)).Err()
-	if err != nil {
+	if err = storage.RedisClient.ExpireAt(ctx, orderKey, time.Now().Add(orderConf.OrderRequestValidityOtc)).Err(); err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.ProviderID,
 			"OrderKey":   orderKey,
 		}).Errorf("Failed to set TTL for OTC order request")
-		// Cleanup: delete the orphaned key before returning
-		cleanupErr := storage.RedisClient.Del(ctx, orderKey).Err()
-		if cleanupErr != nil {
-			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", cleanupErr),
-				"OrderKey": orderKey,
-			}).Errorf("Failed to cleanup orderKey after ExpireAt failure")
-		} else {
-			logger.WithFields(logger.Fields{
-				"OrderKey": orderKey,
-			}).Infof("Successfully cleaned up orderKey after ExpireAt failure")
-		}
-		return err
-	}
-
-	// Commit the transaction if everything succeeded
-	err = tx.Commit()
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"OrderID":    order.ID.String(),
-			"ProviderID": order.ProviderID,
-		}).Errorf("Failed to commit OTC order assignment transaction")
-		// Cleanup Redis key since DB transaction failed
 		_ = storage.RedisClient.Del(ctx, orderKey).Err()
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return fmt.Errorf("failed to set TTL for order_request: %w", err)
 	}
 
 	return nil
@@ -837,6 +1228,79 @@ func (s *PriorityQueueService) countProviderInExcludeList(excludeList []string, 
 		}
 	}
 	return count
+}
+
+// getExcludePsps returns PSP names to exclude for a new_order based only on the global failure-rate threshold
+// PSPs that have high failure rate in the last M minutes. Per-order exclusion is not used so the
+// same order can retry a PSP after a transient failure.
+func (s *PriorityQueueService) getExcludePsps(ctx context.Context, orderID uuid.UUID) ([]string, error) {
+	orderConf := config.OrderConfig()
+	excluded := make(map[string]struct{})
+
+	// PSPs with high failure rate in the last M minutes (any failed fulfillment after disbursement trial)
+	window := time.Duration(orderConf.PspExcludeWindowMinutes) * time.Minute
+	if window <= 0 {
+		window = 120 * time.Minute
+	}
+	since := time.Now().Add(-window)
+
+	fulfillments, err := storage.Client.PaymentOrderFulfillment.Query().
+		Where(paymentorderfulfillment.UpdatedAtGTE(since)).
+		Select(
+			paymentorderfulfillment.FieldPsp,
+			paymentorderfulfillment.FieldValidationStatus,
+		).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("global exclude PSPs: %w", err)
+	}
+
+	// Group by PSP: attempts = count, failures = count where status failed (any error)
+	type stats struct{ attempts, failures int }
+	byPsp := make(map[string]*stats)
+	for _, f := range fulfillments {
+		psp := strings.TrimSpace(f.Psp)
+		if psp == "" {
+			continue
+		}
+		if byPsp[psp] == nil {
+			byPsp[psp] = &stats{}
+		}
+		byPsp[psp].attempts++
+		if f.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed {
+			byPsp[psp].failures++
+		}
+	}
+
+	minAttempts := orderConf.PspExcludeMinAttempts
+	if minAttempts < 1 {
+		minAttempts = 5
+	}
+	minFailures := orderConf.PspExcludeMinFailures
+	if minFailures < 1 {
+		minFailures = 3
+	}
+	minPercent := orderConf.PspExcludeMinFailurePercent
+	if minPercent <= 0 {
+		minPercent = 30
+	}
+	minRate := float64(minPercent) / 100
+
+	for psp, st := range byPsp {
+		if st.attempts < minAttempts || st.failures < minFailures {
+			continue
+		}
+		rate := float64(st.failures) / float64(st.attempts)
+		if rate >= minRate {
+			excluded[psp] = struct{}{}
+		}
+	}
+
+	out := make([]string, 0, len(excluded))
+	for p := range excluded {
+		out = append(out, p)
+	}
+	return out, nil
 }
 
 // addProviderToExcludeList adds a provider to the order exclude list with TTL
@@ -865,6 +1329,7 @@ func (s *PriorityQueueService) addProviderToExcludeList(ctx context.Context, ord
 
 // sendOrderRequest sends an order request to a provider
 func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types.PaymentOrderFields) error {
+	orderConf := config.OrderConfig()
 	// Reserve balance for this order
 	currency := order.ProvisionBucket.Edges.Currency.Code
 	amount := order.Amount.Mul(order.Rate).RoundBank(0)
@@ -923,7 +1388,7 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 				"OrderID":    order.ID.String(),
 				"ProviderID": order.ProviderID,
 				"OrderKey":   orderKey,
-			}).Warnf("Order request already exists in Redis - skipping duplicate notification")
+			}).Errorf("Order request already exists in Redis - skipping duplicate notification")
 			// Order request already sent, commit transaction and return success
 			err = tx.Commit()
 			if err != nil {
@@ -1022,8 +1487,22 @@ func (s *PriorityQueueService) sendOrderRequest(ctx context.Context, order types
 		return err
 	}
 
-	// Notify the provider
-	orderRequestData["orderId"] = order.ID
+	// Exclude PSPs: global high failure-rate only (same order can retry a PSP after transient failure).
+	// Do not apply excludePsps for the fallback provider so it can try all PSPs.
+	if orderConf.FallbackProviderID == "" || order.ProviderID != orderConf.FallbackProviderID {
+		excludePsps, excludeErr := s.getExcludePsps(ctx, order.ID)
+		if excludeErr != nil {
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+				"Error":   excludeErr.Error(),
+			}).Errorf("getExcludePsps failed, sending new_order without excludePsps")
+		} else if len(excludePsps) > 0 {
+			orderRequestData["excludePsps"] = excludePsps
+		}
+	}
+
+	// Notify provider
+	orderRequestData["orderId"] = order.ID.String()
 	err = s.notifyProvider(ctx, orderRequestData)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -1095,9 +1574,18 @@ func (s *PriorityQueueService) notifyProvider(ctx context.Context, orderRequestD
 
 // matchRate matches order rate with a provider rate
 func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, orderIDPrefix string, order types.PaymentOrderFields, excludeList []string) error {
+	orderConf := config.OrderConfig()
+	var considered, skippedDueToStuck int
 	for index := 0; ; index++ {
 		providerData, err := storage.RedisClient.LIndex(ctx, redisKey, int64(index)).Result()
 		if err != nil {
+			if considered > 0 && skippedDueToStuck == considered {
+				currencyCode := ""
+				if order.ProvisionBucket != nil && order.ProvisionBucket.Edges.Currency != nil {
+					currencyCode = order.ProvisionBucket.Edges.Currency.Code
+				}
+				return &types.ErrNoProviderDueToStuck{CurrencyCode: currencyCode}
+			}
 			return err
 		}
 
@@ -1160,13 +1648,28 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			continue
 		}
 
-		// Parse rate (amount limits and OTC checks already done by ValidateRate/findSuitableProviderRate)
+		// Parse min/max order amounts and validate against order amount
+		minOrderAmount, err := decimal.NewFromString(parts[4])
+		if err != nil {
+			continue
+		}
+		maxOrderAmount, err := decimal.NewFromString(parts[5])
+		if err != nil {
+			continue
+		}
+
+		// Check if order amount is within provider's min/max order amount limits
+		if order.Amount.LessThan(minOrderAmount) {
+			// Order amount is below provider's minimum - skip this provider
+			continue
+		}
+
 		rate, err := decimal.NewFromString(parts[3])
 		if err != nil {
 			continue
 		}
 
-		// Fetch ProviderOrderToken only for rate slippage check
+		// Fetch ProviderOrderToken for rate slippage and OTC limit checks
 		bucketCurrency := order.ProvisionBucket.Edges.Currency
 		if bucketCurrency == nil {
 			bucketCurrency, err = order.ProvisionBucket.QueryCurrency().Only(ctx)
@@ -1197,10 +1700,33 @@ func (s *PriorityQueueService) matchRate(ctx context.Context, redisKey string, o
 			continue
 		}
 
+		// Check if order amount exceeds provider's max order amount
+		if order.Amount.GreaterThan(maxOrderAmount) {
+			// Amount exceeds regular max - check OTC limits as fallback
+			if providerToken.MinOrderAmountOtc.IsZero() || providerToken.MaxOrderAmountOtc.IsZero() {
+				// OTC limits not configured - skip this provider
+				continue
+			}
+			if order.Amount.LessThan(providerToken.MinOrderAmountOtc) || order.Amount.GreaterThan(providerToken.MaxOrderAmountOtc) {
+				// Amount outside OTC limits - skip this provider
+				continue
+			}
+		}
+
 		// Calculate allowed deviation based on slippage
 		allowedDeviation := order.Rate.Mul(providerToken.RateSlippage.Div(decimal.NewFromInt(100)))
 
 		if rate.Sub(order.Rate).Abs().LessThanOrEqual(allowedDeviation) {
+			considered++
+			// Regular orders: skip provider if at or over stuck fulfillment threshold
+			if order.OrderType != "otc" && orderConf.ProviderStuckFulfillmentThreshold > 0 {
+				stuckCount, errStuck := utils.GetProviderStuckOrderCount(ctx, order.ProviderID)
+				if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+					skippedDueToStuck++
+					continue
+				}
+			}
+
 			// Found a match for the rate - handle index pop once (common for both OTC and regular)
 			if index == 0 {
 				// Match found at index 0, perform LPOP to dequeue

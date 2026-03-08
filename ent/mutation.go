@@ -6449,6 +6449,7 @@ type PaymentOrderMutation struct {
 	status                      *paymentorder.Status
 	direction                   *paymentorder.Direction
 	order_type                  *paymentorder.OrderType
+	fallback_tried_at           *time.Time
 	clearedFields               map[string]struct{}
 	token                       *int
 	clearedtoken                bool
@@ -8356,6 +8357,55 @@ func (m *PaymentOrderMutation) ResetOrderType() {
 	m.order_type = nil
 }
 
+// SetFallbackTriedAt sets the "fallback_tried_at" field.
+func (m *PaymentOrderMutation) SetFallbackTriedAt(t time.Time) {
+	m.fallback_tried_at = &t
+}
+
+// FallbackTriedAt returns the value of the "fallback_tried_at" field in the mutation.
+func (m *PaymentOrderMutation) FallbackTriedAt() (r time.Time, exists bool) {
+	v := m.fallback_tried_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFallbackTriedAt returns the old "fallback_tried_at" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldFallbackTriedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFallbackTriedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFallbackTriedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFallbackTriedAt: %w", err)
+	}
+	return oldValue.FallbackTriedAt, nil
+}
+
+// ClearFallbackTriedAt clears the value of the "fallback_tried_at" field.
+func (m *PaymentOrderMutation) ClearFallbackTriedAt() {
+	m.fallback_tried_at = nil
+	m.clearedFields[paymentorder.FieldFallbackTriedAt] = struct{}{}
+}
+
+// FallbackTriedAtCleared returns if the "fallback_tried_at" field was cleared in this mutation.
+func (m *PaymentOrderMutation) FallbackTriedAtCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldFallbackTriedAt]
+	return ok
+}
+
+// ResetFallbackTriedAt resets all changes to the "fallback_tried_at" field.
+func (m *PaymentOrderMutation) ResetFallbackTriedAt() {
+	m.fallback_tried_at = nil
+	delete(m.clearedFields, paymentorder.FieldFallbackTriedAt)
+}
+
 // SetTokenID sets the "token" edge to the Token entity by id.
 func (m *PaymentOrderMutation) SetTokenID(id int) {
 	m.token = &id
@@ -8693,7 +8743,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 36)
+	fields := make([]string, 0, 37)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -8802,6 +8852,9 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.order_type != nil {
 		fields = append(fields, paymentorder.FieldOrderType)
 	}
+	if m.fallback_tried_at != nil {
+		fields = append(fields, paymentorder.FieldFallbackTriedAt)
+	}
 	return fields
 }
 
@@ -8882,6 +8935,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.Direction()
 	case paymentorder.FieldOrderType:
 		return m.OrderType()
+	case paymentorder.FieldFallbackTriedAt:
+		return m.FallbackTriedAt()
 	}
 	return nil, false
 }
@@ -8963,6 +9018,8 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldDirection(ctx)
 	case paymentorder.FieldOrderType:
 		return m.OldOrderType(ctx)
+	case paymentorder.FieldFallbackTriedAt:
+		return m.OldFallbackTriedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -9224,6 +9281,13 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetOrderType(v)
 		return nil
+	case paymentorder.FieldFallbackTriedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFallbackTriedAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -9461,6 +9525,9 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	if m.FieldCleared(paymentorder.FieldMemo) {
 		fields = append(fields, paymentorder.FieldMemo)
 	}
+	if m.FieldCleared(paymentorder.FieldFallbackTriedAt) {
+		fields = append(fields, paymentorder.FieldFallbackTriedAt)
+	}
 	return fields
 }
 
@@ -9522,6 +9589,9 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 		return nil
 	case paymentorder.FieldMemo:
 		m.ClearMemo()
+		return nil
+	case paymentorder.FieldFallbackTriedAt:
+		m.ClearFallbackTriedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder nullable field %s", name)
@@ -9638,6 +9708,9 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldOrderType:
 		m.ResetOrderType()
+		return nil
+	case paymentorder.FieldFallbackTriedAt:
+		m.ResetFallbackTriedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
@@ -11260,6 +11333,8 @@ type ProviderBalancesMutation struct {
 	addreserved_balance  *decimal.Decimal
 	is_available         *bool
 	updated_at           *time.Time
+	peak_balance         *decimal.Decimal
+	addpeak_balance      *decimal.Decimal
 	clearedFields        map[string]struct{}
 	provider             *string
 	clearedprovider      bool
@@ -11616,6 +11691,62 @@ func (m *ProviderBalancesMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
+// SetPeakBalance sets the "peak_balance" field.
+func (m *ProviderBalancesMutation) SetPeakBalance(d decimal.Decimal) {
+	m.peak_balance = &d
+	m.addpeak_balance = nil
+}
+
+// PeakBalance returns the value of the "peak_balance" field in the mutation.
+func (m *ProviderBalancesMutation) PeakBalance() (r decimal.Decimal, exists bool) {
+	v := m.peak_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPeakBalance returns the old "peak_balance" field's value of the ProviderBalances entity.
+// If the ProviderBalances object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderBalancesMutation) OldPeakBalance(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPeakBalance is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPeakBalance requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPeakBalance: %w", err)
+	}
+	return oldValue.PeakBalance, nil
+}
+
+// AddPeakBalance adds d to the "peak_balance" field.
+func (m *ProviderBalancesMutation) AddPeakBalance(d decimal.Decimal) {
+	if m.addpeak_balance != nil {
+		*m.addpeak_balance = m.addpeak_balance.Add(d)
+	} else {
+		m.addpeak_balance = &d
+	}
+}
+
+// AddedPeakBalance returns the value that was added to the "peak_balance" field in this mutation.
+func (m *ProviderBalancesMutation) AddedPeakBalance() (r decimal.Decimal, exists bool) {
+	v := m.addpeak_balance
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPeakBalance resets all changes to the "peak_balance" field.
+func (m *ProviderBalancesMutation) ResetPeakBalance() {
+	m.peak_balance = nil
+	m.addpeak_balance = nil
+}
+
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
 func (m *ProviderBalancesMutation) SetProviderID(id string) {
 	m.provider = &id
@@ -11767,7 +11898,7 @@ func (m *ProviderBalancesMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderBalancesMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.available_balance != nil {
 		fields = append(fields, providerbalances.FieldAvailableBalance)
 	}
@@ -11782,6 +11913,9 @@ func (m *ProviderBalancesMutation) Fields() []string {
 	}
 	if m.updated_at != nil {
 		fields = append(fields, providerbalances.FieldUpdatedAt)
+	}
+	if m.peak_balance != nil {
+		fields = append(fields, providerbalances.FieldPeakBalance)
 	}
 	return fields
 }
@@ -11801,6 +11935,8 @@ func (m *ProviderBalancesMutation) Field(name string) (ent.Value, bool) {
 		return m.IsAvailable()
 	case providerbalances.FieldUpdatedAt:
 		return m.UpdatedAt()
+	case providerbalances.FieldPeakBalance:
+		return m.PeakBalance()
 	}
 	return nil, false
 }
@@ -11820,6 +11956,8 @@ func (m *ProviderBalancesMutation) OldField(ctx context.Context, name string) (e
 		return m.OldIsAvailable(ctx)
 	case providerbalances.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
+	case providerbalances.FieldPeakBalance:
+		return m.OldPeakBalance(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProviderBalances field %s", name)
 }
@@ -11864,6 +12002,13 @@ func (m *ProviderBalancesMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetUpdatedAt(v)
 		return nil
+	case providerbalances.FieldPeakBalance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPeakBalance(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderBalances field %s", name)
 }
@@ -11881,6 +12026,9 @@ func (m *ProviderBalancesMutation) AddedFields() []string {
 	if m.addreserved_balance != nil {
 		fields = append(fields, providerbalances.FieldReservedBalance)
 	}
+	if m.addpeak_balance != nil {
+		fields = append(fields, providerbalances.FieldPeakBalance)
+	}
 	return fields
 }
 
@@ -11895,6 +12043,8 @@ func (m *ProviderBalancesMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedTotalBalance()
 	case providerbalances.FieldReservedBalance:
 		return m.AddedReservedBalance()
+	case providerbalances.FieldPeakBalance:
+		return m.AddedPeakBalance()
 	}
 	return nil, false
 }
@@ -11924,6 +12074,13 @@ func (m *ProviderBalancesMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddReservedBalance(v)
+		return nil
+	case providerbalances.FieldPeakBalance:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPeakBalance(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderBalances numeric field %s", name)
@@ -11966,6 +12123,9 @@ func (m *ProviderBalancesMutation) ResetField(name string) error {
 		return nil
 	case providerbalances.FieldUpdatedAt:
 		m.ResetUpdatedAt()
+		return nil
+	case providerbalances.FieldPeakBalance:
+		m.ResetPeakBalance()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderBalances field %s", name)
@@ -14340,7 +14500,6 @@ type ProviderProfileMutation struct {
 	host_identifier          *string
 	provision_mode           *providerprofile.ProvisionMode
 	is_active                *bool
-	is_kyb_verified          *bool
 	updated_at               *time.Time
 	visibility_mode          *providerprofile.VisibilityMode
 	clearedFields            map[string]struct{}
@@ -14642,42 +14801,6 @@ func (m *ProviderProfileMutation) OldIsActive(ctx context.Context) (v bool, err 
 // ResetIsActive resets all changes to the "is_active" field.
 func (m *ProviderProfileMutation) ResetIsActive() {
 	m.is_active = nil
-}
-
-// SetIsKybVerified sets the "is_kyb_verified" field.
-func (m *ProviderProfileMutation) SetIsKybVerified(b bool) {
-	m.is_kyb_verified = &b
-}
-
-// IsKybVerified returns the value of the "is_kyb_verified" field in the mutation.
-func (m *ProviderProfileMutation) IsKybVerified() (r bool, exists bool) {
-	v := m.is_kyb_verified
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsKybVerified returns the old "is_kyb_verified" field's value of the ProviderProfile entity.
-// If the ProviderProfile object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderProfileMutation) OldIsKybVerified(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsKybVerified is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsKybVerified requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsKybVerified: %w", err)
-	}
-	return oldValue.IsKybVerified, nil
-}
-
-// ResetIsKybVerified resets all changes to the "is_kyb_verified" field.
-func (m *ProviderProfileMutation) ResetIsKybVerified() {
-	m.is_kyb_verified = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
@@ -15173,7 +15296,7 @@ func (m *ProviderProfileMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderProfileMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 6)
 	if m.trading_name != nil {
 		fields = append(fields, providerprofile.FieldTradingName)
 	}
@@ -15185,9 +15308,6 @@ func (m *ProviderProfileMutation) Fields() []string {
 	}
 	if m.is_active != nil {
 		fields = append(fields, providerprofile.FieldIsActive)
-	}
-	if m.is_kyb_verified != nil {
-		fields = append(fields, providerprofile.FieldIsKybVerified)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, providerprofile.FieldUpdatedAt)
@@ -15211,8 +15331,6 @@ func (m *ProviderProfileMutation) Field(name string) (ent.Value, bool) {
 		return m.ProvisionMode()
 	case providerprofile.FieldIsActive:
 		return m.IsActive()
-	case providerprofile.FieldIsKybVerified:
-		return m.IsKybVerified()
 	case providerprofile.FieldUpdatedAt:
 		return m.UpdatedAt()
 	case providerprofile.FieldVisibilityMode:
@@ -15234,8 +15352,6 @@ func (m *ProviderProfileMutation) OldField(ctx context.Context, name string) (en
 		return m.OldProvisionMode(ctx)
 	case providerprofile.FieldIsActive:
 		return m.OldIsActive(ctx)
-	case providerprofile.FieldIsKybVerified:
-		return m.OldIsKybVerified(ctx)
 	case providerprofile.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	case providerprofile.FieldVisibilityMode:
@@ -15276,13 +15392,6 @@ func (m *ProviderProfileMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetIsActive(v)
-		return nil
-	case providerprofile.FieldIsKybVerified:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsKybVerified(v)
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		v, ok := value.(time.Time)
@@ -15373,9 +15482,6 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 		return nil
 	case providerprofile.FieldIsActive:
 		m.ResetIsActive()
-		return nil
-	case providerprofile.FieldIsKybVerified:
-		m.ResetIsKybVerified()
 		return nil
 	case providerprofile.FieldUpdatedAt:
 		m.ResetUpdatedAt()

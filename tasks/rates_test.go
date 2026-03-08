@@ -87,8 +87,8 @@ func TestFetchExternalRate(t *testing.T) {
 						"stablecoin": "USDT",
 						"fiat": "TZS",
 						"sources": ["quidax"],
-						"buyRate": "invalid",
-						"sellRate": 1451.61,
+						"buyRate": 1444.36,
+						"sellRate": "invalid",
 						"timestamp": "2025-11-03T13:12:50.290Z"
 					}
 				]`))

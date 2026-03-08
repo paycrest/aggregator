@@ -77,6 +77,11 @@ func DecryptPlain(ciphertext []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	// Validate ciphertext length before slicing
+	if len(ciphertext) < gcm.NonceSize() {
+		return nil, fmt.Errorf("ciphertext too short for nonce: got %d bytes, need at least %d", len(ciphertext), gcm.NonceSize())
+	}
+
 	// Parse nonce from ciphertext
 	nonce, ciphertext := ciphertext[:gcm.NonceSize()], ciphertext[gcm.NonceSize():]
 
@@ -172,6 +177,9 @@ func PublicKeyEncryptJSON(data interface{}, publicKeyPEM string) ([]byte, error)
 // PublicKeyDecryptPlain decrypts ciphertext using RSA 2048 encryption algorithm
 func PublicKeyDecryptPlain(ciphertext []byte, privateKeyPEM string) ([]byte, error) {
 	privateKeyBlock, _ := pem.Decode([]byte(privateKeyPEM))
+	if privateKeyBlock == nil {
+		return nil, fmt.Errorf("failed to parse PEM block")
+	}
 	privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBlock.Bytes)
 	if err != nil {
 		return nil, err
@@ -307,14 +315,20 @@ func decryptHybridJSON(encrypted []byte, privateKeyPEM string) (interface{}, err
 		return nil, fmt.Errorf("invalid encrypted data")
 	}
 
-	// Extract encrypted key
+	// Extract encrypted key length; use uint64 to avoid overflow when adding to 4
 	keyLen := binary.BigEndian.Uint32(encrypted[0:4])
-	if len(encrypted) < int(4+keyLen) {
+	totalKeyEnd := uint64(4) + uint64(keyLen)
+	if totalKeyEnd > uint64(len(encrypted)) {
 		return nil, fmt.Errorf("invalid encrypted data length")
 	}
+	// Ensure we can safely cast to int for slicing (e.g. on 32-bit)
+	if totalKeyEnd > (1<<31)-1 {
+		return nil, fmt.Errorf("invalid encrypted data: key length too large")
+	}
 
-	encryptedKey := encrypted[4 : 4+keyLen]
-	aesCiphertext := encrypted[4+keyLen:]
+	keyEnd := int(totalKeyEnd)
+	encryptedKey := encrypted[4:keyEnd]
+	aesCiphertext := encrypted[keyEnd:]
 
 	// Decrypt AES key with RSA
 	aesKey, err := PublicKeyDecryptPlain(encryptedKey, privateKeyPEM)
@@ -434,17 +448,17 @@ func isHybridEncrypted(data []byte) bool {
 	if len(data) < 4 {
 		return false
 	}
-	
+
 	keyLen := binary.BigEndian.Uint32(data[0:4])
-	
+
 	if keyLen != 256 {
 		return false
 	}
-	
+
 	if len(data) < int(4+keyLen+28) {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -454,7 +468,7 @@ func decryptOrderRecipientWithFallback(encrypted []byte, privateKeyPEM string) (
 	if isHybridEncrypted(encrypted) {
 		return decryptHybridJSON(encrypted, privateKeyPEM)
 	}
-	
+
 	// Fallback to old RSA decryption
 	return PublicKeyDecryptJSON(encrypted, privateKeyPEM)
 }
@@ -479,9 +493,8 @@ func GetOrderRecipientFromMessageHash(messageHash string) (*types.PaymentOrderRe
 	}
 
 	var recipient *types.PaymentOrderRecipient
-	err = json.Unmarshal(messageBytes, &recipient)
-	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+	if err = json.Unmarshal(messageBytes, &recipient); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal recipient: %w", err)
 	}
 	return recipient, nil
 }

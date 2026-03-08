@@ -35,17 +35,17 @@ func fetchExternalRate(currency string) (buyRate, sellRate decimal.Decimal, err 
 
 	// Fetch rates from noblocks rates API
 	res, err := fastshot.NewClient("https://api.rates.noblocks.xyz").
-		Config().SetTimeout(30*time.Second).
+		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 		Build().GET(fmt.Sprintf("/rates/usdt/%s", strings.ToLower(currency))).
-		Retry().Set(3, 5*time.Second).
+		Retry().SetConstantBackoff(5*time.Second, 3).
 		Send()
 	if err != nil {
 		return decimal.Zero, decimal.Zero, fmt.Errorf("ComputeMarketRate: %w", err)
 	}
 
 	// Read the response body manually since we need to parse an array, not an object
-	responseBody, err := io.ReadAll(res.RawResponse.Body)
-	defer res.RawResponse.Body.Close()
+	responseBody, err := io.ReadAll(res.Raw().Body)
+	defer res.Raw().Body.Close()
 	if err != nil {
 		return decimal.Zero, decimal.Zero, fmt.Errorf("ComputeMarketRate: failed to read response body: %w", err)
 	}
