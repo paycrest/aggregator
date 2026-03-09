@@ -400,14 +400,22 @@ func SyncPaymentOrderFulfillments() {
 						continue
 					}
 
-					status := data["data"].(map[string]interface{})["status"].(string)
+					dataMap, ok := data["data"].(map[string]interface{})
+					if !ok {
+						continue
+					}
+					status, ok := dataMap["status"].(string)
+					if !ok {
+						continue
+					}
 
 					if status == "failed" {
+						errMsg, _ := dataMap["error"].(string)
 						_, err = storage.Client.PaymentOrderFulfillment.
 							UpdateOneID(fulfillment.ID).
 							SetTxID(fulfillment.TxID).
 							SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
-							SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
+							SetValidationError(errMsg).
 							Save(ctx)
 						if err != nil {
 							continue
@@ -486,13 +494,21 @@ func SyncPaymentOrderFulfillments() {
 					if err != nil {
 						continue
 					}
-					status := data["data"].(map[string]interface{})["status"].(string)
+					dataMap, ok := data["data"].(map[string]interface{})
+					if !ok {
+						continue
+					}
+					status, ok := dataMap["status"].(string)
+					if !ok {
+						continue
+					}
 					if status == "failed" {
+						errMsg, _ := dataMap["error"].(string)
 						_, _ = storage.Client.PaymentOrderFulfillment.
 							UpdateOneID(fulfillment.ID).
 							SetTxID(fulfillment.TxID).
 							SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
-							SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
+							SetValidationError(errMsg).
 							Save(ctx)
 						_, _ = order.Update().SetStatus(paymentorder.StatusFulfilled).Save(ctx)
 					} else if status == "success" {

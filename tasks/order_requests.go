@@ -29,6 +29,22 @@ func canReassignCancelledOrder(order *ent.PaymentOrder) bool {
 
 // cleanupStuckFulfilledFailedOrder clears provider and sets status to Pending for orders stuck in Fulfilled+failed outside refund window (state cleanup only).
 func cleanupStuckFulfilledFailedOrder(ctx context.Context, order *ent.PaymentOrder) {
+	// Release reserved fiat balance for the provider before clearing (same logic as reassignCancelledOrder).
+	if order.Edges.Provider != nil && order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+		currency := order.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := order.Amount.Mul(order.Rate).RoundBank(0)
+		balanceSvc := balance.New()
+		if relErr := balanceSvc.ReleaseFiatBalance(ctx, order.Edges.Provider.ID, currency, amount, nil); relErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", relErr),
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.Edges.Provider.ID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("cleanupStuckFulfilledFailedOrder: failed to release reserved balance (best effort)")
+		}
+	}
+
 	updatedCount, err := storage.Client.PaymentOrder.
 		Update().
 		Where(
