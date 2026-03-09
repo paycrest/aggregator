@@ -32,7 +32,7 @@ const txStatusRetryCutoff = 24 * time.Hour
 var txStatusBackoffDelaysMinutes = []float64{10, 30, 70, 150, 310, 630}
 
 func shouldRetryTxStatusFiveMinFailure(fulfillment *ent.PaymentOrderFulfillment) bool {
-	if fulfillment.ValidationError != txStatusFiveMinError && fulfillment.ValidationStatus != paymentorderfulfillment.ValidationStatusFailed {
+	if fulfillment.ValidationError != txStatusFiveMinError || fulfillment.ValidationStatus != paymentorderfulfillment.ValidationStatusFailed {
 		return false
 	}
 	elapsed := time.Since(fulfillment.UpdatedAt)
@@ -372,7 +372,7 @@ func SyncPaymentOrderFulfillments() {
 
 					data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 					if err != nil {
-						if err.Error() == "400" && time.Since(fulfillment.CreatedAt) > 5*time.Minute {
+						if strings.Contains(err.Error(), "400") && time.Since(fulfillment.CreatedAt) > 5*time.Minute {
 							_, updateErr := storage.Client.PaymentOrderFulfillment.
 								UpdateOneID(fulfillment.ID).
 								SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
