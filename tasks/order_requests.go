@@ -19,9 +19,46 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// canReassignCancelledOrder returns true if the order is eligible for full reassignment (queue again).
+// Same guard as reassignCancelledOrder: public provider, under cancellation threshold, within refund window.
+func canReassignCancelledOrder(order *ent.PaymentOrder) bool {
+	if order.Edges.Provider == nil {
+		return false
+	}
+	return order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate &&
+		order.CancellationCount < orderConf.RefundCancellationCount &&
+		order.CreatedAt.After(time.Now().Add(-orderConf.OrderRefundTimeout-10*time.Second))
+}
+
+// cleanupStuckFulfilledFailedOrder performs a state-only cleanup for Fulfilled+failed orders outside the refund window:
+// ClearProvider and SetStatus(Pending). Does not queue the order or touch fulfillments.
+func cleanupStuckFulfilledFailedOrder(ctx context.Context, order *ent.PaymentOrder) {
+	updatedCount, err := storage.Client.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.IDEQ(order.ID),
+			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+			),
+		).
+		ClearProvider().
+		SetStatus(paymentorder.StatusPending).
+		Save(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":   fmt.Sprintf("%v", err),
+			"OrderID": order.ID.String(),
+		}).Errorf("cleanupStuckFulfilledFailedOrder: failed to update order")
+		return
+	}
+	if updatedCount == 0 {
+		return
+	}
+}
+
 // reassignCancelledOrder reassigns cancelled orders to providers
 func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfillment *ent.PaymentOrderFulfillment) {
-	if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate && order.CancellationCount < orderConf.RefundCancellationCount && order.CreatedAt.After(time.Now().Add(-orderConf.OrderRefundTimeout-10*time.Second)) {
+	if canReassignCancelledOrder(order) {
 		// Push provider ID to order exclude list
 		orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
 		_, err := storage.RedisClient.RPush(ctx, orderKey, order.Edges.Provider.ID).Result()

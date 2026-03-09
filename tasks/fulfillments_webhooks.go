@@ -405,7 +405,12 @@ func SyncPaymentOrderFulfillments() {
 					}
 
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed {
-					reassignCancelledOrder(ctx, order, fulfillment)
+					if canReassignCancelledOrder(order) {
+						reassignCancelledOrder(ctx, order, fulfillment)
+					} else if order.CreatedAt.Before(time.Now().Add(-orderConf.OrderRefundTimeout - 10*time.Second)) &&
+						fulfillment.ValidationError != "Failed to get transaction status after 5 minutes" {
+						cleanupStuckFulfilledFailedOrder(ctx, order)
+					}
 					continue
 
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusSuccess {
