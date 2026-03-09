@@ -32,7 +32,7 @@ const txStatusRetryCutoff = 24 * time.Hour
 var txStatusBackoffDelaysMinutes = []float64{10, 30, 70, 150, 310, 630}
 
 func shouldRetryTxStatusFiveMinFailure(fulfillment *ent.PaymentOrderFulfillment) bool {
-	if fulfillment.ValidationError != txStatusFiveMinError {
+	if fulfillment.ValidationError != txStatusFiveMinError && fulfillment.ValidationStatus != paymentorderfulfillment.ValidationStatusFailed {
 		return false
 	}
 	elapsed := time.Since(fulfillment.UpdatedAt)
@@ -433,6 +433,7 @@ func SyncPaymentOrderFulfillments() {
 							UpdateOneID(fulfillment.ID).
 							SetTxID(fulfillment.TxID).
 							SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
+							SetValidationError("").
 							Save(ctx)
 						if err != nil {
 							continue
@@ -504,18 +505,21 @@ func SyncPaymentOrderFulfillments() {
 					}
 					if status == "failed" {
 						errMsg, _ := dataMap["error"].(string)
-						_, _ = storage.Client.PaymentOrderFulfillment.
-							UpdateOneID(fulfillment.ID).
-							SetTxID(fulfillment.TxID).
-							SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
-							SetValidationError(errMsg).
-							Save(ctx)
+						if errMsg != fulfillment.ValidationError {
+							_, _ = storage.Client.PaymentOrderFulfillment.
+								UpdateOneID(fulfillment.ID).
+								SetTxID(fulfillment.TxID).
+								SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+								SetValidationError(errMsg).
+								Save(ctx)
+						}
 						_, _ = order.Update().SetStatus(paymentorder.StatusFulfilled).Save(ctx)
 					} else if status == "success" {
 						_, err = storage.Client.PaymentOrderFulfillment.
 							UpdateOneID(fulfillment.ID).
 							SetTxID(fulfillment.TxID).
 							SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
+							SetValidationError("").
 							Save(ctx)
 						if err != nil {
 							continue
