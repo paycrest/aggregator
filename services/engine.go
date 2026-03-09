@@ -944,14 +944,14 @@ func (s *EngineService) GetAddressTransactionHistory(ctx context.Context, chainI
 func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, network *ent.Network, contractAddress string, fromBlock int64, toBlock int64, topics []string, txHash string, eventPayload map[string]string) ([]interface{}, error) {
 	// Try RPC first
 	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, topics, txHash)
-	if rpcErr == nil {
+	if rpcErr == nil && events != nil {
 		return events, nil
 	}
 
 	// If RPC fails, try ThirdWeb (except for BSC and Lisk)
 	if network.ChainID != 56 && network.ChainID != 1135 {
 		events, thirdwebErr := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
-		if thirdwebErr == nil {
+		if thirdwebErr == nil && events != nil {
 			return events, nil
 		}
 		logger.WithFields(logger.Fields{
