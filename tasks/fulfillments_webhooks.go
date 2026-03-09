@@ -24,6 +24,31 @@ import (
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
 )
 
+const txStatusFiveMinError = "Failed to get transaction status after 5 minutes"
+const txStatusRetryWindow = 5 * time.Minute
+const txStatusRetryCutoff = 24 * time.Hour
+
+// txStatusBackoffDelaysMinutes are cumulative minutes from UpdatedAt for each retry slot (exponential: 10, +20, +40, +80, +160, +320).
+var txStatusBackoffDelaysMinutes = []float64{10, 30, 70, 150, 310, 630}
+
+func shouldRetryTxStatusFiveMinFailure(fulfillment *ent.PaymentOrderFulfillment) bool {
+	if fulfillment.ValidationError != txStatusFiveMinError {
+		return false
+	}
+	elapsed := time.Since(fulfillment.UpdatedAt)
+	if elapsed < 10*time.Minute || elapsed >= txStatusRetryCutoff {
+		return false
+	}
+	elapsedMin := elapsed.Minutes()
+	windowMin := txStatusRetryWindow.Minutes()
+	for _, d := range txStatusBackoffDelaysMinutes {
+		if elapsedMin >= d && elapsedMin < d+windowMin {
+			return true
+		}
+	}
+	return false
+}
+
 // SyncPaymentOrderFulfillments syncs payment order fulfillments
 // Only processes regular orders
 // TODO: refactor this to process OTC orders as well when OTC fulfillment validation is automated
@@ -338,26 +363,6 @@ func SyncPaymentOrderFulfillments() {
 
 			for _, fulfillment := range order.Edges.Fulfillments {
 				if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusPending {
-					// Compute HMAC
-					decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.Edges.Provider.ID,
-						}).Errorf("Failed to decode provider secret for pending fulfillment")
-						continue
-					}
-					decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.Edges.Provider.ID,
-						}).Errorf("Failed to decrypt provider secret for pending fulfillment")
-						continue
-					}
-
 					payload := map[string]interface{}{
 						"orderId":  order.ID.String(),
 						"currency": order.Edges.ProvisionBucket.Edges.Currency.Code,
@@ -365,39 +370,22 @@ func SyncPaymentOrderFulfillments() {
 						"txId":     fulfillment.TxID,
 					}
 
-					signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
-
-					// Send POST request to the provider's node
-					res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-						Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
-						Header().Add("X-Request-Signature", signature).
-						Build().POST("/tx_status").
-						Body().AsJSON(payload).
-						Send()
+					data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 					if err != nil {
-						continue
-					}
-
-					data, err := utils.ParseJSONResponse(res.Raw())
-					if err != nil {
-						// Check if it's a 400 error and fulfillment is older than 5 minutes
-						if res.Raw().StatusCode == 400 {
-							if time.Since(fulfillment.CreatedAt) > 5*time.Minute {
-								// Mark fulfillment as failed
-								_, updateErr := storage.Client.PaymentOrderFulfillment.
-									UpdateOneID(fulfillment.ID).
-									SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
-									SetValidationError("Failed to get transaction status after 5 minutes").
-									Save(ctx)
-								if updateErr != nil {
-									logger.WithFields(logger.Fields{
-										"Error":         fmt.Sprintf("%v", updateErr),
-										"OrderID":       order.ID.String(),
-										"FulfillmentID": fulfillment.ID,
-									}).Errorf("Failed to mark fulfillment as failed after 5 minutes")
-								}
-								continue
+						if err.Error() == "400" && time.Since(fulfillment.CreatedAt) > 5*time.Minute {
+							_, updateErr := storage.Client.PaymentOrderFulfillment.
+								UpdateOneID(fulfillment.ID).
+								SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+								SetValidationError(txStatusFiveMinError).
+								Save(ctx)
+							if updateErr != nil {
+								logger.WithFields(logger.Fields{
+									"Error":         fmt.Sprintf("%v", updateErr),
+									"OrderID":       order.ID.String(),
+									"FulfillmentID": fulfillment.ID,
+								}).Errorf("Failed to mark fulfillment as failed after 5 minutes")
 							}
+							continue
 						}
 
 						logger.WithFields(logger.Fields{
@@ -486,8 +474,60 @@ func SyncPaymentOrderFulfillments() {
 						}
 					}
 
+				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed &&
+					shouldRetryTxStatusFiveMinFailure(fulfillment) {
+					payload := map[string]interface{}{
+						"orderId":  order.ID.String(),
+						"currency": order.Edges.ProvisionBucket.Edges.Currency.Code,
+						"psp":      fulfillment.Psp,
+						"txId":     fulfillment.TxID,
+					}
+					data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
+					if err != nil {
+						continue
+					}
+					status := data["data"].(map[string]interface{})["status"].(string)
+					if status == "failed" {
+						_, _ = storage.Client.PaymentOrderFulfillment.
+							UpdateOneID(fulfillment.ID).
+							SetTxID(fulfillment.TxID).
+							SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+							SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
+							Save(ctx)
+						_, _ = order.Update().SetStatus(paymentorder.StatusFulfilled).Save(ctx)
+					} else if status == "success" {
+						_, err = storage.Client.PaymentOrderFulfillment.
+							UpdateOneID(fulfillment.ID).
+							SetTxID(fulfillment.TxID).
+							SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
+							Save(ctx)
+						if err != nil {
+							continue
+						}
+						if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+							transactionLog, err := storage.Client.TransactionLog.
+								Create().
+								SetStatus(transactionlog.StatusOrderValidated).
+								SetNetwork(order.Edges.Token.Edges.Network.Identifier).
+								Save(ctx)
+							if err == nil && transactionLog != nil {
+								_, _ = storage.Client.PaymentOrder.
+									UpdateOneID(order.ID).
+									SetStatus(paymentorder.StatusValidated).
+									AddTransactions(transactionLog).
+									Save(ctx)
+								_ = utils.SendPaymentOrderWebhook(ctx, order)
+							}
+						}
+					}
+					continue
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed {
-					reassignCancelledOrder(ctx, order, fulfillment)
+					if canReassignCancelledOrder(order) {
+						reassignCancelledOrder(ctx, order, fulfillment)
+					} else if order.CreatedAt.Before(time.Now().Add(-orderConf.OrderRefundTimeout - 10*time.Second)) &&
+						fulfillment.ValidationError != txStatusFiveMinError {
+						cleanupStuckFulfilledFailedOrder(ctx, order)
+					}
 					continue
 
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusSuccess {
