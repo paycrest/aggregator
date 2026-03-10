@@ -38,6 +38,7 @@ func cleanupStuckFulfilledFailedOrder(ctx context.Context, order *ent.PaymentOrd
 		Where(
 			paymentorder.IDEQ(order.ID),
 			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusFulfilling),
 				paymentorder.StatusEQ(paymentorder.StatusFulfilled),
 			),
 		).
