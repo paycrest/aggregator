@@ -1,13 +1,17 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
+	"net/http"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -357,7 +361,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 
 	// Send the webhook
 	_, err = fastshot.NewClient(profile.WebhookURL).
-		Config().SetTimeout(30*time.Second).
+		Config().SetCustomTransport(GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 		Header().Add("X-Paycrest-Signature", signature).
 		Header().Add("Content-Type", "application/json").
 		Build().POST("").
@@ -503,34 +507,36 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 	// Generate HMAC signature
 	signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
 
-	// Create HTTP client and make request
-	client := fastshot.NewClient(provider.HostIdentifier).
-		Config().SetTimeout(30*time.Second).
-		Header().Add("X-Request-Signature", signature).
-		Build()
-
-	var res fastshot.Response
-	var reqErr error
-
-	switch method {
-	case "GET":
-		res, reqErr = client.GET(path).
-			Body().AsJSON(payload).
-			Send()
-	case "POST":
-		res, reqErr = client.POST(path).
-			Body().AsJSON(payload).
-			Send()
-	default:
-		return nil, fmt.Errorf("unsupported HTTP method: %s", method)
+	// Build URL and body so the request respects ctx (client disconnect / deadline cancels the call)
+	base := strings.TrimSuffix(provider.HostIdentifier, "/")
+	pathPart := strings.TrimPrefix(path, "/")
+	reqURL := base
+	if pathPart != "" {
+		reqURL = base + "/" + pathPart
 	}
+	var bodyReader io.Reader
+	if payload != nil && len(payload) > 0 {
+		jsonBody, jErr := json.Marshal(payload)
+		if jErr != nil {
+			return nil, fmt.Errorf("failed to marshal request body: %v", jErr)
+		}
+		bodyReader = bytes.NewReader(jsonBody)
+	}
+	req, reqErr := http.NewRequestWithContext(ctx, method, reqURL, bodyReader)
+	if reqErr != nil {
+		return nil, fmt.Errorf("failed to create request: %v", reqErr)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Request-Signature", signature)
 
+	resp, reqErr := GetHTTPClient().Do(req)
 	if reqErr != nil {
 		return nil, fmt.Errorf("failed to make HTTP request: %v", reqErr)
 	}
+	defer func() { _ = resp.Body.Close() }()
 
 	// Parse JSON response
-	data, err := ParseJSONResponse(res.RawResponse)
+	data, err := ParseJSONResponse(resp)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -1053,6 +1059,14 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 		if fallbackID := config.OrderConfig().FallbackProviderID; fallbackID != "" {
 			fallbackResult, fallbackErr := validateProviderRate(ctx, token, currency, amount, fallbackID, networkIdentifier)
 			if fallbackErr == nil {
+				// Quote the queue's best rate when amount was below/above queue providers' min/max but fallback accepts it
+				if bestRate.GreaterThan(decimal.Zero) {
+					return RateValidationResult{
+						Rate:       bestRate,
+						ProviderID: fallbackResult.ProviderID,
+						OrderType:  fallbackResult.OrderType,
+					}, nil
+				}
 				return fallbackResult, nil
 			}
 			var errStuck *types.ErrNoProviderDueToStuck
@@ -1279,6 +1293,20 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 			continue
 		}
 
+		// Parse rate early so we can track best queue rate even when skipping due to min/max
+		rate, err := decimal.NewFromString(parts[3])
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"ProviderData": providerData,
+				"Error":        err,
+				"Value":        parts[3],
+			}).Errorf("ValidateRate.InvalidRate: failed to parse rate")
+			continue
+		}
+		if rate.GreaterThan(bestRate) {
+			bestRate = rate
+		}
+
 		// Check if order amount is within provider's regular min/max limits
 		// If not, check OTC limits as fallback
 		if tokenAmount.LessThan(minOrderAmount) {
@@ -1303,22 +1331,7 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 			// Amount is within OTC limits - proceed to rate parsing
 		}
 
-		// Parse rate
-		rate, err := decimal.NewFromString(parts[3])
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-			}).Errorf("ValidateRate.InvalidRate: failed to parse rate")
-			continue
-		}
-
 		providerID := parts[0]
-
-		// Track the best rate we've seen (for logging purposes)
-		if rate.GreaterThan(bestRate) {
-			bestRate = rate
-		}
 
 		// Calculate fiat equivalent of the token amount
 		fiatAmount := tokenAmount.Mul(rate)
@@ -1440,10 +1453,15 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 		"accountIdentifier": accountIdentifier,
 	}
 
-	// Try each provider until one succeeds
+	// Overall deadline so we don't exceed typical client/LB timeout (e.g. 60s)
+	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
+	defer cancel()
+
+	// Try each provider until one succeeds (10s per provider so we can try several within the overall deadline)
 	for _, provider := range providers {
-		// Call provider /verify_account endpoint using utility function
-		data, err := CallProviderWithHMAC(ctx, provider.ID, "POST", "/verify_account", payload)
+		providerCtx, providerCancel := context.WithTimeout(ctx, 10*time.Second)
+		data, err := CallProviderWithHMAC(providerCtx, provider.ID, "POST", "/verify_account", payload)
+		providerCancel()
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":             fmt.Sprintf("%v", err),
@@ -1453,7 +1471,6 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 			}).Warnf("Failed to verify account with provider %s", provider.ID)
 			continue
 		}
-
 		// Extract account name from response
 		if accountName, ok := data["data"].(string); ok && accountName != "" && accountName != "OK" {
 			return accountName, nil

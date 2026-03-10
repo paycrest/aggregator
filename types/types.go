@@ -1007,11 +1007,13 @@ type WebhookSignatureVerification struct {
 	Secret    string
 }
 
-// ProviderBalance represents a provider's balance for a specific currency
+// ProviderBalance represents a provider's balance for a specific currency.
+// PeakBalance is the peak (max) total balance seen; used for low-balance alerts (e.g. 50%/20% of peak).
 type ProviderBalance struct {
 	AvailableBalance decimal.Decimal `json:"availableBalance"`
 	TotalBalance     decimal.Decimal `json:"totalBalance"`
 	ReservedBalance  decimal.Decimal `json:"reservedBalance"`
+	PeakBalance      decimal.Decimal `json:"peakBalance"`
 	LastUpdated      time.Time       `json:"lastUpdated"`
 }
 

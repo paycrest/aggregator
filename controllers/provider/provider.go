@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -37,37 +36,6 @@ import (
 )
 
 var orderConf = config.OrderConfig()
-
-// errShortIDNotFound is returned when the short ID mapping is missing or expired (Redis key not found).
-// Callers should map it to 404; other errors from resolveOrderID indicate client error (400) or infrastructure failure (500).
-var errShortIDNotFound = errors.New("order not found or expired")
-
-var errShortIDInvalidFormat = errors.New("invalid order ID format")
-var errShortIDInvalidValue = errors.New("invalid order ID")
-
-// resolveOrderID resolves the path id (either a UUID or a 12-char short ID) to the internal order UUID.
-// Use errors.Is(err, errShortIDNotFound) for 404, errShortIDInvalidFormat for 400, else 500 (including errShortIDInvalidValue = server-side corrupted Redis data).
-func resolveOrderID(ctx context.Context, idParam string) (uuid.UUID, error) {
-	if id, err := uuid.Parse(idParam); err == nil {
-		return id, nil
-	}
-	if !u.ValidateShortID(idParam) {
-		return uuid.Nil, errShortIDInvalidFormat
-	}
-	key := u.ShortIDRedisKey(idParam)
-	val, err := storage.RedisClient.Get(ctx, key).Result()
-	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return uuid.Nil, errShortIDNotFound
-		}
-		return uuid.Nil, fmt.Errorf("short ID lookup failed: %w", err)
-	}
-	id, err := uuid.Parse(val)
-	if err != nil {
-		return uuid.Nil, errShortIDInvalidValue
-	}
-	return id, nil
-}
 
 // ProviderController is a controller type for provider endpoints
 type ProviderController struct {
@@ -581,19 +549,9 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	provider := providerCtx.(*ent.ProviderProfile)
 
 	reqCtx := ctx.Request.Context()
-	// Resolve order ID (UUID or short ID) to internal UUID
-	orderID, err := resolveOrderID(reqCtx, ctx.Param("id"))
+	orderID, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
-		if errors.Is(err, errShortIDNotFound) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
-			return
-		}
-		if errors.Is(err, errShortIDInvalidFormat) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
-			return
-		}
-		logger.Errorf("error resolving order ID: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 		return
 	}
 
@@ -768,19 +726,9 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	// Resolve order ID (UUID or short ID) to internal UUID
-	orderID, err := resolveOrderID(ctx.Request.Context(), ctx.Param("id"))
+	orderID, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
-		if errors.Is(err, errShortIDNotFound) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
-			return
-		}
-		if errors.Is(err, errShortIDInvalidFormat) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
-			return
-		}
-		logger.Errorf("error resolving order ID: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 		return
 	}
 
@@ -871,23 +819,10 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	// Resolve order ID (UUID or short ID) to internal UUID
 	reqCtx := ctx.Request.Context()
-	orderID, err := resolveOrderID(reqCtx, ctx.Param("id"))
+	orderID, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
-		if errors.Is(err, errShortIDNotFound) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
-			return
-		}
-		if errors.Is(err, errShortIDInvalidFormat) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
-			return
-		}
-		logger.WithFields(logger.Fields{
-			"Error":  fmt.Sprintf("%v", err),
-			"Trx Id": payload.TxID,
-		}).Errorf("Error resolving order ID: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 		return
 	}
 
@@ -1107,18 +1042,35 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 
 		// Release reserved balance within the same transaction
-		if fulfillment.Edges.Order == nil || fulfillment.Edges.Order.Edges.Provider == nil ||
-			fulfillment.Edges.Order.Edges.ProvisionBucket == nil || fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency == nil {
+		if fulfillment.Edges.Order == nil || fulfillment.Edges.Order.Edges.Provider == nil {
 			logger.WithFields(logger.Fields{
 				"OrderID": orderID.String(),
 				"TxID":    payload.TxID,
-			}).Errorf("FulfillOrder: order missing provider or provision bucket (data integrity)")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order missing provider or provision bucket", nil)
+			}).Errorf("FulfillOrder: order missing provider (data integrity)")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order missing provider", nil)
 			_ = tx.Rollback()
 			return
 		}
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
-		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
+		currency := ""
+		if fulfillment.Edges.Order.Edges.ProvisionBucket != nil && fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency != nil {
+			currency = fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
+		}
+		if currency == "" && fulfillment.Edges.Order.Institution != "" {
+			inst, instErr := u.GetInstitutionByCode(reqCtx, fulfillment.Edges.Order.Institution, true)
+			if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
+				currency = inst.Edges.FiatCurrency.Code
+			}
+		}
+		if currency == "" {
+			logger.WithFields(logger.Fields{
+				"OrderID": orderID.String(),
+				"TxID":    payload.TxID,
+			}).Errorf("FulfillOrder: order missing provision bucket and could not resolve currency from institution")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order missing provider or provision bucket", nil)
+			_ = tx.Rollback()
+			return
+		}
 		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
 
 		err = ctrl.balanceService.ReleaseFiatBalance(reqCtx, providerID, currency, amount, tx)
@@ -1225,17 +1177,32 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		}
 
 		// Release reserved balance for failed validation
-		if fulfillment.Edges.Order == nil || fulfillment.Edges.Order.Edges.Provider == nil ||
-			fulfillment.Edges.Order.Edges.ProvisionBucket == nil || fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency == nil {
+		if fulfillment.Edges.Order == nil || fulfillment.Edges.Order.Edges.Provider == nil {
 			logger.WithFields(logger.Fields{
 				"OrderID": orderID.String(),
 				"TxID":    payload.TxID,
-			}).Errorf("FulfillOrder: order missing provider or provision bucket (data integrity)")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order missing provider or provision bucket", nil)
+			}).Errorf("FulfillOrder: order missing provider (data integrity)")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order missing provider", nil)
 			return
 		}
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
-		currency := fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
+		currency := ""
+		if fulfillment.Edges.Order.Edges.ProvisionBucket != nil && fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency != nil {
+			currency = fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
+		}
+		if currency == "" && fulfillment.Edges.Order.Institution != "" {
+			inst, instErr := u.GetInstitutionByCode(reqCtx, fulfillment.Edges.Order.Institution, true)
+			if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
+				currency = inst.Edges.FiatCurrency.Code
+			}
+		}
+		if currency == "" {
+			logger.WithFields(logger.Fields{
+				"OrderID": orderID.String(),
+				"TxID":    payload.TxID,
+			}).Errorf("FulfillOrder: order missing provision bucket and could not resolve currency from institution")
+			return
+		}
 		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
 
 		err = ctrl.balanceService.ReleaseFiatBalance(reqCtx, providerID, currency, amount, nil)
@@ -1306,25 +1273,11 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
 
-	// Resolve order ID (UUID or short ID) to internal UUID
 	idParam := ctx.Param("id")
 	reqCtx := ctx.Request.Context()
-	orderID, err := resolveOrderID(reqCtx, idParam)
+	orderID, err := uuid.Parse(idParam)
 	if err != nil {
-		if errors.Is(err, errShortIDNotFound) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
-			return
-		}
-		if errors.Is(err, errShortIDInvalidFormat) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
-			return
-		}
-		logger.WithFields(logger.Fields{
-			"Error":    fmt.Sprintf("%v", err),
-			"Reason":   payload.Reason,
-			"Order ID": idParam,
-		}).Errorf("Error resolving order ID: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 		return
 	}
 
@@ -1362,8 +1315,8 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	} else if payload.Reason != "Insufficient funds" {
 		cancellationCount += 1
 		orderUpdate.AppendCancellationReasons([]string{payload.Reason})
-	} else if payload.Reason == "Insufficient funds" {
-		// Search for the specific provider in the queue using a Redis list
+	} else if payload.Reason == "Insufficient funds" && order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+		// Search for the specific provider in the queue using a Redis list (private orders with nil bucket are not in the queue)
 		redisKey := fmt.Sprintf("bucket_%s_%s_%s", order.Edges.ProvisionBucket.Edges.Currency.Code, order.Edges.ProvisionBucket.MinAmount, order.Edges.ProvisionBucket.MaxAmount)
 
 		// Check if the provider ID exists in the list
@@ -1427,56 +1380,29 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 
 	// Release reserved balance for this cancelled order
 	providerID := order.Edges.Provider.ID
-	currency := order.Edges.ProvisionBucket.Edges.Currency.Code
-	amount := order.Amount.Mul(order.Rate).RoundBank(0)
-
-	err = ctrl.balanceService.ReleaseFiatBalance(reqCtx, providerID, currency, amount, nil)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"OrderID":    orderID.String(),
-			"ProviderID": providerID,
-			"Currency":   currency,
-			"Amount":     amount.String(),
-		}).Errorf("failed to release reserved balance for cancelled order")
-		// Don't return error here as the order status is already updated
+	currency := ""
+	if order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+		currency = order.Edges.ProvisionBucket.Edges.Currency.Code
 	}
-
-	// Check if order cancellation count is equal or greater than RefundCancellationCount in config,
-	// and the order has not been refunded, then trigger refund
-	if order.CancellationCount >= orderConf.RefundCancellationCount && order.Status == paymentorder.StatusCancelled {
-		go func() {
-			var service types.OrderService
-			if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
-				service = orderService.NewOrderTron()
-			} else if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "starknet") {
-				client, err := starknetService.NewClient()
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":   fmt.Sprintf("%v", err),
-						"OrderID": order.ID.String(),
-					}).Errorf("CancelOrder.RefundOrder.NewStarknetClient")
-					return
-				}
-				service = orderService.NewOrderStarknet(client)
-				logger.WithFields(logger.Fields{
-					"OrderID":           order.ID.String(),
-					"NetworkIdentifier": order.Edges.Token.Edges.Network.Identifier,
-					"Status":            order.Status.String(),
-					"GatewayID":         order.GatewayID,
-				}).Errorf("CancelOrder.RefundOrder.NewStarknetClient")
-			} else {
-				service = orderService.NewOrderEVM()
-			}
-			err := service.RefundOrder(ctx, order.Edges.Token.Edges.Network, order.GatewayID)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":   fmt.Sprintf("%v", err),
-					"OrderID": orderID.String(),
-					"Network": order.Edges.Token.Edges.Network.Identifier,
-				}).Errorf("Failed to refund order: %v", err)
-			}
-		}()
+	if currency == "" && order.Institution != "" {
+		inst, instErr := u.GetInstitutionByCode(reqCtx, order.Institution, true)
+		if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
+			currency = inst.Edges.FiatCurrency.Code
+		}
+	}
+	if currency != "" {
+		amount := order.Amount.Mul(order.Rate).RoundBank(0)
+		err = ctrl.balanceService.ReleaseFiatBalance(reqCtx, providerID, currency, amount, nil)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", err),
+				"OrderID":    orderID.String(),
+				"ProviderID": providerID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("failed to release reserved balance for cancelled order")
+			// Don't return error here as the order status is already updated
+		}
 	}
 
 	// Push provider ID to order exclude list
@@ -1497,8 +1423,6 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	if err != nil {
 		logger.Errorf("error setting TTL for order %s exclude_list on Redis: %v", orderID, err)
 	}
-
-	// TODO: Reassign order to another provider in background
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Order cancelled successfully", nil)
 }
@@ -1768,7 +1692,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 	var currencyCodes []string
 
 	res, err := fastshot.NewClient(provider.HostIdentifier).
-		Config().SetTimeout(30 * time.Second).
+		Config().SetCustomTransport(u.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
 		Build().GET("/info").
 		Send()
 
@@ -1782,7 +1706,7 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 		return
 	}
 
-	data, err = u.ParseJSONResponse(res.RawResponse)
+	data, err = u.ParseJSONResponse(res.Raw())
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error": fmt.Sprintf("%v", err),
@@ -1843,23 +1767,10 @@ func (ctrl *ProviderController) NodeInfo(ctx *gin.Context) {
 // GetPaymentOrderByID controller fetches a payment order by ID
 func (ctrl *ProviderController) GetPaymentOrderByID(ctx *gin.Context) {
 	reqCtx := ctx.Request.Context()
-	// Resolve order ID (UUID or short ID) to internal UUID
 	idParam := ctx.Param("id")
-	id, err := resolveOrderID(reqCtx, idParam)
+	id, err := uuid.Parse(idParam)
 	if err != nil {
-		if errors.Is(err, errShortIDNotFound) {
-			u.APIResponse(ctx, http.StatusNotFound, "error", "Order not found or expired", nil)
-			return
-		}
-		if errors.Is(err, errShortIDInvalidFormat) {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
-			return
-		}
-		logger.WithFields(logger.Fields{
-			"Error":    fmt.Sprintf("%v", err),
-			"Order ID": idParam,
-		}).Errorf("Failed to resolve order ID: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to resolve order ID", nil)
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid Order ID", nil)
 		return
 	}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -25,7 +26,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// ProcessTransfers processes transfers to receive addresses and updates their status
+// ProcessTransfers processes transfers to receive addresses and updates their status.
+// Address matching is case-insensitive (EVM addresses may be checksummed or lowercase).
 func ProcessTransfers(
 	ctx context.Context,
 	orderService types.OrderService,
@@ -33,10 +35,17 @@ func ProcessTransfers(
 	unknownAddresses []string,
 	addressToEvent map[string]*types.TokenTransferEvent,
 ) error {
+	if len(unknownAddresses) == 0 {
+		return nil
+	}
+	orConditions := make([]predicate.PaymentOrder, len(unknownAddresses))
+	for i, addr := range unknownAddresses {
+		orConditions[i] = paymentorder.ReceiveAddressEqualFold(addr)
+	}
 	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
-			paymentorder.ReceiveAddressIn(unknownAddresses...),
+			paymentorder.Or(orConditions...),
 			paymentorder.StatusEQ(paymentorder.StatusInitiated),
 			paymentorder.ReceiveAddressExpiryGT(time.Now()),
 		).
@@ -54,11 +63,16 @@ func ProcessTransfers(
 		wg.Add(1)
 		go func(order *ent.PaymentOrder, receiveAddress string) {
 			defer wg.Done()
-			transferEvent, ok := addressToEvent[receiveAddress]
-			if !ok {
+			var transferEvent *types.TokenTransferEvent
+			for addr, ev := range addressToEvent {
+				if strings.EqualFold(addr, receiveAddress) {
+					transferEvent = ev
+					break
+				}
+			}
+			if transferEvent == nil {
 				return
 			}
-
 			_, err := UpdateReceiveAddressStatus(ctx, order, transferEvent, orderService.CreateOrder, priorityQueueService.GetProviderRate)
 			if err != nil {
 				if !strings.Contains(fmt.Sprintf("%v", err), "Duplicate payment order") && !strings.Contains(fmt.Sprintf("%v", err), "Receive address not found") {
@@ -228,7 +242,7 @@ func UpdateReceiveAddressStatus(
 	createOrder func(ctx context.Context, orderID uuid.UUID) error,
 	getProviderRate func(ctx context.Context, providerProfile *ent.ProviderProfile, tokenSymbol string, currency string) (decimal.Decimal, error),
 ) (done bool, err error) {
-	if event.To == paymentOrder.ReceiveAddress {
+	if strings.EqualFold(event.To, paymentOrder.ReceiveAddress) {
 		// Check for existing payment order with txHash
 		count, err := db.Client.PaymentOrder.
 			Query().

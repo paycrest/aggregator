@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"math"
 	"strings"
@@ -19,9 +18,7 @@ import (
 	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
-	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
-	tokenUtils "github.com/paycrest/aggregator/utils/token"
 )
 
 // SyncPaymentOrderFulfillments syncs payment order fulfillments
@@ -162,41 +159,11 @@ func SyncPaymentOrderFulfillments() {
 				continue
 			}
 
-			// Compute HMAC
-			decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: Failed to decode provider secret",
-				}).Errorf("SyncPaymentOrderFulfillments.DecodeSecret")
-				continue
-			}
-			decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: Failed to decrypt provider secret",
-				}).Errorf("SyncPaymentOrderFulfillments.DecryptSecret")
-				continue
-			}
-
 			payload := map[string]interface{}{
 				"orderId":  order.ID.String(),
 				"currency": order.Edges.ProvisionBucket.Edges.Currency.Code,
 			}
-			signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
-
-			// Send POST request to the provider's node
-			res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-				Config().SetTimeout(10*time.Second).
-				Header().Add("X-Request-Signature", signature).
-				Build().POST("/tx_status").
-				Body().AsJSON(payload).
-				Send()
+			data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":           fmt.Sprintf("%v", err),
@@ -221,21 +188,6 @@ func SyncPaymentOrderFulfillments() {
 						}).Errorf("SyncPaymentOrderFulfillments.UpdateStatus")
 					}
 				}
-				continue
-			}
-
-			data, err := utils.ParseJSONResponse(res.RawResponse)
-			if err != nil {
-				// Instead of deleting the order, log the error and skip processing
-				// The order will be retried in the next sync cycle or can be manually investigated
-				logger.WithFields(logger.Fields{
-					"Error":           fmt.Sprintf("%v", err),
-					"ProviderID":      order.Edges.Provider.ID,
-					"PayloadOrderId":  payload["orderId"],
-					"PayloadCurrency": payload["currency"],
-					"OrderID":         order.ID.String(),
-					"OrderStatus":     order.Status.String(),
-				}).Errorf("SyncPaymentOrderFulfillments: Failed to parse JSON response after getting trx status from provider, skipping order")
 				continue
 			}
 
@@ -338,26 +290,6 @@ func SyncPaymentOrderFulfillments() {
 
 			for _, fulfillment := range order.Edges.Fulfillments {
 				if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusPending {
-					// Compute HMAC
-					decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.Edges.Provider.ID,
-						}).Errorf("Failed to decode provider secret for pending fulfillment")
-						continue
-					}
-					decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.Edges.Provider.ID,
-						}).Errorf("Failed to decrypt provider secret for pending fulfillment")
-						continue
-					}
-
 					payload := map[string]interface{}{
 						"orderId":  order.ID.String(),
 						"currency": order.Edges.ProvisionBucket.Edges.Currency.Code,
@@ -365,50 +297,36 @@ func SyncPaymentOrderFulfillments() {
 						"txId":     fulfillment.TxID,
 					}
 
-					signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
-
-					// Send POST request to the provider's node
-					res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-						Config().SetTimeout(30*time.Second).
-						Header().Add("X-Request-Signature", signature).
-						Build().POST("/tx_status").
-						Body().AsJSON(payload).
-						Send()
+					data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 					if err != nil {
-						continue
-					}
+						if err.Error() == "400" && time.Since(fulfillment.CreatedAt) > 5*time.Minute {
+							logger.WithFields(logger.Fields{
+								"OrderID": order.ID.String(),
+							}).Errorf("Failed to get transaction status after 5 minutes: %s", order.ID.String())
 
-					data, err := utils.ParseJSONResponse(res.RawResponse)
-					if err != nil {
-						// Check if it's a 400 error and fulfillment is older than 5 minutes
-						if res.RawResponse.StatusCode == 400 {
-							if time.Since(fulfillment.CreatedAt) > 5*time.Minute {
-								// Mark fulfillment as failed
-								_, updateErr := storage.Client.PaymentOrderFulfillment.
-									UpdateOneID(fulfillment.ID).
-									SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
-									SetValidationError("Failed to get transaction status after 5 minutes").
-									Save(ctx)
-								if updateErr != nil {
-									logger.WithFields(logger.Fields{
-										"Error":         fmt.Sprintf("%v", updateErr),
-										"OrderID":       order.ID.String(),
-										"FulfillmentID": fulfillment.ID,
-									}).Errorf("Failed to mark fulfillment as failed after 5 minutes")
-								}
-								continue
+							_, updateErr := storage.Client.PaymentOrderFulfillment.
+								UpdateOneID(fulfillment.ID).
+								SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+								SetValidationError("Failed to get transaction status after 5 minutes").
+								Save(ctx)
+							if updateErr != nil {
+								logger.WithFields(logger.Fields{
+									"Error":         fmt.Sprintf("%v", updateErr),
+									"OrderID":       order.ID.String(),
+									"FulfillmentID": fulfillment.ID,
+								}).Errorf("Failed to mark fulfillment as failed after 5 minutes")
 							}
+						} else {
+							logger.WithFields(logger.Fields{
+								"Error":           fmt.Sprintf("%v", err),
+								"OrderID":         order.ID.String(),
+								"ProviderID":      order.Edges.Provider.ID,
+								"PayloadOrderId":  payload["orderId"],
+								"PayloadCurrency": payload["currency"],
+								"PayloadPsp":      payload["psp"],
+								"PayloadTxId":     payload["txId"],
+							}).Errorf("Failed to get tx_status from provider for pending fulfillment")
 						}
-
-						logger.WithFields(logger.Fields{
-							"Error":           fmt.Sprintf("%v", err),
-							"OrderID":         order.ID.String(),
-							"ProviderID":      order.Edges.Provider.ID,
-							"PayloadOrderId":  payload["orderId"],
-							"PayloadCurrency": payload["currency"],
-							"PayloadPsp":      payload["psp"],
-							"PayloadTxId":     payload["txId"],
-						}).Errorf("Failed to parse JSON response after getting trx status from provider")
 						continue
 					}
 
@@ -487,7 +405,12 @@ func SyncPaymentOrderFulfillments() {
 					}
 
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed {
-					reassignCancelledOrder(ctx, order, fulfillment)
+					if canReassignCancelledOrder(order) {
+						reassignCancelledOrder(ctx, order, fulfillment)
+					} else if order.CreatedAt.Before(time.Now().Add(-orderConf.OrderRefundTimeout - 10*time.Second)) &&
+						fulfillment.ValidationError != "Failed to get transaction status after 5 minutes" {
+						cleanupStuckFulfilledFailedOrder(ctx, order)
+					}
 					continue
 
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusSuccess {
@@ -541,9 +464,10 @@ func SyncPaymentOrderFulfillments() {
 
 // Retry failed webhook notifications
 func RetryFailedWebhookNotifications() error {
-	// ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	// defer cancel()
-	ctx := context.Background()
+	// Use timeout only for fetching attempts, not for processing them
+	// Processing should use per-operation timeouts to avoid deadline exceeded errors
+	fetchCtx, fetchCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer fetchCancel()
 
 	// Fetch failed webhook notifications that are due for retry
 	attempts, err := storage.Client.WebhookRetryAttempt.
@@ -552,7 +476,7 @@ func RetryFailedWebhookNotifications() error {
 			webhookretryattempt.StatusEQ(webhookretryattempt.StatusFailed),
 			webhookretryattempt.NextRetryTimeLTE(time.Now()),
 		).
-		All(ctx)
+		All(fetchCtx)
 	if err != nil {
 		return fmt.Errorf("RetryFailedWebhookNotifications: %w", err)
 	}
@@ -561,17 +485,16 @@ func RetryFailedWebhookNotifications() error {
 	maxCumulativeTime := 24 * time.Hour
 
 	for _, attempt := range attempts {
-		// Send the webhook notification
+		// Send the webhook notification with per-request timeout
 		body, err := fastshot.NewClient(attempt.WebhookURL).
-			Config().SetTimeout(30*time.Second).
+			Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
 			Header().Add("X-Paycrest-Signature", attempt.Signature).
 			Build().POST("").
 			Body().AsJSON(attempt.Payload).
 			Send()
 
-		if err != nil || (body.StatusCode() >= 205) {
-			// Webhook notification failed
-			// Update attempt with next retry time
+		if err != nil || (body.Raw() != nil && body.Raw().StatusCode >= 205) {
+			// Webhook notification failed - use per-operation timeouts to prevent deadline exceeded errors
 			attemptNumber := attempt.AttemptNumber + 1
 			delay := baseDelay * time.Duration(math.Pow(2, float64(attemptNumber-1)))
 
@@ -586,43 +509,94 @@ func RetryFailedWebhookNotifications() error {
 			// Set status to expired if cumulative time is greater than 24 hours
 			if nextRetryTime.Sub(attempt.CreatedAt.Add(-baseDelay)) > maxCumulativeTime {
 				attemptUpdate.SetStatus(webhookretryattempt.StatusExpired)
-				uid, err := uuid.Parse(attempt.Payload["data"].(map[string]interface{})["senderId"].(string))
-				if err != nil {
-					return fmt.Errorf("RetryFailedWebhookNotifications.FailedExtraction: %w", err)
-				}
-				profile, err := storage.Client.SenderProfile.
-					Query().
-					Where(
-						senderprofile.IDEQ(uid),
-					).
-					WithUser().
-					Only(ctx)
-				if err != nil {
-					return fmt.Errorf("RetryFailedWebhookNotifications.CouldNotFetchProfile: %w", err)
-				}
 
-				emailService := email.NewEmailServiceWithProviders()
-				_, err = emailService.SendWebhookFailureEmail(ctx, profile.Edges.User.Email, profile.Edges.User.FirstName)
+				// Safe payload extraction to avoid panic on bad or corrupted data; log and continue on error so batch is not aborted
+				data, ok := attempt.Payload["data"].(map[string]interface{})
+				if !ok {
+					logger.WithFields(logger.Fields{
+						"AttemptID": attempt.ID,
+						"Payload":   attempt.Payload,
+					}).Errorf("RetryFailedWebhookNotifications: invalid payload structure, missing 'data'")
+					// Fall through to save expired status
+				} else {
+					senderIDStr, ok := data["senderId"].(string)
+					if !ok {
+						logger.WithFields(logger.Fields{
+							"AttemptID": attempt.ID,
+							"Payload":   attempt.Payload,
+						}).Errorf("RetryFailedWebhookNotifications: invalid payload structure, missing 'senderId'")
+					} else if uid, parseErr := uuid.Parse(senderIDStr); parseErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":     fmt.Sprintf("%v", parseErr),
+							"AttemptID": attempt.ID,
+						}).Errorf("RetryFailedWebhookNotifications.FailedExtraction")
+					} else {
+						// Use separate context for SenderProfile fetch to avoid deadline pressure
+						profileCtx, profileCancel := context.WithTimeout(context.Background(), 10*time.Second)
+						profile, profileErr := storage.Client.SenderProfile.
+							Query().
+							Where(senderprofile.IDEQ(uid)).
+							WithUser().
+							Only(profileCtx)
+						profileCancel()
 
-				if err != nil {
-					return fmt.Errorf("RetryFailedWebhookNotifications.SendWebhookFailureEmail: %w", err)
+						if profileErr != nil {
+							logger.WithFields(logger.Fields{
+								"Error":     fmt.Sprintf("%v", profileErr),
+								"AttemptID": attempt.ID,
+							}).Errorf("RetryFailedWebhookNotifications.CouldNotFetchProfile")
+						} else if profile == nil || profile.Edges.User == nil {
+							logger.WithFields(logger.Fields{"AttemptID": attempt.ID}).Errorf("RetryFailedWebhookNotifications: profile or user missing")
+						} else {
+							emailCtx, emailCancel := context.WithTimeout(context.Background(), 15*time.Second)
+							emailService := email.NewEmailServiceWithProviders()
+							_, emailErr := emailService.SendWebhookFailureEmail(emailCtx, profile.Edges.User.Email, profile.Edges.User.FirstName)
+							emailCancel()
+							if emailErr != nil {
+								logger.WithFields(logger.Fields{
+									"Error":     fmt.Sprintf("%v", emailErr),
+									"AttemptID": attempt.ID,
+								}).Errorf("RetryFailedWebhookNotifications.SendWebhookFailureEmail")
+								// Still save expired status below
+							}
+						}
+					}
 				}
 			}
 
-			_, err := attemptUpdate.Save(ctx)
+			// Use separate context for save operation to ensure clean deadline
+			saveCtx, saveCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			_, err := attemptUpdate.Save(saveCtx)
+			saveCancel()
+
 			if err != nil {
-				return fmt.Errorf("RetryFailedWebhookNotifications: %w", err)
+				// Log error but don't fail entire batch - skip this attempt and continue
+				logger.WithFields(logger.Fields{
+					"Error":     fmt.Sprintf("%v", err),
+					"AttemptID": attempt.ID,
+				}).Errorf("RetryFailedWebhookNotifications.SaveUpdate")
+				continue
 			}
 
 			continue
 		}
 
-		// Webhook notification was successful
+		// Webhook notification was successful - use per-operation timeout for update
+		successCtx, successCancel := context.WithTimeout(context.Background(), 10*time.Second)
+
 		_, err = attempt.Update().
 			SetStatus(webhookretryattempt.StatusSuccess).
-			Save(ctx)
+			Save(successCtx)
+
+		successCancel()
+
 		if err != nil {
-			return fmt.Errorf("RetryFailedWebhookNotifications: %w", err)
+			// Log error but don't fail entire batch - skip this attempt and continue
+			logger.WithFields(logger.Fields{
+				"Error":     fmt.Sprintf("%v", err),
+				"AttemptID": attempt.ID,
+			}).Errorf("RetryFailedWebhookNotifications.SaveSuccess")
+			continue
 		}
 	}
 

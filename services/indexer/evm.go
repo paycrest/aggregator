@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/paycrest/aggregator/ent"
@@ -540,23 +541,32 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 		logger.Infof("%s", logMessage)
 	}
 
-	// Process each transaction to find gateway events
+	// Process transactions in parallel with bounded concurrency to avoid overwhelming RPC
+	const gatewayTxConcurrency = 10
+	sem := make(chan struct{}, gatewayTxConcurrency)
+	var wg sync.WaitGroup
+	totalTxs := len(transactions)
+
 	for i, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
 		if !ok || txHash == "" {
 			continue
 		}
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logger.Infof("Processing gateway transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
-		}
-
-		// Index gateway events for this specific transaction
-		_, err := s.indexGatewayByTransaction(ctx, network, txHash)
-		if err != nil {
-			logger.Errorf("Error processing gateway transaction %s: %v", txHash[:10]+"...", err)
-			continue // Skip transactions with errors
-		}
+		wg.Add(1)
+		go func(idx int, hash string) {
+			defer wg.Done()
+			sem <- struct{}{}        // acquire
+			defer func() { <-sem }() // release
+			if network.ChainID != 56 && network.ChainID != 1135 {
+				logger.Infof("Processing gateway transaction %d/%d: %s", idx+1, totalTxs, hash[:10]+"...")
+			}
+			_, err := s.indexGatewayByTransaction(ctx, network, hash)
+			if err != nil {
+				logger.Errorf("Error processing gateway transaction %s: %v", hash[:10]+"...", err)
+			}
+		}(i, txHash)
 	}
+	wg.Wait()
 
 	return nil
 }
