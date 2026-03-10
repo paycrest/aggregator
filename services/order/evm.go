@@ -33,6 +33,7 @@ import (
 type OrderEVM struct {
 	priorityQueue *services.PriorityQueueService
 	engineService *services.EngineService
+	nativeService *services.NativeService
 }
 
 // NewOrderEVM creates a new instance of OrderEVM.
@@ -42,6 +43,7 @@ func NewOrderEVM() types.OrderService {
 	return &OrderEVM{
 		priorityQueue: priorityQueue,
 		engineService: services.NewEngineService(),
+		nativeService: services.NewNativeService(),
 	}
 }
 
@@ -109,40 +111,49 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("%s - CreateOrder.updateStatus: %w", orderIDPrefix, err)
 	}
 
+	network := order.Edges.Token.Edges.Network
 	createOrderData, err := s.createOrderCallData(order, encryptedOrderRecipient)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.createOrderCallData: %w", orderIDPrefix, err)
 	}
-
-	// Create approve data for gateway contract
 	approveGatewayData, err := s.approveCallData(
-		ethcommon.HexToAddress(order.Edges.Token.Edges.Network.GatewayContractAddress),
+		ethcommon.HexToAddress(network.GatewayContractAddress),
 		utils.ToSubunit(order.Amount.Add(order.SenderFee), order.Edges.Token.Decimals),
 	)
 	if err != nil {
 		return fmt.Errorf("%s - CreateOrder.approveCallData: %w", orderIDPrefix, err)
 	}
-
-	// Create order
-	txPayload := []map[string]interface{}{
-		{
-			"to":    order.Edges.Token.ContractAddress,
-			"data":  fmt.Sprintf("0x%x", approveGatewayData),
-			"value": "0",
-		},
-		{
-			"to":    order.Edges.Token.Edges.Network.GatewayContractAddress,
-			"data":  fmt.Sprintf("0x%x", createOrderData),
-			"value": "0",
-		},
-	}
-
-	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, address, txPayload)
-	if err != nil {
-		return fmt.Errorf("%s - CreateOrder.sendTransactionBatch: %w", orderIDPrefix, err)
+	switch network.WalletService {
+	case networkent.WalletServiceEngine:
+		txPayload := []map[string]interface{}{
+			{"to": order.Edges.Token.ContractAddress, "data": fmt.Sprintf("0x%x", approveGatewayData), "value": "0"},
+			{"to": network.GatewayContractAddress, "data": fmt.Sprintf("0x%x", createOrderData), "value": "0"},
+		}
+		_, err = s.engineService.SendTransactionBatch(ctx, network.ChainID, address, txPayload)
+		if err != nil {
+			return fmt.Errorf("%s - CreateOrder.sendTransactionBatch: %w", orderIDPrefix, err)
+		}
+	case networkent.WalletServiceNative:
+		calls := s.buildCreateOrderCalls(order, network, approveGatewayData, createOrderData)
+		_, err = s.nativeService.SendEIP7702Batch(ctx, orderIDPrefix, "CreateOrder", order, network, calls)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("%s - CreateOrder: unsupported wallet_service %s", orderIDPrefix, network.WalletService)
 	}
 
 	return nil
+}
+
+// buildCreateOrderCalls returns the EIP-7702 calls slice (approve + createOrder) for native CreateOrder.
+func (s *OrderEVM) buildCreateOrderCalls(order *ent.PaymentOrder, network *ent.Network, approveData, createOrderData []byte) []services.Call7702 {
+	gatewayAddr := ethcommon.HexToAddress(network.GatewayContractAddress)
+	tokenAddr := ethcommon.HexToAddress(order.Edges.Token.ContractAddress)
+	return []services.Call7702{
+		{To: tokenAddr, Value: big.NewInt(0), Data: approveData},
+		{To: gatewayAddr, Value: big.NewInt(0), Data: createOrderData},
+	}
 }
 
 // RefundOrder refunds sender on canceled lock order
@@ -180,16 +191,25 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		return fmt.Errorf("%s - RefundOrder.refundCallData: %w", orderIDPrefix, err)
 	}
 
-	// Refund order
-	txPayload := map[string]interface{}{
-		"to":    lockOrder.Edges.Token.Edges.Network.GatewayContractAddress,
-		"data":  fmt.Sprintf("0x%x", refundOrderData),
-		"value": "0",
-	}
-
-	_, err = s.engineService.SendTransactionBatch(ctx, lockOrder.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
-	if err != nil {
-		return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
+	lockNetwork := lockOrder.Edges.Token.Edges.Network
+	switch lockNetwork.WalletService {
+	case networkent.WalletServiceEngine:
+		txPayload := map[string]interface{}{
+			"to":    lockNetwork.GatewayContractAddress,
+			"data":  fmt.Sprintf("0x%x", refundOrderData),
+			"value": "0",
+		}
+		_, err = s.engineService.SendTransactionBatch(ctx, lockNetwork.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
+		if err != nil {
+			return fmt.Errorf("%s - RefundOrder.sendTransaction: %w", orderIDPrefix, err)
+		}
+	case networkent.WalletServiceNative:
+		_, err = s.nativeService.SendTransaction(ctx, orderIDPrefix, lockNetwork, ethcommon.HexToAddress(lockNetwork.GatewayContractAddress), refundOrderData, nil)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("%s - RefundOrder: unsupported wallet_service %s", orderIDPrefix, lockNetwork.WalletService)
 	}
 
 	// Update order status to refunding after transaction submission
@@ -235,16 +255,25 @@ func (s *OrderEVM) SettleOrder(ctx context.Context, orderID uuid.UUID) error {
 		return fmt.Errorf("%s - SettleOrder.settleCallData: %w", orderIDPrefix, err)
 	}
 
-	// Settle order
-	txPayload := map[string]interface{}{
-		"to":    order.Edges.Token.Edges.Network.GatewayContractAddress,
-		"data":  fmt.Sprintf("0x%x", settleOrderData),
-		"value": "0",
-	}
-
-	_, err = s.engineService.SendTransactionBatch(ctx, order.Edges.Token.Edges.Network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
-	if err != nil {
-		return fmt.Errorf("%s - SettleOrder.sendTransaction: %w", orderIDPrefix, err)
+	network := order.Edges.Token.Edges.Network
+	switch network.WalletService {
+	case networkent.WalletServiceEngine:
+		txPayload := map[string]interface{}{
+			"to":    network.GatewayContractAddress,
+			"data":  fmt.Sprintf("0x%x", settleOrderData),
+			"value": "0",
+		}
+		_, err = s.engineService.SendTransactionBatch(ctx, network.ChainID, cryptoConf.AggregatorAccountEVM, []map[string]interface{}{txPayload})
+		if err != nil {
+			return fmt.Errorf("%s - SettleOrder.sendTransaction: %w", orderIDPrefix, err)
+		}
+	case networkent.WalletServiceNative:
+		_, err = s.nativeService.SendTransaction(ctx, orderIDPrefix, network, ethcommon.HexToAddress(network.GatewayContractAddress), settleOrderData, nil)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("%s - SettleOrder: unsupported wallet_service %s", orderIDPrefix, network.WalletService)
 	}
 
 	// Update order status to settling after transaction submission

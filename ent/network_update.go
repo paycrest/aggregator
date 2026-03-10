@@ -101,6 +101,34 @@ func (_u *NetworkUpdate) SetNillableGatewayContractAddress(v *string) *NetworkUp
 	return _u
 }
 
+// SetDelegationContractAddress sets the "delegation_contract_address" field.
+func (_u *NetworkUpdate) SetDelegationContractAddress(v string) *NetworkUpdate {
+	_u.mutation.SetDelegationContractAddress(v)
+	return _u
+}
+
+// SetNillableDelegationContractAddress sets the "delegation_contract_address" field if the given value is not nil.
+func (_u *NetworkUpdate) SetNillableDelegationContractAddress(v *string) *NetworkUpdate {
+	if v != nil {
+		_u.SetDelegationContractAddress(*v)
+	}
+	return _u
+}
+
+// SetWalletService sets the "wallet_service" field.
+func (_u *NetworkUpdate) SetWalletService(v network.WalletService) *NetworkUpdate {
+	_u.mutation.SetWalletService(v)
+	return _u
+}
+
+// SetNillableWalletService sets the "wallet_service" field if the given value is not nil.
+func (_u *NetworkUpdate) SetNillableWalletService(v *network.WalletService) *NetworkUpdate {
+	if v != nil {
+		_u.SetWalletService(*v)
+	}
+	return _u
+}
+
 // SetBlockTime sets the "block_time" field.
 func (_u *NetworkUpdate) SetBlockTime(v decimal.Decimal) *NetworkUpdate {
 	_u.mutation.ResetBlockTime()
@@ -299,7 +327,20 @@ func (_u *NetworkUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *NetworkUpdate) check() error {
+	if v, ok := _u.mutation.WalletService(); ok {
+		if err := network.WalletServiceValidator(v); err != nil {
+			return &ValidationError{Name: "wallet_service", err: fmt.Errorf(`ent: validator failed for field "Network.wallet_service": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *NetworkUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(network.Table, network.Columns, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -325,6 +366,12 @@ func (_u *NetworkUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.DelegationContractAddress(); ok {
+		_spec.SetField(network.FieldDelegationContractAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.WalletService(); ok {
+		_spec.SetField(network.FieldWalletService, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)
@@ -512,6 +559,34 @@ func (_u *NetworkUpdateOne) SetGatewayContractAddress(v string) *NetworkUpdateOn
 func (_u *NetworkUpdateOne) SetNillableGatewayContractAddress(v *string) *NetworkUpdateOne {
 	if v != nil {
 		_u.SetGatewayContractAddress(*v)
+	}
+	return _u
+}
+
+// SetDelegationContractAddress sets the "delegation_contract_address" field.
+func (_u *NetworkUpdateOne) SetDelegationContractAddress(v string) *NetworkUpdateOne {
+	_u.mutation.SetDelegationContractAddress(v)
+	return _u
+}
+
+// SetNillableDelegationContractAddress sets the "delegation_contract_address" field if the given value is not nil.
+func (_u *NetworkUpdateOne) SetNillableDelegationContractAddress(v *string) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetDelegationContractAddress(*v)
+	}
+	return _u
+}
+
+// SetWalletService sets the "wallet_service" field.
+func (_u *NetworkUpdateOne) SetWalletService(v network.WalletService) *NetworkUpdateOne {
+	_u.mutation.SetWalletService(v)
+	return _u
+}
+
+// SetNillableWalletService sets the "wallet_service" field if the given value is not nil.
+func (_u *NetworkUpdateOne) SetNillableWalletService(v *network.WalletService) *NetworkUpdateOne {
+	if v != nil {
+		_u.SetWalletService(*v)
 	}
 	return _u
 }
@@ -727,7 +802,20 @@ func (_u *NetworkUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *NetworkUpdateOne) check() error {
+	if v, ok := _u.mutation.WalletService(); ok {
+		if err := network.WalletServiceValidator(v); err != nil {
+			return &ValidationError{Name: "wallet_service", err: fmt.Errorf(`ent: validator failed for field "Network.wallet_service": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (_u *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(network.Table, network.Columns, sqlgraph.NewFieldSpec(network.FieldID, field.TypeInt))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -770,6 +858,12 @@ func (_u *NetworkUpdateOne) sqlSave(ctx context.Context) (_node *Network, err er
 	}
 	if value, ok := _u.mutation.GatewayContractAddress(); ok {
 		_spec.SetField(network.FieldGatewayContractAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.DelegationContractAddress(); ok {
+		_spec.SetField(network.FieldDelegationContractAddress, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.WalletService(); ok {
+		_spec.SetField(network.FieldWalletService, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.BlockTime(); ok {
 		_spec.SetField(network.FieldBlockTime, field.TypeFloat64, value)

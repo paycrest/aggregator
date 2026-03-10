@@ -259,7 +259,6 @@ func TestAuth(t *testing.T) {
 		})
 
 
-
 		t.Run("with only sender scope payload", func(t *testing.T) {
 			// Test register with valid payload
 			payload := types.RegisterPayload{
