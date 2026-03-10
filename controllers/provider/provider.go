@@ -1430,8 +1430,6 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 		logger.Errorf("error setting TTL for order %s exclude_list on Redis: %v", orderID, err)
 	}
 
-	// TODO: Reassign order to another provider in background
-
 	u.APIResponse(ctx, http.StatusOK, "success", "Order cancelled successfully", nil)
 }
 

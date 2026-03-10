@@ -45,15 +45,12 @@ func cleanupStuckFulfilledFailedOrder(ctx context.Context, order *ent.PaymentOrd
 		}
 	}
 
-	updatedCount, err := storage.Client.PaymentOrder.
+	_, err := storage.Client.PaymentOrder.
 		Update().
 		Where(
 			paymentorder.IDEQ(order.ID),
 			paymentorder.Or(
-				paymentorder.StatusEQ(paymentorder.StatusFulfilling),
 				paymentorder.StatusEQ(paymentorder.StatusFulfilled),
-				paymentorder.StatusEQ(paymentorder.StatusPending),
-				paymentorder.StatusEQ(paymentorder.StatusCancelled),
 			),
 		).
 		ClearProvider().
@@ -65,9 +62,6 @@ func cleanupStuckFulfilledFailedOrder(ctx context.Context, order *ent.PaymentOrd
 			"OrderID": order.ID.String(),
 		}).Errorf("cleanupStuckFulfilledFailedOrder: failed to update order")
 		return
-	}
-	if updatedCount > 0 {
-		logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Infof("cleanupStuckFulfilledFailedOrder: cleared provider and set Pending")
 	}
 }
 

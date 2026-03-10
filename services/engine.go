@@ -945,6 +945,10 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 	// Try RPC first
 	events, rpcErr := s.GetContractEventsRPC(ctx, network.RPCEndpoint, contractAddress, fromBlock, toBlock, topics, txHash)
 	if rpcErr == nil {
+		// RPC succeeded (receipt fetched); return result even if no matching events (nil/empty)
+		if events == nil {
+			events = []interface{}{}
+		}
 		return events, nil
 	}
 
@@ -952,6 +956,9 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 	if network.ChainID != 56 && network.ChainID != 1135 {
 		events, thirdwebErr := s.GetContractEvents(ctx, network.ChainID, contractAddress, eventPayload)
 		if thirdwebErr == nil {
+			if events == nil {
+				events = []interface{}{}
+			}
 			return events, nil
 		}
 		logger.WithFields(logger.Fields{
@@ -961,10 +968,10 @@ func (s *EngineService) GetContractEventsWithFallback(ctx context.Context, netwo
 			"ThirdWebError": thirdwebErr.Error(),
 			"FallbackToRPC": false,
 		}).Errorf("Both RPC and ThirdWeb failed")
-		return nil, fmt.Errorf("both RPC and ThirdWeb failed - RPC: %w, ThirdWeb: %w", rpcErr, thirdwebErr)
+		return nil, fmt.Errorf("both RPC and ThirdWeb failed - RPC: %v, ThirdWeb: %v", rpcErr, thirdwebErr)
 	}
 
-	return nil, fmt.Errorf("both RPC and ThirdWeb failed - RPC: %w", rpcErr)
+	return nil, fmt.Errorf("both RPC and ThirdWeb failed - RPC: %v", rpcErr)
 }
 
 // TransferToken transfers ERC-20 tokens using Thirdweb Engine API
