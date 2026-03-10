@@ -11,6 +11,30 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// Public API: NativeService has only SendTransaction(ctx, orderIDPrefix, network, to, data, authList).
+// Callers (order/evm.go, tasks/refunds.go) build payloads and pass nil for authList when not using EIP-7702 batch.
+
+func TestNewNativeService_ReturnsNonNil(t *testing.T) {
+	svc := NewNativeService()
+	if svc == nil {
+		t.Fatal("NewNativeService() returned nil")
+	}
+	if svc.nonceManager == nil {
+		t.Error("NewNativeService() has nil nonceManager")
+	}
+}
+
+func TestNewNativeServiceWithNonceManager_ReturnsServiceWithGivenManager(t *testing.T) {
+	nm := NewNonceManager()
+	svc := NewNativeServiceWithNonceManager(nm)
+	if svc == nil {
+		t.Fatal("NewNativeServiceWithNonceManager returned nil")
+	}
+	if svc.nonceManager != nm {
+		t.Error("service should use the provided NonceManager")
+	}
+}
+
 func TestAcquireNonce_Sequential(t *testing.T) {
 	nm := NewNonceManager()
 	addr := common.HexToAddress("0x1234567890abcdef1234567890abcdef12345678")

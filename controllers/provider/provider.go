@@ -29,7 +29,6 @@ import (
 	"github.com/paycrest/aggregator/types"
 	u "github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
-	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"

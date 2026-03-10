@@ -415,8 +415,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
 		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
-		mode := string(token.Edges.Network.WalletService)
-		address, salt, err := ctrl.receiveAddressService.CreateEVMAddress(reqCtx, mode, uniqueLabel)
+		address, salt, err := ctrl.receiveAddressService.CreateEVMAddress(reqCtx, token.Edges.Network.WalletService, uniqueLabel)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -431,7 +430,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddress = address
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
-		if mode == "engine" {
+		if token.Edges.Network.WalletService == network.WalletServiceEngine {
 			createTransferWebhook = true
 		}
 	}
@@ -1055,8 +1054,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
 		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
-		mode := string(token.Edges.Network.WalletService)
-		address, salt, err := ctrl.receiveAddressService.CreateEVMAddress(reqCtx, mode, uniqueLabel)
+		address, salt, err := ctrl.receiveAddressService.CreateEVMAddress(reqCtx, token.Edges.Network.WalletService, uniqueLabel)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -1071,7 +1069,7 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 		receiveAddress = address
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
-		if mode == "engine" {
+		if token.Edges.Network.WalletService == network.WalletServiceEngine {
 			createTransferWebhook = true
 		}
 	}
@@ -1186,9 +1184,8 @@ func (ctrl *SenderController) InitiatePaymentOrderV2(ctx *gin.Context) {
 				Save(ctx)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"error":   err,
-					"orderID": paymentOrder.ID,
-				}).Errorf("Failed to save payment webhook record")
+					"error": err,
+				}).Errorf("Failed to save payment webhook record: %s", paymentOrder.ID.String())
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 				_ = tx.Rollback()
 				return

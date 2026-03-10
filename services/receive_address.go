@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/services/starknet"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	tronWallet "github.com/paycrest/tron-wallet"
@@ -29,9 +30,9 @@ func NewReceiveAddressService() *ReceiveAddressService {
 // CreateEVMAddress returns (address, saltOrNil, error).
 // engine: uses EngineService.CreateServerWallet; no salt.
 // native: generates EOA locally, encrypts key as salt.
-func (s *ReceiveAddressService) CreateEVMAddress(ctx context.Context, mode string, label string) (string, []byte, error) {
-	switch mode {
-	case "engine":
+func (s *ReceiveAddressService) CreateEVMAddress(ctx context.Context, walletService network.WalletService, label string) (string, []byte, error) {
+	switch walletService {
+	case network.WalletServiceEngine:
 		if s.engineService == nil {
 			return "", nil, fmt.Errorf("engine service required for engine mode")
 		}
@@ -40,7 +41,7 @@ func (s *ReceiveAddressService) CreateEVMAddress(ctx context.Context, mode strin
 			return "", nil, err
 		}
 		return address, nil, nil
-	case "native":
+	case network.WalletServiceNative:
 		privateKey, err := crypto.GenerateKey()
 		if err != nil {
 			return "", nil, fmt.Errorf("failed to generate EOA key: %w", err)
@@ -53,7 +54,7 @@ func (s *ReceiveAddressService) CreateEVMAddress(ctx context.Context, mode strin
 		}
 		return address.Hex(), salt, nil
 	default:
-		return "", nil, fmt.Errorf("unsupported wallet_service: %s", mode)
+		return "", nil, fmt.Errorf("unsupported wallet_service: %s", walletService)
 	}
 }
 

@@ -8,14 +8,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	coretypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/paycrest/aggregator/ent"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/common"
+	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/storage"
 	blockchainUtils "github.com/paycrest/aggregator/utils/blockchain"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -108,8 +114,10 @@ func ProcessExpiredOrdersRefunds() error {
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":   err.Error(),
-					"OrderID": order.ID.String(),
-				}).Errorf("Failed to check token balance")
+					"TokenSymbol": order.Edges.Token.Symbol,
+					"ReceiveAddress": order.ReceiveAddress,
+					"ReturnAddress": order.ReturnAddress,
+				}).Errorf("Failed to check token balance: %s", order.ID.String())
 				return
 			}
 			if balance.Cmp(big.NewInt(0)) == 0 {
@@ -122,14 +130,12 @@ func ProcessExpiredOrdersRefunds() error {
 			case networkent.WalletServiceEngine:
 				refundErr = refundExpiredOrderForSmartWallet(ctx, order, network.ChainID, balance, tokenContract, engineService)
 			case networkent.WalletServiceNative:
-				_, refundErr = nativeService.RefundExpiredOrder(ctx, map[string]interface{}{
-					"orderIDPrefix": orderIDPrefix,
-					"order":         order,
-					"network":       network,
-					"tokenContract": tokenContract,
-					"returnAddress": order.ReturnAddress,
-					"balance":       balance,
-				})
+				userAddr, batchData, authList, err := buildRefundExpiredBatch7702(ctx, orderIDPrefix, order, network, tokenContract, order.ReturnAddress, balance)
+				if err != nil {
+					refundErr = err
+				} else {
+					_, refundErr = nativeService.SendTransaction(ctx, orderIDPrefix, network, userAddr, batchData, authList)
+				}
 			default:
 				logger.WithFields(logger.Fields{
 					"OrderID":       order.ID.String(),
@@ -155,6 +161,79 @@ func ProcessExpiredOrdersRefunds() error {
 
 	wg.Wait()
 	return nil
+}
+
+// buildRefundExpiredBatch7702 builds the EIP-7702 batch (single transfer call) for native refund-expired. Returns (userAddr, batchData, authList).
+func buildRefundExpiredBatch7702(ctx context.Context, orderIDPrefix string, order *ent.PaymentOrder, network *ent.Network, tokenContract, returnAddress string, balance *big.Int) (ethcommon.Address, []byte, []coretypes.SetCodeAuthorization, error) {
+	if len(order.ReceiveAddressSalt) == 0 {
+		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired: receive address salt is empty", orderIDPrefix)
+	}
+	saltDecrypted, err := cryptoUtils.DecryptPlain(order.ReceiveAddressSalt)
+	if err != nil {
+		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.decryptSalt: %w", orderIDPrefix, err)
+	}
+	userKey, err := crypto.HexToECDSA(string(saltDecrypted))
+	if err != nil {
+		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.parseKey: %w", orderIDPrefix, err)
+	}
+	userAddr := crypto.PubkeyToAddress(userKey.PublicKey)
+
+	client, err := ethclient.Dial(network.RPCEndpoint)
+	if err != nil {
+		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.dialRPC: %w", orderIDPrefix, err)
+	}
+	defer client.Close()
+
+	chainID := big.NewInt(network.ChainID)
+	delegationContract := ethcommon.HexToAddress(network.DelegationContractAddress)
+	alreadyDelegated, err := services.CheckDelegation(ctx, client, userAddr, delegationContract)
+	if err != nil {
+		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.checkDelegation: %w", orderIDPrefix, err)
+	}
+
+	var authList []coretypes.SetCodeAuthorization
+	if !alreadyDelegated {
+		authNonce, err := client.PendingNonceAt(ctx, userAddr)
+		if err != nil {
+			return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.pendingNonce: %w", orderIDPrefix, err)
+		}
+		auth, err := services.SignAuthorization7702(userKey, chainID, delegationContract, authNonce)
+		if err != nil {
+			return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.signAuth: %w", orderIDPrefix, err)
+		}
+		authList = []coretypes.SetCodeAuthorization{auth}
+	}
+
+	erc20ABI, err := abi.JSON(strings.NewReader(contracts.ERC20TokenMetaData.ABI))
+	if err != nil {
+		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.parseABI: %w", orderIDPrefix, err)
+	}
+	transferData, err := erc20ABI.Pack("transfer", ethcommon.HexToAddress(returnAddress), balance)
+	if err != nil {
+		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.packTransfer: %w", orderIDPrefix, err)
+	}
+
+	tokenAddr := ethcommon.HexToAddress(tokenContract)
+	calls := []services.Call7702{
+		{To: tokenAddr, Value: big.NewInt(0), Data: transferData},
+	}
+
+	var batchNonce uint64
+	if alreadyDelegated {
+		batchNonce, err = services.ReadBatchNonce(ctx, client, userAddr)
+		if err != nil {
+			return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.readBatchNonce: %w", orderIDPrefix, err)
+		}
+	}
+	batchSig, err := services.SignBatch7702(userKey, batchNonce, calls)
+	if err != nil {
+		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.signBatch: %w", orderIDPrefix, err)
+	}
+	batchData, err := services.PackExecute(calls, batchSig)
+	if err != nil {
+		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.packExecute: %w", orderIDPrefix, err)
+	}
+	return userAddr, batchData, authList, nil
 }
 
 // refundExpiredOrderForSmartWallet sends ERC-20 transfer from smart wallet to return address via Thirdweb Engine (fire-and-forget).
