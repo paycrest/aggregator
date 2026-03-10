@@ -21,6 +21,7 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
+	"github.com/paycrest/aggregator/utils/logger"
 )
 
 // --- Public API ---
@@ -419,25 +420,16 @@ func (nm *NonceManager) acquireNonce(ctx context.Context, client *ethclient.Clie
 	key := nonceKey{chainID, addr}
 
 	nm.mu.Lock()
+	defer nm.mu.Unlock()
 	if existing, ok := nm.nonces[key]; ok {
-		nonce := existing
 		nm.nonces[key]++
-		nm.mu.Unlock()
-		return nonce, nil
+		return existing, nil
 	}
-	nm.mu.Unlock()
-
+	// Key missing: fetch under lock so a concurrent resetNonce cannot delete the key
+	// between our check and set, which would allow two goroutines to return the same nonce.
 	pendingNonce, err := client.PendingNonceAt(ctx, addr)
 	if err != nil {
 		return 0, fmt.Errorf("failed to fetch pending nonce: %w", err)
-	}
-
-	nm.mu.Lock()
-	defer nm.mu.Unlock()
-	if existing, ok := nm.nonces[key]; ok {
-		// Another goroutine set it while we were fetching; use existing.
-		nm.nonces[key] = existing + 1
-		return existing, nil
 	}
 	nm.nonces[key] = pendingNonce + 1
 	return pendingNonce, nil
@@ -473,7 +465,17 @@ func (nm *NonceManager) submitWithNonce(
 			return nil
 		}
 
+		// NOTE:If 'nonce too low' errors are frequent, consider an alternative or a hybrid approach:
+		// Serialize per nonce: We could serialize so that order N+1 only starts after
+		// order N’s tx is confirmed (or known failed in a way that doesn’t consume the nonce).
+		// That would avoid “nonce too low” from parallel submissions but would reduce throughput
+		// and is a bigger change.
 		if isNonceTooLow(err) {
+			logger.WithFields(logger.Fields{
+				"chainID": chainID,
+				"address": addr.Hex(),
+				"nonce":   nonce,
+			}).Errorf("nonce too low, resetting nonce")
 			nm.resetNonce(chainID, addr)
 			continue
 		}
