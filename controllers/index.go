@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -223,6 +224,12 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	// Validate rate using extracted logic
 	rateResult, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
 	if err != nil {
+		var errStuck *types.ErrNoProviderDueToStuck
+		if errors.As(err, &errStuck) && errStuck.CurrencyCode != "" {
+			msg := fmt.Sprintf("There's a banking/mobile network issue affecting %s providers", errStuck.CurrencyCode)
+			u.APIResponse(ctx, http.StatusServiceUnavailable, "error", msg, nil)
+			return
+		}
 		// Return 404 if no provider found, else 500 for other errors
 		if strings.Contains(err.Error(), "no provider available") {
 			u.APIResponse(ctx, http.StatusNotFound, "error", err.Error(), nil)
@@ -2504,11 +2511,19 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 				First(reqCtx)
 
 			if err == nil && paymentOrder != nil {
-				logger.WithFields(logger.Fields{
-					"NetworkParam":   networkParam,
-					"Address":        address,
-					"PaymentOrderID": paymentOrder.ID,
-				}).Infof("Found receive address in database, starting transfer event indexing")
+				if paymentOrder.Status == paymentorder.StatusDeposited && paymentOrder.GatewayID == "" {
+					_, clearErr := storage.Client.PaymentOrder.
+						Update().
+						Where(paymentorder.IDEQ(paymentOrder.ID)).
+						ClearMessageHash().
+						Save(ctx)
+					if clearErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":          fmt.Sprintf("%v", clearErr),
+							"PaymentOrderID": paymentOrder.ID,
+						}).Errorf("Failed to clear message hash for retry")
+					}
+				}
 
 				// This is a receive address, index transfer events
 				wg.Add(1)

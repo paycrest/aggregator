@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -23,6 +24,16 @@ import (
 	"github.com/paycrest/aggregator/ent/user"
 	"github.com/shopspring/decimal"
 )
+
+// ErrNoProviderDueToStuck is returned when no provider can be assigned for a currency because all candidates are at or over the stuck fulfillment threshold.
+// API handlers should return 503 with message: "There's a banking/mobile network issue affecting {CurrencyCode} providers".
+type ErrNoProviderDueToStuck struct {
+	CurrencyCode string
+}
+
+func (e *ErrNoProviderDueToStuck) Error() string {
+	return fmt.Sprintf("no provider available for currency %s: all at or over stuck fulfillment threshold", e.CurrencyCode)
+}
 
 // RPCClient is an interface for interacting with the blockchain.
 type RPCClient interface {
