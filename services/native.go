@@ -184,7 +184,11 @@ func SignBatch7702(privateKey *ecdsa.PrivateKey, nonce uint64, calls []Call7702)
 	for _, c := range calls {
 		packed = append(packed, c.To.Bytes()...)
 		valBytes := make([]byte, 32)
-		c.Value.FillBytes(valBytes)
+		val := c.Value
+		if val == nil {
+			val = big.NewInt(0)
+		}
+		val.FillBytes(valBytes)
 		packed = append(packed, valBytes...)
 		packed = append(packed, c.Data...)
 	}
@@ -455,15 +459,17 @@ func (nm *NonceManager) releaseNonce(chainID int64, addr common.Address, nonce u
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 	key := nonceKey{chainID, addr}
+	current, ok := nm.nonces[key]
+	if !ok {
+		return
+	}
 	// If the stored next-nonce is exactly nonce+1, no other goroutine has acquired
 	// a higher nonce yet, so we can safely roll back without causing duplicates.
-	if current, ok := nm.nonces[key]; ok && current == nonce+1 {
+	if current == nonce+1 {
 		nm.nonces[key] = nonce
-	}
-	// Otherwise another goroutine already acquired nonce+1 or higher.
-	// We can't roll back without risking a duplicate, so reset to force a refetch.
-	// This is slightly aggressive but safe: the next acquirer will call PendingNonceAt.
-	if current, ok := nm.nonces[key]; ok && current > nonce+1 {
+	} else if current > nonce+1 {
+		// Another goroutine already acquired nonce+1 or higher.
+		// We can't roll back without risking a duplicate, so reset to force a refetch.
 		delete(nm.nonces, key)
 	}
 }
