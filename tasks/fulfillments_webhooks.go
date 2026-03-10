@@ -21,6 +21,31 @@ import (
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
+const txStatusFiveMinError = "Failed to get transaction status after 5 minutes"
+const txStatusRetryWindow = 5 * time.Minute
+const txStatusRetryCutoff = 24 * time.Hour
+
+// txStatusBackoffDelaysMinutes are cumulative minutes from UpdatedAt for each retry slot (exponential: 10, +20, +40, +80, +160, +320).
+var txStatusBackoffDelaysMinutes = []float64{10, 30, 70, 150, 310, 630}
+
+func shouldRetryTxStatusFiveMinFailure(fulfillment *ent.PaymentOrderFulfillment) bool {
+	if fulfillment.ValidationError != txStatusFiveMinError || fulfillment.ValidationStatus != paymentorderfulfillment.ValidationStatusFailed {
+		return false
+	}
+	elapsed := time.Since(fulfillment.UpdatedAt)
+	if elapsed < 10*time.Minute || elapsed >= txStatusRetryCutoff {
+		return false
+	}
+	elapsedMin := elapsed.Minutes()
+	windowMin := txStatusRetryWindow.Minutes()
+	for _, d := range txStatusBackoffDelaysMinutes {
+		if elapsedMin >= d && elapsedMin < d+windowMin {
+			return true
+		}
+	}
+	return false
+}
+
 // SyncPaymentOrderFulfillments syncs payment order fulfillments
 // Only processes regular orders
 // TODO: refactor this to process OTC orders as well when OTC fulfillment validation is automated
@@ -299,15 +324,19 @@ func SyncPaymentOrderFulfillments() {
 
 					data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 					if err != nil {
-						if err.Error() == "400" && time.Since(fulfillment.CreatedAt) > 5*time.Minute {
-							logger.WithFields(logger.Fields{
-								"OrderID": order.ID.String(),
-							}).Errorf("Failed to get transaction status after 5 minutes: %s", order.ID.String())
-
+						if strings.Contains(err.Error(), "400") && time.Since(fulfillment.CreatedAt) > 5*time.Minute {
+              logger.WithFields(logger.Fields{
+                "Error":           fmt.Sprintf("%v", err),
+                "Data":            data,
+                "ProviderID":      order.Edges.Provider.ID,
+                "PayloadCurrency": payload["currency"],
+                "PayloadPsp":      payload["psp"],
+                "PayloadTxId":     payload["txId"],
+              }).Errorf("%s: %s", txStatusFiveMinError, order.ID.String())
 							_, updateErr := storage.Client.PaymentOrderFulfillment.
 								UpdateOneID(fulfillment.ID).
 								SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
-								SetValidationError("Failed to get transaction status after 5 minutes").
+								SetValidationError(txStatusFiveMinError).
 								Save(ctx)
 							if updateErr != nil {
 								logger.WithFields(logger.Fields{
@@ -316,28 +345,36 @@ func SyncPaymentOrderFulfillments() {
 									"FulfillmentID": fulfillment.ID,
 								}).Errorf("Failed to mark fulfillment as failed after 5 minutes")
 							}
-						} else {
-							logger.WithFields(logger.Fields{
-								"Error":           fmt.Sprintf("%v", err),
-								"OrderID":         order.ID.String(),
-								"ProviderID":      order.Edges.Provider.ID,
-								"PayloadOrderId":  payload["orderId"],
-								"PayloadCurrency": payload["currency"],
-								"PayloadPsp":      payload["psp"],
-								"PayloadTxId":     payload["txId"],
-							}).Errorf("Failed to get tx_status from provider for pending fulfillment")
+							continue
 						}
+            
+            logger.WithFields(logger.Fields{
+							"Error":           fmt.Sprintf("%v", err),
+							"ProviderID":      order.Edges.Provider.ID,
+							"PayloadOrderId":  payload["orderId"],
+							"PayloadCurrency": payload["currency"],
+							"PayloadPsp":      payload["psp"],
+							"PayloadTxId":     payload["txId"],
+            }).Errorf("Failed to parse JSON response after getting trx status from provider: %s", order.ID.String())
 						continue
 					}
 
-					status := data["data"].(map[string]interface{})["status"].(string)
+					dataMap, ok := data["data"].(map[string]interface{})
+					if !ok {
+						continue
+					}
+					status, ok := dataMap["status"].(string)
+					if !ok {
+						continue
+					}
 
 					if status == "failed" {
+						errMsg, _ := dataMap["error"].(string)
 						_, err = storage.Client.PaymentOrderFulfillment.
 							UpdateOneID(fulfillment.ID).
 							SetTxID(fulfillment.TxID).
 							SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
-							SetValidationError(data["data"].(map[string]interface{})["error"].(string)).
+							SetValidationError(errMsg).
 							Save(ctx)
 						if err != nil {
 							continue
@@ -355,6 +392,7 @@ func SyncPaymentOrderFulfillments() {
 							UpdateOneID(fulfillment.ID).
 							SetTxID(fulfillment.TxID).
 							SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
+							SetValidationError("").
 							Save(ctx)
 						if err != nil {
 							continue
@@ -404,11 +442,69 @@ func SyncPaymentOrderFulfillments() {
 						}
 					}
 
+				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed &&
+					shouldRetryTxStatusFiveMinFailure(fulfillment) {
+					payload := map[string]interface{}{
+						"orderId":  order.ID.String(),
+						"currency": order.Edges.ProvisionBucket.Edges.Currency.Code,
+						"psp":      fulfillment.Psp,
+						"txId":     fulfillment.TxID,
+					}
+					data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
+					if err != nil {
+						continue
+					}
+					dataMap, ok := data["data"].(map[string]interface{})
+					if !ok {
+						continue
+					}
+					status, ok := dataMap["status"].(string)
+					if !ok {
+						continue
+					}
+					if status == "failed" {
+						errMsg, _ := dataMap["error"].(string)
+						if errMsg != fulfillment.ValidationError {
+							_, _ = storage.Client.PaymentOrderFulfillment.
+								UpdateOneID(fulfillment.ID).
+								SetTxID(fulfillment.TxID).
+								SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+								SetValidationError(errMsg).
+								Save(ctx)
+						}
+						_, _ = order.Update().SetStatus(paymentorder.StatusFulfilled).Save(ctx)
+					} else if status == "success" {
+						_, err = storage.Client.PaymentOrderFulfillment.
+							UpdateOneID(fulfillment.ID).
+							SetTxID(fulfillment.TxID).
+							SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
+							SetValidationError("").
+							Save(ctx)
+						if err != nil {
+							continue
+						}
+						if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+							transactionLog, err := storage.Client.TransactionLog.
+								Create().
+								SetStatus(transactionlog.StatusOrderValidated).
+								SetNetwork(order.Edges.Token.Edges.Network.Identifier).
+								Save(ctx)
+							if err == nil && transactionLog != nil {
+								_, _ = storage.Client.PaymentOrder.
+									UpdateOneID(order.ID).
+									SetStatus(paymentorder.StatusValidated).
+									AddTransactions(transactionLog).
+									Save(ctx)
+								_ = utils.SendPaymentOrderWebhook(ctx, order)
+							}
+						}
+					}
+					continue
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed {
 					if canReassignCancelledOrder(order) {
 						reassignCancelledOrder(ctx, order, fulfillment)
 					} else if order.CreatedAt.Before(time.Now().Add(-orderConf.OrderRefundTimeout - 10*time.Second)) &&
-						fulfillment.ValidationError != "Failed to get transaction status after 5 minutes" {
+						fulfillment.ValidationError != txStatusFiveMinError {
 						cleanupStuckFulfilledFailedOrder(ctx, order)
 					}
 					continue
