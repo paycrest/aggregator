@@ -404,15 +404,20 @@ type nonceKey struct {
 }
 
 // NonceManager manages pending nonces per (chainID, address) for native keeper txs.
+// Per-key mutexes allow the slow PendingNonceAt RPC to block only acquirers for the same
+// key, avoiding a global stall, while still preventing the resetNonce race (only one
+// goroutine per key can be in the fetch-and-set path).
 type NonceManager struct {
 	mu     sync.Mutex
 	nonces map[nonceKey]uint64
+	keyMu  map[nonceKey]*sync.Mutex
 }
 
 // NewNonceManager creates a new NonceManager (used by NativeService).
 func NewNonceManager() *NonceManager {
 	return &NonceManager{
 		nonces: make(map[nonceKey]uint64),
+		keyMu:  make(map[nonceKey]*sync.Mutex),
 	}
 }
 
@@ -420,18 +425,29 @@ func (nm *NonceManager) acquireNonce(ctx context.Context, client *ethclient.Clie
 	key := nonceKey{chainID, addr}
 
 	nm.mu.Lock()
-	defer nm.mu.Unlock()
 	if existing, ok := nm.nonces[key]; ok {
 		nm.nonces[key]++
+		nm.mu.Unlock()
 		return existing, nil
 	}
-	// Key missing: fetch under lock so a concurrent resetNonce cannot delete the key
-	// between our check and set, which would allow two goroutines to return the same nonce.
+	// Key missing: serialize fetch per key so RPC doesn't hold global lock and resetNonce can't cause duplicate nonces.
+	if nm.keyMu[key] == nil {
+		nm.keyMu[key] = &sync.Mutex{}
+	}
+	keyLock := nm.keyMu[key]
+	keyLock.Lock()
+	nm.mu.Unlock()
+
 	pendingNonce, err := client.PendingNonceAt(ctx, addr)
 	if err != nil {
+		keyLock.Unlock()
 		return 0, fmt.Errorf("failed to fetch pending nonce: %w", err)
 	}
+
+	nm.mu.Lock()
 	nm.nonces[key] = pendingNonce + 1
+	nm.mu.Unlock()
+	keyLock.Unlock()
 	return pendingNonce, nil
 }
 
