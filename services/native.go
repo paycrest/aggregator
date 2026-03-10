@@ -74,6 +74,9 @@ func (s *NativeService) SendTransaction(ctx context.Context, orderIDPrefix strin
 	if err != nil {
 		return nil, err
 	}
+	if receipt == nil {
+		return nil, fmt.Errorf("%s - SendTransaction: no receipt after successful submit", orderIDPrefix)
+	}
 	if receipt.Status == 0 {
 		return nil, fmt.Errorf("%s - SendTransaction: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
 	}
@@ -116,6 +119,9 @@ func (s *NativeService) SendEIP7702Batch(ctx context.Context, orderIDPrefix, lab
 	})
 	if err != nil {
 		return nil, err
+	}
+	if receipt == nil {
+		return nil, fmt.Errorf("%s - %s: no receipt after successful submit", orderIDPrefix, label)
 	}
 	if receipt.Status == 0 {
 		return nil, fmt.Errorf("%s - %s: tx reverted in block %s", orderIDPrefix, label, receipt.BlockNumber.String())
@@ -436,6 +442,18 @@ func (nm *NonceManager) acquireNonce(ctx context.Context, client *ethclient.Clie
 	}
 	keyLock := nm.keyMu[key]
 	keyLock.Lock()
+	nm.mu.Unlock()
+
+	// Re-check: another goroutine may have populated the key after we released nm.mu
+	// (e.g. it had keyLock before us and set it; or resetNonce ran and a prior holder re-populated).
+	// Without this, we could fetch the same pending nonce and overwrite, causing duplicate nonces.
+	nm.mu.Lock()
+	if existing, ok := nm.nonces[key]; ok {
+		nm.nonces[key]++
+		nm.mu.Unlock()
+		keyLock.Unlock()
+		return existing, nil
+	}
 	nm.mu.Unlock()
 
 	pendingNonce, err := client.PendingNonceAt(ctx, addr)
