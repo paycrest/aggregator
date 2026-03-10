@@ -405,7 +405,7 @@ func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
 		Query().
 		Where(
 			verificationtoken.TokenEQ(payload.Token),
-			verificationtoken.HasOwnerWith(userEnt.EmailEQ(payload.Email)),
+			verificationtoken.HasOwnerWith(userEnt.EmailEqualFold(payload.Email)),
 		).
 		WithOwner().
 		Only(reqCtx)
@@ -463,8 +463,8 @@ func (ctrl *AuthController) ResendVerificationToken(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch User account.
-	user, userErr := db.Client.User.Query().Where(userEnt.EmailEQ(payload.Email)).Only(reqCtx)
+	// Fetch User account (case-insensitive email lookup).
+	user, userErr := db.Client.User.Query().Where(userEnt.EmailEqualFold(payload.Email)).Only(reqCtx)
 	if userErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid credential", userErr.Error())
 		return
@@ -557,10 +557,10 @@ func (ctrl *AuthController) ResetPasswordToken(ctx *gin.Context) {
 		return
 	}
 
-	// Get user account.
+	// Get user account (case-insensitive email lookup).
 	user, userErr := db.Client.User.
 		Query().
-		Where(userEnt.EmailEQ(payload.Email)).
+		Where(userEnt.EmailEqualFold(payload.Email)).
 		Only(reqCtx)
 	if userErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Email does not belong to any user", nil)
