@@ -1753,8 +1753,7 @@ func (c *PaymentOrderClient) QueryTransactions(_m *PaymentOrder) *TransactionLog
 
 // Hooks returns the client hooks.
 func (c *PaymentOrderClient) Hooks() []Hook {
-	hooks := c.hooks.PaymentOrder
-	return append(hooks[:len(hooks):len(hooks)], paymentorder.Hooks[:]...)
+	return c.hooks.PaymentOrder
 }
 
 // Interceptors returns the client interceptors.

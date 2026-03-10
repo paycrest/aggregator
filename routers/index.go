@@ -133,6 +133,7 @@ func senderRoutes(route *gin.Engine) {
 	v1 := route.Group("/v1/sender/")
 	v1.Use(middleware.OrdersReadinessMiddleware())
 	v1.Use(middleware.DynamicAuthMiddleware)
+	v1.Use(middleware.DomainWhitelistMiddleware)
 	v1.Use(middleware.OnlySenderMiddleware)
 
 	v1.POST("orders", senderCtrl.InitiatePaymentOrder)
@@ -144,6 +145,7 @@ func senderRoutes(route *gin.Engine) {
 	v2 := route.Group("/v2/sender/")
 	v2.Use(middleware.OrdersReadinessMiddleware())
 	v2.Use(middleware.DynamicAuthMiddleware)
+	v2.Use(middleware.DomainWhitelistMiddleware)
 	v2.Use(middleware.OnlySenderMiddleware)
 
 	v2.POST("orders", senderCtrl.InitiatePaymentOrderV2)
