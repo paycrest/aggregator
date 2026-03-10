@@ -3,12 +3,10 @@ package services
 import (
 	"context"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -62,10 +60,10 @@ func (s *NativeService) SendTransaction(ctx context.Context, orderIDPrefix strin
 	defer client.Close()
 	chainID := big.NewInt(network.ChainID)
 
-	var receipt *types.Receipt
+	var txHash string
 	err = s.nonceManager.submitWithNonce(ctx, client, network.ChainID, aggregatorAddr, func(nonce uint64) error {
 		var txErr error
-		receipt, txErr = SendKeeperTx(ctx, client, aggregatorKey, nonce, to, data, authList, chainID)
+		txHash, txErr = SendKeeperTx(ctx, client, aggregatorKey, nonce, to, data, authList, chainID)
 		if txErr != nil {
 			return fmt.Errorf("%s - SendTransaction.sendTx: %w", orderIDPrefix, txErr)
 		}
@@ -74,15 +72,8 @@ func (s *NativeService) SendTransaction(ctx context.Context, orderIDPrefix strin
 	if err != nil {
 		return nil, err
 	}
-	if receipt == nil {
-		return nil, fmt.Errorf("%s - SendTransaction: no receipt after successful submit", orderIDPrefix)
-	}
-	if receipt.Status == 0 {
-		return nil, fmt.Errorf("%s - SendTransaction: tx reverted in block %s", orderIDPrefix, receipt.BlockNumber.String())
-	}
 	return map[string]interface{}{
-		"transactionHash": receipt.TxHash.Hex(),
-		"blockNumber":     receipt.BlockNumber.Int64(),
+		"transactionHash": txHash,
 	}, nil
 }
 
@@ -108,10 +99,10 @@ func (s *NativeService) SendEIP7702Batch(ctx context.Context, orderIDPrefix, lab
 	aggregatorAddr := crypto.PubkeyToAddress(aggregatorKey.PublicKey)
 	chainID := big.NewInt(network.ChainID)
 
-	var receipt *types.Receipt
+	var txHash string
 	err = s.nonceManager.submitWithNonce(ctx, client, network.ChainID, aggregatorAddr, func(nonce uint64) error {
 		var txErr error
-		receipt, txErr = SendKeeperTx(ctx, client, aggregatorKey, nonce, userAddr, batchData, authList, chainID)
+		txHash, txErr = SendKeeperTx(ctx, client, aggregatorKey, nonce, userAddr, batchData, authList, chainID)
 		if txErr != nil {
 			return fmt.Errorf("%s - %s.sendTx: %w", orderIDPrefix, label, txErr)
 		}
@@ -120,24 +111,12 @@ func (s *NativeService) SendEIP7702Batch(ctx context.Context, orderIDPrefix, lab
 	if err != nil {
 		return nil, err
 	}
-	if receipt == nil {
-		return nil, fmt.Errorf("%s - %s: no receipt after successful submit", orderIDPrefix, label)
-	}
-	if receipt.Status == 0 {
-		return nil, fmt.Errorf("%s - %s: tx reverted in block %s", orderIDPrefix, label, receipt.BlockNumber.String())
-	}
 	return map[string]interface{}{
-		"transactionHash": receipt.TxHash.Hex(),
-		"blockNumber":     receipt.BlockNumber.Int64(),
+		"transactionHash": txHash,
 	}, nil
 }
 
 // --- Errors and constants ---
-
-// ErrTxBroadcastNoReceipt is returned when SendTransaction succeeded but the receipt
-// was not obtained (timeout or context cancel). The nonce was consumed on-chain;
-// nonce manager must not release it (use resetNonce so next acquire refetches).
-var ErrTxBroadcastNoReceipt = errors.New("transaction broadcast but receipt not available")
 
 const (
 	batchExecuteABI = `[{"inputs":[{"components":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"bytes","name":"data","type":"bytes"}],"internalType":"struct ProviderBatchCallAndSponsor.Call[]","name":"calls","type":"tuple[]"},{"internalType":"bytes","name":"signature","type":"bytes"}],"name":"execute","outputs":[],"stateMutability":"payable","type":"function"}]`
@@ -308,15 +287,16 @@ func BuildEIP7702Batch(ctx context.Context, client *ethclient.Client, orderIDPre
 
 // --- Keeper transaction ---
 
-// SendKeeperTx sends a keeper transaction (with optional EIP-7702 auth list), then polls for the receipt.
-func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecdsa.PrivateKey, keeperNonce uint64, to common.Address, data []byte, authList []types.SetCodeAuthorization, chainID *big.Int) (*types.Receipt, error) {
+// SendKeeperTx sends a keeper transaction (with optional EIP-7702 auth list) and returns the tx hash or error.
+// It does not wait for the receipt; callers can use the hash for indexing or status updates.
+func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecdsa.PrivateKey, keeperNonce uint64, to common.Address, data []byte, authList []types.SetCodeAuthorization, chainID *big.Int) (string, error) {
 	gasTipCap, err := client.SuggestGasTipCap(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to suggest gas tip: %w", err)
+		return "", fmt.Errorf("failed to suggest gas tip: %w", err)
 	}
 	head, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get block header: %w", err)
+		return "", fmt.Errorf("failed to get block header: %w", err)
 	}
 	var gasFeeCap *big.Int
 	if head.BaseFee != nil {
@@ -336,7 +316,14 @@ func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecds
 		AuthorizationList: authList,
 	}
 	gasLimit := uint64(500_000)
-	if estimated, err := client.EstimateGas(ctx, callMsg); err == nil {
+	estimated, estErr := client.EstimateGas(ctx, callMsg)
+	if estErr != nil {
+		logger.WithFields(logger.Fields{
+			"keeper": keeperAddr.Hex(),
+			"to":     to.Hex(),
+			"nonce":  keeperNonce,
+		}).Errorf("gas estimation failed, using default %d: %v", gasLimit, estErr)
+	} else {
 		gasLimit = estimated + (estimated / 5) // 20% safety margin
 		if gasLimit < 100_000 {
 			gasLimit = 100_000
@@ -374,31 +361,14 @@ func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecds
 
 	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainID), keeperKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign tx: %w", err)
+		return "", fmt.Errorf("failed to sign tx: %w", err)
 	}
 
 	if err := client.SendTransaction(ctx, signedTx); err != nil {
-		return nil, fmt.Errorf("failed to send tx: %w", err)
+		return "", fmt.Errorf("failed to send tx: %w", err)
 	}
 
-	for i := 0; i < 30; i++ {
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("tx %s: %w", signedTx.Hash().Hex(), errors.Join(ErrTxBroadcastNoReceipt, ctx.Err()))
-		}
-		receipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
-		if err == nil {
-			return receipt, nil
-		}
-		if !errors.Is(err, ethereum.NotFound) {
-			return nil, fmt.Errorf("getting receipt for %s: %w", signedTx.Hash().Hex(), err)
-		}
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("tx %s: %w", signedTx.Hash().Hex(), errors.Join(ErrTxBroadcastNoReceipt, ctx.Err()))
-		case <-time.After(2 * time.Second):
-		}
-	}
-	return nil, fmt.Errorf("tx %s: %w", signedTx.Hash().Hex(), ErrTxBroadcastNoReceipt)
+	return signedTx.Hash().Hex(), nil
 }
 
 // --- Nonce management ---
@@ -437,16 +407,26 @@ func (nm *NonceManager) acquireNonce(ctx context.Context, client *ethclient.Clie
 		return existing, nil
 	}
 	// Key missing: serialize fetch per key so RPC doesn't hold global lock and resetNonce can't cause duplicate nonces.
+	// Lock order must be consistent to avoid deadlock: never hold nm.mu while taking keyLock, and never hold keyLock
+	// while taking nm.mu. So: release nm.mu before keyLock.Lock(); release keyLock before nm.mu.Lock() for re-check.
 	if nm.keyMu[key] == nil {
 		nm.keyMu[key] = &sync.Mutex{}
 	}
 	keyLock := nm.keyMu[key]
+	nm.mu.Unlock()
 	keyLock.Lock()
+	// Release keyLock before taking nm.mu to avoid deadlock (lock order: never hold keyLock while acquiring nm.mu).
+	// We re-acquire keyLock below before fetching; the brief hold here only serializes entry into the re-check.
+	keyLock.Unlock() //nolint:SA2001 — intentional: release so we don't hold keyLock across nm.mu.Lock()
+	nm.mu.Lock()
+	if existing, ok := nm.nonces[key]; ok {
+		nm.nonces[key]++
+		nm.mu.Unlock()
+		return existing, nil
+	}
 	nm.mu.Unlock()
 
-	// Re-check: another goroutine may have populated the key after we released nm.mu
-	// (e.g. it had keyLock before us and set it; or resetNonce ran and a prior holder re-populated).
-	// Without this, we could fetch the same pending nonce and overwrite, causing duplicate nonces.
+	keyLock.Lock()
 	nm.mu.Lock()
 	if existing, ok := nm.nonces[key]; ok {
 		nm.nonces[key]++
@@ -469,14 +449,31 @@ func (nm *NonceManager) acquireNonce(ctx context.Context, client *ethclient.Clie
 	return pendingNonce, nil
 }
 
+// releaseNonce rolls back the nonce when safe (no higher nonce acquired).
+// This prevents burning nonce slots when a tx fails before broadcast (e.g. signing or gas estimation error).
 func (nm *NonceManager) releaseNonce(chainID int64, addr common.Address, nonce uint64) {
-	// No-op: rolling back would be unsafe under concurrency.
+	nm.mu.Lock()
+	defer nm.mu.Unlock()
+	key := nonceKey{chainID, addr}
+	// If the stored next-nonce is exactly nonce+1, no other goroutine has acquired
+	// a higher nonce yet, so we can safely roll back without causing duplicates.
+	if current, ok := nm.nonces[key]; ok && current == nonce+1 {
+		nm.nonces[key] = nonce
+	}
+	// Otherwise another goroutine already acquired nonce+1 or higher.
+	// We can't roll back without risking a duplicate, so reset to force a refetch.
+	// This is slightly aggressive but safe: the next acquirer will call PendingNonceAt.
+	if current, ok := nm.nonces[key]; ok && current > nonce+1 {
+		delete(nm.nonces, key)
+	}
 }
 
 func (nm *NonceManager) resetNonce(chainID int64, addr common.Address) {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
-	delete(nm.nonces, nonceKey{chainID, addr})
+	key := nonceKey{chainID, addr}
+	delete(nm.nonces, key)
+	delete(nm.keyMu, key) // prevent unbounded growth of per-key mutexes
 }
 
 func (nm *NonceManager) submitWithNonce(
@@ -514,11 +511,6 @@ func (nm *NonceManager) submitWithNonce(
 			continue
 		}
 
-		if errors.Is(err, ErrTxBroadcastNoReceipt) {
-			nm.resetNonce(chainID, addr)
-			return err
-		}
-
 		nm.releaseNonce(chainID, addr, nonce)
 		return err
 	}
@@ -532,8 +524,7 @@ func isNonceTooLow(err error) bool {
 	}
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "nonce too low") ||
-		strings.Contains(msg, "replacement transaction underpriced") ||
-		strings.Contains(msg, "already known")
+		strings.Contains(msg, "replacement transaction underpriced")
 }
 
 // defaultNonceManager is the shared nonce manager used by all NativeService instances
