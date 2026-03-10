@@ -67,11 +67,11 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Check if user with email already exists
+	// Check if user with email already exists (case-insensitive)
 	userTmp, _ := tx.User.
 		Query().
 		Where(
-			userEnt.EmailEQ(strings.ToLower(payload.Email)),
+			userEnt.EmailEqualFold(payload.Email),
 		).
 		Only(reqCtx)
 
@@ -305,10 +305,10 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch user by email
+	// Fetch user by email (case-insensitive)
 	user, err := db.Client.User.
 		Query().
-		Where(userEnt.EmailEQ(strings.ToLower(payload.Email))).
+		Where(userEnt.EmailEqualFold(payload.Email)).
 		Only(reqCtx)
 
 	if err != nil {
