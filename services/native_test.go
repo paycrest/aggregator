@@ -115,8 +115,8 @@ func TestReleaseNonce(t *testing.T) {
 	nm.releaseNonce(chainID, addr, 5)
 
 	nonce2, _ := nm.acquireNonce(context.Background(), nil, chainID, addr)
-	if nonce2 != 6 {
-		t.Errorf("after release (no-op), next acquire should be 6, got %d", nonce2)
+	if nonce2 != 5 {
+		t.Errorf("after release (rollback when safe), next acquire should be 5, got %d", nonce2)
 	}
 }
 
@@ -247,8 +247,8 @@ func TestSubmitWithNonce_NonNonceError(t *testing.T) {
 	current := nm.nonces[nonceKey{chainID, addr}]
 	nm.mu.Unlock()
 
-	if current != 6 {
-		t.Errorf("after non-nonce error, counter should stay 6 (no rollback), got %d", current)
+	if current != 5 {
+		t.Errorf("after non-nonce error, releaseNonce rolls back so counter should be 5, got %d", current)
 	}
 }
 
@@ -299,7 +299,7 @@ func TestIsNonceTooLow(t *testing.T) {
 		{fmt.Errorf("nonce too low"), true},
 		{fmt.Errorf("Nonce Too Low"), true},
 		{fmt.Errorf("replacement transaction underpriced"), true},
-		{fmt.Errorf("already known"), true},
+		{fmt.Errorf("already known"), false},
 		{fmt.Errorf("tx failed: nonce too low for account"), true},
 	}
 

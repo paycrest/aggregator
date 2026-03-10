@@ -471,9 +471,7 @@ func (nm *NonceManager) releaseNonce(chainID int64, addr common.Address, nonce u
 func (nm *NonceManager) resetNonce(chainID int64, addr common.Address) {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
-	key := nonceKey{chainID, addr}
-	delete(nm.nonces, key)
-	delete(nm.keyMu, key) // prevent unbounded growth of per-key mutexes
+	delete(nm.nonces, nonceKey{chainID, addr})
 }
 
 func (nm *NonceManager) submitWithNonce(
