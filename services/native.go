@@ -82,6 +82,49 @@ func (s *NativeService) SendTransaction(ctx context.Context, orderIDPrefix strin
 	}, nil
 }
 
+// SendEIP7702Batch dials a single RPC connection, builds the EIP-7702 batch with it, and submits the transaction
+// with the same connection so delegation and batch nonce are read from the same node that receives the tx.
+func (s *NativeService) SendEIP7702Batch(ctx context.Context, orderIDPrefix, label string, order *ent.PaymentOrder, network *ent.Network, calls []Call7702) (map[string]interface{}, error) {
+	client, err := ethclient.Dial(network.RPCEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("%s - %s.dialRPC: %w", orderIDPrefix, label, err)
+	}
+	defer client.Close()
+
+	userAddr, batchData, authList, err := BuildEIP7702Batch(ctx, client, orderIDPrefix, label, order, network, calls)
+	if err != nil {
+		return nil, err
+	}
+
+	cryptoConf := config.CryptoConfig()
+	aggregatorKey, err := crypto.HexToECDSA(cryptoConf.AggregatorAccountPrivateKeyEVM)
+	if err != nil {
+		return nil, fmt.Errorf("%s - %s.parseAggregatorKey: %w", orderIDPrefix, label, err)
+	}
+	aggregatorAddr := crypto.PubkeyToAddress(aggregatorKey.PublicKey)
+	chainID := big.NewInt(network.ChainID)
+
+	var receipt *types.Receipt
+	err = s.nonceManager.submitWithNonce(ctx, client, network.ChainID, aggregatorAddr, func(nonce uint64) error {
+		var txErr error
+		receipt, txErr = SendKeeperTx(ctx, client, aggregatorKey, nonce, userAddr, batchData, authList, chainID)
+		if txErr != nil {
+			return fmt.Errorf("%s - %s.sendTx: %w", orderIDPrefix, label, txErr)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if receipt.Status == 0 {
+		return nil, fmt.Errorf("%s - %s: tx reverted in block %s", orderIDPrefix, label, receipt.BlockNumber.String())
+	}
+	return map[string]interface{}{
+		"transactionHash": receipt.TxHash.Hex(),
+		"blockNumber":     receipt.BlockNumber.Int64(),
+	}, nil
+}
+
 // --- Errors and constants ---
 
 // ErrTxBroadcastNoReceipt is returned when SendTransaction succeeded but the receipt
@@ -201,10 +244,10 @@ func PackExecute(calls []Call7702, signature []byte) ([]byte, error) {
 	return parsed.Pack("execute", calls, signature)
 }
 
-// BuildEIP7702Batch builds the EIP-7702 batch (delegation check, optional auth, sign batch, pack execute).
-// Callers provide the pre-built calls slice; this function handles decrypt salt, key, dial, CheckDelegation,
-// optional SignAuthorization7702, ReadBatchNonce, SignBatch7702, and PackExecute. label is used in error messages (e.g. "CreateOrder", "RefundExpired").
-func BuildEIP7702Batch(ctx context.Context, orderIDPrefix, label string, order *ent.PaymentOrder, network *ent.Network, calls []Call7702) (common.Address, []byte, []types.SetCodeAuthorization, error) {
+// BuildEIP7702Batch builds the EIP-7702 batch (delegation check, optional auth, sign batch, pack execute)
+// using the provided client. Callers provide the pre-built calls slice. label is used in error messages (e.g. "CreateOrder", "RefundExpired").
+// The client is not closed by this function; the caller owns it (enables single connection for build+send).
+func BuildEIP7702Batch(ctx context.Context, client *ethclient.Client, orderIDPrefix, label string, order *ent.PaymentOrder, network *ent.Network, calls []Call7702) (common.Address, []byte, []types.SetCodeAuthorization, error) {
 	if len(order.ReceiveAddressSalt) == 0 {
 		return common.Address{}, nil, nil, fmt.Errorf("%s - %s: receive address salt is empty", orderIDPrefix, label)
 	}
@@ -217,12 +260,6 @@ func BuildEIP7702Batch(ctx context.Context, orderIDPrefix, label string, order *
 		return common.Address{}, nil, nil, fmt.Errorf("%s - %s.parseKey: %w", orderIDPrefix, label, err)
 	}
 	userAddr := crypto.PubkeyToAddress(userKey.PublicKey)
-
-	client, err := ethclient.Dial(network.RPCEndpoint)
-	if err != nil {
-		return common.Address{}, nil, nil, fmt.Errorf("%s - %s.dialRPC: %w", orderIDPrefix, label, err)
-	}
-	defer client.Close()
 
 	chainID := big.NewInt(network.ChainID)
 	delegationContract := common.HexToAddress(network.DelegationContractAddress)
@@ -280,7 +317,24 @@ func SendKeeperTx(ctx context.Context, client *ethclient.Client, keeperKey *ecds
 	} else {
 		gasFeeCap = new(big.Int).Set(gasTipCap)
 	}
+
+	keeperAddr := crypto.PubkeyToAddress(keeperKey.PublicKey)
+	callMsg := ethereum.CallMsg{
+		From:              keeperAddr,
+		To:                &to,
+		Data:              data,
+		Value:             big.NewInt(0),
+		GasFeeCap:         gasFeeCap,
+		GasTipCap:         gasTipCap,
+		AuthorizationList: authList,
+	}
 	gasLimit := uint64(500_000)
+	if estimated, err := client.EstimateGas(ctx, callMsg); err == nil {
+		gasLimit = estimated + (estimated / 5) // 20% safety margin
+		if gasLimit < 100_000 {
+			gasLimit = 100_000
+		}
+	}
 
 	var tx *types.Transaction
 	if len(authList) > 0 {

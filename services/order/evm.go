@@ -9,7 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
@@ -135,11 +134,8 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 			return fmt.Errorf("%s - CreateOrder.sendTransactionBatch: %w", orderIDPrefix, err)
 		}
 	case networkent.WalletServiceNative:
-		userAddr, batchData, authList, err := s.buildCreateOrderBatch7702(ctx, orderIDPrefix, order, network, approveGatewayData, createOrderData)
-		if err != nil {
-			return err
-		}
-		_, err = s.nativeService.SendTransaction(ctx, orderIDPrefix, network, userAddr, batchData, authList)
+		calls := s.buildCreateOrderCalls(order, network, approveGatewayData, createOrderData)
+		_, err = s.nativeService.SendEIP7702Batch(ctx, orderIDPrefix, "CreateOrder", order, network, calls)
 		if err != nil {
 			return err
 		}
@@ -150,20 +146,14 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 	return nil
 }
 
-// buildCreateOrderBatch7702 builds the EIP-7702 batch (approve + createOrder) for native CreateOrder.
-// Returns userAddr (tx target), batchData (execute calldata), and authList (optional SetCode auth).
-func (s *OrderEVM) buildCreateOrderBatch7702(ctx context.Context, orderIDPrefix string, order *ent.PaymentOrder, network *ent.Network, approveData, createOrderData []byte) (ethcommon.Address, []byte, []coretypes.SetCodeAuthorization, error) {
+// buildCreateOrderCalls returns the EIP-7702 calls slice (approve + createOrder) for native CreateOrder.
+func (s *OrderEVM) buildCreateOrderCalls(order *ent.PaymentOrder, network *ent.Network, approveData, createOrderData []byte) []services.Call7702 {
 	gatewayAddr := ethcommon.HexToAddress(network.GatewayContractAddress)
 	tokenAddr := ethcommon.HexToAddress(order.Edges.Token.ContractAddress)
-	calls := []services.Call7702{
+	return []services.Call7702{
 		{To: tokenAddr, Value: big.NewInt(0), Data: approveData},
 		{To: gatewayAddr, Value: big.NewInt(0), Data: createOrderData},
 	}
-	userAddr, batchData, authList, err := services.BuildEIP7702Batch(ctx, orderIDPrefix, "CreateOrder", order, network, calls)
-	if err != nil {
-		return ethcommon.Address{}, nil, nil, err
-	}
-	return userAddr, batchData, authList, nil
 }
 
 // RefundOrder refunds sender on canceled lock order

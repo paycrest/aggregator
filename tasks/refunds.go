@@ -10,7 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/paycrest/aggregator/ent"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
@@ -127,11 +126,11 @@ func ProcessExpiredOrdersRefunds() error {
 			case networkent.WalletServiceEngine:
 				refundErr = refundExpiredOrderForSmartWallet(ctx, order, network.ChainID, balance, tokenContract, engineService)
 			case networkent.WalletServiceNative:
-				userAddr, batchData, authList, err := buildRefundExpiredBatch7702(ctx, orderIDPrefix, order, network, tokenContract, order.ReturnAddress, balance)
+				calls, err := buildRefundExpiredCalls(orderIDPrefix, tokenContract, order.ReturnAddress, balance)
 				if err != nil {
 					refundErr = err
 				} else {
-					_, refundErr = nativeService.SendTransaction(ctx, orderIDPrefix, network, userAddr, batchData, authList)
+					_, refundErr = nativeService.SendEIP7702Batch(ctx, orderIDPrefix, "RefundExpired", order, network, calls)
 				}
 			default:
 				logger.WithFields(logger.Fields{
@@ -160,25 +159,20 @@ func ProcessExpiredOrdersRefunds() error {
 	return nil
 }
 
-// buildRefundExpiredBatch7702 builds the EIP-7702 batch (single transfer call) for native refund-expired. Returns (userAddr, batchData, authList).
-func buildRefundExpiredBatch7702(ctx context.Context, orderIDPrefix string, order *ent.PaymentOrder, network *ent.Network, tokenContract, returnAddress string, balance *big.Int) (ethcommon.Address, []byte, []coretypes.SetCodeAuthorization, error) {
+// buildRefundExpiredCalls returns the EIP-7702 calls slice (single transfer) for native refund-expired.
+func buildRefundExpiredCalls(orderIDPrefix, tokenContract, returnAddress string, balance *big.Int) ([]services.Call7702, error) {
 	erc20ABI, err := abi.JSON(strings.NewReader(contracts.ERC20TokenMetaData.ABI))
 	if err != nil {
-		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.parseABI: %w", orderIDPrefix, err)
+		return nil, fmt.Errorf("%s - RefundExpired.parseABI: %w", orderIDPrefix, err)
 	}
 	transferData, err := erc20ABI.Pack("transfer", ethcommon.HexToAddress(returnAddress), balance)
 	if err != nil {
-		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - RefundExpired.packTransfer: %w", orderIDPrefix, err)
+		return nil, fmt.Errorf("%s - RefundExpired.packTransfer: %w", orderIDPrefix, err)
 	}
 	tokenAddr := ethcommon.HexToAddress(tokenContract)
-	calls := []services.Call7702{
+	return []services.Call7702{
 		{To: tokenAddr, Value: big.NewInt(0), Data: transferData},
-	}
-	userAddr, batchData, authList, err := services.BuildEIP7702Batch(ctx, orderIDPrefix, "RefundExpired", order, network, calls)
-	if err != nil {
-		return ethcommon.Address{}, nil, nil, err
-	}
-	return userAddr, batchData, authList, nil
+	}, nil
 }
 
 // refundExpiredOrderForSmartWallet sends ERC-20 transfer from smart wallet to return address via Thirdweb Engine (fire-and-forget).
