@@ -20,6 +20,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 )
 
 // --- Public API ---
@@ -198,6 +199,67 @@ func PackExecute(calls []Call7702, signature []byte) ([]byte, error) {
 		return nil, err
 	}
 	return parsed.Pack("execute", calls, signature)
+}
+
+// BuildEIP7702Batch builds the EIP-7702 batch (delegation check, optional auth, sign batch, pack execute).
+// Callers provide the pre-built calls slice; this function handles decrypt salt, key, dial, CheckDelegation,
+// optional SignAuthorization7702, ReadBatchNonce, SignBatch7702, and PackExecute. label is used in error messages (e.g. "CreateOrder", "RefundExpired").
+func BuildEIP7702Batch(ctx context.Context, orderIDPrefix, label string, order *ent.PaymentOrder, network *ent.Network, calls []Call7702) (common.Address, []byte, []types.SetCodeAuthorization, error) {
+	if len(order.ReceiveAddressSalt) == 0 {
+		return common.Address{}, nil, nil, fmt.Errorf("%s - %s: receive address salt is empty", orderIDPrefix, label)
+	}
+	saltDecrypted, err := cryptoUtils.DecryptPlain(order.ReceiveAddressSalt)
+	if err != nil {
+		return common.Address{}, nil, nil, fmt.Errorf("%s - %s.decryptSalt: %w", orderIDPrefix, label, err)
+	}
+	userKey, err := crypto.HexToECDSA(string(saltDecrypted))
+	if err != nil {
+		return common.Address{}, nil, nil, fmt.Errorf("%s - %s.parseKey: %w", orderIDPrefix, label, err)
+	}
+	userAddr := crypto.PubkeyToAddress(userKey.PublicKey)
+
+	client, err := ethclient.Dial(network.RPCEndpoint)
+	if err != nil {
+		return common.Address{}, nil, nil, fmt.Errorf("%s - %s.dialRPC: %w", orderIDPrefix, label, err)
+	}
+	defer client.Close()
+
+	chainID := big.NewInt(network.ChainID)
+	delegationContract := common.HexToAddress(network.DelegationContractAddress)
+	alreadyDelegated, err := CheckDelegation(ctx, client, userAddr, delegationContract)
+	if err != nil {
+		return common.Address{}, nil, nil, fmt.Errorf("%s - %s.checkDelegation: %w", orderIDPrefix, label, err)
+	}
+
+	var authList []types.SetCodeAuthorization
+	if !alreadyDelegated {
+		authNonce, err := client.PendingNonceAt(ctx, userAddr)
+		if err != nil {
+			return common.Address{}, nil, nil, fmt.Errorf("%s - %s.pendingNonce: %w", orderIDPrefix, label, err)
+		}
+		auth, err := SignAuthorization7702(userKey, chainID, delegationContract, authNonce)
+		if err != nil {
+			return common.Address{}, nil, nil, fmt.Errorf("%s - %s.signAuth: %w", orderIDPrefix, label, err)
+		}
+		authList = []types.SetCodeAuthorization{auth}
+	}
+
+	var batchNonce uint64
+	if alreadyDelegated {
+		batchNonce, err = ReadBatchNonce(ctx, client, userAddr)
+		if err != nil {
+			return common.Address{}, nil, nil, fmt.Errorf("%s - %s.readBatchNonce: %w", orderIDPrefix, label, err)
+		}
+	}
+	batchSig, err := SignBatch7702(userKey, batchNonce, calls)
+	if err != nil {
+		return common.Address{}, nil, nil, fmt.Errorf("%s - %s.signBatch: %w", orderIDPrefix, label, err)
+	}
+	batchData, err := PackExecute(calls, batchSig)
+	if err != nil {
+		return common.Address{}, nil, nil, fmt.Errorf("%s - %s.packExecute: %w", orderIDPrefix, label, err)
+	}
+	return userAddr, batchData, authList, nil
 }
 
 // --- Keeper transaction ---

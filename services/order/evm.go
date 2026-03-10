@@ -10,8 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	coretypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
@@ -155,66 +153,15 @@ func (s *OrderEVM) CreateOrder(ctx context.Context, orderID uuid.UUID) error {
 // buildCreateOrderBatch7702 builds the EIP-7702 batch (approve + createOrder) for native CreateOrder.
 // Returns userAddr (tx target), batchData (execute calldata), and authList (optional SetCode auth).
 func (s *OrderEVM) buildCreateOrderBatch7702(ctx context.Context, orderIDPrefix string, order *ent.PaymentOrder, network *ent.Network, approveData, createOrderData []byte) (ethcommon.Address, []byte, []coretypes.SetCodeAuthorization, error) {
-	if len(order.ReceiveAddressSalt) == 0 {
-		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - CreateOrder: receive address salt is empty", orderIDPrefix)
-	}
-	saltDecrypted, err := cryptoUtils.DecryptPlain(order.ReceiveAddressSalt)
-	if err != nil {
-		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - CreateOrder.decryptSalt: %w", orderIDPrefix, err)
-	}
-	userKey, err := crypto.HexToECDSA(string(saltDecrypted))
-	if err != nil {
-		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - CreateOrder.parseKey: %w", orderIDPrefix, err)
-	}
-	userAddr := crypto.PubkeyToAddress(userKey.PublicKey)
-
-	client, err := ethclient.Dial(network.RPCEndpoint)
-	if err != nil {
-		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - CreateOrder.dialRPC: %w", orderIDPrefix, err)
-	}
-	defer client.Close()
-
-	chainID := big.NewInt(network.ChainID)
-	delegationContract := ethcommon.HexToAddress(network.DelegationContractAddress)
-	alreadyDelegated, err := services.CheckDelegation(ctx, client, userAddr, delegationContract)
-	if err != nil {
-		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - CreateOrder.checkDelegation: %w", orderIDPrefix, err)
-	}
-
-	var authList []coretypes.SetCodeAuthorization
-	if !alreadyDelegated {
-		authNonce, err := client.PendingNonceAt(ctx, userAddr)
-		if err != nil {
-			return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - CreateOrder.pendingNonce: %w", orderIDPrefix, err)
-		}
-		auth, err := services.SignAuthorization7702(userKey, chainID, delegationContract, authNonce)
-		if err != nil {
-			return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - CreateOrder.signAuth: %w", orderIDPrefix, err)
-		}
-		authList = []coretypes.SetCodeAuthorization{auth}
-	}
-
 	gatewayAddr := ethcommon.HexToAddress(network.GatewayContractAddress)
 	tokenAddr := ethcommon.HexToAddress(order.Edges.Token.ContractAddress)
 	calls := []services.Call7702{
 		{To: tokenAddr, Value: big.NewInt(0), Data: approveData},
 		{To: gatewayAddr, Value: big.NewInt(0), Data: createOrderData},
 	}
-
-	var batchNonce uint64
-	if alreadyDelegated {
-		batchNonce, err = services.ReadBatchNonce(ctx, client, userAddr)
-		if err != nil {
-			return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - CreateOrder.readBatchNonce: %w", orderIDPrefix, err)
-		}
-	}
-	batchSig, err := services.SignBatch7702(userKey, batchNonce, calls)
+	userAddr, batchData, authList, err := services.BuildEIP7702Batch(ctx, orderIDPrefix, "CreateOrder", order, network, calls)
 	if err != nil {
-		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - CreateOrder.signBatch: %w", orderIDPrefix, err)
-	}
-	batchData, err := services.PackExecute(calls, batchSig)
-	if err != nil {
-		return ethcommon.Address{}, nil, nil, fmt.Errorf("%s - CreateOrder.packExecute: %w", orderIDPrefix, err)
+		return ethcommon.Address{}, nil, nil, err
 	}
 	return userAddr, batchData, authList, nil
 }
