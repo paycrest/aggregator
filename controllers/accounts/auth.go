@@ -67,11 +67,11 @@ func (ctrl *AuthController) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Check if user with email already exists
+	// Check if user with email already exists (case-insensitive)
 	userTmp, _ := tx.User.
 		Query().
 		Where(
-			userEnt.EmailEQ(strings.ToLower(payload.Email)),
+			userEnt.EmailEqualFold(payload.Email),
 		).
 		Only(reqCtx)
 
@@ -305,10 +305,10 @@ func (ctrl *AuthController) Login(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch user by email
+	// Fetch user by email (case-insensitive)
 	user, err := db.Client.User.
 		Query().
-		Where(userEnt.EmailEQ(strings.ToLower(payload.Email))).
+		Where(userEnt.EmailEqualFold(payload.Email)).
 		Only(reqCtx)
 
 	if err != nil {
@@ -405,7 +405,7 @@ func (ctrl *AuthController) ConfirmEmail(ctx *gin.Context) {
 		Query().
 		Where(
 			verificationtoken.TokenEQ(payload.Token),
-			verificationtoken.HasOwnerWith(userEnt.EmailEQ(payload.Email)),
+			verificationtoken.HasOwnerWith(userEnt.EmailEqualFold(payload.Email)),
 		).
 		WithOwner().
 		Only(reqCtx)
@@ -463,8 +463,8 @@ func (ctrl *AuthController) ResendVerificationToken(ctx *gin.Context) {
 		return
 	}
 
-	// Fetch User account.
-	user, userErr := db.Client.User.Query().Where(userEnt.EmailEQ(payload.Email)).Only(reqCtx)
+	// Fetch User account (case-insensitive email lookup).
+	user, userErr := db.Client.User.Query().Where(userEnt.EmailEqualFold(payload.Email)).Only(reqCtx)
 	if userErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid credential", userErr.Error())
 		return
@@ -557,10 +557,10 @@ func (ctrl *AuthController) ResetPasswordToken(ctx *gin.Context) {
 		return
 	}
 
-	// Get user account.
+	// Get user account (case-insensitive email lookup).
 	user, userErr := db.Client.User.
 		Query().
-		Where(userEnt.EmailEQ(payload.Email)).
+		Where(userEnt.EmailEqualFold(payload.Email)).
 		Only(reqCtx)
 	if userErr != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Email does not belong to any user", nil)
