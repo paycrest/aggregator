@@ -31,6 +31,10 @@ type Network struct {
 	RPCEndpoint string `json:"rpc_endpoint,omitempty"`
 	// GatewayContractAddress holds the value of the "gateway_contract_address" field.
 	GatewayContractAddress string `json:"gateway_contract_address,omitempty"`
+	// DelegationContractAddress holds the value of the "delegation_contract_address" field.
+	DelegationContractAddress string `json:"delegation_contract_address,omitempty"`
+	// WalletService holds the value of the "wallet_service" field.
+	WalletService network.WalletService `json:"wallet_service,omitempty"`
 	// BlockTime holds the value of the "block_time" field.
 	BlockTime decimal.Decimal `json:"block_time,omitempty"`
 	// IsTestnet holds the value of the "is_testnet" field.
@@ -89,7 +93,7 @@ func (*Network) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case network.FieldID, network.FieldChainID:
 			values[i] = new(sql.NullInt64)
-		case network.FieldIdentifier, network.FieldRPCEndpoint, network.FieldGatewayContractAddress, network.FieldBundlerURL, network.FieldPaymasterURL:
+		case network.FieldIdentifier, network.FieldRPCEndpoint, network.FieldGatewayContractAddress, network.FieldDelegationContractAddress, network.FieldWalletService, network.FieldBundlerURL, network.FieldPaymasterURL:
 			values[i] = new(sql.NullString)
 		case network.FieldCreatedAt, network.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -149,6 +153,18 @@ func (_m *Network) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field gateway_contract_address", values[i])
 			} else if value.Valid {
 				_m.GatewayContractAddress = value.String
+			}
+		case network.FieldDelegationContractAddress:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field delegation_contract_address", values[i])
+			} else if value.Valid {
+				_m.DelegationContractAddress = value.String
+			}
+		case network.FieldWalletService:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field wallet_service", values[i])
+			} else if value.Valid {
+				_m.WalletService = network.WalletService(value.String)
 			}
 		case network.FieldBlockTime:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
@@ -243,6 +259,12 @@ func (_m *Network) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("gateway_contract_address=")
 	builder.WriteString(_m.GatewayContractAddress)
+	builder.WriteString(", ")
+	builder.WriteString("delegation_contract_address=")
+	builder.WriteString(_m.DelegationContractAddress)
+	builder.WriteString(", ")
+	builder.WriteString("wallet_service=")
+	builder.WriteString(fmt.Sprintf("%v", _m.WalletService))
 	builder.WriteString(", ")
 	builder.WriteString("block_time=")
 	builder.WriteString(fmt.Sprintf("%v", _m.BlockTime))

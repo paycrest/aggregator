@@ -25,6 +25,31 @@ import (
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
 )
 
+const txStatusFiveMinError = "Failed to get transaction status after 5 minutes"
+const txStatusRetryWindow = 5 * time.Minute
+const txStatusRetryCutoff = 24 * time.Hour
+
+// txStatusBackoffDelaysMinutes are cumulative minutes from UpdatedAt for each retry slot (exponential: 10, +20, +40, +80, +160, +320).
+var txStatusBackoffDelaysMinutes = []float64{10, 30, 70, 150, 310, 630}
+
+func shouldRetryTxStatusFiveMinFailure(fulfillment *ent.PaymentOrderFulfillment) bool {
+	if fulfillment.ValidationError != txStatusFiveMinError || fulfillment.ValidationStatus != paymentorderfulfillment.ValidationStatusFailed {
+		return false
+	}
+	elapsed := time.Since(fulfillment.UpdatedAt)
+	if elapsed < 10*time.Minute || elapsed >= txStatusRetryCutoff {
+		return false
+	}
+	elapsedMin := elapsed.Minutes()
+	windowMin := txStatusRetryWindow.Minutes()
+	for _, d := range txStatusBackoffDelaysMinutes {
+		if elapsedMin >= d && elapsedMin < d+windowMin {
+			return true
+		}
+	}
+	return false
+}
+
 // SyncPaymentOrderFulfillments syncs payment order fulfillments
 // Only processes regular orders
 // TODO: refactor this to process OTC orders as well when OTC fulfillment validation is automated
@@ -175,41 +200,11 @@ func SyncPaymentOrderFulfillments() {
 				continue
 			}
 
-			// Compute HMAC
-			decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: Failed to decode provider secret",
-				}).Errorf("SyncPaymentOrderFulfillments.DecodeSecret")
-				continue
-			}
-			decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: Failed to decrypt provider secret",
-				}).Errorf("SyncPaymentOrderFulfillments.DecryptSecret")
-				continue
-			}
-
 			payload := map[string]interface{}{
 				"reference": getTxStatusReferenceForVA(order),
 				"currency":  order.Edges.ProvisionBucket.Edges.Currency.Code,
 			}
-			signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
-
-			// Send POST request to the provider's node
-			res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-				Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(10*time.Second).
-				Header().Add("X-Request-Signature", signature).
-				Build().POST("/tx_status").
-				Body().AsJSON(payload).
-				Send()
+			data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":            fmt.Sprintf("%v", err),
@@ -234,21 +229,6 @@ func SyncPaymentOrderFulfillments() {
 						}).Errorf("SyncPaymentOrderFulfillments.UpdateStatus")
 					}
 				}
-				continue
-			}
-
-			data, err := utils.ParseJSONResponse(res.Raw())
-			if err != nil {
-				// Instead of deleting the order, log the error and skip processing
-				// The order will be retried in the next sync cycle or can be manually investigated
-				logger.WithFields(logger.Fields{
-					"Error":            fmt.Sprintf("%v", err),
-					"ProviderID":       order.Edges.Provider.ID,
-					"PayloadReference": payload["reference"],
-					"PayloadCurrency":  payload["currency"],
-					"OrderID":          order.ID.String(),
-					"OrderStatus":      order.Status.String(),
-				}).Errorf("SyncPaymentOrderFulfillments: Failed to parse JSON response after getting trx status from provider, skipping order")
 				continue
 			}
 
@@ -299,7 +279,7 @@ func SyncPaymentOrderFulfillments() {
 				}
 				// Payin (onramp): ask provider to run AcceptOrder + FulfillOrder(Success) with EIP-7702 auth
 				if order.Direction == paymentorder.DirectionOnramp {
-					if reqErr := callRequestAuthorization(ctx, order, psp, txId, order.Amount.Add(order.SenderFee).String(), string(decryptedSecret)); reqErr != nil {
+					if reqErr := callRequestAuthorization(ctx, order, psp, txId, order.Amount.Add(order.SenderFee).String()); reqErr != nil {
 						logger.WithFields(logger.Fields{
 							"OrderID": order.ID.String(),
 							"Error":   reqErr.Error(),
@@ -368,26 +348,6 @@ func SyncPaymentOrderFulfillments() {
 
 			for _, fulfillment := range order.Edges.Fulfillments {
 				if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusPending {
-					// Compute HMAC
-					decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.Edges.Provider.ID,
-						}).Errorf("Failed to decode provider secret for pending fulfillment")
-						continue
-					}
-					decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-					if err != nil {
-						logger.WithFields(logger.Fields{
-							"Error":      fmt.Sprintf("%v", err),
-							"OrderID":    order.ID.String(),
-							"ProviderID": order.Edges.Provider.ID,
-						}).Errorf("Failed to decrypt provider secret for pending fulfillment")
-						continue
-					}
-
 					payload := map[string]interface{}{
 						"reference": getTxStatusReferenceForVA(order),
 						"currency":  order.Edges.ProvisionBucket.Edges.Currency.Code,
@@ -395,65 +355,59 @@ func SyncPaymentOrderFulfillments() {
 						"txId":      fulfillment.TxID,
 					}
 
-					signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
-
-					// Send POST request to the provider's node
-					res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-						Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
-						Header().Add("X-Request-Signature", signature).
-						Build().POST("/tx_status").
-						Body().AsJSON(payload).
-						Send()
+					data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 					if err != nil {
-						continue
-					}
-
-					data, err := utils.ParseJSONResponse(res.Raw())
-					if err != nil {
-						// Check if it's a 400 error and fulfillment is older than 5 minutes
-						if res.Raw().StatusCode == 400 {
-							if time.Since(fulfillment.CreatedAt) > 5*time.Minute {
-								// Mark fulfillment as failed
-								_, updateErr := storage.Client.PaymentOrderFulfillment.
-									UpdateOneID(fulfillment.ID).
-									SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
-									SetValidationError("Failed to get transaction status after 5 minutes").
-									Save(ctx)
-								if updateErr != nil {
-									logger.WithFields(logger.Fields{
-										"Error":         fmt.Sprintf("%v", updateErr),
-										"OrderID":       order.ID.String(),
-										"FulfillmentID": fulfillment.ID,
-									}).Errorf("Failed to mark fulfillment as failed after 5 minutes")
-								}
-								continue
+						if strings.Contains(err.Error(), "400") && time.Since(fulfillment.CreatedAt) > 5*time.Minute {
+							logger.WithFields(logger.Fields{
+								"Error":           fmt.Sprintf("%v", err),
+								"Data":            data,
+								"ProviderID":      order.Edges.Provider.ID,
+								"PayloadCurrency": payload["currency"],
+								"PayloadPsp":      payload["psp"],
+								"PayloadTxId":     payload["txId"],
+							}).Errorf("%s: %s", txStatusFiveMinError, order.ID.String())
+							_, updateErr := storage.Client.PaymentOrderFulfillment.
+								UpdateOneID(fulfillment.ID).
+								SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+								SetValidationError(txStatusFiveMinError).
+								Save(ctx)
+							if updateErr != nil {
+								logger.WithFields(logger.Fields{
+									"Error":         fmt.Sprintf("%v", updateErr),
+									"OrderID":       order.ID.String(),
+									"FulfillmentID": fulfillment.ID,
+								}).Errorf("Failed to mark fulfillment as failed after 5 minutes")
 							}
+							continue
 						}
 
 						logger.WithFields(logger.Fields{
-							"Error":            fmt.Sprintf("%v", err),
-							"OrderID":          order.ID.String(),
-							"ProviderID":       order.Edges.Provider.ID,
-							"PayloadReference": payload["reference"],
-							"PayloadCurrency":  payload["currency"],
-							"PayloadPsp":       payload["psp"],
-							"PayloadTxId":      payload["txId"],
-						}).Errorf("Failed to parse JSON response after getting trx status from provider")
+							"Error":           fmt.Sprintf("%v", err),
+							"ProviderID":      order.Edges.Provider.ID,
+							"PayloadOrderId":  payload["orderId"],
+							"PayloadCurrency": payload["currency"],
+							"PayloadPsp":      payload["psp"],
+							"PayloadTxId":     payload["txId"],
+						}).Errorf("Failed to parse JSON response after getting trx status from provider: %s", order.ID.String())
 						continue
 					}
 
-					status := data["data"].(map[string]interface{})["status"].(string)
+					dataMap, ok := data["data"].(map[string]interface{})
+					if !ok {
+						continue
+					}
+					status, ok := dataMap["status"].(string)
+					if !ok {
+						continue
+					}
 
 					if status == "failed" {
-						validationError := ""
-						if errVal, ok := data["data"].(map[string]interface{})["error"].(string); ok {
-							validationError = errVal
-						}
+						errMsg, _ := dataMap["error"].(string)
 						_, err = storage.Client.PaymentOrderFulfillment.
 							UpdateOneID(fulfillment.ID).
 							SetTxID(fulfillment.TxID).
 							SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
-							SetValidationError(validationError).
+							SetValidationError(errMsg).
 							Save(ctx)
 						if err != nil {
 							continue
@@ -478,13 +432,14 @@ func SyncPaymentOrderFulfillments() {
 							UpdateOneID(fulfillment.ID).
 							SetTxID(fulfillment.TxID).
 							SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
+							SetValidationError("").
 							Save(ctx)
 						if err != nil {
 							continue
 						}
 						// Onramp: ask provider to run AcceptOrder + FulfillOrder(Success) with EIP-7702 auth
 						if order.Direction == paymentorder.DirectionOnramp {
-							if reqErr := callRequestAuthorization(ctx, order, fulfillment.Psp, fulfillment.TxID, order.Amount.Add(order.SenderFee).String(), string(decryptedSecret)); reqErr != nil {
+							if reqErr := callRequestAuthorization(ctx, order, fulfillment.Psp, fulfillment.TxID, order.Amount.Add(order.SenderFee).String()); reqErr != nil {
 								logger.WithFields(logger.Fields{
 									"OrderID": order.ID.String(),
 									"Error":   reqErr.Error(),
@@ -537,12 +492,75 @@ func SyncPaymentOrderFulfillments() {
 						}
 					}
 
+				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed &&
+					shouldRetryTxStatusFiveMinFailure(fulfillment) {
+					payload := map[string]interface{}{
+						"orderId":  order.ID.String(),
+						"currency": order.Edges.ProvisionBucket.Edges.Currency.Code,
+						"psp":      fulfillment.Psp,
+						"txId":     fulfillment.TxID,
+					}
+					data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
+					if err != nil {
+						continue
+					}
+					dataMap, ok := data["data"].(map[string]interface{})
+					if !ok {
+						continue
+					}
+					status, ok := dataMap["status"].(string)
+					if !ok {
+						continue
+					}
+					if status == "failed" {
+						errMsg, _ := dataMap["error"].(string)
+						if errMsg != fulfillment.ValidationError {
+							_, _ = storage.Client.PaymentOrderFulfillment.
+								UpdateOneID(fulfillment.ID).
+								SetTxID(fulfillment.TxID).
+								SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
+								SetValidationError(errMsg).
+								Save(ctx)
+						}
+						_, _ = order.Update().SetStatus(paymentorder.StatusFulfilled).Save(ctx)
+					} else if status == "success" {
+						_, err = storage.Client.PaymentOrderFulfillment.
+							UpdateOneID(fulfillment.ID).
+							SetTxID(fulfillment.TxID).
+							SetValidationStatus(paymentorderfulfillment.ValidationStatusSuccess).
+							SetValidationError("").
+							Save(ctx)
+						if err != nil {
+							continue
+						}
+						if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+							transactionLog, err := storage.Client.TransactionLog.
+								Create().
+								SetStatus(transactionlog.StatusOrderValidated).
+								SetNetwork(order.Edges.Token.Edges.Network.Identifier).
+								Save(ctx)
+							if err == nil && transactionLog != nil {
+								_, _ = storage.Client.PaymentOrder.
+									UpdateOneID(order.ID).
+									SetStatus(paymentorder.StatusValidated).
+									AddTransactions(transactionLog).
+									Save(ctx)
+								_ = utils.SendPaymentOrderWebhook(ctx, order)
+							}
+						}
+					}
+					continue
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed {
 					// Onramp: no reassign on failed fulfillment (balance released in syncRefundingOrder or payin-failed path).
 					if order.Direction == paymentorder.DirectionOnramp {
 						continue
 					}
-					reassignCancelledOrder(ctx, order, fulfillment)
+					if canReassignCancelledOrder(order) {
+						reassignCancelledOrder(ctx, order, fulfillment)
+					} else if order.CreatedAt.Before(time.Now().Add(-orderConf.OrderRefundTimeout-10*time.Second)) &&
+						fulfillment.ValidationError != txStatusFiveMinError {
+						cleanupStuckFulfilledFailedOrder(ctx, order)
+					}
 					continue
 
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusSuccess {
@@ -950,8 +968,8 @@ func getTxStatusReferenceForVA(order *ent.PaymentOrder) string {
 	return order.ID.String()
 }
 
-// callRequestAuthorization calls POST /request_authorization on the provider (same host, HMAC as tx_status). On 200 returns nil; on 4xx/5xx/network returns error for logging; no change to order/fulfillment.
-func callRequestAuthorization(ctx context.Context, order *ent.PaymentOrder, psp, txId, amountStr, decryptedSecret string) error {
+// callRequestAuthorization calls POST /request_authorization on the provider (same HMAC auth as /tx_status). On 200 returns nil; on 4xx/5xx/network returns error for logging; no change to order/fulfillment.
+func callRequestAuthorization(ctx context.Context, order *ent.PaymentOrder, psp, txId, amountStr string) error {
 	payload := map[string]interface{}{
 		"orderId": order.ID.String(),
 		"amount":  amountStr,
@@ -962,20 +980,8 @@ func callRequestAuthorization(ctx context.Context, order *ent.PaymentOrder, psp,
 	if txId != "" {
 		payload["txId"] = txId
 	}
-	signature := tokenUtils.GenerateHMACSignature(payload, decryptedSecret)
-	res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30*time.Second).
-		Header().Add("X-Request-Signature", signature).
-		Build().POST("/request_authorization").
-		Body().AsJSON(payload).
-		Send()
-	if err != nil {
-		return err
-	}
-	if res.Raw().StatusCode != 200 {
-		return fmt.Errorf("request_authorization status %d", res.Raw().StatusCode)
-	}
-	return nil
+	_, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/request_authorization", payload)
+	return err
 }
 
 // callTxRefundAndStore calls POST /tx_refund, on 200 stores refundReference in order metadata and returns it.

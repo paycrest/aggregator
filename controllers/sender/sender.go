@@ -51,7 +51,6 @@ func NewSenderController() *SenderController {
 	if err != nil {
 		starknetClient = nil
 	}
-
 	return &SenderController{
 		receiveAddressService: svc.NewReceiveAddressService(),
 		orderService:          orderSvc.NewOrderEVM(),
@@ -377,6 +376,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	var receiveAddress string
 	var receiveAddressSalt []byte
 	var receiveAddressExpiry time.Time
+	var createTransferWebhook bool
 
 	if strings.HasPrefix(payload.Network, "tron") {
 		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
@@ -424,9 +424,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
-		// Generate unique label for smart address
 		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
-		address, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, uniqueLabel)
+		address, salt, err := ctrl.receiveAddressService.CreateEVMAddress(reqCtx, token.Edges.Network.WalletService, uniqueLabel)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -439,7 +438,11 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			return
 		}
 		receiveAddress = address
+		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
+		if token.Edges.Network.WalletService == network.WalletServiceEngine {
+			createTransferWebhook = true
+		}
 	}
 
 	// Set extended expiry for private orders (10x normal validity)
@@ -536,7 +539,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		SetMetadata(payload.Recipient.Metadata).
 		AddTransactions(transactionLog)
 
-	// Set salt for Tron addresses
 	if receiveAddressSalt != nil {
 		paymentOrderBuilder = paymentOrderBuilder.SetReceiveAddressSalt(receiveAddressSalt)
 	}
@@ -549,36 +551,29 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Create webhook for the smart address to monitor transfers (only for EVM networks)
-	if !strings.HasPrefix(payload.Network, "tron") && !strings.HasPrefix(payload.Network, "starknet") {
+	if createTransferWebhook {
 		engineService := svc.NewEngineService()
-		webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
-			reqCtx,
-			token.Edges.Network.ChainID,
-			token.ContractAddress,    // Token contract address
-			receiveAddress,           // Smart address to monitor
-			paymentOrder.ID.String(), // Order ID for webhook name
-		)
-		if err != nil {
+		webhookID, webhookSecret, webhookErr := engineService.CreateTransferWebhook(reqCtx, token.Edges.Network.ChainID, token.ContractAddress, receiveAddress, paymentOrder.ID.String())
+		if webhookErr != nil {
 			// Check if this is BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) which is not supported by Thirdweb
 			if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
 				logger.WithFields(logger.Fields{
 					"ChainID": token.Edges.Network.ChainID,
 					"Network": token.Edges.Network.Identifier,
-					"Error":   err.Error(),
-				}).Errorf("Failed to create transfer webhook: %v", err)
+					"Error":   webhookErr.Error(),
+				}).Errorf("Failed to create transfer webhook: %v", webhookErr)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 				_ = tx.Rollback()
 				return
 			}
 		} else {
-			// Create PaymentWebhook record in database only if webhook was created successfully
 			_, err = tx.PaymentWebhook.
 				Create().
 				SetWebhookID(webhookID).
 				SetWebhookSecret(webhookSecret).
 				SetCallbackURL(fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)).
 				SetPaymentOrder(paymentOrder).
+				SetNetwork(token.Edges.Network).
 				Save(ctx)
 			if err != nil {
 				logger.Errorf("Failed to save payment webhook record: %v", err)
@@ -1123,6 +1118,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	var receiveAddress string
 	var receiveAddressSalt []byte
 	var receiveAddressExpiry time.Time
+	var createTransferWebhook bool
 
 	if strings.HasPrefix(source.Network, "tron") {
 		address, salt, err := ctrl.receiveAddressService.CreateTronAddress(ctx)
@@ -1168,9 +1164,8 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
 	} else {
-		// Generate unique label for smart address
 		uniqueLabel := fmt.Sprintf("payment_order_%d_%s", time.Now().UnixNano(), uuid.New().String()[:8])
-		address, err := ctrl.receiveAddressService.CreateSmartAddress(ctx, uniqueLabel)
+		address, salt, err := ctrl.receiveAddressService.CreateEVMAddress(reqCtx, token.Edges.Network.WalletService, uniqueLabel)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"error":   err,
@@ -1183,7 +1178,11 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 			return
 		}
 		receiveAddress = address
+		receiveAddressSalt = salt
 		receiveAddressExpiry = time.Now().Add(orderConf.ReceiveAddressValidity)
+		if token.Edges.Network.WalletService == network.WalletServiceEngine {
+			createTransferWebhook = true
+		}
 	}
 
 	// Set extended expiry for private orders (10x normal validity)
@@ -1261,7 +1260,6 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		paymentOrderBuilder = paymentOrderBuilder.SetProviderID(rateValidationResult.ProviderID)
 	}
 
-	// Set salt for Tron addresses
 	if receiveAddressSalt != nil {
 		paymentOrderBuilder = paymentOrderBuilder.SetReceiveAddressSalt(receiveAddressSalt)
 	}
@@ -1274,39 +1272,35 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		return
 	}
 
-	// Create webhook for the smart address to monitor transfers (only for EVM networks)
-	if !strings.HasPrefix(source.Network, "tron") && !strings.HasPrefix(source.Network, "starknet") {
+	if createTransferWebhook {
 		engineService := svc.NewEngineService()
-		webhookID, webhookSecret, err := engineService.CreateTransferWebhook(
-			reqCtx,
-			token.Edges.Network.ChainID,
-			token.ContractAddress,
-			receiveAddress,
-			paymentOrder.ID.String(),
-		)
-		if err != nil {
-			// Check if this is BNB Smart Chain (chain ID 56) or Lisk (chain ID 1135) which is not supported by Thirdweb
+		webhookID, webhookSecret, webhookErr := engineService.CreateTransferWebhook(reqCtx, token.Edges.Network.ChainID, token.ContractAddress, receiveAddress, paymentOrder.ID.String())
+		if webhookErr != nil {
+			// BNB Smart Chain (56) and Lisk (1135) are not supported by Thirdweb; do not fail the order
 			if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
 				logger.WithFields(logger.Fields{
 					"ChainID": token.Edges.Network.ChainID,
 					"Network": token.Edges.Network.Identifier,
-					"Error":   err.Error(),
-				}).Errorf("Failed to create transfer webhook: %v", err)
+					"Error":   webhookErr.Error(),
+				}).Errorf("Failed to create transfer webhook: %v", webhookErr)
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 				_ = tx.Rollback()
 				return
 			}
 		} else {
-			// Create PaymentWebhook record in database only if webhook was created successfully
+			webhookCallbackURL := fmt.Sprintf("%s/v1/insight/webhook", config.ServerConfig().ServerURL)
 			_, err = tx.PaymentWebhook.
 				Create().
 				SetWebhookID(webhookID).
 				SetWebhookSecret(webhookSecret).
-				SetCallbackURL(fmt.Sprintf("%s/v1/insight/webhook", serverConf.ServerURL)).
+				SetCallbackURL(webhookCallbackURL).
 				SetPaymentOrder(paymentOrder).
+				SetNetwork(token.Edges.Network).
 				Save(ctx)
 			if err != nil {
-				logger.Errorf("Failed to save payment webhook record: %v", err)
+				logger.WithFields(logger.Fields{
+					"error": err,
+				}).Errorf("Failed to save payment webhook record: %s", paymentOrder.ID.String())
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 				_ = tx.Rollback()
 				return

@@ -4,37 +4,24 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/paycrest/aggregator/ent"
+	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/services/common"
+	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
 	blockchainUtils "github.com/paycrest/aggregator/utils/blockchain"
 	"github.com/paycrest/aggregator/utils/logger"
 )
-
-// func FixDatabaseMishap() error {
-// 	ctx := context.Background()
-// 	network, err := storage.Client.Network.
-// 		Query().
-// 		Where(networkent.ChainIDEQ(1135)).
-// 		Only(ctx)
-// 	if err != nil {
-// 		return fmt.Errorf("FixDatabaseMishap.fetchNetworks: %w", err)
-// 	}
-//
-// 	indexerInstance := indexer.NewIndexerEVM()
-//
-// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18052684, 18052684, "")
-// 	_ = indexerInstance.IndexOrderCreated(ctx, network, 18056857, 18056857, "")
-//
-// 	return nil
-// }
 
 // ExpireStaleOrders expires orders past their validity: offramp Initiated with expired receive address, and onramp Pending past VA validity (metadata.providerAccount.validUntil). For onramp, releases reserved token balance.
 func ExpireStaleOrders() error {
@@ -120,7 +107,6 @@ const RefundsInterval = 30
 func ProcessExpiredOrdersRefunds() error {
 	ctx := context.Background()
 
-	// Get all payment orders that are expired and initiated in the last RefundsInterval
 	expiredOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
@@ -140,6 +126,7 @@ func ProcessExpiredOrdersRefunds() error {
 	}
 
 	engineService := services.NewEngineService()
+	nativeService := services.NewNativeService()
 
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, 5)
@@ -151,59 +138,62 @@ func ProcessExpiredOrdersRefunds() error {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			if order.ReceiveAddress == "" {
+			if order.ReceiveAddress == "" || order.RefundOrRecipientAddress == "" {
 				return
 			}
-
-			receiveAddress := order.ReceiveAddress
-			tokenContract := order.Edges.Token.ContractAddress
 			network := order.Edges.Token.Edges.Network
-			rpcEndpoint := network.RPCEndpoint
-			chainID := network.ChainID
-
-			// Skip if no return address (nowhere to refund to)
-			if order.RefundOrRecipientAddress == "" {
+			if strings.HasPrefix(network.Identifier, "tron") || strings.HasPrefix(network.Identifier, "starknet") {
 				return
 			}
 
-			// Check balance of token at receive address
-			balance, err := blockchainUtils.GetTokenBalance(rpcEndpoint, tokenContract, receiveAddress)
+			tokenContract := order.Edges.Token.ContractAddress
+			if !ethcommon.IsHexAddress(order.ReceiveAddress) || !ethcommon.IsHexAddress(order.RefundOrRecipientAddress) || !ethcommon.IsHexAddress(tokenContract) {
+				logger.WithFields(logger.Fields{
+					"OrderID":                  order.ID.String(),
+					"ReceiveAddress":           order.ReceiveAddress,
+					"RefundOrRecipientAddress": order.RefundOrRecipientAddress,
+					"TokenContract":            tokenContract,
+				}).Errorf("Invalid hex address format for refund, skipping")
+				return
+			}
+			balance, err := blockchainUtils.GetTokenBalance(network.RPCEndpoint, tokenContract, order.ReceiveAddress)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error":             err.Error(),
-					"OrderID":           order.ID.String(),
-					"ReceiveAddress":    receiveAddress,
-					"TokenContract":     tokenContract,
-					"NetworkIdentifier": network.Identifier,
-				}).Errorf("Failed to check token balance for receive address %s", receiveAddress)
+					"Error":                    err.Error(),
+					"TokenSymbol":              order.Edges.Token.Symbol,
+					"ReceiveAddress":           order.ReceiveAddress,
+					"RefundOrRecipientAddress": order.RefundOrRecipientAddress,
+				}).Errorf("Failed to check token balance: %s", order.ID.String())
 				return
 			}
-
 			if balance.Cmp(big.NewInt(0)) == 0 {
 				return
 			}
 
-			// Prepare transfer method call
-			method := "function transfer(address recipient, uint256 amount) public returns (bool)"
-			params := []interface{}{
-				order.RefundOrRecipientAddress, // recipient address
-				balance.String(),               // amount to transfer
-			}
-
-			// Send the transfer transaction
-			_, err = engineService.SendContractCall(
-				ctx,
-				chainID,
-				receiveAddress,
-				tokenContract,
-				method,
-				params,
-			)
-			if err != nil {
+			orderIDPrefix := strings.Split(order.ID.String(), "-")[0]
+			var refundErr error
+			switch network.WalletService {
+			case networkent.WalletServiceEngine:
+				refundErr = refundExpiredOrderForSmartWallet(ctx, order, network.ChainID, balance, tokenContract, engineService)
+			case networkent.WalletServiceNative:
+				calls, err := buildRefundExpiredCalls(orderIDPrefix, tokenContract, order.RefundOrRecipientAddress, balance)
+				if err != nil {
+					refundErr = err
+				} else {
+					_, refundErr = nativeService.SendEIP7702Batch(ctx, orderIDPrefix, "RefundExpired", order, network, calls)
+				}
+			default:
 				logger.WithFields(logger.Fields{
-					"Error":                    err.Error(),
+					"OrderID":       order.ID.String(),
+					"WalletService": network.WalletService,
+				}).Errorf("Unsupported wallet_service for refund, skipping")
+				return
+			}
+			if refundErr != nil {
+				logger.WithFields(logger.Fields{
+					"Error":                    refundErr.Error(),
 					"OrderID":                  order.ID.String(),
-					"ReceiveAddress":           receiveAddress,
+					"ReceiveAddress":           order.ReceiveAddress,
 					"RefundOrRecipientAddress": order.RefundOrRecipientAddress,
 					"Balance":                  balance.String(),
 					"TokenContract":            tokenContract,
@@ -216,5 +206,35 @@ func ProcessExpiredOrdersRefunds() error {
 	}
 
 	wg.Wait()
+	return nil
+}
+
+// buildRefundExpiredCalls returns the EIP-7702 calls slice (single transfer) for native refund-expired.
+func buildRefundExpiredCalls(orderIDPrefix, tokenContract, returnAddress string, balance *big.Int) ([]services.Call7702, error) {
+	erc20ABI, err := abi.JSON(strings.NewReader(contracts.ERC20TokenMetaData.ABI))
+	if err != nil {
+		return nil, fmt.Errorf("%s - RefundExpired.parseABI: %w", orderIDPrefix, err)
+	}
+	transferData, err := erc20ABI.Pack("transfer", ethcommon.HexToAddress(returnAddress), balance)
+	if err != nil {
+		return nil, fmt.Errorf("%s - RefundExpired.packTransfer: %w", orderIDPrefix, err)
+	}
+	tokenAddr := ethcommon.HexToAddress(tokenContract)
+	return []services.Call7702{
+		{To: tokenAddr, Value: big.NewInt(0), Data: transferData},
+	}, nil
+}
+
+// refundExpiredOrderForSmartWallet sends ERC-20 transfer from smart wallet to return address via Thirdweb Engine (fire-and-forget).
+func refundExpiredOrderForSmartWallet(ctx context.Context, order *ent.PaymentOrder, chainId int64, balance *big.Int, tokenContract string, engineService *services.EngineService) error {
+	method := "function transfer(address recipient, uint256 amount) public returns (bool)"
+	params := []interface{}{
+		order.RefundOrRecipientAddress,
+		balance.String(),
+	}
+	_, err := engineService.SendContractCall(ctx, chainId, order.ReceiveAddress, tokenContract, method, params)
+	if err != nil {
+		return fmt.Errorf("Failed to send refund transfer via Engine: %w", err)
+	}
 	return nil
 }

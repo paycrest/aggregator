@@ -2,8 +2,11 @@ package services
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/services/starknet"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	tronWallet "github.com/paycrest/tron-wallet"
@@ -17,15 +20,42 @@ type ReceiveAddressService struct {
 }
 
 // NewReceiveAddressService creates a new instance of ReceiveAddressService.
+// engineService can be nil when not used (e.g. index controller); required for engine mode in sender.
 func NewReceiveAddressService() *ReceiveAddressService {
 	return &ReceiveAddressService{
 		engineService: NewEngineService(),
 	}
 }
 
-// CreateSmartAddress function generates and saves a new EIP-4337 smart contract account address
-func (s *ReceiveAddressService) CreateSmartAddress(ctx context.Context, label string) (string, error) {
-	return s.engineService.CreateServerWallet(ctx, label)
+// CreateEVMAddress returns (address, saltOrNil, error).
+// engine: uses EngineService.CreateServerWallet; no salt.
+// native: generates EOA locally, encrypts key as salt.
+func (s *ReceiveAddressService) CreateEVMAddress(ctx context.Context, walletService network.WalletService, label string) (string, []byte, error) {
+	switch walletService {
+	case network.WalletServiceEngine:
+		if s.engineService == nil {
+			return "", nil, fmt.Errorf("engine service required for engine mode")
+		}
+		address, err := s.engineService.CreateServerWallet(ctx, label)
+		if err != nil {
+			return "", nil, err
+		}
+		return address, nil, nil
+	case network.WalletServiceNative:
+		privateKey, err := crypto.GenerateKey()
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to generate EOA key: %w", err)
+		}
+		address := crypto.PubkeyToAddress(privateKey.PublicKey)
+		privateKeyHex := hex.EncodeToString(crypto.FromECDSA(privateKey))
+		salt, err := cryptoUtils.EncryptPlain([]byte(privateKeyHex))
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to encrypt salt: %w", err)
+		}
+		return address.Hex(), salt, nil
+	default:
+		return "", nil, fmt.Errorf("unsupported wallet_service: %s", walletService)
+	}
 }
 
 // CreateTronAddress generates and saves a new Tron address

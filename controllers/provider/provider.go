@@ -1430,6 +1430,13 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 		}()
 
 	case paymentorderfulfillment.ValidationStatusFailed:
+		// Idempotency: skip all when fulfillment is already Failed and order is already Fulfilled (avoids re-writing and double balance release).
+		if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed &&
+			fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Status == paymentorder.StatusFulfilled {
+			u.APIResponse(ctx, http.StatusOK, "success", fmt.Sprintf("Order already %s", fulfillment.ValidationStatus), nil)
+			return
+		}
+
 		_, err := fulfillment.Update().
 			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
 			SetValidationError(payload.ValidationError).
@@ -2231,8 +2238,6 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	if err != nil {
 		logger.Errorf("error setting TTL for order %s exclude_list on Redis: %v", orderID, err)
 	}
-
-	// TODO: Reassign order to another provider in background
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Order cancelled successfully", nil)
 }

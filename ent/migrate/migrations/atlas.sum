@@ -1,4 +1,4 @@
-h1:yvaAS3YenHEZHJACOCn2H5axLNOVSVCoAVqr3qhksYI=
+h1:37U5rHy7mt8xa+siyDisH50FQpXleZhSteSc6VyWJlY=
 20240118234246_initial.sql h1:dYuYBqns33WT+3p8VQvbKUP62k3k6w6h8S+FqNqgSvU=
 20240130122324_order_from_address.sql h1:mMVI2iBUd1roIYLUqu0d2jZ7+B6exppRN8qqn+aIHx4=
 20240202010744_fees_on_order.sql h1:P7ngxZKqDKefBM5vk6M3kbWeMPVwbZ4MZVcLBjEfS34=
@@ -77,3 +77,4 @@ h1:yvaAS3YenHEZHJACOCn2H5axLNOVSVCoAVqr3qhksYI=
 20260216150716_add_fallback_tried_at.sql h1:uRF9J576E338U5X/ghtVhwAtvUyEPMooRVl80PZJE/I=
 20260219103600_drop_daily_estimated_volume.sql h1:lPK0SOxaScn37xSvXfEJN/4idCmjYyzwTq6pkI+K1Fk=
 20260305193715_add_peak_balance.sql h1:InsWKpVwaPDZxOdDy6EiCtInpnfqyzvUx7kjoa+3hIA=
+20260310185904_add_wallet_service.sql h1:eG863f+be3Cac7dzU6+rOJ+tVEVIouatPBlIGtKI+VY=

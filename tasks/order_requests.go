@@ -19,13 +19,67 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// canReassignCancelledOrder returns true when the order is eligible for reassignment (same guard as reassignCancelledOrder).
+func canReassignCancelledOrder(order *ent.PaymentOrder) bool {
+	return order.Edges.Provider != nil &&
+		order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate &&
+		order.CancellationCount < orderConf.RefundCancellationCount &&
+		order.CreatedAt.After(time.Now().Add(-orderConf.OrderRefundTimeout-10*time.Second))
+}
+
+// cleanupStuckFulfilledFailedOrder clears provider and sets status to Pending for orders stuck in Fulfilled+failed outside refund window (state cleanup only).
+func cleanupStuckFulfilledFailedOrder(ctx context.Context, order *ent.PaymentOrder) {
+	// Release reserved fiat balance for the provider before clearing (same logic as reassignCancelledOrder).
+	if order.Edges.Provider != nil && order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+		currency := order.Edges.ProvisionBucket.Edges.Currency.Code
+		amount := order.Amount.Mul(order.Rate).RoundBank(0)
+		balanceSvc := balance.New()
+		if relErr := balanceSvc.ReleaseFiatBalance(ctx, order.Edges.Provider.ID, currency, amount, nil); relErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", relErr),
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.Edges.Provider.ID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("cleanupStuckFulfilledFailedOrder: failed to release reserved balance (best effort)")
+		}
+	}
+
+	_, err := storage.Client.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.IDEQ(order.ID),
+			paymentorder.Or(
+				paymentorder.StatusEQ(paymentorder.StatusFulfilling),
+				paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+			),
+		).
+		ClearProvider().
+		SetStatus(paymentorder.StatusPending).
+		Save(ctx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":   fmt.Sprintf("%v", err),
+			"OrderID": order.ID.String(),
+		}).Errorf("cleanupStuckFulfilledFailedOrder: failed to update order")
+		return
+	}
+}
+
 // reassignCancelledOrder reassigns cancelled orders to providers
 func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfillment *ent.PaymentOrderFulfillment) {
-	if order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate && order.CancellationCount < orderConf.RefundCancellationCount && order.CreatedAt.After(time.Now().Add(-orderConf.OrderRefundTimeout-10*time.Second)) {
+	if !canReassignCancelledOrder(order) {
+		return
+	}
+	{
 		// Push provider ID to order exclude list
 		orderKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
 		_, err := storage.RedisClient.RPush(ctx, orderKey, order.Edges.Provider.ID).Result()
 		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": order.ID.String(),
+			}).Errorf("reassignCancelledOrder: Redis RPush failed for exclude list, skipping reassignment")
 			return
 		}
 		// Set TTL for the exclude list (2x order request validity since orders can be reassigned)
