@@ -1549,36 +1549,72 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	amountIn := payload.AmountIn
 	switch amountIn {
 	case "fiat":
-		// For fiat amounts, convert to crypto using buy rate
-		isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
-		if isDirectMatch {
-			orderRate = decimal.NewFromInt(1)
-		} else {
-			if currency.MarketBuyRate.IsZero() {
+		// Onramp + amountIn=fiat: user fixes fiat input. Rate is optional: if provided use it (crypto = fiat/rate); else pick system rate.
+		if payload.Rate != "" {
+			providedRate, err := decimal.NewFromString(payload.Rate)
+			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
-					Message: "Rate not available for this currency",
+					Message: "Invalid rate format",
 				})
 				return
 			}
-			// Use market buy rate as approximation for onramp
-			orderRate = currency.MarketBuyRate
+			if providedRate.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: "Rate must be greater than zero",
+				})
+				return
+			}
+			cryptoAmountOut = amount.Div(providedRate)
+			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
+				})
+				return
+			}
+			rateValidationResult = rateResult
+			achievableRate := rateValidationResult.Rate
+			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001))
+			if providedRate.GreaterThan(achievableRate.Add(tolerance)) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Provided rate %s is not achievable. Available rate is %s", providedRate, achievableRate),
+				})
+				return
+			}
+			orderRate = providedRate
+			cryptoAmountOut = amount.Div(orderRate)
+		} else {
+			// No rate provided: pick valid system rate and determine crypto from user's fiat amount
+			isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
+			if isDirectMatch {
+				orderRate = decimal.NewFromInt(1)
+			} else {
+				if currency.MarketBuyRate.IsZero() {
+					u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+						Field:   "Rate",
+						Message: "Rate not available for this currency",
+					})
+					return
+				}
+				orderRate = currency.MarketBuyRate
+			}
+			cryptoAmountOut = amount.Div(orderRate)
+			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Rate",
+					Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
+				})
+				return
+			}
+			rateValidationResult = rateResult
+			orderRate = rateValidationResult.Rate
+			cryptoAmountOut = amount.Div(orderRate)
 		}
-		cryptoAmountOut = amount.Div(orderRate)
-
-		// ValidateRate expects crypto units, so pass cryptoAmountOut with buy side
-		rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
-		if err != nil {
-			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-				Field:   "Rate",
-				Message: fmt.Sprintf("Rate validation failed: %s", err.Error()),
-			})
-			return
-		}
-		rateValidationResult = rateResult
-		orderRate = rateValidationResult.Rate
-		// Recalculate cryptoAmountOut with the validated rate
-		cryptoAmountOut = amount.Div(orderRate)
 	case "crypto":
 		cryptoAmountOut = amount
 		if payload.Rate != "" {
