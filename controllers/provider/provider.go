@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"io"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -574,17 +572,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Parse request body for direction and amount (for payin orders)
-	var acceptRequest types.AcceptOrderRequest
-	if err := ctx.ShouldBindJSON(&acceptRequest); err != nil {
-		if !errors.Is(err, io.EOF) {
-			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Invalid request body"})
-			return
-		}
-		// Empty body: backward compatibility, default to payout
-		acceptRequest.Direction = "payout"
-	}
-
 	// Get order request from Redis (offramp: set by assignment; payin: set by sender at creation).
 	// If Redis key is missing (e.g. expired/deleted), fall back to DB so retries still succeed.
 	orderRequestKey := fmt.Sprintf("order_request_%s", orderID)
@@ -697,6 +684,9 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		// Idempotent retry: if order is already Fulfilling with same provider, return 201 immediately.
 		if currentOrder.Status == paymentorder.StatusFulfilling && currentOrder.Edges.Provider != nil && currentOrder.Edges.Provider.ID == provider.ID {
 			_ = tx.Rollback()
+			// Delete Redis keys so repeated retries don't keep hitting DB (same as Redis-fallback idempotent path).
+			_, _ = storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
+			_, _ = storage.RedisClient.Del(reqCtx, orderRequestKey).Result()
 			response := buildAcceptOrderResponse(currentOrder, orderID, provider)
 			u.APIResponse(ctx, http.StatusCreated, "success", "Order accepted", response)
 			return
@@ -905,6 +895,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		order, err = tx.PaymentOrder.
 			Query().
 			Where(paymentorder.IDEQ(orderID)).
+			WithProvider().
 			WithToken(func(tq *ent.TokenQuery) {
 				tq.WithNetwork()
 			}).
