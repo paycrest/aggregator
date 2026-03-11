@@ -152,7 +152,7 @@ func (PaymentOrder) Edges() []ent.Edge {
 // Indexes of the PaymentOrder.
 func (PaymentOrder) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("gateway_id", "rate", "tx_hash", "block_number", "institution", "account_identifier", "account_name", "memo").
+		index.Fields("gateway_id", "rate", "tx_hash", "block_number", "institution", "account_identifier", "account_name", "memo", "direction", "refund_or_recipient_address").
 			Edges("token").
 			Unique(),
 	}

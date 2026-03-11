@@ -263,9 +263,9 @@ var (
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "paymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_token_payment_orders",
+				Name:    "paymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_direction_refund_or_recipient_address_token_payment_orders",
 				Unique:  true,
-				Columns: []*schema.Column{PaymentOrdersColumns[17], PaymentOrdersColumns[4], PaymentOrdersColumns[14], PaymentOrdersColumns[15], PaymentOrdersColumns[25], PaymentOrdersColumns[26], PaymentOrdersColumns[27], PaymentOrdersColumns[33], PaymentOrdersColumns[42]},
+				Columns: []*schema.Column{PaymentOrdersColumns[17], PaymentOrdersColumns[4], PaymentOrdersColumns[14], PaymentOrdersColumns[15], PaymentOrdersColumns[25], PaymentOrdersColumns[26], PaymentOrdersColumns[27], PaymentOrdersColumns[33], PaymentOrdersColumns[35], PaymentOrdersColumns[19], PaymentOrdersColumns[42]},
 			},
 		},
 	}
