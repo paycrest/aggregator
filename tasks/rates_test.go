@@ -38,8 +38,8 @@ func TestFetchExternalRate(t *testing.T) {
 
 		buy, sell, err := fetchExternalRate("NGN")
 		assert.NoError(t, err)
-		expectedBuy := decimal.NewFromFloat(1451.61) // swapped in implementation
-		expectedSell := decimal.NewFromFloat(1444.36)
+		expectedBuy := decimal.NewFromFloat(1444.36)
+		expectedSell := decimal.NewFromFloat(1451.61)
 		assert.True(t, buy.Equal(expectedBuy))
 		assert.True(t, sell.Equal(expectedSell))
 	})
