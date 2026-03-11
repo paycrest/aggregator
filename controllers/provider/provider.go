@@ -694,6 +694,14 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 	// For payin orders, confirm it's an onramp order and check token balance reservation
 	if isPayin {
+		// Idempotent retry: if order is already Fulfilling with same provider, return 201 immediately.
+		if currentOrder.Status == paymentorder.StatusFulfilling && currentOrder.Edges.Provider != nil && currentOrder.Edges.Provider.ID == provider.ID {
+			_ = tx.Rollback()
+			response := buildAcceptOrderResponse(currentOrder, orderID, provider)
+			u.APIResponse(ctx, http.StatusCreated, "success", "Order accepted", response)
+			return
+		}
+
 		// Confirm order is onramp
 		if currentOrder.Direction != paymentorder.DirectionOnramp {
 			_ = tx.Rollback()
@@ -804,14 +812,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Insufficient reserved token balance", refundDetails)
 			return
 		}
-	}
-
-	// For payin: if order is already Fulfilling and same provider, return 201 + lock payload (idempotent retry after settlement failure)
-	if isPayin && currentOrder.Direction == paymentorder.DirectionOnramp && currentOrder.Status == paymentorder.StatusFulfilling && currentOrder.Edges.Provider != nil && currentOrder.Edges.Provider.ID == provider.ID {
-		_ = tx.Rollback()
-		response := buildAcceptOrderResponse(currentOrder, orderID, provider)
-		u.APIResponse(ctx, http.StatusCreated, "success", "Order accepted", response)
-		return
 	}
 
 	// Check if order is already in a finalized state

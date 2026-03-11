@@ -76,8 +76,8 @@ func fetchExternalRate(currency string) (buyRate, sellRate decimal.Decimal, err 
 	}
 
 	// Swap buy and sell rates to match sender perspective
-	buyRate = decimal.NewFromFloat(sellRateFloat)
-	sellRate = decimal.NewFromFloat(buyRateFloat)
+	buyRate = decimal.NewFromFloat(buyRateFloat)
+	sellRate = decimal.NewFromFloat(sellRateFloat)
 
 	return buyRate, sellRate, nil
 }
