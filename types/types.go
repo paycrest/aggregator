@@ -12,7 +12,7 @@ import (
 	"github.com/NethermindEth/starknet.go/rpc"
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
@@ -37,15 +37,15 @@ func (e *ErrNoProviderDueToStuck) Error() string {
 
 // RPCClient is an interface for interacting with the blockchain.
 type RPCClient interface {
-	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error)
-	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
+	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]coretypes.Log, error)
+	HeaderByNumber(ctx context.Context, number *big.Int) (*coretypes.Header, error)
 	PendingNonceAt(ctx context.Context, account common.Address) (uint64, error)
 	SuggestGasPrice(ctx context.Context) (*big.Int, error)
 	SuggestGasTipCap(ctx context.Context) (*big.Int, error)
 	EstimateGas(ctx context.Context, call ethereum.CallMsg) (gas uint64, err error)
-	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error)
+	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- coretypes.Log) (ethereum.Subscription, error)
 	CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error)
-	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*coretypes.Receipt, error)
 	Close()
 	Commit() common.Hash
 }
@@ -235,23 +235,13 @@ type AcceptOrderResponse struct {
 	DelegationAddress string                 `json:"delegationAddress,omitempty"`
 }
 
-// SetCodeAuthorization represents EIP-7702 SetCodeAuthorization for payin orders
-type SetCodeAuthorization struct {
-	ChainID string `json:"chainId"` // Chain ID as string
-	Address string `json:"address"` // Delegation contract address
-	Nonce   uint64 `json:"nonce"`   // Authorization nonce
-	V       uint8  `json:"v"`       // Signature V component
-	R       string `json:"r"`       // Signature R component (hex string)
-	S       string `json:"s"`       // Signature S component (hex string)
-}
-
 // FulfillOrderPayload is the payload for the fulfill order endpoint
 type FulfillOrderPayload struct {
 	PSP              string                                   `json:"psp" binding:"required"`
 	TxID             string                                   `json:"txId" binding:"required"`
 	ValidationStatus paymentorderfulfillment.ValidationStatus `json:"validationStatus"`
 	ValidationError  string                                   `json:"validationError"`
-	Authorization    *SetCodeAuthorization                    `json:"authorization,omitempty"` // Required for payin orders
+	Authorization    *coretypes.SetCodeAuthorization         `json:"authorization,omitempty"` // Required for payin orders (EIP-7702; JSON: yParity, chainId, address, nonce, r, s)
 }
 
 // CancelOrderPayload is the payload for the cancel order endpoint

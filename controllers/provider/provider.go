@@ -15,6 +15,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
@@ -52,12 +53,14 @@ var cryptoConf = config.CryptoConfig()
 // ProviderController is a controller type for provider endpoints
 type ProviderController struct {
 	balanceService *balance.Service
+	nativeService  *services.NativeService
 }
 
 // NewProviderController creates a new instance of ProviderController with injected services
 func NewProviderController() *ProviderController {
 	return &ProviderController{
 		balanceService: balance.New(),
+		nativeService:   services.NewNativeService(),
 	}
 }
 
@@ -634,9 +637,16 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			"providerId": fallbackOrder.Edges.Provider.ID,
 			"direction":  directionStr,
 		}
-		if fallbackOrder.Direction == paymentorder.DirectionOnramp && fallbackOrder.Edges.ProvisionBucket != nil && fallbackOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+		if fallbackOrder.Direction == paymentorder.DirectionOnramp {
 			result["amount"] = fallbackOrder.Amount.Add(fallbackOrder.SenderFee).Mul(fallbackOrder.Rate).RoundBank(0).String()
-			result["currency"] = fallbackOrder.Edges.ProvisionBucket.Edges.Currency.Code
+			if fallbackOrder.Edges.ProvisionBucket != nil && fallbackOrder.Edges.ProvisionBucket.Edges.Currency != nil {
+				result["currency"] = fallbackOrder.Edges.ProvisionBucket.Edges.Currency.Code
+			} else if fallbackOrder.Institution != "" {
+				inst, instErr := u.GetInstitutionByCode(reqCtx, fallbackOrder.Institution, true)
+				if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
+					result["currency"] = inst.Edges.FiatCurrency.Code
+				}
+			}
 		}
 	} else if result["providerId"] != provider.ID {
 		logger.Errorf("order request not found in Redis: %v", orderID)
@@ -945,13 +955,15 @@ func buildAcceptOrderResponse(order *ent.PaymentOrder, orderID uuid.UUID, provid
 			network := order.Edges.Token.Edges.Network
 			response.ChainId = fmt.Sprintf("%d", network.ChainID)
 			response.RpcUrl = network.RPCEndpoint
-			response.DelegationAddress = network.GatewayContractAddress
+			response.DelegationAddress = network.DelegationContractAddress
 		}
 	} else {
 		response.Direction = "payout"
 		response.Amount = order.Amount.Mul(order.Rate).RoundBank(0)
 	}
-	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling && provider != nil {
+	// Only attach OTC expiry when the provider argument is the order's assigned provider (avoids leaking metadata if called with wrong order).
+	if order.OrderType == paymentorder.OrderTypeOtc && order.Status == paymentorder.StatusFulfilling &&
+		order.Edges.Provider != nil && order.Edges.Provider.ID == provider.ID {
 		if response.Metadata == nil {
 			response.Metadata = make(map[string]interface{})
 		}
@@ -1200,7 +1212,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	if fulfillment.Edges.Order != nil &&
 		fulfillment.Edges.Order.Status == paymentorder.StatusRefunding &&
 		fulfillment.Edges.Order.Direction == paymentorder.DirectionOnramp {
-		ctrl.handleRefundOutcomeFulfillment(ctx, orderID, payload, fulfillment, provider)
+		ctrl.handleRefundOutcomeFulfillment(ctx, orderID, payload, fulfillment)
 		return
 	}
 
@@ -1213,11 +1225,11 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 		return
 	}
 
-	ctrl.handlePayoutFulfillment(ctx, orderID, payload, fulfillment, provider)
+	ctrl.handlePayoutFulfillment(ctx, orderID, payload, fulfillment)
 }
 
 // handlePayoutFulfillment handles payout (offramp) order fulfillment by validation status.
-func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
+func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment) {
 	reqCtx := ctx.Request.Context()
 	updateLockOrder := storage.Client.PaymentOrder.
 		Update().
@@ -1540,7 +1552,7 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 
 // handleRefundOutcomeFulfillment handles FulfillOrder when order is Refunding (payin insufficient-balance refund path).
 // It interprets payload.ValidationStatus as refund outcome: refunded, pending, or failed.
-func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
+func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment) {
 	order := fulfillment.Edges.Order
 	if order == nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Order not found", nil)
@@ -1690,14 +1702,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	// Authorization required only when proceeding to on-chain settlement
-	if payload.Authorization == nil {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Authorization is required for payin orders", types.ErrorData{
-			Field:   "Authorization",
-			Message: "EIP-7702 SetCodeAuthorization is required for payin fulfillment",
-		})
-		return
-	}
+	// Authorization is optional: provider omits it when the EOA had already delegated (authList will be nil for SendTransaction).
 
 	// Fetch order with token, network, provider, and sender profile (prepareSettleInCallData needs SenderProfile.ID)
 	orderWithDetails, err := storage.Client.PaymentOrder.
@@ -2000,65 +2005,35 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order 
 	return data, nil
 }
 
-// executePayinSettlement executes the EIP-7702 transaction for payin settlement via Engine write/transaction with authorizationList.
-func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, authorization *types.SetCodeAuthorization, settleInData []byte) error {
-	if authorization == nil {
-		return fmt.Errorf("authorization is required")
-	}
-	if cryptoConf.AggregatorAccountEVM == "" {
-		return fmt.Errorf("aggregator EVM address not configured")
-	}
-	gatewayAddress := order.Edges.Token.Edges.Network.GatewayContractAddress
+// executePayinSettlement executes the EIP-7702 transaction for payin settlement via native RPC (NativeService).
+// If authorization is nil (provider already delegated), authList is nil; otherwise the provided auth is validated and used.
+func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, authorization *coretypes.SetCodeAuthorization, settleInData []byte) error {
+	network := order.Edges.Token.Edges.Network
+	gatewayAddress := network.GatewayContractAddress
 	if gatewayAddress == "" {
 		return fmt.Errorf("gateway contract address not set for network")
 	}
-	orderChainID := order.Edges.Token.Edges.Network.ChainID
-	if fmt.Sprintf("%d", orderChainID) != authorization.ChainID {
-		return fmt.Errorf("authorization chain ID does not match order network")
-	}
-	if !strings.EqualFold(strings.TrimPrefix(authorization.Address, "0x"), strings.TrimPrefix(gatewayAddress, "0x")) {
-		return fmt.Errorf("authorization address does not match order network gateway address")
+
+	var authList []coretypes.SetCodeAuthorization
+	if authorization != nil {
+		delegationAddress := network.DelegationContractAddress
+		if delegationAddress == "" {
+			return fmt.Errorf("delegation contract address not set for network")
+		}
+		if authorization.ChainID.ToBig().Cmp(big.NewInt(int64(network.ChainID))) != 0 {
+			return fmt.Errorf("authorization chain ID does not match order network")
+		}
+		if authorization.Address != ethcommon.HexToAddress(delegationAddress) {
+			return fmt.Errorf("authorization address does not match order network delegation contract address")
+		}
+		if authorization.V != 0 && authorization.V != 1 {
+			return fmt.Errorf("authorization yParity must be 0 or 1; got %d", authorization.V)
+		}
+		authList = []coretypes.SetCodeAuthorization{*authorization}
 	}
 
-	// Validate V and derive yParity: only 0, 1, 27, 28 are accepted (EIP-155 and legacy)
-	var yParity int
-	switch authorization.V {
-	case 0:
-		yParity = 0
-	case 1:
-		yParity = 1
-	case 27:
-		yParity = 0
-	case 28:
-		yParity = 1
-	default:
-		return fmt.Errorf("authorization V must be 0, 1, 27, or 28; got %d", authorization.V)
-	}
-
-	authEntry := map[string]interface{}{
-		"chainId": authorization.ChainID,
-		"address": authorization.Address,
-		"nonce":   authorization.Nonce,
-		"yParity": yParity,
-		"r":       authorization.R,
-		"s":       authorization.S,
-	}
-	authorizationList := []map[string]interface{}{authEntry}
-
-	// Single transaction object: authorizationList must be on the same map as to/data/value so the Engine API applies EIP-7702 delegation to this tx
-	params := []map[string]interface{}{
-		{
-			"to":                gatewayAddress,
-			"data":              "0x" + hex.EncodeToString(settleInData),
-			"value":             "0",
-			"authorizationList": authorizationList,
-		},
-	}
-
-	engineSvc := services.NewEngineService()
-	chainID := order.Edges.Token.Edges.Network.ChainID
 	reqCtx := ctx.Request.Context()
-	_, err := engineSvc.SendTransactionBatch(reqCtx, chainID, cryptoConf.AggregatorAccountEVM, params)
+	_, err := ctrl.nativeService.SendTransaction(reqCtx, order.ID.String(), network, ethcommon.HexToAddress(gatewayAddress), settleInData, authList)
 	if err != nil {
 		return fmt.Errorf("send transaction with authorizationList: %w", err)
 	}
