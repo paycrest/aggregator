@@ -508,6 +508,7 @@ type SenderOrderResponse struct {
 	UpdatedAt      time.Time              `json:"updatedAt"`
 	TxHash         string                 `json:"txHash"`
 	Status         paymentorder.Status    `json:"status"`
+	RefundReason   string                 `json:"refundReason,omitempty"`
 	Transactions   []TransactionLog       `json:"transactionLogs"`
 	OrderType      paymentorder.OrderType `json:"orderType"`
 }
@@ -534,6 +535,7 @@ type PaymentOrderWebhookData struct {
 	CreatedAt      time.Time             `json:"createdAt"`
 	TxHash         string                `json:"txHash"`
 	Status         paymentorder.Status   `json:"status"`
+	RefundReason   string                `json:"refundReason,omitempty"`
 }
 
 // PaymentOrderWebhookPayload is the request type for a payment order webhook

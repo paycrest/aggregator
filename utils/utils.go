@@ -98,7 +98,6 @@ func StringToByte32(s string) [32]byte {
 
 // Byte32ToString converts [32]byte to string
 func Byte32ToString(b [32]byte) string {
-
 	// Find first null index if any
 	nullIndex := -1
 	for i, x := range b {
@@ -307,6 +306,14 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 	if paymentOrder.Edges.Provider != nil {
 		providerID = paymentOrder.Edges.Provider.ID
 	}
+	reasons := paymentOrder.CancellationReasons
+	if reasons == nil {
+		reasons = []string{}
+	}
+	refundReason := ""
+	if (paymentOrder.Status == paymentorder.StatusRefunded || paymentOrder.Status == paymentorder.StatusRefunding) && len(reasons) > 0 {
+		refundReason = strings.Join(reasons, "; ")
+	}
 	payloadStruct := types.PaymentOrderWebhookPayload{
 		Event: event,
 		Data: types.PaymentOrderWebhookData{
@@ -336,6 +343,7 @@ func SendPaymentOrderWebhook(ctx context.Context, paymentOrder *ent.PaymentOrder
 			CreatedAt:     paymentOrder.CreatedAt,
 			TxHash:        paymentOrder.TxHash,
 			Status:        paymentOrder.Status,
+			RefundReason:  refundReason,
 		},
 	}
 

@@ -183,7 +183,6 @@ func setup() error {
 		"fee_percent": "5",
 		"token":       token.Symbol,
 	})
-
 	if err != nil {
 		return fmt.Errorf("CreateTestSenderProfile.sender_test: %w", err)
 	}
@@ -355,7 +354,6 @@ func setupHTTPMocks() {
 }
 
 func TestSender(t *testing.T) {
-
 	// Set up test database client with shared in-memory schema so all connections see the same tables
 	client := enttest.Open(t, "sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	defer client.Close()
@@ -626,7 +624,6 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("should successfully create order with valid amount", func(t *testing.T) {
-
 			// Activate httpmock globally to intercept all HTTP calls (including fastshot)
 			httpmock.Activate()
 			defer httpmock.DeactivateAndReset()
@@ -1295,7 +1292,6 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, expectedFee, paymentOrder.SenderFee, "Database should store calculated fee")
 		})
-
 	})
 
 	t.Run("GetPaymentOrderByID", func(t *testing.T) {
@@ -1352,12 +1348,20 @@ func TestSender(t *testing.T) {
 				}
 				assert.NotEmpty(t, data["total"])
 				assert.NotEmpty(t, data["orders"])
+				if orders, ok := data["orders"].([]interface{}); ok {
+					for _, o := range orders {
+						if order, ok := o.(map[string]interface{}); ok && order["refundReason"] != nil {
+							_, ok := order["refundReason"].(string)
+							assert.True(t, ok, "refundReason when present must be a string")
+						}
+					}
+				}
 			}
 		})
 
 		t.Run("when filtering is applied", func(t *testing.T) {
 			// Test different status filters
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"status":    "initiated",
 				"timestamp": time.Now().Unix(),
 			}
@@ -1392,7 +1396,7 @@ func TestSender(t *testing.T) {
 			// Test different page and pageSize values
 			page := 1
 			pageSize := 10
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"page":      strconv.Itoa(page),
 				"pageSize":  strconv.Itoa(pageSize),
 				"timestamp": time.Now().Unix(),
@@ -1427,7 +1431,7 @@ func TestSender(t *testing.T) {
 
 		t.Run("with ordering", func(t *testing.T) {
 			// Test ascending and descending ordering
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"ordering":  "desc",
 				"timestamp": time.Now().Unix(),
 			}
@@ -1472,7 +1476,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("with filtering by network", func(t *testing.T) {
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"network":   testCtx.networkIdentifier,
 				"timestamp": time.Now().Unix(),
 			}
@@ -1507,7 +1511,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("with filtering by token", func(t *testing.T) {
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"token":     testCtx.token.Symbol,
 				"timestamp": time.Now().Unix(),
 			}
@@ -1571,7 +1575,7 @@ func TestSender(t *testing.T) {
 				return
 			}
 
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1611,7 +1615,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("when orders have been initiated", func(t *testing.T) {
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1690,7 +1694,7 @@ func TestSender(t *testing.T) {
 				Save(context.Background())
 			assert.NoError(t, err)
 			assert.NoError(t, err)
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -1742,7 +1746,7 @@ func TestSender(t *testing.T) {
 
 	t.Run("SearchPaymentOrders", func(t *testing.T) {
 		t.Run("should return error when search query is empty", func(t *testing.T) {
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"search":    "",
 				"timestamp": time.Now().Unix(),
 			}
@@ -1764,7 +1768,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("should search by account identifier", func(t *testing.T) {
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"search":    "1234567890",
 				"timestamp": time.Now().Unix(),
 			}
@@ -1795,7 +1799,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("should return empty results for non-matching search", func(t *testing.T) {
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"search":    "nonexistent_search_term",
 				"timestamp": time.Now().Unix(),
 			}
@@ -1881,7 +1885,7 @@ func TestSender(t *testing.T) {
 				Save(context.Background())
 			assert.NoError(t, err)
 
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"search":    paymentOrder2.ID.String(),
 				"timestamp": time.Now().Unix(),
 			}
@@ -1938,7 +1942,7 @@ func TestSender(t *testing.T) {
 			today := time.Now().Format("2006-01-02")
 			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
 
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"from":      today,
 				"to":        tomorrow,
 				"export":    "csv",
@@ -1977,7 +1981,7 @@ func TestSender(t *testing.T) {
 			today := time.Now().Format("2006-01-02")
 			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
 
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"from":      today,
 				"to":        tomorrow,
 				"limit":     "50", // Use a limit higher than expected orders to avoid validation error
@@ -2012,7 +2016,7 @@ func TestSender(t *testing.T) {
 			today := time.Now().Format("2006-01-02")
 			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
 
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"from":      today,
 				"to":        tomorrow,
 				"limit":     "1", // Very small limit to trigger validation
@@ -2037,7 +2041,7 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("should return error for invalid date format", func(t *testing.T) {
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"from":      "invalid-date",
 				"to":        "2024-12-31",
 				"export":    "csv",
@@ -2119,7 +2123,7 @@ func TestSender(t *testing.T) {
 			today := time.Now().Format("2006-01-02")
 			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
 
-			var payload = map[string]interface{}{
+			payload := map[string]interface{}{
 				"from":      today,
 				"to":        tomorrow,
 				"export":    "csv",
