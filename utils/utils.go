@@ -965,12 +965,13 @@ func IsBase64(s string) bool {
 	return false
 }
 
-// GetTokenRateFromQueue gets the rate of a token from the priority queue
-func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiatCurrency string, marketRate decimal.Decimal) (decimal.Decimal, error) {
+// GetTokenRateFromQueue gets the rate of a token from the priority queue for the given side (buy/sell).
+// Bucket keys are side-suffixed: bucket_{currency}_{min}_{max}_{side}. Scanning without side would mix buy and sell rates.
+func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiatCurrency string, marketRate decimal.Decimal, side RateSide) (decimal.Decimal, error) {
 	ctx := context.Background()
 
-	// Get rate from priority queue
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+fiatCurrency+"_*_*", 100).Result()
+	// Scan for side-specific bucket keys: bucket_{currency}_{min}_{max}_{side}
+	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+fiatCurrency+"_*_*_"+string(side), 100).Result()
 	if err != nil {
 		return decimal.Decimal{}, err
 	}
@@ -980,9 +981,11 @@ func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiat
 
 	// Scan through the buckets to find a suitable rate
 	for _, key := range keys {
-		bucketData := strings.Split(key, "_")
-		minAmount, _ := decimal.NewFromString(bucketData[2])
-		maxAmount, _ := decimal.NewFromString(bucketData[3])
+		bd, err := parseBucketKey(key)
+		if err != nil {
+			continue
+		}
+		minAmount, maxAmount := bd.MinAmount, bd.MaxAmount
 
 		for index := 0; ; index++ {
 			// Get the topmost provider in the priority queue of the bucket
