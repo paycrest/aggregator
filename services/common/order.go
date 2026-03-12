@@ -709,7 +709,7 @@ func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusSettleIn.commit: %v", err)
 	}
 
-	// Reload payment order for webhook
+	// Reload payment order for webhook and balance release
 	paymentOrder, err := db.Client.PaymentOrder.
 		Query().
 		Where(
@@ -721,12 +721,25 @@ func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event 
 			),
 		).
 		WithSenderProfile().
+		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
 		Only(ctx)
 	if err != nil {
-		return nil // Order updated; webhook best-effort
+		return nil // Order updated; webhook/release best-effort
+	}
+
+	// Release reserved token balance only after on-chain confirmation (SettleIn event)
+	if paymentOrder.Edges.Provider != nil && paymentOrder.Edges.Token != nil {
+		balanceService := balance.New()
+		totalCryptoReserved := paymentOrder.Amount.Add(paymentOrder.SenderFee)
+		if relErr := balanceService.ReleaseTokenBalance(ctx, paymentOrder.Edges.Provider.ID, paymentOrder.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+			logger.WithFields(logger.Fields{
+				"OrderID": gatewayID,
+				"Error":   relErr.Error(),
+			}).Errorf("UpdateOrderStatusSettleIn.releaseBalance: failed to release reserved token balance")
+		}
 	}
 
 	if err := utils.SendPaymentOrderWebhook(ctx, paymentOrder); err != nil {

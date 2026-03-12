@@ -1858,7 +1858,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	// Update fulfillment status and release reserved token balance
+	// Update fulfillment status. Reserved token balance is released only after on-chain confirmation (SettleIn event in indexer).
 	tx2, err := storage.Client.Tx(ctx)
 	if err != nil {
 		logger.Errorf("Failed to start transaction: %v", err)
@@ -1879,12 +1879,6 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		logger.Errorf("Failed to commit transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
-	}
-	totalCryptoReserved := orderWithDetails.Amount.Add(orderWithDetails.SenderFee)
-	err = ctrl.balanceService.ReleaseTokenBalance(ctx, provider.ID, orderWithDetails.Edges.Token.ID, totalCryptoReserved, nil)
-	if err != nil {
-		logger.Errorf("Failed to release token balance: %v", err)
-		// Don't fail the entire operation if balance release fails - log and continue
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Order submitted for settlement", nil)

@@ -13,6 +13,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/services"
 	orderService "github.com/paycrest/aggregator/services/order"
 	starknetService "github.com/paycrest/aggregator/services/starknet"
@@ -122,7 +123,7 @@ func RetryStaleUserOperations() error {
 					paymentorder.UpdatedAtLT(time.Now().Add(-5*time.Minute)),
 					paymentorder.UpdatedAtGTE(time.Now().Add(-15*time.Minute)),
 				),
-				// Stuck settling: updated > 10 min ago and < 12 min ago. The retry process is called every 60 seconds, so we should only retry once or twice at most.
+				// Stuck settling: updated > 10 min ago and < 15 min ago. The retry process is called every 60 seconds, so we should only retry once or twice at most.
 				paymentorder.And(
 					paymentorder.StatusEQ(paymentorder.StatusSettling),
 					paymentorder.UpdatedAtLT(time.Now().Add(-10*time.Minute)),
@@ -142,10 +143,74 @@ func RetryStaleUserOperations() error {
 	go func(ctx context.Context) {
 		defer wg.Done()
 		for _, order := range lockOrders {
-			// SettleOrder only accepts StatusValidated; reset stuck settling so it can be retried.
-			// Guard on StatusSettling so we never overwrite an order that became settled (or any
-			// other status) after the initial query—avoids race and re-submitting settlement.
+			// SettleOrder only accepts StatusValidated (offramp). For payin, revert stuck Settling to Fulfilling so provider can retry; keep reservation.
+			// Guard on StatusSettling so we never overwrite an order that became settled (or any other status) after the initial query.
 			if order.Status == paymentorder.StatusSettling {
+				if order.Direction == paymentorder.DirectionOnramp {
+					// Payin: revert to Fulfilling and remove settling log so provider can retry; do not release balance (reservation stays).
+					settlingLog, logErr := storage.Client.TransactionLog.
+						Query().
+						Where(
+							transactionlog.StatusEQ(transactionlog.StatusOrderSettling),
+							transactionlog.GatewayIDEQ(order.GatewayID),
+							transactionlog.NetworkEQ(order.Edges.Token.Edges.Network.Identifier),
+						).
+						First(ctx)
+					if logErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":     fmt.Sprintf("%v", logErr),
+							"OrderID":   order.ID.String(),
+							"GatewayID": order.GatewayID,
+						}).Errorf("RetryStaleUserOperations.payinRevert: failed to find settling log")
+						continue
+					}
+					txRev, txErr := storage.Client.Tx(ctx)
+					if txErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":     fmt.Sprintf("%v", txErr),
+							"OrderID":   order.ID.String(),
+							"LogID":     settlingLog.ID.String(),
+							"GatewayID": order.GatewayID,
+						}).Errorf("RetryStaleUserOperations.payinRevert: failed to start tx")
+						continue
+					}
+					_, updErr := txRev.PaymentOrder.
+						UpdateOneID(order.ID).
+						SetStatus(paymentorder.StatusFulfilling).
+						RemoveTransactions(settlingLog).
+						Save(ctx)
+					if updErr != nil {
+						_ = txRev.Rollback()
+						logger.WithFields(logger.Fields{
+							"Error":     fmt.Sprintf("%v", updErr),
+							"OrderID":   order.ID.String(),
+							"LogID":     settlingLog.ID.String(),
+							"GatewayID": order.GatewayID,
+						}).Errorf("RetryStaleUserOperations.payinRevert: failed to revert order")
+						continue
+					}
+					if delErr := txRev.TransactionLog.DeleteOneID(settlingLog.ID).Exec(ctx); delErr != nil {
+						_ = txRev.Rollback()
+						logger.WithFields(logger.Fields{
+							"Error":     fmt.Sprintf("%v", delErr),
+							"OrderID":   order.ID.String(),
+							"LogID":     settlingLog.ID.String(),
+							"GatewayID": order.GatewayID,
+						}).Errorf("RetryStaleUserOperations.payinRevert: failed to remove settling log")
+						continue
+					}
+					if commitErr := txRev.Commit(); commitErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":     fmt.Sprintf("%v", commitErr),
+							"OrderID":   order.ID.String(),
+							"LogID":     settlingLog.ID.String(),
+							"GatewayID": order.GatewayID,
+						}).Errorf("RetryStaleUserOperations.payinRevert: failed to commit")
+						continue
+					}
+					continue // Skip SettleOrder (offramp only)
+				}
+				// Offramp: reset to StatusValidated so SettleOrder can retry
 				affected, err := storage.Client.PaymentOrder.
 					Update().
 					Where(
