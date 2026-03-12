@@ -71,7 +71,8 @@ var (
 		{Name: "decimals", Type: field.TypeInt, Default: 2},
 		{Name: "symbol", Type: field.TypeString},
 		{Name: "name", Type: field.TypeString},
-		{Name: "market_rate", Type: field.TypeFloat64},
+		{Name: "market_buy_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "market_sell_rate", Type: field.TypeFloat64, Nullable: true},
 		{Name: "is_enabled", Type: field.TypeBool, Default: false},
 	}
 	// FiatCurrenciesTable holds the schema information for the "fiat_currencies" table.
@@ -198,7 +199,7 @@ var (
 		{Name: "message_hash", Type: field.TypeString, Nullable: true},
 		{Name: "gateway_id", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "from_address", Type: field.TypeString, Nullable: true, Size: 70},
-		{Name: "return_address", Type: field.TypeString, Nullable: true, Size: 70},
+		{Name: "refund_or_recipient_address", Type: field.TypeString, Nullable: true, Size: 70},
 		{Name: "receive_address", Type: field.TypeString, Unique: true, Nullable: true, Size: 70},
 		{Name: "receive_address_salt", Type: field.TypeBytes, Nullable: true},
 		{Name: "receive_address_expiry", Type: field.TypeTime, Nullable: true},
@@ -207,13 +208,14 @@ var (
 		{Name: "institution", Type: field.TypeString, Size: 255},
 		{Name: "account_identifier", Type: field.TypeString, Size: 255},
 		{Name: "account_name", Type: field.TypeString, Size: 255},
-		{Name: "memo", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
 		{Name: "sender", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "reference", Type: field.TypeString, Nullable: true, Size: 70},
 		{Name: "cancellation_count", Type: field.TypeInt, Nullable: true, Default: 0},
 		{Name: "cancellation_reasons", Type: field.TypeJSON, Nullable: true},
+		{Name: "memo", Type: field.TypeString, Nullable: true, Size: 255},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"initiated", "deposited", "pending", "fulfilling", "fulfilled", "validated", "settling", "settled", "cancelled", "refunding", "refunded", "expired"}, Default: "initiated"},
+		{Name: "direction", Type: field.TypeEnum, Enums: []string{"offramp", "onramp"}, Default: "offramp"},
 		{Name: "order_type", Type: field.TypeEnum, Enums: []string{"otc", "regular"}, Default: "regular"},
 		{Name: "fallback_tried_at", Type: field.TypeTime, Nullable: true},
 		{Name: "api_key_payment_orders", Type: field.TypeUUID, Nullable: true},
@@ -230,40 +232,40 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_api_keys_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[37]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[38]},
 				RefColumns: []*schema.Column{APIKeysColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_provider_profiles_assigned_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[38]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[39]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "payment_orders_provision_buckets_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[39]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[40]},
 				RefColumns: []*schema.Column{ProvisionBucketsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_sender_profiles_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[40]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[41]},
 				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_tokens_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[41]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[42]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "paymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_token_payment_orders",
+				Name:    "paymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_direction_refund_or_recipient_address_token_payment_orders",
 				Unique:  true,
-				Columns: []*schema.Column{PaymentOrdersColumns[17], PaymentOrdersColumns[4], PaymentOrdersColumns[14], PaymentOrdersColumns[15], PaymentOrdersColumns[25], PaymentOrdersColumns[26], PaymentOrdersColumns[27], PaymentOrdersColumns[28], PaymentOrdersColumns[41]},
+				Columns: []*schema.Column{PaymentOrdersColumns[17], PaymentOrdersColumns[4], PaymentOrdersColumns[14], PaymentOrdersColumns[15], PaymentOrdersColumns[25], PaymentOrdersColumns[26], PaymentOrdersColumns[27], PaymentOrdersColumns[33], PaymentOrdersColumns[35], PaymentOrdersColumns[19], PaymentOrdersColumns[42]},
 			},
 		},
 	}
@@ -274,7 +276,7 @@ var (
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "tx_id", Type: field.TypeString, Nullable: true},
 		{Name: "psp", Type: field.TypeString, Nullable: true},
-		{Name: "validation_status", Type: field.TypeEnum, Enums: []string{"pending", "success", "failed"}, Default: "pending"},
+		{Name: "validation_status", Type: field.TypeEnum, Enums: []string{"pending", "success", "failed", "refunded"}, Default: "pending"},
 		{Name: "validation_error", Type: field.TypeString, Nullable: true},
 		{Name: "payment_order_fulfillments", Type: field.TypeUUID},
 	}
@@ -410,9 +412,10 @@ var (
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "fixed_conversion_rate", Type: field.TypeFloat64},
-		{Name: "floating_conversion_rate", Type: field.TypeFloat64},
-		{Name: "conversion_rate_type", Type: field.TypeEnum, Enums: []string{"fixed", "floating"}},
+		{Name: "fixed_buy_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "fixed_sell_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "floating_buy_delta", Type: field.TypeFloat64, Nullable: true},
+		{Name: "floating_sell_delta", Type: field.TypeFloat64, Nullable: true},
 		{Name: "max_order_amount", Type: field.TypeFloat64},
 		{Name: "min_order_amount", Type: field.TypeFloat64},
 		{Name: "max_order_amount_otc", Type: field.TypeFloat64},
@@ -433,19 +436,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_order_tokens_fiat_currencies_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[14]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[15]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_provider_profiles_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[15]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[16]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_tokens_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[16]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[17]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -454,7 +457,7 @@ var (
 			{
 				Name:    "providerordertoken_network_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderOrderTokensColumns[13], ProviderOrderTokensColumns[15], ProviderOrderTokensColumns[16], ProviderOrderTokensColumns[14]},
+				Columns: []*schema.Column{ProviderOrderTokensColumns[14], ProviderOrderTokensColumns[16], ProviderOrderTokensColumns[17], ProviderOrderTokensColumns[15]},
 			},
 		},
 	}
@@ -570,6 +573,7 @@ var (
 	SenderProfilesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "webhook_url", Type: field.TypeString, Nullable: true},
+		{Name: "webhook_version", Type: field.TypeString, Nullable: true, Default: "1"},
 		{Name: "domain_whitelist", Type: field.TypeJSON},
 		{Name: "provider_id", Type: field.TypeString, Nullable: true},
 		{Name: "is_partner", Type: field.TypeBool, Default: false},
@@ -585,7 +589,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "sender_profiles_users_sender_profile",
-				Columns:    []*schema.Column{SenderProfilesColumns[7]},
+				Columns:    []*schema.Column{SenderProfilesColumns[8]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -621,7 +625,7 @@ var (
 	TransactionLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "gateway_id", Type: field.TypeString, Nullable: true},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"order_initiated", "crypto_deposited", "order_created", "order_processing", "order_fulfilled", "order_validated", "order_settled", "order_refunded", "gas_prefunded", "gateway_approved"}, Default: "order_initiated"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"order_initiated", "crypto_deposited", "order_created", "order_fulfilling", "order_fulfilled", "order_validated", "order_settling", "order_settled", "order_refunding", "order_refunded", "gas_prefunded", "gateway_approved"}, Default: "order_initiated"},
 		{Name: "network", Type: field.TypeString, Nullable: true},
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},

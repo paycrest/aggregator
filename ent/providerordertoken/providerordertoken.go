@@ -3,7 +3,6 @@
 package providerordertoken
 
 import (
-	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -19,12 +18,14 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// FieldFixedConversionRate holds the string denoting the fixed_conversion_rate field in the database.
-	FieldFixedConversionRate = "fixed_conversion_rate"
-	// FieldFloatingConversionRate holds the string denoting the floating_conversion_rate field in the database.
-	FieldFloatingConversionRate = "floating_conversion_rate"
-	// FieldConversionRateType holds the string denoting the conversion_rate_type field in the database.
-	FieldConversionRateType = "conversion_rate_type"
+	// FieldFixedBuyRate holds the string denoting the fixed_buy_rate field in the database.
+	FieldFixedBuyRate = "fixed_buy_rate"
+	// FieldFixedSellRate holds the string denoting the fixed_sell_rate field in the database.
+	FieldFixedSellRate = "fixed_sell_rate"
+	// FieldFloatingBuyDelta holds the string denoting the floating_buy_delta field in the database.
+	FieldFloatingBuyDelta = "floating_buy_delta"
+	// FieldFloatingSellDelta holds the string denoting the floating_sell_delta field in the database.
+	FieldFloatingSellDelta = "floating_sell_delta"
 	// FieldMaxOrderAmount holds the string denoting the max_order_amount field in the database.
 	FieldMaxOrderAmount = "max_order_amount"
 	// FieldMinOrderAmount holds the string denoting the min_order_amount field in the database.
@@ -77,9 +78,10 @@ var Columns = []string{
 	FieldID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
-	FieldFixedConversionRate,
-	FieldFloatingConversionRate,
-	FieldConversionRateType,
+	FieldFixedBuyRate,
+	FieldFixedSellRate,
+	FieldFloatingBuyDelta,
+	FieldFloatingSellDelta,
 	FieldMaxOrderAmount,
 	FieldMinOrderAmount,
 	FieldMaxOrderAmountOtc,
@@ -122,29 +124,6 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 )
 
-// ConversionRateType defines the type for the "conversion_rate_type" enum field.
-type ConversionRateType string
-
-// ConversionRateType values.
-const (
-	ConversionRateTypeFixed    ConversionRateType = "fixed"
-	ConversionRateTypeFloating ConversionRateType = "floating"
-)
-
-func (crt ConversionRateType) String() string {
-	return string(crt)
-}
-
-// ConversionRateTypeValidator is a validator for the "conversion_rate_type" field enum values. It is called by the builders before save.
-func ConversionRateTypeValidator(crt ConversionRateType) error {
-	switch crt {
-	case ConversionRateTypeFixed, ConversionRateTypeFloating:
-		return nil
-	default:
-		return fmt.Errorf("providerordertoken: invalid enum value for conversion_rate_type field: %q", crt)
-	}
-}
-
 // OrderOption defines the ordering options for the ProviderOrderToken queries.
 type OrderOption func(*sql.Selector)
 
@@ -163,19 +142,24 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// ByFixedConversionRate orders the results by the fixed_conversion_rate field.
-func ByFixedConversionRate(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldFixedConversionRate, opts...).ToFunc()
+// ByFixedBuyRate orders the results by the fixed_buy_rate field.
+func ByFixedBuyRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFixedBuyRate, opts...).ToFunc()
 }
 
-// ByFloatingConversionRate orders the results by the floating_conversion_rate field.
-func ByFloatingConversionRate(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldFloatingConversionRate, opts...).ToFunc()
+// ByFixedSellRate orders the results by the fixed_sell_rate field.
+func ByFixedSellRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFixedSellRate, opts...).ToFunc()
 }
 
-// ByConversionRateType orders the results by the conversion_rate_type field.
-func ByConversionRateType(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldConversionRateType, opts...).ToFunc()
+// ByFloatingBuyDelta orders the results by the floating_buy_delta field.
+func ByFloatingBuyDelta(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFloatingBuyDelta, opts...).ToFunc()
+}
+
+// ByFloatingSellDelta orders the results by the floating_sell_delta field.
+func ByFloatingSellDelta(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFloatingSellDelta, opts...).ToFunc()
 }
 
 // ByMaxOrderAmount orders the results by the max_order_amount field.

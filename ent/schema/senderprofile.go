@@ -21,6 +21,9 @@ func (SenderProfile) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).
 			Default(uuid.New),
 		field.String("webhook_url").Optional(),
+		field.String("webhook_version").
+			Default("1").
+			Optional(),
 		field.Strings("domain_whitelist").
 			Default([]string{}),
 		field.String("provider_id").Optional(),

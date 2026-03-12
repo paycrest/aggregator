@@ -23,6 +23,8 @@ type SenderProfile struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// WebhookURL holds the value of the "webhook_url" field.
 	WebhookURL string `json:"webhook_url,omitempty"`
+	// WebhookVersion holds the value of the "webhook_version" field.
+	WebhookVersion string `json:"webhook_version,omitempty"`
 	// DomainWhitelist holds the value of the "domain_whitelist" field.
 	DomainWhitelist []string `json:"domain_whitelist,omitempty"`
 	// ProviderID holds the value of the "provider_id" field.
@@ -104,7 +106,7 @@ func (*SenderProfile) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case senderprofile.FieldIsPartner, senderprofile.FieldIsActive:
 			values[i] = new(sql.NullBool)
-		case senderprofile.FieldWebhookURL, senderprofile.FieldProviderID:
+		case senderprofile.FieldWebhookURL, senderprofile.FieldWebhookVersion, senderprofile.FieldProviderID:
 			values[i] = new(sql.NullString)
 		case senderprofile.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -138,6 +140,12 @@ func (_m *SenderProfile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field webhook_url", values[i])
 			} else if value.Valid {
 				_m.WebhookURL = value.String
+			}
+		case senderprofile.FieldWebhookVersion:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field webhook_version", values[i])
+			} else if value.Valid {
+				_m.WebhookVersion = value.String
 			}
 		case senderprofile.FieldDomainWhitelist:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -236,6 +244,9 @@ func (_m *SenderProfile) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("webhook_url=")
 	builder.WriteString(_m.WebhookURL)
+	builder.WriteString(", ")
+	builder.WriteString("webhook_version=")
+	builder.WriteString(_m.WebhookVersion)
 	builder.WriteString(", ")
 	builder.WriteString("domain_whitelist=")
 	builder.WriteString(fmt.Sprintf("%v", _m.DomainWhitelist))

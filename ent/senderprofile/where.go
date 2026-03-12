@@ -61,6 +61,11 @@ func WebhookURL(v string) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldWebhookURL, v))
 }
 
+// WebhookVersion applies equality check predicate on the "webhook_version" field. It's identical to WebhookVersionEQ.
+func WebhookVersion(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldWebhookVersion, v))
+}
+
 // ProviderID applies equality check predicate on the "provider_id" field. It's identical to ProviderIDEQ.
 func ProviderID(v string) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldEQ(FieldProviderID, v))
@@ -154,6 +159,81 @@ func WebhookURLEqualFold(v string) predicate.SenderProfile {
 // WebhookURLContainsFold applies the ContainsFold predicate on the "webhook_url" field.
 func WebhookURLContainsFold(v string) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.FieldContainsFold(FieldWebhookURL, v))
+}
+
+// WebhookVersionEQ applies the EQ predicate on the "webhook_version" field.
+func WebhookVersionEQ(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEQ(FieldWebhookVersion, v))
+}
+
+// WebhookVersionNEQ applies the NEQ predicate on the "webhook_version" field.
+func WebhookVersionNEQ(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNEQ(FieldWebhookVersion, v))
+}
+
+// WebhookVersionIn applies the In predicate on the "webhook_version" field.
+func WebhookVersionIn(vs ...string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldIn(FieldWebhookVersion, vs...))
+}
+
+// WebhookVersionNotIn applies the NotIn predicate on the "webhook_version" field.
+func WebhookVersionNotIn(vs ...string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNotIn(FieldWebhookVersion, vs...))
+}
+
+// WebhookVersionGT applies the GT predicate on the "webhook_version" field.
+func WebhookVersionGT(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldGT(FieldWebhookVersion, v))
+}
+
+// WebhookVersionGTE applies the GTE predicate on the "webhook_version" field.
+func WebhookVersionGTE(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldGTE(FieldWebhookVersion, v))
+}
+
+// WebhookVersionLT applies the LT predicate on the "webhook_version" field.
+func WebhookVersionLT(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldLT(FieldWebhookVersion, v))
+}
+
+// WebhookVersionLTE applies the LTE predicate on the "webhook_version" field.
+func WebhookVersionLTE(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldLTE(FieldWebhookVersion, v))
+}
+
+// WebhookVersionContains applies the Contains predicate on the "webhook_version" field.
+func WebhookVersionContains(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldContains(FieldWebhookVersion, v))
+}
+
+// WebhookVersionHasPrefix applies the HasPrefix predicate on the "webhook_version" field.
+func WebhookVersionHasPrefix(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldHasPrefix(FieldWebhookVersion, v))
+}
+
+// WebhookVersionHasSuffix applies the HasSuffix predicate on the "webhook_version" field.
+func WebhookVersionHasSuffix(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldHasSuffix(FieldWebhookVersion, v))
+}
+
+// WebhookVersionIsNil applies the IsNil predicate on the "webhook_version" field.
+func WebhookVersionIsNil() predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldIsNull(FieldWebhookVersion))
+}
+
+// WebhookVersionNotNil applies the NotNil predicate on the "webhook_version" field.
+func WebhookVersionNotNil() predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldNotNull(FieldWebhookVersion))
+}
+
+// WebhookVersionEqualFold applies the EqualFold predicate on the "webhook_version" field.
+func WebhookVersionEqualFold(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldEqualFold(FieldWebhookVersion, v))
+}
+
+// WebhookVersionContainsFold applies the ContainsFold predicate on the "webhook_version" field.
+func WebhookVersionContainsFold(v string) predicate.SenderProfile {
+	return predicate.SenderProfile(sql.FieldContainsFold(FieldWebhookVersion, v))
 }
 
 // ProviderIDEQ applies the EQ predicate on the "provider_id" field.

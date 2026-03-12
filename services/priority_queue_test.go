@@ -374,15 +374,14 @@ func setupForPQ() error {
 	testCtxForPQ.publicProviderProfileAPIKey = apiKey
 	_, err = test.AddProviderOrderTokenToProvider(
 		map[string]interface{}{
-			"fixed_conversion_rate":    decimal.NewFromFloat(100),
-			"conversion_rate_type":     "fixed",
-			"floating_conversion_rate": decimal.NewFromFloat(1.0),
-			"max_order_amount":         decimal.NewFromFloat(1000),
-			"min_order_amount":         decimal.NewFromFloat(1.0),
-			"provider":                 publicProviderProfile,
-			"currency_id":              currency.ID,
-			"network":                  token.Edges.Network.Identifier,
-			"token_id":                 token.ID,
+			"fixed_buy_rate":   decimal.NewFromFloat(100),
+			"fixed_sell_rate":  decimal.NewFromFloat(100),
+			"max_order_amount": decimal.NewFromFloat(1000),
+			"min_order_amount": decimal.NewFromFloat(1.0),
+			"provider":         publicProviderProfile,
+			"currency_id":      currency.ID,
+			"network":          token.Edges.Network.Identifier,
+			"token_id":         token.ID,
 		},
 	)
 	if err != nil {
@@ -574,7 +573,7 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		service.CreatePriorityQueueForBucket(ctx, _bucket)
 
-		redisKey := fmt.Sprintf("bucket_%s_%s_%s", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
+		redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", _bucket.Edges.Currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
 
 		data, err := db.RedisClient.LRange(ctx, redisKey, 0, -1).Result()
 		assert.NoError(t, err)
@@ -595,8 +594,9 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		ctx := context.Background()
 		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
-		// Clear Redis key and aux keys so ProcessBucketQueues starts from a clean state (no leftover from TestCreatePriorityQueueForBucket or concurrent goroutines).
-		for _, k := range []string{redisKey, redisKey + "_temp", redisKey + "_prev"} {
+		redisKeySell := redisKey + "_sell"
+		// Clear Redis keys (buy and sell) and aux keys so ProcessBucketQueues starts from a clean state (no leftover from TestCreatePriorityQueueForBucket or concurrent goroutines).
+		for _, k := range []string{redisKey, redisKey + "_temp", redisKey + "_prev", redisKeySell, redisKeySell + "_temp", redisKeySell + "_prev"} {
 			_ = db.RedisClient.Del(ctx, k).Err()
 		}
 		// Only one bucket should use this redis key so the queue has deterministic length (1 provider, 1 token).
@@ -613,6 +613,8 @@ func TestPriorityQueueTest(t *testing.T) {
 
 		err = service.ProcessBucketQueues()
 		assert.NoError(t, err)
+		// buildQueueForSide uses key with _sell suffix for the sell queue
+		redisKey = fmt.Sprintf("bucket_%s_%s_%s_sell", testCtxForPQ.currency.Code, testCtxForPQ.minAmount, testCtxForPQ.maxAmount)
 
 		// ProcessBucketQueues launches goroutines; wait until the queue is populated.
 		assert.Eventually(t, func() bool {
@@ -636,7 +638,8 @@ func TestPriorityQueueTest(t *testing.T) {
 			"max_amount":  testCtxForPQ.maxAmount,
 			"currency_id": testCtxForPQ.currency.ID,
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, bucket, "CreateTestProvisionBucket returned nil")
 
 		_bucket, err := db.Client.ProvisionBucket.
 			Query().
@@ -644,7 +647,8 @@ func TestPriorityQueueTest(t *testing.T) {
 			WithCurrency().
 			WithProviderProfiles().
 			Only(ctx)
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, _bucket)
 
 		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
 			"provider":   testCtxForPQ.publicProviderProfile,
@@ -652,9 +656,11 @@ func TestPriorityQueueTest(t *testing.T) {
 			"token_id":   testCtxForPQ.token.ID,
 			"gateway_id": "order-1",
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, _order)
+
 		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		order, err := db.Client.PaymentOrder.
 			Query().
@@ -664,8 +670,8 @@ func TestPriorityQueueTest(t *testing.T) {
 			}).
 			WithToken().
 			Only(ctx)
-
-		assert.NoError(t, err)
+		require.NoError(t, err)
+		require.NotNil(t, order)
 
 		service.CreatePriorityQueueForBucket(ctx, _bucket)
 
@@ -716,10 +722,11 @@ func TestPriorityQueueTest(t *testing.T) {
 			Only(ctx)
 		assert.NoError(t, err)
 
-		// Ensure both current and prev queues are empty for this bucket
+		// Ensure current and prev queues are empty for this bucket (side-suffixed keys used by AssignPaymentOrder)
 		redisKey := fmt.Sprintf("bucket_%s_%s_%s", testCtxForPQ.currency.Code, bucket.MinAmount, bucket.MaxAmount)
-		db.RedisClient.Del(ctx, redisKey)
-		db.RedisClient.Del(ctx, redisKey+"_prev")
+		for _, suffix := range []string{"", "_sell", "_sell_prev", "_sell_temp", "_buy", "_buy_prev", "_buy_temp", "_prev"} {
+			db.RedisClient.Del(ctx, redisKey+suffix)
+		}
 
 		err = service.AssignPaymentOrder(ctx, types.PaymentOrderFields{
 			ID:                order.ID,
@@ -741,7 +748,7 @@ func TestPriorityQueueTest(t *testing.T) {
 	t.Run("TestGetProviderRate", func(t *testing.T) {
 		// Use the provider profile directly - it was created with db.Client which is the same as client
 		// The relationship queries should work as long as db.Client is set correctly
-		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol, testCtxForPQ.currency.Code)
+		rate, err := service.GetProviderRate(context.Background(), testCtxForPQ.publicProviderProfile, testCtxForPQ.token.Symbol, testCtxForPQ.currency.Code, RateSideSell)
 		assert.NoError(t, err)
 		_rate, ok := rate.Float64()
 		assert.True(t, ok)
@@ -1183,25 +1190,26 @@ func TestPriorityQueueTest(t *testing.T) {
 				Only(ctx)
 			assert.NoError(t, err)
 			_, err = db.Client.ProviderOrderToken.UpdateOneID(publicToken.ID).
-				SetFixedConversionRate(decimal.NewFromFloat(1376)).
+				SetFixedSellRate(decimal.NewFromFloat(1376)).
 				SetRateSlippage(decimal.NewFromFloat(0.5)).
 				Save(ctx)
 			assert.NoError(t, err)
 
 			// Fallback provider (private): rate 1388, slippage 2% → order 1390 is within (|1390-1388| <= 1390*0.02)
 			_, err = test.AddProviderOrderTokenToProvider(map[string]interface{}{
-				"provider":                 testCtxForPQ.privateProviderProfile,
-				"token_id":                 int(testCtxForPQ.token.ID),
-				"currency_id":              testCtxForPQ.currency.ID,
-				"network":                  networkID,
-				"fixed_conversion_rate":    decimal.NewFromFloat(1388),
-				"conversion_rate_type":     "fixed",
-				"floating_conversion_rate": decimal.NewFromFloat(1.0),
-				"max_order_amount":         decimal.NewFromFloat(10000),
-				"min_order_amount":         decimal.NewFromFloat(1),
-				"max_order_amount_otc":     decimal.NewFromFloat(10000),
-				"min_order_amount_otc":     decimal.NewFromFloat(100),
-				"settlement_address":       "0xfallback123456789012345678901234567890",
+				"provider":             testCtxForPQ.privateProviderProfile,
+				"token_id":             int(testCtxForPQ.token.ID),
+				"currency_id":          testCtxForPQ.currency.ID,
+				"network":              networkID,
+				"fixed_buy_rate":       decimal.NewFromFloat(1388),
+				"fixed_sell_rate":      decimal.NewFromFloat(1388),
+				"floating_buy_delta":   decimal.Zero,
+				"floating_sell_delta":  decimal.Zero,
+				"max_order_amount":     decimal.NewFromFloat(10000),
+				"min_order_amount":     decimal.NewFromFloat(1),
+				"max_order_amount_otc": decimal.NewFromFloat(10000),
+				"min_order_amount_otc": decimal.NewFromFloat(100),
+				"settlement_address":   "0xfallback123456789012345678901234567890",
 			})
 			assert.NoError(t, err)
 			fallbackToken, err := db.Client.ProviderOrderToken.

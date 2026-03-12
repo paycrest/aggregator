@@ -14,17 +14,20 @@ import (
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/storage"
+	"github.com/paycrest/aggregator/utils"
 	blockchainUtils "github.com/paycrest/aggregator/utils/blockchain"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
-// HandleReceiveAddressValidity handles receive address validity
-func HandleReceiveAddressValidity() error {
+// ExpireStaleOrders expires orders past their validity: offramp Initiated with expired receive address, and onramp Pending past VA validity (metadata.providerAccount.validUntil). For onramp, releases reserved token balance.
+func ExpireStaleOrders() error {
 	ctx := context.Background()
 
+	// Offramp: receive address validity — Initiated orders with expired receive address
 	orders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
@@ -37,9 +40,8 @@ func HandleReceiveAddressValidity() error {
 		WithSenderProfile().
 		All(ctx)
 	if err != nil {
-		return fmt.Errorf("HandleReceiveAddressValidity: %w", err)
+		return fmt.Errorf("ExpireStaleOrders.receiveAddress: %w", err)
 	}
-
 	for _, order := range orders {
 		err := common.HandleReceiveAddressValidity(ctx, order)
 		if err != nil {
@@ -47,6 +49,54 @@ func HandleReceiveAddressValidity() error {
 		}
 	}
 
+	// Onramp: Pending orders past VA validity (no deposit, provider never called AcceptOrder) — use validUntil from metadata, fallback to CreatedAt + OrderFulfillmentValidity
+	pendingOnramp, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.DirectionEQ(paymentorder.DirectionOnramp),
+			paymentorder.StatusEQ(paymentorder.StatusPending),
+		).
+		WithProvider().
+		WithToken().
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("ExpireStaleOrders.pendingOnramp: %w", err)
+	}
+	balanceService := balance.New()
+	now := time.Now()
+	for _, order := range pendingOnramp {
+		var validUntil time.Time
+		if order.Metadata != nil {
+			if pa, ok := order.Metadata["providerAccount"].(map[string]interface{}); ok {
+				if t, ok := utils.ParseValidUntilFromMetadata(pa["validUntil"]); ok {
+					validUntil = t
+				}
+			}
+		}
+		if validUntil.IsZero() {
+			validUntil = order.CreatedAt.Add(orderConf.OrderFulfillmentValidity)
+		}
+		if !now.After(validUntil) {
+			continue
+		}
+		_, err := storage.Client.PaymentOrder.UpdateOneID(order.ID).SetStatus(paymentorder.StatusExpired).Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"OrderID": order.ID.String(),
+				"Error":   err,
+			}).Errorf("ExpireStaleOrders: failed to set Expired for onramp Pending")
+			continue
+		}
+		if order.Edges.Provider != nil && order.Edges.Token != nil {
+			totalCryptoReserved := order.Amount.Add(order.SenderFee)
+			if relErr := balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+				logger.WithFields(logger.Fields{
+					"OrderID": order.ID.String(),
+					"Error":   relErr,
+				}).Errorf("ExpireStaleOrders: failed to release token balance for onramp Pending")
+			}
+		}
+	}
 	return nil
 }
 
@@ -88,7 +138,7 @@ func ProcessExpiredOrdersRefunds() error {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			if order.ReceiveAddress == "" || order.ReturnAddress == "" {
+			if order.ReceiveAddress == "" || order.RefundOrRecipientAddress == "" {
 				return
 			}
 			network := order.Edges.Token.Edges.Network
@@ -97,22 +147,22 @@ func ProcessExpiredOrdersRefunds() error {
 			}
 
 			tokenContract := order.Edges.Token.ContractAddress
-			if !ethcommon.IsHexAddress(order.ReceiveAddress) || !ethcommon.IsHexAddress(order.ReturnAddress) || !ethcommon.IsHexAddress(tokenContract) {
+			if !ethcommon.IsHexAddress(order.ReceiveAddress) || !ethcommon.IsHexAddress(order.RefundOrRecipientAddress) || !ethcommon.IsHexAddress(tokenContract) {
 				logger.WithFields(logger.Fields{
-					"OrderID":        order.ID.String(),
-					"ReceiveAddress": order.ReceiveAddress,
-					"ReturnAddress":  order.ReturnAddress,
-					"TokenContract":  tokenContract,
+					"OrderID":                  order.ID.String(),
+					"ReceiveAddress":           order.ReceiveAddress,
+					"RefundOrRecipientAddress": order.RefundOrRecipientAddress,
+					"TokenContract":            tokenContract,
 				}).Errorf("Invalid hex address format for refund, skipping")
 				return
 			}
 			balance, err := blockchainUtils.GetTokenBalance(network.RPCEndpoint, tokenContract, order.ReceiveAddress)
 			if err != nil {
 				logger.WithFields(logger.Fields{
-					"Error":   err.Error(),
-					"TokenSymbol": order.Edges.Token.Symbol,
-					"ReceiveAddress": order.ReceiveAddress,
-					"ReturnAddress": order.ReturnAddress,
+					"Error":                    err.Error(),
+					"TokenSymbol":              order.Edges.Token.Symbol,
+					"ReceiveAddress":           order.ReceiveAddress,
+					"RefundOrRecipientAddress": order.RefundOrRecipientAddress,
 				}).Errorf("Failed to check token balance: %s", order.ID.String())
 				return
 			}
@@ -126,7 +176,7 @@ func ProcessExpiredOrdersRefunds() error {
 			case networkent.WalletServiceEngine:
 				refundErr = refundExpiredOrderForSmartWallet(ctx, order, network.ChainID, balance, tokenContract, engineService)
 			case networkent.WalletServiceNative:
-				calls, err := buildRefundExpiredCalls(orderIDPrefix, tokenContract, order.ReturnAddress, balance)
+				calls, err := buildRefundExpiredCalls(orderIDPrefix, tokenContract, order.RefundOrRecipientAddress, balance)
 				if err != nil {
 					refundErr = err
 				} else {
@@ -141,13 +191,13 @@ func ProcessExpiredOrdersRefunds() error {
 			}
 			if refundErr != nil {
 				logger.WithFields(logger.Fields{
-					"Error":             refundErr.Error(),
-					"OrderID":           order.ID.String(),
-					"ReceiveAddress":    order.ReceiveAddress,
-					"ReturnAddress":     order.ReturnAddress,
-					"Balance":           balance.String(),
-					"TokenContract":     tokenContract,
-					"NetworkIdentifier": network.Identifier,
+					"Error":                    refundErr.Error(),
+					"OrderID":                  order.ID.String(),
+					"ReceiveAddress":           order.ReceiveAddress,
+					"RefundOrRecipientAddress": order.RefundOrRecipientAddress,
+					"Balance":                  balance.String(),
+					"TokenContract":            tokenContract,
+					"NetworkIdentifier":        network.Identifier,
 				}).Errorf("Failed to send refund transfer transaction")
 				return
 			}
@@ -179,7 +229,7 @@ func buildRefundExpiredCalls(orderIDPrefix, tokenContract, returnAddress string,
 func refundExpiredOrderForSmartWallet(ctx context.Context, order *ent.PaymentOrder, chainId int64, balance *big.Int, tokenContract string, engineService *services.EngineService) error {
 	method := "function transfer(address recipient, uint256 amount) public returns (bool)"
 	params := []interface{}{
-		order.ReturnAddress,
+		order.RefundOrRecipientAddress,
 		balance.String(),
 	}
 	_, err := engineService.SendContractCall(ctx, chainId, order.ReceiveAddress, tokenContract, method, params)

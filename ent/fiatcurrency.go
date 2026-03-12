@@ -33,8 +33,10 @@ type FiatCurrency struct {
 	Symbol string `json:"symbol,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
-	// MarketRate holds the value of the "market_rate" field.
-	MarketRate decimal.Decimal `json:"market_rate,omitempty"`
+	// MarketBuyRate holds the value of the "market_buy_rate" field.
+	MarketBuyRate decimal.Decimal `json:"market_buy_rate,omitempty"`
+	// MarketSellRate holds the value of the "market_sell_rate" field.
+	MarketSellRate decimal.Decimal `json:"market_sell_rate,omitempty"`
 	// IsEnabled holds the value of the "is_enabled" field.
 	IsEnabled bool `json:"is_enabled,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -99,7 +101,7 @@ func (*FiatCurrency) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case fiatcurrency.FieldMarketRate:
+		case fiatcurrency.FieldMarketBuyRate, fiatcurrency.FieldMarketSellRate:
 			values[i] = new(decimal.Decimal)
 		case fiatcurrency.FieldIsEnabled:
 			values[i] = new(sql.NullBool)
@@ -174,11 +176,17 @@ func (_m *FiatCurrency) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Name = value.String
 			}
-		case fiatcurrency.FieldMarketRate:
+		case fiatcurrency.FieldMarketBuyRate:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field market_rate", values[i])
+				return fmt.Errorf("unexpected type %T for field market_buy_rate", values[i])
 			} else if value != nil {
-				_m.MarketRate = *value
+				_m.MarketBuyRate = *value
+			}
+		case fiatcurrency.FieldMarketSellRate:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field market_sell_rate", values[i])
+			} else if value != nil {
+				_m.MarketSellRate = *value
 			}
 		case fiatcurrency.FieldIsEnabled:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -263,8 +271,11 @@ func (_m *FiatCurrency) String() string {
 	builder.WriteString("name=")
 	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
-	builder.WriteString("market_rate=")
-	builder.WriteString(fmt.Sprintf("%v", _m.MarketRate))
+	builder.WriteString("market_buy_rate=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MarketBuyRate))
+	builder.WriteString(", ")
+	builder.WriteString("market_sell_rate=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MarketSellRate))
 	builder.WriteString(", ")
 	builder.WriteString("is_enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsEnabled))

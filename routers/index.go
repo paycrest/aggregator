@@ -62,9 +62,6 @@ func RegisterRoutes(route *gin.Engine) {
 	// Reindex transaction endpoint
 	v1.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
 
-	// Index provider address endpoint
-	v1.POST("index-provider-address", ctrl.IndexProviderAddress)
-
 	// Etherscan queue monitoring endpoint
 	v1.GET("etherscan/stats", ctrl.GetEtherscanQueueStats)
 
@@ -147,6 +144,8 @@ func senderRoutes(route *gin.Engine) {
 	v2.Use(middleware.OnlySenderMiddleware)
 
 	v2.POST("orders", senderCtrl.InitiatePaymentOrderV2)
+	v2.GET("orders/:id", senderCtrl.GetPaymentOrderByIDV2)
+	v2.GET("orders", senderCtrl.GetPaymentOrdersV2)
 }
 
 func providerRoutes(route *gin.Engine) {
@@ -157,6 +156,7 @@ func providerRoutes(route *gin.Engine) {
 	v1.Use(middleware.OnlyProviderMiddleware)
 
 	v1.GET("orders", providerCtrl.GetPaymentOrders)
+	v1.GET("orders/:id", providerCtrl.GetPaymentOrderByID)
 	v1.POST("orders/:id/accept", providerCtrl.AcceptOrder)
 	v1.POST("orders/:id/decline", providerCtrl.DeclineOrder)
 	v1.POST("orders/:id/fulfill", providerCtrl.FulfillOrder)
@@ -165,4 +165,11 @@ func providerRoutes(route *gin.Engine) {
 	v1.GET("rates/:token/:fiat", providerCtrl.GetMarketRate)
 	v1.GET("stats", providerCtrl.Stats)
 	v1.GET("node-info", providerCtrl.NodeInfo)
+
+	v2Provider := route.Group("/v2/provider/")
+	v2Provider.Use(middleware.DynamicAuthMiddleware)
+	v2Provider.Use(middleware.OnlyProviderMiddleware)
+
+	v2Provider.GET("orders", providerCtrl.GetPaymentOrdersV2)
+	v2Provider.GET("orders/:id", providerCtrl.GetPaymentOrderByIDV2)
 }

@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -73,7 +74,11 @@ func ProcessTransfers(
 			if transferEvent == nil {
 				return
 			}
-			_, err := UpdateReceiveAddressStatus(ctx, order, transferEvent, orderService.CreateOrder, priorityQueueService.GetProviderRate)
+
+			_, err := UpdateReceiveAddressStatus(ctx, order, transferEvent, orderService.CreateOrder, func(ctx context.Context, providerProfile *ent.ProviderProfile, tokenSymbol string, currency string) (decimal.Decimal, error) {
+				// Offramp context: use sell side rates
+				return priorityQueueService.GetProviderRate(ctx, providerProfile, tokenSymbol, currency, services.RateSideSell)
+			})
 			if err != nil {
 				if !strings.Contains(fmt.Sprintf("%v", err), "Duplicate payment order") && !strings.Contains(fmt.Sprintf("%v", err), "Receive address not found") {
 					logger.WithFields(logger.Fields{
@@ -129,8 +134,9 @@ func ProcessCreatedOrders(
 	return nil
 }
 
-// ProcessSettledOrders processes settled orders for a network
-func ProcessSettledOrders(ctx context.Context, network *ent.Network, orderIds []string, orderIdToEvent map[string]*types.OrderSettledEvent) error {
+// ProcessSettleOutOrders processes offramp (SettleOut) events and updates orders to settled.
+// orderIdToEvents supports multiple events per order (e.g. split settlements).
+func ProcessSettleOutOrders(ctx context.Context, network *ent.Network, orderIds []string, orderIdToEvents map[string][]*types.SettleOutEvent) error {
 	lockOrders, err := storage.Client.PaymentOrder.
 		Query().
 		Where(
@@ -142,7 +148,7 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, orderIds []
 		}).
 		All(ctx)
 	if err != nil {
-		return fmt.Errorf("IndexOrderSettled.fetchLockOrders: %w", err)
+		return fmt.Errorf("ProcessSettleOutOrders.fetchLockOrders: %w", err)
 	}
 
 	lockOrderDetails := make([]map[string]interface{}, len(lockOrders))
@@ -159,31 +165,128 @@ func ProcessSettledOrders(ctx context.Context, network *ent.Network, orderIds []
 		"LockOrders": lockOrderDetails,
 	}).Info("Processing settled orders")
 
+	// Map lock orders by ID so each event can be matched to its split order
+	lockOrderByID := make(map[uuid.UUID]*ent.PaymentOrder)
+	for _, lo := range lockOrders {
+		lockOrderByID[lo.ID] = lo
+	}
+
+	var wg sync.WaitGroup
+	for _, events := range orderIdToEvents {
+		for _, ev := range events {
+			trimmed := strings.TrimPrefix(ev.SplitOrderId, "0x")
+			splitID, err := uuid.Parse(trimmed)
+			if err != nil {
+				// EVM: SplitOrderId may be 32-byte hex; use first 16 bytes as UUID
+				if b, decodeErr := hex.DecodeString(trimmed); decodeErr == nil && len(b) >= 16 {
+					splitID, _ = uuid.FromBytes(b[:16])
+				} else {
+					continue
+				}
+			}
+			lockOrder, ok := lockOrderByID[splitID]
+			if !ok {
+				continue
+			}
+			se := ev
+			lo := lockOrder
+			wg.Add(1)
+			go func(lockOrder *ent.PaymentOrder, settledEvent *types.SettleOutEvent) {
+				defer wg.Done()
+				err := UpdateOrderStatusSettleOut(ctx, network, settledEvent, lockOrder.MessageHash)
+				if err != nil {
+					logger.WithFields(logger.Fields{
+						"Error":   fmt.Sprintf("%v", err),
+						"OrderID": settledEvent.OrderId,
+						"TxHash":  settledEvent.TxHash,
+						"Network": network.Identifier,
+					}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
+				}
+			}(lo, se)
+		}
+	}
+	wg.Wait()
+
+	return nil
+}
+
+// ProcessOrderSettledOrders processes OrderSettled events (Starknet) and updates orders to settled.
+// Starknet contract still uses OrderSettled; events are converted to SettleOutEvent shape and use UpdateOrderStatusSettleOut.
+func ProcessOrderSettledOrders(ctx context.Context, network *ent.Network, orderIds []string, orderIdToEvent map[string]*types.OrderSettledEvent) error {
+	lockOrders, err := storage.Client.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.GatewayIDIn(orderIds...),
+			paymentorder.StatusEQ(paymentorder.StatusSettling),
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("ProcessOrderSettledOrders.fetchLockOrders: %w", err)
+	}
+
 	var wg sync.WaitGroup
 	for _, lockOrder := range lockOrders {
-		settledEvent, ok := orderIdToEvent[lockOrder.GatewayID]
+		ev, ok := orderIdToEvent[lockOrder.GatewayID]
 		if !ok {
 			continue
 		}
-
+		settledEvent := &types.SettleOutEvent{
+			BlockNumber:       ev.BlockNumber,
+			TxHash:            ev.TxHash,
+			SplitOrderId:      ev.SplitOrderId,
+			OrderId:           ev.OrderId,
+			LiquidityProvider: ev.LiquidityProvider,
+			SettlePercent:     ev.SettlePercent,
+			RebatePercent:     ev.RebatePercent,
+		}
 		wg.Add(1)
-		go func(lo *ent.PaymentOrder, se *types.OrderSettledEvent) {
+		go func(lo *ent.PaymentOrder, se *types.SettleOutEvent) {
 			defer wg.Done()
-
-			// Update order status
-			err := UpdateOrderStatusSettled(ctx, network, se, lockOrder.MessageHash)
+			err := UpdateOrderStatusSettleOut(ctx, network, se, lo.MessageHash)
 			if err != nil {
 				logger.WithFields(logger.Fields{
 					"Error":   fmt.Sprintf("%v", err),
 					"OrderID": se.OrderId,
 					"TxHash":  se.TxHash,
 					"Network": network.Identifier,
-				}).Errorf("Failed to update order status settlement when indexing order settled events for %s", network.Identifier)
+				}).Errorf("Failed to update order status when indexing OrderSettled events for %s", network.Identifier)
 			}
 		}(lockOrder, settledEvent)
 	}
 	wg.Wait()
+	return nil
+}
 
+// ProcessSettleInOrders processes SettleIn (onramp) events and updates payin orders to settled.
+func ProcessSettleInOrders(ctx context.Context, network *ent.Network, orderIds []string, orderIdToEvent map[string]*types.SettleInEvent) error {
+	if len(orderIds) == 0 {
+		return nil
+	}
+
+	var wg sync.WaitGroup
+	for _, orderId := range orderIds {
+		event, ok := orderIdToEvent[orderId]
+		if !ok {
+			continue
+		}
+		wg.Add(1)
+		go func(ev *types.SettleInEvent) {
+			defer wg.Done()
+			err := UpdateOrderStatusSettleIn(ctx, network, ev)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":   fmt.Sprintf("%v", err),
+					"OrderID": ev.OrderId,
+					"TxHash":  ev.TxHash,
+					"Network": network.Identifier,
+				}).Errorf("Failed to update payin order when indexing SettleIn events for %s", network.Identifier)
+			}
+		}(event)
+	}
+	wg.Wait()
 	return nil
 }
 
@@ -274,8 +377,8 @@ func UpdateReceiveAddressStatus(
 		}
 
 		paymentOrderUpdate := tx.PaymentOrder.Update().Where(paymentorder.IDEQ(paymentOrder.ID))
-		if paymentOrder.ReturnAddress == "" {
-			paymentOrderUpdate = paymentOrderUpdate.SetReturnAddress(event.From)
+		if paymentOrder.RefundOrRecipientAddress == "" {
+			paymentOrderUpdate = paymentOrderUpdate.SetRefundOrRecipientAddress(event.From)
 		}
 
 		if !transferMatchesOrderAmount {
@@ -374,8 +477,8 @@ func UpdateReceiveAddressStatus(
 	return false, nil
 }
 
-// GetProviderAddresses gets provider addresses for a given token, network, and currency
-func GetProviderAddresses(ctx context.Context, token *ent.Token, currencyCode string) ([]string, error) {
+// GetProviderSettlementAddresses returns provider settlement addresses for a given token and currency.
+func GetProviderSettlementAddresses(ctx context.Context, token *ent.Token, currencyCode string) ([]string, error) {
 	providerOrderTokens, err := storage.Client.ProviderOrderToken.
 		Query().
 		Where(

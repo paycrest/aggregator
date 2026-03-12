@@ -42,6 +42,20 @@ func (_c *SenderProfileCreate) SetNillableWebhookURL(v *string) *SenderProfileCr
 	return _c
 }
 
+// SetWebhookVersion sets the "webhook_version" field.
+func (_c *SenderProfileCreate) SetWebhookVersion(v string) *SenderProfileCreate {
+	_c.mutation.SetWebhookVersion(v)
+	return _c
+}
+
+// SetNillableWebhookVersion sets the "webhook_version" field if the given value is not nil.
+func (_c *SenderProfileCreate) SetNillableWebhookVersion(v *string) *SenderProfileCreate {
+	if v != nil {
+		_c.SetWebhookVersion(*v)
+	}
+	return _c
+}
+
 // SetDomainWhitelist sets the "domain_whitelist" field.
 func (_c *SenderProfileCreate) SetDomainWhitelist(v []string) *SenderProfileCreate {
 	_c.mutation.SetDomainWhitelist(v)
@@ -213,6 +227,10 @@ func (_c *SenderProfileCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *SenderProfileCreate) defaults() {
+	if _, ok := _c.mutation.WebhookVersion(); !ok {
+		v := senderprofile.DefaultWebhookVersion
+		_c.mutation.SetWebhookVersion(v)
+	}
 	if _, ok := _c.mutation.DomainWhitelist(); !ok {
 		v := senderprofile.DefaultDomainWhitelist
 		_c.mutation.SetDomainWhitelist(v)
@@ -291,6 +309,10 @@ func (_c *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.WebhookURL(); ok {
 		_spec.SetField(senderprofile.FieldWebhookURL, field.TypeString, value)
 		_node.WebhookURL = value
+	}
+	if value, ok := _c.mutation.WebhookVersion(); ok {
+		_spec.SetField(senderprofile.FieldWebhookVersion, field.TypeString, value)
+		_node.WebhookVersion = value
 	}
 	if value, ok := _c.mutation.DomainWhitelist(); ok {
 		_spec.SetField(senderprofile.FieldDomainWhitelist, field.TypeJSON, value)
@@ -447,6 +469,24 @@ func (u *SenderProfileUpsert) ClearWebhookURL() *SenderProfileUpsert {
 	return u
 }
 
+// SetWebhookVersion sets the "webhook_version" field.
+func (u *SenderProfileUpsert) SetWebhookVersion(v string) *SenderProfileUpsert {
+	u.Set(senderprofile.FieldWebhookVersion, v)
+	return u
+}
+
+// UpdateWebhookVersion sets the "webhook_version" field to the value that was provided on create.
+func (u *SenderProfileUpsert) UpdateWebhookVersion() *SenderProfileUpsert {
+	u.SetExcluded(senderprofile.FieldWebhookVersion)
+	return u
+}
+
+// ClearWebhookVersion clears the value of the "webhook_version" field.
+func (u *SenderProfileUpsert) ClearWebhookVersion() *SenderProfileUpsert {
+	u.SetNull(senderprofile.FieldWebhookVersion)
+	return u
+}
+
 // SetDomainWhitelist sets the "domain_whitelist" field.
 func (u *SenderProfileUpsert) SetDomainWhitelist(v []string) *SenderProfileUpsert {
 	u.Set(senderprofile.FieldDomainWhitelist, v)
@@ -579,6 +619,27 @@ func (u *SenderProfileUpsertOne) UpdateWebhookURL() *SenderProfileUpsertOne {
 func (u *SenderProfileUpsertOne) ClearWebhookURL() *SenderProfileUpsertOne {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.ClearWebhookURL()
+	})
+}
+
+// SetWebhookVersion sets the "webhook_version" field.
+func (u *SenderProfileUpsertOne) SetWebhookVersion(v string) *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetWebhookVersion(v)
+	})
+}
+
+// UpdateWebhookVersion sets the "webhook_version" field to the value that was provided on create.
+func (u *SenderProfileUpsertOne) UpdateWebhookVersion() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateWebhookVersion()
+	})
+}
+
+// ClearWebhookVersion clears the value of the "webhook_version" field.
+func (u *SenderProfileUpsertOne) ClearWebhookVersion() *SenderProfileUpsertOne {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.ClearWebhookVersion()
 	})
 }
 
@@ -892,6 +953,27 @@ func (u *SenderProfileUpsertBulk) UpdateWebhookURL() *SenderProfileUpsertBulk {
 func (u *SenderProfileUpsertBulk) ClearWebhookURL() *SenderProfileUpsertBulk {
 	return u.Update(func(s *SenderProfileUpsert) {
 		s.ClearWebhookURL()
+	})
+}
+
+// SetWebhookVersion sets the "webhook_version" field.
+func (u *SenderProfileUpsertBulk) SetWebhookVersion(v string) *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.SetWebhookVersion(v)
+	})
+}
+
+// UpdateWebhookVersion sets the "webhook_version" field to the value that was provided on create.
+func (u *SenderProfileUpsertBulk) UpdateWebhookVersion() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.UpdateWebhookVersion()
+	})
+}
+
+// ClearWebhookVersion clears the value of the "webhook_version" field.
+func (u *SenderProfileUpsertBulk) ClearWebhookVersion() *SenderProfileUpsertBulk {
+	return u.Update(func(s *SenderProfileUpsert) {
+		s.ClearWebhookVersion()
 	})
 }
 

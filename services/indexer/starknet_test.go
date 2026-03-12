@@ -181,10 +181,10 @@ func TestIndexerStarknet_IndexGateway(t *testing.T) {
 		require.NotNil(t, eventCounts, "Event counts should not be nil")
 
 		// Verify that at least one OrderSettled event was found
-		assert.Greater(t, eventCounts.OrderSettled, 0, "Expected at least one OrderSettled event")
+		assert.Greater(t, eventCounts.SettleOut, 0, "Expected at least one OrderSettled event")
 
 		t.Logf("Successfully indexed OrderSettled transaction: %s", txHashOrderSettled)
-		t.Logf("OrderSettled events found: %d", eventCounts.OrderSettled)
+		t.Logf("OrderSettled events found: %d", eventCounts.SettleOut)
 	})
 
 	t.Run("Index OrderRefunded Event", func(t *testing.T) {
@@ -208,8 +208,8 @@ func TestIndexerStarknet_IndexGateway(t *testing.T) {
 	})
 }
 
-// TestIndexerStarknet_IndexProviderAddress tests the IndexProviderAddress function with a real settlement transaction
-func TestIndexerStarknet_IndexProviderAddress(t *testing.T) {
+// TestIndexerStarknet_IndexProviderSettlementAddress tests the IndexProviderSettlementAddress function with a real settlement transaction
+func TestIndexerStarknet_IndexProviderSettlementAddress(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test that requires network access")
 	}
@@ -229,7 +229,7 @@ func TestIndexerStarknet_IndexProviderAddress(t *testing.T) {
 	network := createMockNetwork()
 
 	t.Run("Index Provider Settlement", func(t *testing.T) {
-		eventCounts, err := indexer.IndexProviderAddress(
+		eventCounts, err := indexer.IndexProviderSettlementAddress(
 			ctx,
 			network,
 			providerAddress,
@@ -242,15 +242,15 @@ func TestIndexerStarknet_IndexProviderAddress(t *testing.T) {
 		require.NotNil(t, eventCounts, "Event counts should not be nil")
 
 		// Verify that at least one OrderSettled event was found for this provider
-		assert.Greater(t, eventCounts.OrderSettled, 0, "Expected at least one OrderSettled event for provider")
+		assert.Greater(t, eventCounts.SettleOut, 0, "Expected at least one OrderSettled event for provider")
 
 		t.Logf("Successfully indexed provider settlement: %s", txHashOrderSettled)
-		t.Logf("OrderSettled events found for provider: %d", eventCounts.OrderSettled)
+		t.Logf("OrderSettled events found for provider: %d", eventCounts.SettleOut)
 	})
 
 	t.Run("Index Non-Provider Transaction", func(t *testing.T) {
 		// Try to index OrderCreated transaction for provider (should find nothing)
-		eventCounts, err := indexer.IndexProviderAddress(
+		eventCounts, err := indexer.IndexProviderSettlementAddress(
 			ctx,
 			network,
 			providerAddress,
@@ -264,7 +264,7 @@ func TestIndexerStarknet_IndexProviderAddress(t *testing.T) {
 		require.NotNil(t, eventCounts, "Event counts should not be nil")
 
 		// No OrderSettled events should match
-		assert.Equal(t, 0, eventCounts.OrderSettled, "Expected no OrderSettled events in OrderCreated transaction")
+		assert.Equal(t, 0, eventCounts.SettleOut, "Expected no OrderSettled events in OrderCreated transaction")
 	})
 }
 
@@ -300,10 +300,10 @@ func TestIndexerStarknet_Integration(t *testing.T) {
 		require.NoError(t, err, "Failed to index order creation")
 		t.Logf("✓ Step 2 - OrderCreated indexed: %d events", orderCreatedCounts.OrderCreated)
 
-		// Step 3: Provider settles the order (IndexProviderAddress)
-		settlementCounts, err := indexer.IndexProviderAddress(ctx, network, providerAddress, 0, 0, txHashOrderSettled)
+		// Step 3: Provider settles the order (IndexProviderSettlementAddress)
+		settlementCounts, err := indexer.IndexProviderSettlementAddress(ctx, network, providerAddress, 0, 0, txHashOrderSettled)
 		require.NoError(t, err, "Failed to index provider settlement")
-		t.Logf("✓ Step 3 - OrderSettled indexed: %d events", settlementCounts.OrderSettled)
+		t.Logf("✓ Step 3 - OrderSettled indexed: %d events", settlementCounts.SettleOut)
 
 		// Step 4: Order can be refunded if needed (IndexGateway)
 		refundCounts, err := indexer.IndexGateway(ctx, network, gatewayContract, 0, 0, txHashOrderRefunded)

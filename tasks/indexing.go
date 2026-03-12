@@ -496,8 +496,8 @@ func ProcessStuckValidatedOrders() error {
 					continue
 				}
 
-				// Index provider address for OrderSettled events
-				_, err = indexerInstance.IndexProviderAddress(runCtx, network, providerAddress, 0, 0, "")
+				// Index provider settlement address for SettleOut events
+				_, err = indexerInstance.IndexProviderSettlementAddress(runCtx, network, providerAddress, 0, 0, "")
 				if err != nil {
 					logger.WithFields(logger.Fields{
 						"Error":             fmt.Sprintf("%v", err),

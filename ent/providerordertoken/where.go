@@ -66,14 +66,24 @@ func UpdatedAt(v time.Time) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
-// FixedConversionRate applies equality check predicate on the "fixed_conversion_rate" field. It's identical to FixedConversionRateEQ.
-func FixedConversionRate(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFixedConversionRate, v))
+// FixedBuyRate applies equality check predicate on the "fixed_buy_rate" field. It's identical to FixedBuyRateEQ.
+func FixedBuyRate(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFixedBuyRate, v))
 }
 
-// FloatingConversionRate applies equality check predicate on the "floating_conversion_rate" field. It's identical to FloatingConversionRateEQ.
-func FloatingConversionRate(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFloatingConversionRate, v))
+// FixedSellRate applies equality check predicate on the "fixed_sell_rate" field. It's identical to FixedSellRateEQ.
+func FixedSellRate(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFixedSellRate, v))
+}
+
+// FloatingBuyDelta applies equality check predicate on the "floating_buy_delta" field. It's identical to FloatingBuyDeltaEQ.
+func FloatingBuyDelta(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFloatingBuyDelta, v))
+}
+
+// FloatingSellDelta applies equality check predicate on the "floating_sell_delta" field. It's identical to FloatingSellDeltaEQ.
+func FloatingSellDelta(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFloatingSellDelta, v))
 }
 
 // MaxOrderAmount applies equality check predicate on the "max_order_amount" field. It's identical to MaxOrderAmountEQ.
@@ -196,104 +206,204 @@ func UpdatedAtLTE(v time.Time) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
-// FixedConversionRateEQ applies the EQ predicate on the "fixed_conversion_rate" field.
-func FixedConversionRateEQ(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFixedConversionRate, v))
+// FixedBuyRateEQ applies the EQ predicate on the "fixed_buy_rate" field.
+func FixedBuyRateEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFixedBuyRate, v))
 }
 
-// FixedConversionRateNEQ applies the NEQ predicate on the "fixed_conversion_rate" field.
-func FixedConversionRateNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldFixedConversionRate, v))
+// FixedBuyRateNEQ applies the NEQ predicate on the "fixed_buy_rate" field.
+func FixedBuyRateNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldFixedBuyRate, v))
 }
 
-// FixedConversionRateIn applies the In predicate on the "fixed_conversion_rate" field.
-func FixedConversionRateIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldIn(FieldFixedConversionRate, vs...))
+// FixedBuyRateIn applies the In predicate on the "fixed_buy_rate" field.
+func FixedBuyRateIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldFixedBuyRate, vs...))
 }
 
-// FixedConversionRateNotIn applies the NotIn predicate on the "fixed_conversion_rate" field.
-func FixedConversionRateNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldFixedConversionRate, vs...))
+// FixedBuyRateNotIn applies the NotIn predicate on the "fixed_buy_rate" field.
+func FixedBuyRateNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldFixedBuyRate, vs...))
 }
 
-// FixedConversionRateGT applies the GT predicate on the "fixed_conversion_rate" field.
-func FixedConversionRateGT(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldGT(FieldFixedConversionRate, v))
+// FixedBuyRateGT applies the GT predicate on the "fixed_buy_rate" field.
+func FixedBuyRateGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldFixedBuyRate, v))
 }
 
-// FixedConversionRateGTE applies the GTE predicate on the "fixed_conversion_rate" field.
-func FixedConversionRateGTE(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldGTE(FieldFixedConversionRate, v))
+// FixedBuyRateGTE applies the GTE predicate on the "fixed_buy_rate" field.
+func FixedBuyRateGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldFixedBuyRate, v))
 }
 
-// FixedConversionRateLT applies the LT predicate on the "fixed_conversion_rate" field.
-func FixedConversionRateLT(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldLT(FieldFixedConversionRate, v))
+// FixedBuyRateLT applies the LT predicate on the "fixed_buy_rate" field.
+func FixedBuyRateLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldFixedBuyRate, v))
 }
 
-// FixedConversionRateLTE applies the LTE predicate on the "fixed_conversion_rate" field.
-func FixedConversionRateLTE(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldLTE(FieldFixedConversionRate, v))
+// FixedBuyRateLTE applies the LTE predicate on the "fixed_buy_rate" field.
+func FixedBuyRateLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldFixedBuyRate, v))
 }
 
-// FloatingConversionRateEQ applies the EQ predicate on the "floating_conversion_rate" field.
-func FloatingConversionRateEQ(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFloatingConversionRate, v))
+// FixedBuyRateIsNil applies the IsNil predicate on the "fixed_buy_rate" field.
+func FixedBuyRateIsNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldFixedBuyRate))
 }
 
-// FloatingConversionRateNEQ applies the NEQ predicate on the "floating_conversion_rate" field.
-func FloatingConversionRateNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldFloatingConversionRate, v))
+// FixedBuyRateNotNil applies the NotNil predicate on the "fixed_buy_rate" field.
+func FixedBuyRateNotNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldFixedBuyRate))
 }
 
-// FloatingConversionRateIn applies the In predicate on the "floating_conversion_rate" field.
-func FloatingConversionRateIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldIn(FieldFloatingConversionRate, vs...))
+// FixedSellRateEQ applies the EQ predicate on the "fixed_sell_rate" field.
+func FixedSellRateEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFixedSellRate, v))
 }
 
-// FloatingConversionRateNotIn applies the NotIn predicate on the "floating_conversion_rate" field.
-func FloatingConversionRateNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldFloatingConversionRate, vs...))
+// FixedSellRateNEQ applies the NEQ predicate on the "fixed_sell_rate" field.
+func FixedSellRateNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldFixedSellRate, v))
 }
 
-// FloatingConversionRateGT applies the GT predicate on the "floating_conversion_rate" field.
-func FloatingConversionRateGT(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldGT(FieldFloatingConversionRate, v))
+// FixedSellRateIn applies the In predicate on the "fixed_sell_rate" field.
+func FixedSellRateIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldFixedSellRate, vs...))
 }
 
-// FloatingConversionRateGTE applies the GTE predicate on the "floating_conversion_rate" field.
-func FloatingConversionRateGTE(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldGTE(FieldFloatingConversionRate, v))
+// FixedSellRateNotIn applies the NotIn predicate on the "fixed_sell_rate" field.
+func FixedSellRateNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldFixedSellRate, vs...))
 }
 
-// FloatingConversionRateLT applies the LT predicate on the "floating_conversion_rate" field.
-func FloatingConversionRateLT(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldLT(FieldFloatingConversionRate, v))
+// FixedSellRateGT applies the GT predicate on the "fixed_sell_rate" field.
+func FixedSellRateGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldFixedSellRate, v))
 }
 
-// FloatingConversionRateLTE applies the LTE predicate on the "floating_conversion_rate" field.
-func FloatingConversionRateLTE(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldLTE(FieldFloatingConversionRate, v))
+// FixedSellRateGTE applies the GTE predicate on the "fixed_sell_rate" field.
+func FixedSellRateGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldFixedSellRate, v))
 }
 
-// ConversionRateTypeEQ applies the EQ predicate on the "conversion_rate_type" field.
-func ConversionRateTypeEQ(v ConversionRateType) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldEQ(FieldConversionRateType, v))
+// FixedSellRateLT applies the LT predicate on the "fixed_sell_rate" field.
+func FixedSellRateLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldFixedSellRate, v))
 }
 
-// ConversionRateTypeNEQ applies the NEQ predicate on the "conversion_rate_type" field.
-func ConversionRateTypeNEQ(v ConversionRateType) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldConversionRateType, v))
+// FixedSellRateLTE applies the LTE predicate on the "fixed_sell_rate" field.
+func FixedSellRateLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldFixedSellRate, v))
 }
 
-// ConversionRateTypeIn applies the In predicate on the "conversion_rate_type" field.
-func ConversionRateTypeIn(vs ...ConversionRateType) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldIn(FieldConversionRateType, vs...))
+// FixedSellRateIsNil applies the IsNil predicate on the "fixed_sell_rate" field.
+func FixedSellRateIsNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldFixedSellRate))
 }
 
-// ConversionRateTypeNotIn applies the NotIn predicate on the "conversion_rate_type" field.
-func ConversionRateTypeNotIn(vs ...ConversionRateType) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldConversionRateType, vs...))
+// FixedSellRateNotNil applies the NotNil predicate on the "fixed_sell_rate" field.
+func FixedSellRateNotNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldFixedSellRate))
+}
+
+// FloatingBuyDeltaEQ applies the EQ predicate on the "floating_buy_delta" field.
+func FloatingBuyDeltaEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFloatingBuyDelta, v))
+}
+
+// FloatingBuyDeltaNEQ applies the NEQ predicate on the "floating_buy_delta" field.
+func FloatingBuyDeltaNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldFloatingBuyDelta, v))
+}
+
+// FloatingBuyDeltaIn applies the In predicate on the "floating_buy_delta" field.
+func FloatingBuyDeltaIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldFloatingBuyDelta, vs...))
+}
+
+// FloatingBuyDeltaNotIn applies the NotIn predicate on the "floating_buy_delta" field.
+func FloatingBuyDeltaNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldFloatingBuyDelta, vs...))
+}
+
+// FloatingBuyDeltaGT applies the GT predicate on the "floating_buy_delta" field.
+func FloatingBuyDeltaGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldFloatingBuyDelta, v))
+}
+
+// FloatingBuyDeltaGTE applies the GTE predicate on the "floating_buy_delta" field.
+func FloatingBuyDeltaGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldFloatingBuyDelta, v))
+}
+
+// FloatingBuyDeltaLT applies the LT predicate on the "floating_buy_delta" field.
+func FloatingBuyDeltaLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldFloatingBuyDelta, v))
+}
+
+// FloatingBuyDeltaLTE applies the LTE predicate on the "floating_buy_delta" field.
+func FloatingBuyDeltaLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldFloatingBuyDelta, v))
+}
+
+// FloatingBuyDeltaIsNil applies the IsNil predicate on the "floating_buy_delta" field.
+func FloatingBuyDeltaIsNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldFloatingBuyDelta))
+}
+
+// FloatingBuyDeltaNotNil applies the NotNil predicate on the "floating_buy_delta" field.
+func FloatingBuyDeltaNotNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldFloatingBuyDelta))
+}
+
+// FloatingSellDeltaEQ applies the EQ predicate on the "floating_sell_delta" field.
+func FloatingSellDeltaEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldFloatingSellDelta, v))
+}
+
+// FloatingSellDeltaNEQ applies the NEQ predicate on the "floating_sell_delta" field.
+func FloatingSellDeltaNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldFloatingSellDelta, v))
+}
+
+// FloatingSellDeltaIn applies the In predicate on the "floating_sell_delta" field.
+func FloatingSellDeltaIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldFloatingSellDelta, vs...))
+}
+
+// FloatingSellDeltaNotIn applies the NotIn predicate on the "floating_sell_delta" field.
+func FloatingSellDeltaNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldFloatingSellDelta, vs...))
+}
+
+// FloatingSellDeltaGT applies the GT predicate on the "floating_sell_delta" field.
+func FloatingSellDeltaGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldFloatingSellDelta, v))
+}
+
+// FloatingSellDeltaGTE applies the GTE predicate on the "floating_sell_delta" field.
+func FloatingSellDeltaGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldFloatingSellDelta, v))
+}
+
+// FloatingSellDeltaLT applies the LT predicate on the "floating_sell_delta" field.
+func FloatingSellDeltaLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldFloatingSellDelta, v))
+}
+
+// FloatingSellDeltaLTE applies the LTE predicate on the "floating_sell_delta" field.
+func FloatingSellDeltaLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldFloatingSellDelta, v))
+}
+
+// FloatingSellDeltaIsNil applies the IsNil predicate on the "floating_sell_delta" field.
+func FloatingSellDeltaIsNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldFloatingSellDelta))
+}
+
+// FloatingSellDeltaNotNil applies the NotNil predicate on the "floating_sell_delta" field.
+func FloatingSellDeltaNotNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldFloatingSellDelta))
 }
 
 // MaxOrderAmountEQ applies the EQ predicate on the "max_order_amount" field.

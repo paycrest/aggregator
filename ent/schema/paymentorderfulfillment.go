@@ -29,7 +29,7 @@ func (PaymentOrderFulfillment) Fields() []ent.Field {
 		field.String("psp").
 			Optional(),
 		field.Enum("validation_status").
-			Values("pending", "success", "failed").
+			Values("pending", "success", "failed", "refunded").
 			Default("pending"),
 		field.String("validation_error").
 			Optional(),

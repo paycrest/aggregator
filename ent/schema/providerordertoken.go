@@ -23,12 +23,18 @@ func (ProviderOrderToken) Mixin() []ent.Mixin {
 // Fields of the ProviderOrderToken.
 func (ProviderOrderToken) Fields() []ent.Field {
 	return []ent.Field{
-		field.Float("fixed_conversion_rate").
-			GoType(decimal.Decimal{}),
-		field.Float("floating_conversion_rate").
-			GoType(decimal.Decimal{}),
-		field.Enum("conversion_rate_type").
-			Values("fixed", "floating"),
+		field.Float("fixed_buy_rate").
+			GoType(decimal.Decimal{}).
+			Optional(),
+		field.Float("fixed_sell_rate").
+			GoType(decimal.Decimal{}).
+			Optional(),
+		field.Float("floating_buy_delta").
+			GoType(decimal.Decimal{}).
+			Optional(),
+		field.Float("floating_sell_delta").
+			GoType(decimal.Decimal{}).
+			Optional(),
 		field.Float("max_order_amount").
 			GoType(decimal.Decimal{}),
 		field.Float("min_order_amount").

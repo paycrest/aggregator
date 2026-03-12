@@ -29,8 +29,10 @@ const (
 	FieldSymbol = "symbol"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
-	// FieldMarketRate holds the string denoting the market_rate field in the database.
-	FieldMarketRate = "market_rate"
+	// FieldMarketBuyRate holds the string denoting the market_buy_rate field in the database.
+	FieldMarketBuyRate = "market_buy_rate"
+	// FieldMarketSellRate holds the string denoting the market_sell_rate field in the database.
+	FieldMarketSellRate = "market_sell_rate"
 	// FieldIsEnabled holds the string denoting the is_enabled field in the database.
 	FieldIsEnabled = "is_enabled"
 	// EdgeProviderBalances holds the string denoting the provider_balances edge name in mutations.
@@ -83,7 +85,8 @@ var Columns = []string{
 	FieldDecimals,
 	FieldSymbol,
 	FieldName,
-	FieldMarketRate,
+	FieldMarketBuyRate,
+	FieldMarketSellRate,
 	FieldIsEnabled,
 }
 
@@ -155,9 +158,14 @@ func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
 }
 
-// ByMarketRate orders the results by the market_rate field.
-func ByMarketRate(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldMarketRate, opts...).ToFunc()
+// ByMarketBuyRate orders the results by the market_buy_rate field.
+func ByMarketBuyRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMarketBuyRate, opts...).ToFunc()
+}
+
+// ByMarketSellRate orders the results by the market_sell_rate field.
+func ByMarketSellRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMarketSellRate, opts...).ToFunc()
 }
 
 // ByIsEnabled orders the results by the is_enabled field.

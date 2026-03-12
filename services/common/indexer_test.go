@@ -62,7 +62,7 @@ func createTestOrder(t *testing.T, client *ent.Client, amount float64, receiveAd
 		SetReceiveAddress(receiveAddress).
 		SetReceiveAddressSalt([]byte("salt")).
 		SetReceiveAddressExpiry(time.Now().Add(time.Hour)).
-		SetReturnAddress("0xReturnAddr").
+		SetRefundOrRecipientAddress("0xReturnAddr").
 		SetInstitution("ABNGNGLA").
 		SetAccountIdentifier("1234567890").
 		SetAccountName("Test Account").

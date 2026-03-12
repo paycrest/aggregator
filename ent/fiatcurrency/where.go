@@ -92,9 +92,14 @@ func Name(v string) predicate.FiatCurrency {
 	return predicate.FiatCurrency(sql.FieldEQ(FieldName, v))
 }
 
-// MarketRate applies equality check predicate on the "market_rate" field. It's identical to MarketRateEQ.
-func MarketRate(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldEQ(FieldMarketRate, v))
+// MarketBuyRate applies equality check predicate on the "market_buy_rate" field. It's identical to MarketBuyRateEQ.
+func MarketBuyRate(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldEQ(FieldMarketBuyRate, v))
+}
+
+// MarketSellRate applies equality check predicate on the "market_sell_rate" field. It's identical to MarketSellRateEQ.
+func MarketSellRate(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldEQ(FieldMarketSellRate, v))
 }
 
 // IsEnabled applies equality check predicate on the "is_enabled" field. It's identical to IsEnabledEQ.
@@ -482,44 +487,104 @@ func NameContainsFold(v string) predicate.FiatCurrency {
 	return predicate.FiatCurrency(sql.FieldContainsFold(FieldName, v))
 }
 
-// MarketRateEQ applies the EQ predicate on the "market_rate" field.
-func MarketRateEQ(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldEQ(FieldMarketRate, v))
+// MarketBuyRateEQ applies the EQ predicate on the "market_buy_rate" field.
+func MarketBuyRateEQ(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldEQ(FieldMarketBuyRate, v))
 }
 
-// MarketRateNEQ applies the NEQ predicate on the "market_rate" field.
-func MarketRateNEQ(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldNEQ(FieldMarketRate, v))
+// MarketBuyRateNEQ applies the NEQ predicate on the "market_buy_rate" field.
+func MarketBuyRateNEQ(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNEQ(FieldMarketBuyRate, v))
 }
 
-// MarketRateIn applies the In predicate on the "market_rate" field.
-func MarketRateIn(vs ...decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldIn(FieldMarketRate, vs...))
+// MarketBuyRateIn applies the In predicate on the "market_buy_rate" field.
+func MarketBuyRateIn(vs ...decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldIn(FieldMarketBuyRate, vs...))
 }
 
-// MarketRateNotIn applies the NotIn predicate on the "market_rate" field.
-func MarketRateNotIn(vs ...decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldNotIn(FieldMarketRate, vs...))
+// MarketBuyRateNotIn applies the NotIn predicate on the "market_buy_rate" field.
+func MarketBuyRateNotIn(vs ...decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNotIn(FieldMarketBuyRate, vs...))
 }
 
-// MarketRateGT applies the GT predicate on the "market_rate" field.
-func MarketRateGT(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldGT(FieldMarketRate, v))
+// MarketBuyRateGT applies the GT predicate on the "market_buy_rate" field.
+func MarketBuyRateGT(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldGT(FieldMarketBuyRate, v))
 }
 
-// MarketRateGTE applies the GTE predicate on the "market_rate" field.
-func MarketRateGTE(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldGTE(FieldMarketRate, v))
+// MarketBuyRateGTE applies the GTE predicate on the "market_buy_rate" field.
+func MarketBuyRateGTE(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldGTE(FieldMarketBuyRate, v))
 }
 
-// MarketRateLT applies the LT predicate on the "market_rate" field.
-func MarketRateLT(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldLT(FieldMarketRate, v))
+// MarketBuyRateLT applies the LT predicate on the "market_buy_rate" field.
+func MarketBuyRateLT(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldLT(FieldMarketBuyRate, v))
 }
 
-// MarketRateLTE applies the LTE predicate on the "market_rate" field.
-func MarketRateLTE(v decimal.Decimal) predicate.FiatCurrency {
-	return predicate.FiatCurrency(sql.FieldLTE(FieldMarketRate, v))
+// MarketBuyRateLTE applies the LTE predicate on the "market_buy_rate" field.
+func MarketBuyRateLTE(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldLTE(FieldMarketBuyRate, v))
+}
+
+// MarketBuyRateIsNil applies the IsNil predicate on the "market_buy_rate" field.
+func MarketBuyRateIsNil() predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldIsNull(FieldMarketBuyRate))
+}
+
+// MarketBuyRateNotNil applies the NotNil predicate on the "market_buy_rate" field.
+func MarketBuyRateNotNil() predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNotNull(FieldMarketBuyRate))
+}
+
+// MarketSellRateEQ applies the EQ predicate on the "market_sell_rate" field.
+func MarketSellRateEQ(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldEQ(FieldMarketSellRate, v))
+}
+
+// MarketSellRateNEQ applies the NEQ predicate on the "market_sell_rate" field.
+func MarketSellRateNEQ(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNEQ(FieldMarketSellRate, v))
+}
+
+// MarketSellRateIn applies the In predicate on the "market_sell_rate" field.
+func MarketSellRateIn(vs ...decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldIn(FieldMarketSellRate, vs...))
+}
+
+// MarketSellRateNotIn applies the NotIn predicate on the "market_sell_rate" field.
+func MarketSellRateNotIn(vs ...decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNotIn(FieldMarketSellRate, vs...))
+}
+
+// MarketSellRateGT applies the GT predicate on the "market_sell_rate" field.
+func MarketSellRateGT(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldGT(FieldMarketSellRate, v))
+}
+
+// MarketSellRateGTE applies the GTE predicate on the "market_sell_rate" field.
+func MarketSellRateGTE(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldGTE(FieldMarketSellRate, v))
+}
+
+// MarketSellRateLT applies the LT predicate on the "market_sell_rate" field.
+func MarketSellRateLT(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldLT(FieldMarketSellRate, v))
+}
+
+// MarketSellRateLTE applies the LTE predicate on the "market_sell_rate" field.
+func MarketSellRateLTE(v decimal.Decimal) predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldLTE(FieldMarketSellRate, v))
+}
+
+// MarketSellRateIsNil applies the IsNil predicate on the "market_sell_rate" field.
+func MarketSellRateIsNil() predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldIsNull(FieldMarketSellRate))
+}
+
+// MarketSellRateNotNil applies the NotNil predicate on the "market_sell_rate" field.
+func MarketSellRateNotNil() predicate.FiatCurrency {
+	return predicate.FiatCurrency(sql.FieldNotNull(FieldMarketSellRate))
 }
 
 // IsEnabledEQ applies the EQ predicate on the "is_enabled" field.

@@ -107,12 +107,13 @@ func (ctrl *Controller) GetFiatCurrencies(ctx *gin.Context) {
 	currencies := make([]types.SupportedCurrencies, 0, len(fiatcurrencies))
 	for _, currency := range fiatcurrencies {
 		currencies = append(currencies, types.SupportedCurrencies{
-			Code:       currency.Code,
-			Name:       currency.Name,
-			ShortName:  currency.ShortName,
-			Decimals:   int8(currency.Decimals),
-			Symbol:     currency.Symbol,
-			MarketRate: currency.MarketRate,
+			Code:           currency.Code,
+			Name:           currency.Name,
+			ShortName:      currency.ShortName,
+			Decimals:       int8(currency.Decimals),
+			Symbol:         currency.Symbol,
+			MarketBuyRate:  currency.MarketBuyRate,
+			MarketSellRate: currency.MarketSellRate,
 		})
 	}
 
@@ -222,7 +223,7 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 	}
 
 	// Validate rate using extracted logic
-	rateResult, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter)
+	rateResult, err := u.ValidateRate(ctx, token, currency, tokenAmount, ctx.Query("provider_id"), networkFilter, u.RateSideSell)
 	if err != nil {
 		var errStuck *types.ErrNoProviderDueToStuck
 		if errors.As(err, &errStuck) && errStuck.CurrencyCode != "" {
@@ -1952,8 +1953,10 @@ func (ctrl *Controller) handleNewEvent(ctx context.Context, event types.Thirdweb
 		return ctrl.handleTransferEvent(ctx, event)
 	case utils.OrderCreatedEventSignature:
 		return ctrl.handleOrderCreatedEvent(ctx, event)
-	case utils.OrderSettledEventSignature:
-		return ctrl.handleOrderSettledEvent(ctx, event)
+	case utils.SettleOutEventSignature:
+		return ctrl.handleSettleOutEvent(ctx, event)
+	case utils.SettleInEventSignature:
+		return ctrl.handleSettleInEvent(ctx, event)
 	case utils.OrderRefundedEventSignature:
 		return ctrl.handleOrderRefundedEvent(ctx, event)
 	default:
@@ -1963,8 +1966,10 @@ func (ctrl *Controller) handleNewEvent(ctx context.Context, event types.Thirdweb
 			return ctrl.handleTransferEvent(ctx, event)
 		case "OrderCreated":
 			return ctrl.handleOrderCreatedEvent(ctx, event)
-		case "OrderSettled":
-			return ctrl.handleOrderSettledEvent(ctx, event)
+		case "SettleOut":
+			return ctrl.handleSettleOutEvent(ctx, event)
+		case "SettleIn":
+			return ctrl.handleSettleInEvent(ctx, event)
 		case "OrderRefunded":
 			return ctrl.handleOrderRefundedEvent(ctx, event)
 		default:
@@ -2113,8 +2118,8 @@ func (ctrl *Controller) handleOrderCreatedEvent(ctx context.Context, event types
 	return nil
 }
 
-// handleOrderSettledEvent processes OrderSettled events from webhook
-func (ctrl *Controller) handleOrderSettledEvent(ctx context.Context, event types.ThirdwebWebhookEvent) error {
+// handleSettleOutEvent processes SettleOut (offramp) events from webhook
+func (ctrl *Controller) handleSettleOutEvent(ctx context.Context, event types.ThirdwebWebhookEvent) error {
 	// Convert chain ID from string to int64
 	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
 	if err != nil {
@@ -2144,8 +2149,8 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx context.Context, event types
 		return fmt.Errorf("invalid rebate percent: %w", err)
 	}
 
-	// Create order settled event
-	settledEvent := &types.OrderSettledEvent{
+	// Create SettleOut event
+	settledEvent := &types.SettleOutEvent{
 		BlockNumber:       event.Data.BlockNumber,
 		TxHash:            event.Data.TransactionHash,
 		SplitOrderId:      nonIndexedParams["splitOrderId"].(string),
@@ -2164,12 +2169,79 @@ func (ctrl *Controller) handleOrderSettledEvent(ctx context.Context, event types
 		return fmt.Errorf("payment order not found: %w", err)
 	}
 
-	err = common.UpdateOrderStatusSettled(ctx, network, settledEvent, lockOrder.MessageHash)
+	err = common.UpdateOrderStatusSettleOut(ctx, network, settledEvent, lockOrder.MessageHash)
 	if err != nil {
 		return fmt.Errorf("failed to process settled order: %w", err)
 	}
 
 	return nil
+}
+
+// handleSettleInEvent processes SettleIn (onramp) events from webhook
+func (ctrl *Controller) handleSettleInEvent(ctx context.Context, event types.ThirdwebWebhookEvent) error {
+	chainID, err := strconv.ParseInt(event.Data.ChainID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid chain ID: %w", err)
+	}
+	network, err := storage.Client.Network.
+		Query().
+		Where(networkent.ChainIDEQ(chainID)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("network not found: %w", err)
+	}
+	indexedParams := event.Data.Decoded.IndexedParams
+	nonIndexedParams := event.Data.Decoded.NonIndexedParams
+
+	orderId, _ := indexedParams["orderId"].(string)
+	if orderId == "" {
+		return fmt.Errorf("SettleIn: missing or empty orderId in indexed params")
+	}
+	liquidityProvider, _ := indexedParams["liquidityProvider"].(string)
+	recipient, _ := indexedParams["recipient"].(string)
+	tokenStr, _ := nonIndexedParams["token"].(string)
+
+	amountStr, ok := nonIndexedParams["amount"].(string)
+	if !ok || amountStr == "" {
+		return fmt.Errorf("SettleIn: missing or empty amount in non-indexed params")
+	}
+	amount, err := decimal.NewFromString(amountStr)
+	if err != nil {
+		return fmt.Errorf("SettleIn: invalid amount %q: %w", amountStr, err)
+	}
+
+	rateStr, ok := nonIndexedParams["rate"].(string)
+	if !ok || rateStr == "" {
+		return fmt.Errorf("SettleIn: missing or empty rate in non-indexed params")
+	}
+	rate, err := decimal.NewFromString(rateStr)
+	if err != nil {
+		return fmt.Errorf("SettleIn: invalid rate %q: %w", rateStr, err)
+	}
+	// Contract stores rate as rate * 100 (uint96 where 100 = 1.00); unscale to match indexer semantics
+	rate = rate.Div(decimal.NewFromInt(100))
+
+	aggregatorFee := decimal.Zero
+	if aggregatorFeeStr, ok := nonIndexedParams["aggregatorFee"].(string); ok && aggregatorFeeStr != "" {
+		var parseErr error
+		aggregatorFee, parseErr = decimal.NewFromString(aggregatorFeeStr)
+		if parseErr != nil {
+			return fmt.Errorf("SettleIn: invalid aggregatorFee %q: %w", aggregatorFeeStr, parseErr)
+		}
+	}
+
+	settleInEvent := &types.SettleInEvent{
+		BlockNumber:       event.Data.BlockNumber,
+		TxHash:            event.Data.TransactionHash,
+		OrderId:           orderId,
+		LiquidityProvider: ethcommon.HexToAddress(liquidityProvider).Hex(),
+		Amount:            amount,
+		Recipient:         ethcommon.HexToAddress(recipient).Hex(),
+		Token:             ethcommon.HexToAddress(tokenStr).Hex(),
+		AggregatorFee:     aggregatorFee,
+		Rate:              rate,
+	}
+	return common.UpdateOrderStatusSettleIn(ctx, network, settleInEvent)
 }
 
 // handleOrderRefundedEvent processes OrderRefunded events from webhook
@@ -2370,18 +2442,13 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	}
 
 	// Track event counts
-	eventCounts := struct {
-		Transfer      int `json:"Transfer"`
-		OrderCreated  int `json:"OrderCreated"`
-		OrderSettled  int `json:"OrderSettled"`
-		OrderRefunded int `json:"OrderRefunded"`
-	}{}
+	eventCounts := &types.EventCounts{}
 
 	// Run indexing operations based on parameter type
 	var wg sync.WaitGroup
 	var eventCountsMutex sync.Mutex
 
-	// If txHash is provided, index Gateway events (OrderCreated, OrderSettled, OrderRefunded)
+	// If txHash is provided, index Gateway events (OrderCreated, SettleOut, SettleIn, OrderRefunded)
 	if txHash != "" {
 		wg.Add(1)
 		go func() {
@@ -2419,7 +2486,8 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 				// Update event counts with actual counts from indexer
 				eventCountsMutex.Lock()
 				eventCounts.OrderCreated += counts.OrderCreated
-				eventCounts.OrderSettled += counts.OrderSettled
+				eventCounts.SettleOut += counts.SettleOut
+				eventCounts.SettleIn += counts.SettleIn
 				eventCounts.OrderRefunded += counts.OrderRefunded
 				eventCountsMutex.Unlock()
 
@@ -2431,7 +2499,8 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 					"ToBlock":        toBlock,
 					"EventType":      "Gateway",
 					"OrderCreated":   counts.OrderCreated,
-					"OrderSettled":   counts.OrderSettled,
+					"SettleOut":      counts.SettleOut,
+					"SettleIn":       counts.SettleIn,
 					"OrderRefunded":  counts.OrderRefunded,
 				}).Infof("Gateway event indexing completed successfully")
 			}
@@ -2486,7 +2555,8 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 					// Update event counts with actual counts from indexer
 					eventCountsMutex.Lock()
 					eventCounts.OrderCreated += counts.OrderCreated
-					eventCounts.OrderSettled += counts.OrderSettled
+					eventCounts.SettleOut += counts.SettleOut
+					eventCounts.SettleIn += counts.SettleIn
 					eventCounts.OrderRefunded += counts.OrderRefunded
 					eventCountsMutex.Unlock()
 
@@ -2498,7 +2568,8 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 						"ToBlock":        toBlock,
 						"EventType":      "Gateway",
 						"OrderCreated":   counts.OrderCreated,
-						"OrderSettled":   counts.OrderSettled,
+						"SettleOut":      counts.SettleOut,
+						"SettleIn":       counts.SettleIn,
 						"OrderRefunded":  counts.OrderRefunded,
 					}).Infof("Gateway event indexing completed successfully")
 				}
@@ -2611,7 +2682,7 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	wg.Wait()
 
 	response := types.IndexTransactionResponse{
-		Events: eventCounts,
+		Events: *eventCounts,
 	}
 
 	// Build response message based on what was indexed
@@ -2627,8 +2698,8 @@ func (ctrl *Controller) IndexTransaction(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", responseMsg, response)
 }
 
-// IndexProviderAddress controller indexes provider addresses for OrderSettled events
-func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
+// IndexProviderSettlementAddress controller indexes provider settlement (payout) addresses for SettleOut events
+func (ctrl *Controller) IndexProviderSettlementAddress(ctx *gin.Context) {
 	reqCtx := ctx.Request.Context()
 	var request struct {
 		Network      string `json:"network" binding:"required"`
@@ -2669,7 +2740,7 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 		return
 	}
 
-	// Get provider order token to find the provider address
+	// Get provider order token to find the provider settlement address
 	providerOrderToken, err := storage.Client.ProviderOrderToken.
 		Query().
 		Where(
@@ -2710,11 +2781,11 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 		}
 	}
 
-	// Index provider address
-	eventCounts, err := indexerInstance.IndexProviderAddress(reqCtx, network, providerOrderToken.SettlementAddress, request.FromBlock, request.ToBlock, request.TxHash)
+	// Index provider settlement address (SettleOut events)
+	eventCounts, err := indexerInstance.IndexProviderSettlementAddress(reqCtx, network, providerOrderToken.SettlementAddress, request.FromBlock, request.ToBlock, request.TxHash)
 	if err != nil {
-		logger.Errorf("Failed to index provider address: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to index provider address", nil)
+		logger.Errorf("Failed to index provider settlement address: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to index provider settlement address", nil)
 		return
 	}
 
@@ -2722,7 +2793,7 @@ func (ctrl *Controller) IndexProviderAddress(ctx *gin.Context) {
 		Events: *eventCounts,
 	}
 
-	u.APIResponse(ctx, http.StatusOK, "success", "Provider address indexed successfully", response)
+	u.APIResponse(ctx, http.StatusOK, "success", "Provider settlement address indexed successfully", response)
 }
 
 // GetEtherscanQueueStats controller returns statistics about the Etherscan queue

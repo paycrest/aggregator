@@ -24,6 +24,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
@@ -167,6 +168,7 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 			paymentorder.GatewayIDEQ(orderID),
 			paymentorder.StatusNEQ(paymentorder.StatusValidated),
 			paymentorder.StatusNEQ(paymentorder.StatusRefunded),
+			paymentorder.StatusNEQ(paymentorder.StatusRefunding),
 			paymentorder.StatusNEQ(paymentorder.StatusSettled),
 			paymentorder.StatusNEQ(paymentorder.StatusFulfilling),
 			paymentorder.StatusNEQ(paymentorder.StatusSettling),
@@ -212,13 +214,32 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 		return fmt.Errorf("%s - RefundOrder: unsupported wallet_service %s", orderIDPrefix, lockNetwork.WalletService)
 	}
 
-	// Update order status to refunding after transaction submission
-	_, err = db.Client.PaymentOrder.
-		UpdateOneID(lockOrder.ID).
-		SetStatus(paymentorder.StatusRefunding).
+	// Create order_refunding log (indexer will update to order_refunded when event is indexed)
+	tx, err := db.Client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("%s - RefundOrder.tx: %w", orderIDPrefix, err)
+	}
+	transactionLog, err := tx.TransactionLog.
+		Create().
+		SetStatus(transactionlog.StatusOrderRefunding).
+		SetGatewayID(lockOrder.GatewayID).
+		SetNetwork(lockOrder.Edges.Token.Edges.Network.Identifier).
 		Save(ctx)
 	if err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("%s - RefundOrder.createLog: %w", orderIDPrefix, err)
+	}
+	_, err = tx.PaymentOrder.
+		UpdateOneID(lockOrder.ID).
+		SetStatus(paymentorder.StatusRefunding).
+		AddTransactions(transactionLog).
+		Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
 		return fmt.Errorf("%s - RefundOrder.updateStatus: %w", orderIDPrefix, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("%s - RefundOrder.commit: %w", orderIDPrefix, err)
 	}
 
 	return nil
@@ -311,10 +332,10 @@ func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder, encryptedOrderRe
 	params := &types.CreateOrderParams{
 		Token:              ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
 		Amount:             utils.ToSubunit(order.Amount, order.Edges.Token.Decimals),
-		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).BigInt(),
+		Rate:               order.Rate.Mul(decimal.NewFromInt(100)).RoundBank(0).BigInt(),
 		SenderFeeRecipient: ethcommon.HexToAddress(order.FeeAddress),
 		SenderFee:          utils.ToSubunit(order.SenderFee, order.Edges.Token.Decimals),
-		RefundAddress:      ethcommon.HexToAddress(order.ReturnAddress),
+		RefundAddress:      ethcommon.HexToAddress(order.RefundOrRecipientAddress),
 		MessageHash:        encryptedOrderRecipient,
 	}
 
@@ -342,7 +363,7 @@ func (s *OrderEVM) createOrderCallData(order *ent.PaymentOrder, encryptedOrderRe
 	return data, nil
 }
 
-// settleCallData creates the data for the settle method in the gateway contract
+// settleCallData creates the data for the settleOut method in the gateway contract
 func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.PaymentOrder) ([]byte, error) {
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
 	if err != nil {
@@ -386,9 +407,9 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.PaymentOrder) 
 
 	splitOrderID := strings.ReplaceAll(order.ID.String(), "-", "")
 
-	// Generate calldata for settlement
+	// Generate calldata for settlement (Gateway.settleOut)
 	data, err := gatewayABI.Pack(
-		"settle",
+		"settleOut",
 		utils.StringToByte32(splitOrderID),
 		utils.StringToByte32(string(orderID)),
 		ethcommon.HexToAddress(token.SettlementAddress),
@@ -396,7 +417,7 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.PaymentOrder) 
 		uint64(0), // rebatePercent - default to 0 for now
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to pack settle ABI: %w", err)
+		return nil, fmt.Errorf("failed to pack settleOut ABI: %w", err)
 	}
 
 	return data, nil

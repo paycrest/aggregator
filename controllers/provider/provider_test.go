@@ -959,7 +959,7 @@ func TestProvider(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "Rate fetched successfully", response.Message)
-			assert.Equal(t, "950.0", response.Data.MarketRate.StringFixed(1))
+			assert.Equal(t, "950.0", response.Data.MarketSellRate.StringFixed(1))
 		})
 	})
 

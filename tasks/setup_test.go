@@ -103,7 +103,7 @@ func setup() error {
 		SetReceiveAddressExpiry(time.Now().Add(time.Hour)).
 		SetFeePercent(decimal.NewFromFloat(5.0)).
 		SetFeeAddress("0x1234567890123456789012345678901234567890").
-		SetReturnAddress("0x0987654321098765432109876543210987654321").
+		SetRefundOrRecipientAddress("0x0987654321098765432109876543210987654321").
 		SetInstitution("ABNGNGLA").
 		SetAccountIdentifier("1234567890").
 		SetAccountName("Test Account").
@@ -140,7 +140,8 @@ func setup() error {
 				Memo:              "",
 			},
 			FromAddress:   paymentOrder.FromAddress,
-			ReturnAddress: paymentOrder.ReturnAddress,
+			ReturnAddress: paymentOrder.RefundOrRecipientAddress,
+			RefundAddress: paymentOrder.RefundOrRecipientAddress,
 			UpdatedAt:     paymentOrder.UpdatedAt,
 			CreatedAt:     paymentOrder.CreatedAt,
 			TxHash:        paymentOrder.TxHash,

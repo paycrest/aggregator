@@ -2,6 +2,7 @@ package types
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"time"
@@ -11,14 +12,13 @@ import (
 	"github.com/NethermindEth/starknet.go/rpc"
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
-	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
@@ -37,15 +37,15 @@ func (e *ErrNoProviderDueToStuck) Error() string {
 
 // RPCClient is an interface for interacting with the blockchain.
 type RPCClient interface {
-	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error)
-	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
+	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]coretypes.Log, error)
+	HeaderByNumber(ctx context.Context, number *big.Int) (*coretypes.Header, error)
 	PendingNonceAt(ctx context.Context, account common.Address) (uint64, error)
 	SuggestGasPrice(ctx context.Context) (*big.Int, error)
 	SuggestGasTipCap(ctx context.Context) (*big.Int, error)
 	EstimateGas(ctx context.Context, call ethereum.CallMsg) (gas uint64, err error)
-	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error)
+	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- coretypes.Log) (ethereum.Subscription, error)
 	CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error)
-	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*coretypes.Receipt, error)
 	Close()
 	Commit() common.Hash
 }
@@ -92,7 +92,18 @@ type OrderCreatedEvent struct {
 	Sender      string
 }
 
-// OrderSettledEvent represents a order settled event.
+// SettleOutEvent represents an offramp settlement event (Gateway SettleOut).
+type SettleOutEvent struct {
+	BlockNumber       int64
+	TxHash            string
+	SplitOrderId      string
+	OrderId           string
+	LiquidityProvider string
+	SettlePercent     decimal.Decimal
+	RebatePercent     decimal.Decimal
+}
+
+// OrderSettledEvent represents an order settled event. Only used for Starknet.
 type OrderSettledEvent struct {
 	BlockNumber       int64
 	TxHash            string
@@ -101,6 +112,19 @@ type OrderSettledEvent struct {
 	LiquidityProvider string
 	SettlePercent     decimal.Decimal
 	RebatePercent     decimal.Decimal
+}
+
+// SettleInEvent represents an onramp settlement event (Gateway SettleIn).
+type SettleInEvent struct {
+	BlockNumber       int64
+	TxHash            string
+	OrderId           string
+	LiquidityProvider string
+	Amount            decimal.Decimal
+	Recipient         string
+	Token             string
+	AggregatorFee     decimal.Decimal
+	Rate              decimal.Decimal
 }
 
 // OrderRefundedEvent represents a order refunded event.
@@ -120,14 +144,14 @@ type OrderService interface {
 
 // Indexer provides an interface for indexing blockchain data to the database.
 type Indexer interface {
-	// Index all gateway events (OrderCreated, OrderSettled, OrderRefunded) in one efficient call
+	// Index all gateway events (OrderCreated, SettleOut, SettleIn, OrderRefunded) in one efficient call
 	IndexGateway(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
 
 	// Index receive address events
 	IndexReceiveAddress(ctx context.Context, token *ent.Token, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
 
-	// Index provider address events (OrderSettled)
-	IndexProviderAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
+	// Index provider address events (SettleOut)
+	IndexProviderSettlementAddress(ctx context.Context, network *ent.Network, address string, fromBlock int64, toBlock int64, txHash string) (*EventCounts, error)
 }
 
 // KYCProvider defines the interface for KYC verification providers
@@ -188,15 +212,27 @@ type RegisterResponse struct {
 	Email     string    `json:"email"`
 }
 
-// AcceptOrderResponse is the response for the accept order endpoint
+// AcceptOrderRequest is the request payload for the accept order endpoint
+type AcceptOrderRequest struct {
+	Direction string `json:"direction,omitempty" validate:"omitempty,oneof=payin payout"` // "payin" or "payout" (default: "payout" for backward compatibility)
+	Amount    string `json:"amount,omitempty"`    // Required for payin orders
+}
+
+// AcceptOrderResponse is the unified response for the accept order endpoint (payin and payout).
+// Common: id, direction, amount, institution, accountIdentifier, accountName.
+// Payout-only: memo, metadata. Payin-only: chainId, rpcUrl, delegationAddress.
 type AcceptOrderResponse struct {
-	ID                uuid.UUID              `json:"id"`
+	ID                string                 `json:"id"`
+	Direction         string                 `json:"direction"` // "payin" or "payout"
 	Amount            decimal.Decimal        `json:"amount"`
 	Institution       string                 `json:"institution"`
 	AccountIdentifier string                 `json:"accountIdentifier"`
 	AccountName       string                 `json:"accountName"`
-	Memo              string                 `json:"memo"`
-	Metadata          map[string]interface{} `json:"metadata"`
+	Memo              string                 `json:"memo,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	ChainId           string                 `json:"chainId,omitempty"`
+	RpcUrl            string                 `json:"rpcUrl,omitempty"`
+	DelegationAddress string                 `json:"delegationAddress,omitempty"`
 }
 
 // FulfillOrderPayload is the payload for the fulfill order endpoint
@@ -205,6 +241,7 @@ type FulfillOrderPayload struct {
 	TxID             string                                   `json:"txId" binding:"required"`
 	ValidationStatus paymentorderfulfillment.ValidationStatus `json:"validationStatus"`
 	ValidationError  string                                   `json:"validationError"`
+	Authorization    *coretypes.SetCodeAuthorization         `json:"authorization,omitempty"` // Required for payin orders (EIP-7702; JSON: yParity, chainId, address, nonce, r, s)
 }
 
 // CancelOrderPayload is the payload for the cancel order endpoint
@@ -248,23 +285,25 @@ type SenderOrderTokenPayload struct {
 // SenderProfilePayload is the payload for the sender profile endpoint
 type SenderProfilePayload struct {
 	WebhookURL      string                    `json:"webhookUrl"`
+	WebhookVersion  string                    `json:"webhookVersion" binding:"omitempty,oneof=1 2"`
 	DomainWhitelist []string                  `json:"domainWhitelist"`
 	Tokens          []SenderOrderTokenPayload `json:"tokens"`
 }
 
 // ProviderOrderTokenPayload defines the provider setting for a token
 type ProviderOrderTokenPayload struct {
-	Symbol                 string                                `json:"symbol" binding:"required"`
-	ConversionRateType     providerordertoken.ConversionRateType `json:"conversionRateType" binding:"required,oneof=fixed floating"`
-	FixedConversionRate    decimal.Decimal                       `json:"fixedConversionRate" binding:"required,gt=0"`
-	FloatingConversionRate decimal.Decimal                       `json:"floatingConversionRate" binding:"required"`
-	MaxOrderAmount         decimal.Decimal                       `json:"maxOrderAmount" binding:"required,gt=0"`
-	MinOrderAmount         decimal.Decimal                       `json:"minOrderAmount" binding:"required,gt=0"`
-	MaxOrderAmountOTC      decimal.Decimal                       `json:"maxOrderAmountOtc" binding:"required,gte=0"`
-	MinOrderAmountOTC      decimal.Decimal                       `json:"minOrderAmountOtc" binding:"required,gte=0"`
-	RateSlippage           decimal.Decimal                       `json:"rateSlippage" binding:"omitempty,gte=0.1"`
-	SettlementAddress      string                                `json:"settlementAddress" binding:"required"`
-	Network                string                                `json:"network" binding:"required"`
+	Symbol            string          `json:"symbol" binding:"required"`
+	FixedBuyRate      decimal.Decimal `json:"fixedBuyRate" binding:"omitempty,gte=0"`
+	FixedSellRate     decimal.Decimal `json:"fixedSellRate" binding:"omitempty,gte=0"`
+	FloatingBuyDelta  decimal.Decimal `json:"floatingBuyDelta" binding:"omitempty"`
+	FloatingSellDelta decimal.Decimal `json:"floatingSellDelta" binding:"omitempty"`
+	MaxOrderAmount    decimal.Decimal `json:"maxOrderAmount" binding:"required,gt=0"`
+	MinOrderAmount    decimal.Decimal `json:"minOrderAmount" binding:"required,gt=0"`
+	MaxOrderAmountOTC decimal.Decimal `json:"maxOrderAmountOtc" binding:"required,gte=0"`
+	MinOrderAmountOTC decimal.Decimal `json:"minOrderAmountOtc" binding:"required,gte=0"`
+	RateSlippage      decimal.Decimal `json:"rateSlippage" binding:"omitempty,gte=0.1"`
+	SettlementAddress string          `json:"settlementAddress" binding:"required"`
+	Network           string          `json:"network" binding:"required"`
 }
 
 // ProviderProfilePayload is the payload for the provider profile endpoint
@@ -331,6 +370,7 @@ type SenderProfileResponse struct {
 	LastName              string                     `json:"lastName"`
 	Email                 string                     `json:"email"`
 	WebhookURL            string                     `json:"webhookUrl"`
+	WebhookVersion        string                     `json:"webhookVersion"`
 	DomainWhitelist       []string                   `json:"domainWhitelist"`
 	Tokens                []SenderOrderTokenResponse `json:"tokens"`
 	APIKey                APIKeyResponse             `json:"apiKey"`
@@ -466,7 +506,7 @@ type NewPaymentOrderPayload struct {
 	Network       string                `json:"network" binding:"required"`
 	Recipient     PaymentOrderRecipient `json:"recipient" binding:"required"`
 	Reference     string                `json:"reference"`
-	ReturnAddress string                `json:"returnAddress"`
+	ReturnAddress string                `json:"returnAddress"` // v1 API: kept for backward compatibility; maps to refund_or_recipient_address
 	FeePercent    decimal.Decimal       `json:"feePercent"`
 	FeeAddress    string                `json:"feeAddress"`
 }
@@ -500,7 +540,8 @@ type SenderOrderResponse struct {
 	GatewayID      string                 `json:"gatewayId"`
 	Recipient      PaymentOrderRecipient  `json:"recipient"`
 	FromAddress    string                 `json:"fromAddress"`
-	ReturnAddress  string                 `json:"returnAddress"`
+	ReturnAddress  string                 `json:"returnAddress"` // deprecated: use refundAddress; kept for backward compatibility
+	RefundAddress  string                 `json:"refundAddress"` // preferred; same value as returnAddress
 	ReceiveAddress string                 `json:"receiveAddress"`
 	FeeAddress     string                 `json:"feeAddress"`
 	Reference      string                 `json:"reference"`
@@ -528,7 +569,8 @@ type PaymentOrderWebhookData struct {
 	SenderID       uuid.UUID             `json:"senderId"`
 	Recipient      PaymentOrderRecipient `json:"recipient"`
 	FromAddress    string                `json:"fromAddress"`
-	ReturnAddress  string                `json:"returnAddress"`
+	ReturnAddress  string                `json:"returnAddress"` // deprecated: use refundAddress; kept for backward compatibility
+	RefundAddress  string                `json:"refundAddress"` // preferred; same value as returnAddress
 	Reference      string                `json:"reference"`
 	UpdatedAt      time.Time             `json:"updatedAt"`
 	CreatedAt      time.Time             `json:"createdAt"`
@@ -538,20 +580,82 @@ type PaymentOrderWebhookData struct {
 
 // PaymentOrderWebhookPayload is the request type for a payment order webhook
 type PaymentOrderWebhookPayload struct {
-	Event string                  `json:"event"`
-	Data  PaymentOrderWebhookData `json:"data"`
+	Event          string                  `json:"event"`
+	WebhookVersion string                  `json:"webhookVersion"` // "1" or "2"
+	Data           PaymentOrderWebhookData `json:"data"`
 }
 
-// V2PaymentOrderSource represents the source configuration for v2 payment orders
-type V2PaymentOrderSource struct {
-	Type          string `json:"type" binding:"required,eq=crypto"`
-	Currency      string `json:"currency" binding:"required"`
-	PaymentRail   string `json:"paymentRail" binding:"required"`
-	RefundAddress string `json:"refundAddress" binding:"required"`
+// V2PaymentOrderWebhookRecipient is the recipient in v2 webhook payload (no KYC).
+type V2PaymentOrderWebhookRecipient struct {
+	Institution       string                 `json:"institution"`
+	AccountIdentifier string                 `json:"accountIdentifier"`
+	AccountName       string                 `json:"accountName"`
+	Memo              string                 `json:"memo"`
+	ProviderID        string                 `json:"providerId,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	Currency          string                 `json:"currency,omitempty"`
 }
 
-// V2PaymentOrderRecipient represents the recipient configuration for v2 payment orders
-type V2PaymentOrderRecipient struct {
+// V2PaymentOrderWebhookRefundAccount is the refund account in v2 webhook payload (onramp; no KYC).
+type V2PaymentOrderWebhookRefundAccount struct {
+	Institution       string                 `json:"institution"`
+	AccountIdentifier string                 `json:"accountIdentifier"`
+	AccountName       string                 `json:"accountName"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// V2PaymentOrderWebhookData is the v2 webhook data, aligned with API schema: providerAccount, source, destination (same types as V2PaymentOrderResponse).
+type V2PaymentOrderWebhookData struct {
+	ID              uuid.UUID           `json:"id"`
+	Direction       string              `json:"direction"` // "offramp" or "onramp"
+	Amount          decimal.Decimal     `json:"amount"`
+	AmountInUSD     decimal.Decimal     `json:"amountInUsd"`
+	AmountPaid      decimal.Decimal     `json:"amountPaid"`
+	AmountReturned  decimal.Decimal     `json:"amountReturned"`
+	PercentSettled  decimal.Decimal     `json:"percentSettled"`
+	SenderFee       decimal.Decimal     `json:"senderFee"`
+	TransactionFee  decimal.Decimal     `json:"transactionFee"` // network fee + protocol fee
+	Rate            decimal.Decimal     `json:"rate"`
+	GatewayID       string              `json:"gatewayId"`
+	SenderID        uuid.UUID           `json:"senderId"`
+	ProviderAccount any                 `json:"providerAccount,omitempty"` // V2CryptoProviderAccount (offramp) or V2FiatProviderAccount (onramp)
+	Source          any                 `json:"source,omitempty"`          // V2CryptoSource (offramp) or V2FiatSource (onramp)
+	Destination     any                 `json:"destination,omitempty"`     // V2FiatDestination (offramp) or V2CryptoDestination (onramp)
+	FromAddress     string              `json:"fromAddress"`
+	Reference       string              `json:"reference"`
+	Timestamp       time.Time           `json:"timestamp"` // when this webhook event was sent (for ordering/idempotency)
+	TxHash          string              `json:"txHash"`
+	Status          paymentorder.Status `json:"status"`
+}
+
+// V2PaymentOrderWebhookPayload is the v2 payment order webhook payload.
+type V2PaymentOrderWebhookPayload struct {
+	Event          string                    `json:"event"`
+	WebhookVersion string                    `json:"webhookVersion"`
+	Data           V2PaymentOrderWebhookData `json:"data"`
+}
+
+// V2CryptoSource represents the crypto source configuration for offramp v2 payment orders
+type V2CryptoSource struct {
+	Type          string     `json:"type" binding:"required,eq=crypto"`
+	Currency      string     `json:"currency" binding:"required"`
+	Network       string     `json:"network" binding:"required"`
+	RefundAddress string     `json:"refundAddress" binding:"required"`
+	KYC           *KYCDetail `json:"kyc,omitempty"`
+}
+
+// V2FiatDestination represents the fiat destination configuration for offramp v2 payment orders
+type V2FiatDestination struct {
+	Type       string          `json:"type" binding:"required,eq=fiat"`
+	Currency   string          `json:"currency" binding:"required"`
+	Country    string          `json:"country,omitempty"`
+	ProviderID string          `json:"providerId,omitempty"`
+	Recipient  V2FiatRecipient `json:"recipient" binding:"required"`
+	KYC        *KYCDetail      `json:"kyc,omitempty"`
+}
+
+// V2FiatRecipient represents the fiat recipient configuration for offramp v2 payment orders
+type V2FiatRecipient struct {
 	Institution       string                 `json:"institution" binding:"required"`
 	AccountIdentifier string                 `json:"accountIdentifier" binding:"required"`
 	AccountName       string                 `json:"accountName" binding:"required"`
@@ -559,19 +663,37 @@ type V2PaymentOrderRecipient struct {
 	Metadata          map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// V2PaymentOrderDestination represents the destination configuration for v2 payment orders
-type V2PaymentOrderDestination struct {
-	Type       string                  `json:"type" binding:"required,eq=fiat"`
-	Currency   string                  `json:"currency" binding:"required"`
-	Country    string                  `json:"country,omitempty"`
-	ProviderID string                  `json:"providerId,omitempty"`
-	Recipient  V2PaymentOrderRecipient `json:"recipient" binding:"required"`
+// V2FiatSource represents the fiat source configuration for onramp v2 payment orders
+type V2FiatSource struct {
+	Type          string              `json:"type" binding:"required,eq=fiat"`
+	Currency      string              `json:"currency" binding:"required"`
+	Country       string              `json:"country,omitempty"`
+	RefundAccount V2FiatRefundAccount `json:"refundAccount" binding:"required"`
+	KYC           *KYCDetail          `json:"kyc,omitempty"`
 }
 
-// V2PaymentOrderKYC represents KYC information for v2 payment orders
-type V2PaymentOrderKYC struct {
-	Recipient *KYCDetail `json:"recipient,omitempty"`
-	Sender    *KYCDetail `json:"sender,omitempty"`
+// V2FiatRefundAccount represents the refund account for onramp orders
+type V2FiatRefundAccount struct {
+	Institution       string                 `json:"institution" binding:"required"`
+	AccountIdentifier string                 `json:"accountIdentifier" binding:"required"`
+	AccountName       string                 `json:"accountName" binding:"required"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// V2CryptoDestination represents the crypto destination configuration for onramp v2 payment orders
+type V2CryptoDestination struct {
+	Type       string            `json:"type" binding:"required,eq=crypto"`
+	Currency   string            `json:"currency" binding:"required"`
+	Network    string            `json:"network" binding:"required"`
+	ProviderID string            `json:"providerId,omitempty"`
+	Recipient  V2CryptoRecipient `json:"recipient" binding:"required"`
+	KYC        *KYCDetail        `json:"kyc,omitempty"`
+}
+
+// V2CryptoRecipient represents the crypto recipient configuration for onramp v2 payment orders
+type V2CryptoRecipient struct {
+	Address string `json:"address" binding:"required"`
+	Network string `json:"network" binding:"required"`
 }
 
 // EntityType represents the type of entity
@@ -652,40 +774,84 @@ type PrincipalAddress struct {
 }
 
 // V2PaymentOrderPayload is the payload for the v2 create payment order endpoint
+// Source and Destination are polymorphic (json.RawMessage) to support both offramp and onramp flows
 type V2PaymentOrderPayload struct {
-	Amount           string                    `json:"amount" binding:"required"`
-	Rate             string                    `json:"rate,omitempty"`
-	AmountIn         string                    `json:"amountIn,omitempty" binding:"omitempty,oneof=crypto fiat"`
-	SenderFee        string                    `json:"senderFee,omitempty"`
-	SenderFeePercent string                    `json:"senderFeePercent,omitempty"`
-	Reference        string                    `json:"reference,omitempty"`
-	Source           V2PaymentOrderSource      `json:"source" binding:"required"`
-	Destination      V2PaymentOrderDestination `json:"destination" binding:"required"`
-	KYC              *V2PaymentOrderKYC        `json:"kyc,omitempty"`
+	Amount           string          `json:"amount" binding:"required"`
+	Rate             string          `json:"rate,omitempty"`
+	AmountIn         string          `json:"amountIn,omitempty" binding:"omitempty,oneof=crypto fiat"`
+	SenderFee        string          `json:"senderFee,omitempty"`
+	SenderFeePercent string          `json:"senderFeePercent,omitempty"`
+	Reference        string          `json:"reference,omitempty"`
+	Source           json.RawMessage `json:"source" binding:"required"`
+	Destination      json.RawMessage `json:"destination" binding:"required"`
 }
 
-// V2ProviderAccount represents provider account details in v2 responses
-type V2ProviderAccount struct {
-	PaymentRail    string    `json:"paymentRail"`
+// V2CryptoProviderAccount represents provider account details for offramp (crypto source) in v2 responses
+type V2CryptoProviderAccount struct {
+	Network        string    `json:"network"`
 	ReceiveAddress string    `json:"receiveAddress"`
 	ValidUntil     time.Time `json:"validUntil"`
 }
 
+// V2FiatProviderAccount represents provider account details for onramp (fiat source) in v2 responses
+type V2FiatProviderAccount struct {
+	Institution       string    `json:"institution"`
+	AccountIdentifier string    `json:"accountIdentifier"`
+	AccountName       string    `json:"accountName"`
+	ValidUntil        time.Time `json:"validUntil"`
+}
+
 // V2PaymentOrderResponse is the response type for v2 payment order creation
+// ProviderAccount, Source, and Destination are polymorphic (any) to support both offramp and onramp flows
 type V2PaymentOrderResponse struct {
-	ID               uuid.UUID                 `json:"id"`
-	Status           string                    `json:"status"`
-	Timestamp        time.Time                 `json:"timestamp"`
-	Amount           string                    `json:"amount"`
-	Rate             string                    `json:"rate,omitempty"`
-	SenderFee        string                    `json:"senderFee"`
-	SenderFeePercent string                    `json:"senderFeePercent"`
-	TransactionFee   string                    `json:"transactionFee"`
-	Reference        string                    `json:"reference"`
-	ProviderAccount  V2ProviderAccount         `json:"providerAccount"`
-	Source           V2PaymentOrderSource      `json:"source"`
-	Destination      V2PaymentOrderDestination `json:"destination"`
-	KYC              *V2PaymentOrderKYC        `json:"kyc,omitempty"`
+	ID               uuid.UUID `json:"id"`
+	Status           string    `json:"status"`
+	Timestamp        time.Time `json:"timestamp"`
+	Amount           string    `json:"amount"`   // Crypto amount (token units) - consistent for both flows
+	AmountIn         string    `json:"amountIn"` // Echo/normalize the input amount (crypto | fiat)
+	Rate             string    `json:"rate,omitempty"`
+	SenderFee        string    `json:"senderFee"` // Crypto amount (token units) - consistent for both flows
+	SenderFeePercent string    `json:"senderFeePercent"`
+	TransactionFee   string    `json:"transactionFee"`
+	Reference        string    `json:"reference"`
+	ProviderAccount  any       `json:"providerAccount"` // V2CryptoProviderAccount for offramp, V2FiatProviderAccount for onramp
+	Source           any       `json:"source"`          // V2CryptoSource for offramp, V2FiatSource for onramp
+	Destination      any       `json:"destination"`     // V2FiatDestination for offramp, V2CryptoDestination for onramp
+}
+
+// V2PaymentOrderGetResponse is the v2 response for GET payment order (single or list item). Aligned with v2 API schema.
+type V2PaymentOrderGetResponse struct {
+	ID                  uuid.UUID        `json:"id"`
+	Status              string           `json:"status"`
+	Direction           string           `json:"direction"` // "offramp" or "onramp"
+	CreatedAt           time.Time        `json:"createdAt"`
+	UpdatedAt           time.Time        `json:"updatedAt"`
+	Amount              string           `json:"amount"`
+	AmountIn            string           `json:"amountIn"`
+	AmountInUsd         string           `json:"amountInUsd,omitempty"`
+	AmountPaid          string           `json:"amountPaid,omitempty"`
+	AmountReturned      string           `json:"amountReturned,omitempty"`
+	PercentSettled      string           `json:"percentSettled,omitempty"`
+	Rate                string           `json:"rate,omitempty"`
+	SenderFee           string           `json:"senderFee"`
+	SenderFeePercent    string           `json:"senderFeePercent"`
+	TransactionFee      string           `json:"transactionFee"`
+	Reference           string           `json:"reference"`
+	ProviderAccount     any              `json:"providerAccount"`
+	Source              any              `json:"source"`
+	Destination         any              `json:"destination"`
+	TxHash              string           `json:"txHash,omitempty"`
+	TransactionLogs     []TransactionLog `json:"transactionLogs,omitempty"`
+	CancellationReasons []string         `json:"cancellationReasons,omitempty"` // provider view
+	OTCExpiry           *time.Time       `json:"otcExpiry,omitempty"`           // provider view
+}
+
+// V2PaymentOrderListResponse is the v2 response for GET payment orders list.
+type V2PaymentOrderListResponse struct {
+	TotalRecords int                         `json:"total"`
+	Page         int                         `json:"page"`
+	PageSize     int                         `json:"pageSize"`
+	Orders       []V2PaymentOrderGetResponse `json:"orders"`
 }
 
 // ConfirmEmailPayload is the payload for the confirmEmail endpoint
@@ -712,9 +878,10 @@ type SendEmailResponse struct {
 
 // MarketRateResponse is the response for the market rate endpoint
 type MarketRateResponse struct {
-	MarketRate  decimal.Decimal `json:"marketRate"`
-	MinimumRate decimal.Decimal `json:"minimumRate"`
-	MaximumRate decimal.Decimal `json:"maximumRate"`
+	MarketBuyRate  decimal.Decimal `json:"marketBuyRate"`
+	MarketSellRate decimal.Decimal `json:"marketSellRate"`
+	MinimumRate    decimal.Decimal `json:"minimumRate"`
+	MaximumRate    decimal.Decimal `json:"maximumRate"`
 }
 
 // RateMetadata contains optional metadata for rate responses
@@ -736,12 +903,13 @@ type SupportedInstitutions struct {
 
 // SupportedCurrencies is the supported currencies response struct.
 type SupportedCurrencies struct {
-	Code       string          `json:"code"`
-	Name       string          `json:"name"`
-	ShortName  string          `json:"shortName"`
-	Decimals   int8            `json:"decimals"`
-	Symbol     string          `json:"symbol"`
-	MarketRate decimal.Decimal `json:"marketRate"`
+	Code           string          `json:"code"`
+	Name           string          `json:"name"`
+	ShortName      string          `json:"shortName"`
+	Decimals       int8            `json:"decimals"`
+	Symbol         string          `json:"symbol"`
+	MarketBuyRate  decimal.Decimal `json:"marketBuyRate"`
+	MarketSellRate decimal.Decimal `json:"marketSellRate"`
 }
 
 // Response is the struct for an API response
@@ -861,7 +1029,8 @@ type LinkedAddressTransaction struct {
 	GatewayID     string                            `json:"gatewayId"`
 	Recipient     LinkedAddressTransactionRecipient `json:"recipient"`
 	FromAddress   string                            `json:"fromAddress"`
-	ReturnAddress string                            `json:"returnAddress"`
+	ReturnAddress string                            `json:"returnAddress"` // deprecated: use refundAddress; kept for backward compatibility
+	RefundAddress string                            `json:"refundAddress"` // preferred; same value as returnAddress
 	CreatedAt     time.Time                         `json:"createdAt"`
 	UpdatedAt     time.Time                         `json:"updatedAt"`
 	TxHash        string                            `json:"txHash"`
@@ -935,19 +1104,15 @@ type IndexTransactionRequest struct {
 
 // IndexTransactionResponse represents the response for the index transaction endpoint
 type IndexTransactionResponse struct {
-	Events struct {
-		Transfer      int `json:"Transfer"`
-		OrderCreated  int `json:"OrderCreated"`
-		OrderSettled  int `json:"OrderSettled"`
-		OrderRefunded int `json:"OrderRefunded"`
-	} `json:"events"`
+	Events EventCounts `json:"events"`
 }
 
 // EventCounts represents the count of different event types found during indexing
 type EventCounts struct {
 	Transfer      int `json:"Transfer"`
 	OrderCreated  int `json:"OrderCreated"`
-	OrderSettled  int `json:"OrderSettled"`
+	SettleOut     int `json:"SettleOut"` // SettleOut (offramp); Starknet OrderSettled is mapped here
+	SettleIn      int `json:"SettleIn"`  // SettleIn (onramp)
 	OrderRefunded int `json:"OrderRefunded"`
 }
 
