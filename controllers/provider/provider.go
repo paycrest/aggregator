@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -937,7 +938,7 @@ func buildAcceptOrderResponse(order *ent.PaymentOrder, orderID uuid.UUID, provid
 		AccountIdentifier: order.AccountIdentifier,
 		AccountName:       order.AccountName,
 		Memo:              order.Memo,
-		Metadata:          order.Metadata,
+		Metadata:          maps.Clone(order.Metadata),
 	}
 	if isPayin {
 		response.Direction = "payin"
