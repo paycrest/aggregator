@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"math"
 	"strings"
@@ -20,9 +19,7 @@ import (
 	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
-	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
-	tokenUtils "github.com/paycrest/aggregator/utils/token"
 )
 
 const txStatusFiveMinError = "Failed to get transaction status after 5 minutes"
@@ -768,27 +765,12 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: missing ProvisionBucket or Currency")
 		return
 	}
-	decodedSecret, err := base64.StdEncoding.DecodeString(order.Edges.Provider.Edges.APIKey.Secret)
-	if err != nil {
-		logger.WithFields(logger.Fields{"OrderID": order.ID.String(),
-			"ProviderID": order.Edges.Provider.ID,
-			"Error":      err,
-		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: decode secret")
-		return
-	}
-	decryptedSecret, err := cryptoUtils.DecryptPlain(decodedSecret)
-	if err != nil {
-		logger.WithFields(logger.Fields{"OrderID": order.ID.String(),
-			"ProviderID": order.Edges.Provider.ID,
-			"Error":      err,
-		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: decrypt secret")
-		return
-	}
 
 	// Use refundReference for tx_status (refund status). If missing, call /tx_refund first to get one.
 	refundReference := getRefundReferenceFromOrder(order)
 	if refundReference == "" {
-		refundReference, err = callTxRefundAndStore(ctx, order, string(decryptedSecret))
+		var err error
+		refundReference, err = callTxRefundAndStore(ctx, order)
 		if err != nil || refundReference == "" {
 			return
 		}
@@ -798,28 +780,13 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 		"reference": refundReference,
 		"currency":  order.Edges.ProvisionBucket.Edges.Currency.Code,
 	}
-	signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
-	res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(10*time.Second).
-		Header().Add("X-Request-Signature", signature).
-		Build().POST("/tx_status").
-		Body().AsJSON(payload).
-		Send()
+	data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.Edges.Provider.ID,
 			"Error":      err,
 		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: tx_status request")
-		return
-	}
-	data, err := utils.ParseJSONResponse(res.Raw())
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"OrderID":    order.ID.String(),
-			"ProviderID": order.Edges.Provider.ID,
-			"Error":      err,
-		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: parse response")
 		return
 	}
 	dataMap, ok := data["data"].(map[string]interface{})
@@ -914,7 +881,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 		}
 
 		// On success, refundReference is stored in order metadata; next sync will poll /tx_status with it.
-		if _, err := callTxRefundAndStore(ctx, order, string(decryptedSecret)); err != nil {
+		if _, err := callTxRefundAndStore(ctx, order); err != nil {
 			return
 		}
 	}
@@ -984,8 +951,8 @@ func callRequestAuthorization(ctx context.Context, order *ent.PaymentOrder, psp,
 	return err
 }
 
-// callTxRefundAndStore calls POST /tx_refund, on 200 stores refundReference in order metadata and returns it.
-func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder, decryptedSecret string) (refundReference string, err error) {
+// callTxRefundAndStore calls POST /tx_refund via CallProviderWithHMAC; on 200 stores refundReference in order metadata and returns it.
+func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder) (refundReference string, err error) {
 	fiatAmount := order.Amount.Add(order.SenderFee).Mul(order.Rate).RoundBank(0).String()
 	refundAccount := map[string]interface{}{
 		"accountIdentifier": order.AccountIdentifier,
@@ -1003,26 +970,13 @@ func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder, decrypte
 		"amount":        fiatAmount,
 		"refundAccount": refundAccount,
 	}
-	signature := tokenUtils.GenerateHMACSignature(body, decryptedSecret)
-	res, err := fastshot.NewClient(order.Edges.Provider.HostIdentifier).
-		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(10*time.Second).
-		Header().Add("X-Request-Signature", signature).
-		Build().POST("/tx_refund").
-		Body().AsJSON(body).
-		Send()
+	data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_refund", body)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"OrderID": order.ID.String(),
 			"Error":   err,
 		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: tx_refund request")
 		return "", err
-	}
-	data, err := utils.ParseJSONResponse(res.Raw())
-	if err != nil {
-		return "", err
-	}
-	if res.Raw().StatusCode != 200 {
-		return "", nil
 	}
 	dataMap, _ := data["data"].(map[string]interface{})
 	if dataMap == nil {

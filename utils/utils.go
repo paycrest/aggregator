@@ -812,9 +812,6 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 		return nil, fmt.Errorf("failed to decrypt API key secret: %v", err)
 	}
 
-	// Generate HMAC signature
-	signature := tokenUtils.GenerateHMACSignature(payload, string(decryptedSecret))
-
 	// Build URL and body so the request respects ctx (client disconnect / deadline cancels the call)
 	base := strings.TrimSuffix(provider.HostIdentifier, "/")
 	pathPart := strings.TrimPrefix(path, "/")
@@ -822,12 +819,23 @@ func CallProviderWithHMAC(ctx context.Context, providerID, method, path string, 
 	if pathPart != "" {
 		reqURL = base + "/" + pathPart
 	}
-	var bodyReader io.Reader
-	if payload != nil && len(payload) > 0 {
-		jsonBody, jErr := json.Marshal(payload)
+	var jsonBody []byte
+	if len(payload) > 0 {
+		var jErr error
+		jsonBody, jErr = json.Marshal(payload)
 		if jErr != nil {
 			return nil, fmt.Errorf("failed to marshal request body: %v", jErr)
 		}
+	}
+	// Sign the exact body bytes so provider's VerifyHMACSignatureBytes accepts the request
+	var signature string
+	if len(jsonBody) > 0 {
+		signature = tokenUtils.SignRequestBody(jsonBody, string(decryptedSecret))
+	} else {
+		signature = tokenUtils.SignRequestBody([]byte{}, string(decryptedSecret))
+	}
+	var bodyReader io.Reader
+	if len(jsonBody) > 0 {
 		bodyReader = bytes.NewReader(jsonBody)
 	}
 	req, reqErr := http.NewRequestWithContext(ctx, method, reqURL, bodyReader)

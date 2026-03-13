@@ -108,6 +108,22 @@ func GenerateHMACSignature(payload map[string]interface{}, privateKey string) st
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// SignRequestBody computes HMAC-SHA256(secret, rawBody) and returns the hex-encoded string.
+// Use this to sign the exact request body bytes so the provider's VerifyHMACSignatureBytes accepts the request (aggregator → provider).
+func SignRequestBody(rawBody []byte, secret string) string {
+	key := []byte(secret)
+	h := hmac.New(sha256.New, key)
+	h.Write(rawBody)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// VerifyHMACSignatureBytes verifies the HMAC signature over the exact raw payload bytes.
+// Matches provider-side verification for incoming requests.
+func VerifyHMACSignatureBytes(rawPayload []byte, secret string, signature string) bool {
+	expected := SignRequestBody(rawPayload, secret)
+	return hmac.Equal([]byte(expected), []byte(signature))
+}
+
 // SortMapRecursively sorts a map recursively by its keys
 func SortMapRecursively(m map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})

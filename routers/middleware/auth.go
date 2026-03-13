@@ -238,6 +238,7 @@ func HMACVerificationMiddleware(c *gin.Context) {
 	}
 
 	var payloadData map[string]interface{}
+	var rawPayload []byte
 	var err error
 
 	// Handle GET and DELETE requests differently
@@ -257,7 +258,7 @@ func HMACVerificationMiddleware(c *gin.Context) {
 		}
 	} else {
 		// For non-GET/non-DELETE requests, read the payload from the body
-		payload, err := c.GetRawData()
+		rawPayload, err = c.GetRawData()
 		if err != nil {
 			u.APIResponse(c, http.StatusInternalServerError, "error", "Failed to read request payload", err.Error())
 			c.Abort()
@@ -265,7 +266,7 @@ func HMACVerificationMiddleware(c *gin.Context) {
 		}
 
 		// Parse the payload to retrieve timestamp
-		err = json.Unmarshal(payload, &payloadData)
+		err = json.Unmarshal(rawPayload, &payloadData)
 		if err != nil {
 			u.APIResponse(c, http.StatusBadRequest, "error", "Invalid payload format", err.Error())
 			c.Abort()
@@ -358,8 +359,11 @@ func HMACVerificationMiddleware(c *gin.Context) {
 		return
 	}
 
-	// Verify the HMAC signature
-	valid := token.VerifyHMACSignature(payloadData, string(decryptedSecret), signature)
+	// Verify the HMAC signature: try raw-body first, then map-based for backward compatibility with old providers
+	valid := len(rawPayload) > 0 && token.VerifyHMACSignatureBytes(rawPayload, string(decryptedSecret), signature)
+	if !valid {
+		valid = token.VerifyHMACSignature(payloadData, string(decryptedSecret), signature)
+	}
 	if !valid {
 		u.APIResponse(c, http.StatusUnauthorized, "error", "Invalid HMAC signature", nil)
 		c.Abort()
