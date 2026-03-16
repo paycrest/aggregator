@@ -88,3 +88,41 @@ func TestUtils(t *testing.T) {
 		assert.True(median.Equal(decimal.NewFromInt(2)), "Median calculation is incorrect")
 	})
 }
+
+func TestNormalizeMobileMoneyAccountIdentifier(t *testing.T) {
+	tests := []struct {
+		name              string
+		currencyCode      string
+		accountIdentifier string
+		want              string
+	}{
+		// UGX (256)
+		{"UGX with + and leading spaces", "UGX", "+ 256701234567", "256701234567"},
+		{"UGX plus and dial code no internal space", "UGX", "+256701234567", "256701234567"},
+		{"UGX local number gets prefix", "UGX", "701234567", "256701234567"},
+		{"UGX already has dial code", "UGX", "256701234567", "256701234567"},
+		{"UGX plus and dial code lowercase currency", "ugx", "+256701234567", "256701234567"},
+		{"UGX leading non-digit then digits", "UGX", "+ x701234567", "256701234567"},
+		// TZS (255)
+		{"TZS local number gets prefix", "TZS", "712345678", "255712345678"},
+		{"TZS already has dial code", "TZS", "255712345678", "255712345678"},
+		{"TZS lowercase currency", "tzs", "255712345678", "255712345678"},
+		// KES (254)
+		{"KES local number gets prefix", "KES", "712345678", "254712345678"},
+		{"KES already has dial code", "KES", "254712345678", "254712345678"},
+		// Unknown currency: return digits only (no dial code added)
+		{"NGN unknown currency returns digits", "NGN", "+2348012345678", "2348012345678"},
+		{"unknown currency with spaces", "XYZ", "  701234567  ", "701234567"},
+		// Edge: empty after trim
+		{"empty string unchanged", "UGX", "", ""},
+		{"only plus and spaces returns plus", "UGX", "  +   ", "+"},
+		// Leading non-digits stripped; already has dial code returns digitOnly
+		{"UGX leading junk already has 256", "UGX", "x256701234567", "256701234567"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NormalizeMobileMoneyAccountIdentifier(tt.currencyCode, tt.accountIdentifier)
+			assert.Equal(t, tt.want, got, "NormalizeMobileMoneyAccountIdentifier(%q, %q)", tt.currencyCode, tt.accountIdentifier)
+		})
+	}
+}
