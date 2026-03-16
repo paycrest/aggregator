@@ -204,9 +204,15 @@ func TestSlackService(t *testing.T) {
 						assert.Equal(t, "1234567890.123456", body["ts"], "ts must be set")
 						blocks, ok := body["blocks"].([]interface{})
 						assert.True(t, ok, "blocks must be present")
+						assert.Len(t, blocks, 3, "chat.update must send status-only blocks")
 						for _, b := range blocks {
 							blk, _ := b.(map[string]interface{})
 							assert.NotEqualf(t, "actions", blk["type"], "chat.update must not contain actions block (buttons removed)")
+							if textObj, _ := blk["text"].(map[string]interface{}); textObj != nil {
+								if text, _ := textObj["text"].(string); text != "" {
+									assert.NotContains(t, text, "http", "chat.update must hide document links")
+								}
+							}
 						}
 						return httpmock.NewBytesResponse(200, []byte(`{"ok": true}`)), nil
 					},
