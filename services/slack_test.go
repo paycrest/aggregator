@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"testing"
@@ -133,6 +134,29 @@ func TestSlackService(t *testing.T) {
 			t.Run("returns ts on success", func(t *testing.T) {
 				httpmock.RegisterResponder("POST", slackAPI,
 					func(r *http.Request) (*http.Response, error) {
+						var body map[string]interface{}
+						if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+							t.Fatalf("decode body: %v", err)
+						}
+						assert.Equal(t, "C01234", body["channel"], "channel must be set")
+						blocks, ok := body["blocks"].([]interface{})
+						assert.True(t, ok, "blocks must be present")
+						var hasReviewButton bool
+						for _, b := range blocks {
+							blk, _ := b.(map[string]interface{})
+							if blk["type"] == "actions" {
+								elements, _ := blk["elements"].([]interface{})
+								for _, e := range elements {
+									el, _ := e.(map[string]interface{})
+									if el["action_id"] == "review_kyb" && el["value"] == "sub-123" {
+										hasReviewButton = true
+										break
+									}
+								}
+								break
+							}
+						}
+						assert.True(t, hasReviewButton, "payload must include review_kyb button with value sub-123")
 						return httpmock.NewBytesResponse(200, []byte(`{"ok": true, "ts": "1234567890.123456"}`)), nil
 					},
 				)
@@ -171,7 +195,21 @@ func TestSlackService(t *testing.T) {
 
 			t.Run("returns nil on success", func(t *testing.T) {
 				httpmock.RegisterResponder("POST", slackAPI,
-					httpmock.NewBytesResponder(200, []byte(`{"ok": true}`)),
+					func(r *http.Request) (*http.Response, error) {
+						var body map[string]interface{}
+						if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+							t.Fatalf("decode body: %v", err)
+						}
+						assert.Equal(t, "C01234", body["channel"], "channel must be set")
+						assert.Equal(t, "1234567890.123456", body["ts"], "ts must be set")
+						blocks, ok := body["blocks"].([]interface{})
+						assert.True(t, ok, "blocks must be present")
+						for _, b := range blocks {
+							blk, _ := b.(map[string]interface{})
+							assert.NotEqualf(t, "actions", blk["type"], "chat.update must not contain actions block (buttons removed)")
+						}
+						return httpmock.NewBytesResponse(200, []byte(`{"ok": true}`)), nil
+					},
 				)
 				err := slackService.UpdateKYBSubmissionMessage("xoxb-token", "C01234", "1234567890.123456", "Acme Ltd", "Approved", "KYB submission approved successfully")
 				assert.NoError(t, err)

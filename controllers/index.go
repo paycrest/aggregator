@@ -729,6 +729,12 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 
 		// Handle review button - open modal with KYB details
 		if actionID == "review_kyb" {
+			// Guard: do not open modal if already approved (DB is source of truth; avoids relying only on Slack/Redis)
+			if kybProfile.Edges.User.KybVerificationStatus == user.KybVerificationStatusApproved {
+				logger.Infof("KYB Profile %s already approved, not opening modal", kybProfileID)
+				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been approved."})
+				return
+			}
 			logger.Infof("Review button clicked for KYB Profile %s", kybProfileID)
 			triggerID, ok := payload["trigger_id"].(string)
 			if !ok {
@@ -1741,8 +1747,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 			logger.Warnf("Failed to post KYB Slack message for %s: %v, falling back to webhook", kybProfileID, postErr)
 			if err := ctrl.slackService.SendSubmissionNotification(userRecord.FirstName, userRecord.Email, kybProfileID); err != nil {
 				logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", kybSubmission.ID, err)
-				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Error sending Slack notification", nil)
-				return
+				// Do not return 500; submission is already committed (retries would get 409)
 			}
 		} else if msgTs != "" {
 			redisKey := "kyb_slack_message:" + kybProfileID
@@ -1755,8 +1760,7 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 		err = ctrl.slackService.SendSubmissionNotification(userRecord.FirstName, userRecord.Email, kybProfileID)
 		if err != nil {
 			logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", kybSubmission.ID, err)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Error sending Slack notification", nil)
-			return
+			// Do not return 500; submission is already committed (retries would get 409)
 		}
 	}
 
