@@ -384,8 +384,8 @@ func (s *SlackService) PostKYBSubmissionMessage(botToken, channelID, firstName, 
 }
 
 // UpdateKYBSubmissionMessage updates the original KYB submission message in Slack to remove
-// Review/Reject buttons and show the decision status. Requires Slack Bot Token (chat:write).
-func (s *SlackService) UpdateKYBSubmissionMessage(botToken, channelID, messageTs, firstName, email, submissionID, statusLabel string) error {
+// Review/Reject buttons and show only company name, action, and reason. Requires Slack Bot Token (chat:write).
+func (s *SlackService) UpdateKYBSubmissionMessage(botToken, channelID, messageTs, companyName, actionLabel, reason string) error {
 	if botToken == "" || channelID == "" || messageTs == "" {
 		return fmt.Errorf("bot token, channel ID and message ts are required to update KYB message")
 	}
@@ -395,35 +395,21 @@ func (s *SlackService) UpdateKYBSubmissionMessage(botToken, channelID, messageTs
 			"type": "section",
 			"text": map[string]interface{}{
 				"type": "mrkdwn",
-				"text": "*New KYB Submission*",
+				"text": fmt.Sprintf("CompanyName: %s", companyName),
 			},
 		},
 		{
 			"type": "section",
 			"text": map[string]interface{}{
 				"type": "mrkdwn",
-				"text": fmt.Sprintf("First Name: %s", firstName),
+				"text": fmt.Sprintf("Action: %s", actionLabel),
 			},
 		},
 		{
 			"type": "section",
 			"text": map[string]interface{}{
 				"type": "mrkdwn",
-				"text": fmt.Sprintf("Email: %s", email),
-			},
-		},
-		{
-			"type": "section",
-			"text": map[string]interface{}{
-				"type": "mrkdwn",
-				"text": fmt.Sprintf("Submission ID: %s", submissionID),
-			},
-		},
-		{
-			"type": "section",
-			"text": map[string]interface{}{
-				"type": "mrkdwn",
-				"text": fmt.Sprintf("*Status:* %s", statusLabel),
+				"text": fmt.Sprintf("Reason: %s", reason),
 			},
 		},
 	}

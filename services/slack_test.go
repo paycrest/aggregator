@@ -173,18 +173,18 @@ func TestSlackService(t *testing.T) {
 				httpmock.RegisterResponder("POST", slackAPI,
 					httpmock.NewBytesResponder(200, []byte(`{"ok": true}`)),
 				)
-				err := slackService.UpdateKYBSubmissionMessage("xoxb-token", "C01234", "1234567890.123456", "Jane", "jane@example.com", "sub-123", "Approved")
+				err := slackService.UpdateKYBSubmissionMessage("xoxb-token", "C01234", "1234567890.123456", "Acme Ltd", "Approved", "KYB submission approved successfully")
 				assert.NoError(t, err)
 			})
 
 			t.Run("returns error when bot token is empty", func(t *testing.T) {
-				err := slackService.UpdateKYBSubmissionMessage("", "C01234", "123.456", "Jane", "jane@example.com", "sub-123", "Rejected")
+				err := slackService.UpdateKYBSubmissionMessage("", "C01234", "123.456", "Acme Ltd", "Rejected", "Incomplete documents")
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "bot token, channel ID and message ts are required")
 			})
 
 			t.Run("returns error when message ts is empty", func(t *testing.T) {
-				err := slackService.UpdateKYBSubmissionMessage("xoxb-token", "C01234", "", "Jane", "jane@example.com", "sub-123", "Rejected")
+				err := slackService.UpdateKYBSubmissionMessage("xoxb-token", "C01234", "", "Acme Ltd", "Rejected", "Incomplete documents")
 				assert.Error(t, err)
 			})
 
@@ -192,7 +192,7 @@ func TestSlackService(t *testing.T) {
 				httpmock.RegisterResponder("POST", slackAPI,
 					httpmock.NewBytesResponder(200, []byte(`{"ok": false, "error": "message_not_found"}`)),
 				)
-				err := slackService.UpdateKYBSubmissionMessage("xoxb-token", "C01234", "123.456", "Jane", "jane@example.com", "sub-123", "Rejected")
+				err := slackService.UpdateKYBSubmissionMessage("xoxb-token", "C01234", "123.456", "Acme Ltd", "Rejected", "Incomplete documents")
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "message_not_found")
 			})

@@ -1284,7 +1284,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				if getErr == nil {
 					parts := strings.SplitN(val, "|", 2)
 					if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
-						if updateErr := ctrl.slackService.UpdateKYBSubmissionMessage(cnfg.SlackBotToken, parts[0], parts[1], firstName, email, kybProfileID, "Rejected"); updateErr != nil {
+						if updateErr := ctrl.slackService.UpdateKYBSubmissionMessage(cnfg.SlackBotToken, parts[0], parts[1], kyb.CompanyName, "Rejected", finalRejectionComment); updateErr != nil {
 							logger.Warnf("Failed to update Slack KYB message for %s: %v", kybProfileID, updateErr)
 						} else {
 							_ = storage.RedisClient.Del(reqCtx, redisKey).Err()
@@ -1447,7 +1447,7 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				if getErr == nil {
 					parts := strings.SplitN(val, "|", 2)
 					if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
-						if updateErr := ctrl.slackService.UpdateKYBSubmissionMessage(cnfg.SlackBotToken, parts[0], parts[1], firstName, email, kybProfileID, "Approved"); updateErr != nil {
+						if updateErr := ctrl.slackService.UpdateKYBSubmissionMessage(cnfg.SlackBotToken, parts[0], parts[1], kyb.CompanyName, "Approved", approvalReason); updateErr != nil {
 							logger.Warnf("Failed to update Slack KYB message for %s: %v", kybProfileID, updateErr)
 						} else {
 							_ = storage.RedisClient.Del(reqCtx, redisKey).Err()
