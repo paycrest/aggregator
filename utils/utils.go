@@ -1403,6 +1403,40 @@ func findSuitableProviderRate(ctx context.Context, providers []string, tokenSymb
 	}
 }
 
+// NormalizeMobileMoneyAccountIdentifier ensures the account identifier has a country dial code
+// and no leading '+'. Used for mobile money institutions so providers receive e.g. "256701234567".
+// TODO: add dial_code to fiat_currency DB schema and use it here instead of switch.
+func NormalizeMobileMoneyAccountIdentifier(currencyCode, accountIdentifier string) string {
+	digits := strings.TrimPrefix(accountIdentifier, "+")
+	digits = strings.TrimSpace(digits)
+	if digits == "" {
+		return accountIdentifier
+	}
+	digitOnly := strings.TrimLeftFunc(digits, func(r rune) bool { return r < '0' || r > '9' })
+	if digitOnly == "" {
+		return digits
+	}
+	var dialCode string
+	switch strings.ToUpper(currencyCode) {
+	case "UGX":
+		dialCode = "256"
+	case "TZS":
+		dialCode = "255"
+	case "KES":
+		dialCode = "254"
+	case "GHS":
+		dialCode = "233"
+	case "MWK":
+		dialCode = "265"
+	default:
+		return digits
+	}
+	if strings.HasPrefix(digitOnly, dialCode) {
+		return digitOnly // already has dial code; return cleaned digits
+	}
+	return dialCode + digitOnly
+}
+
 // ValidateAccount validates if an account exists for the given institution and account identifier
 // Returns the account name if verification is successful, or an error if verification fails
 func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier string) (string, error) {
