@@ -407,6 +407,47 @@ var (
 			},
 		},
 	}
+	// ProviderOrderAssignmentsColumns holds the columns for the "provider_order_assignments" table.
+	ProviderOrderAssignmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "assignment_status", Type: field.TypeEnum, Enums: []string{"assigned", "reassigned", "accepted"}, Default: "assigned"},
+		{Name: "assigned_at", Type: field.TypeTime},
+		{Name: "reassigned_at", Type: field.TypeTime, Nullable: true},
+		{Name: "payment_order_provider_assignments", Type: field.TypeUUID},
+		{Name: "provider_profile_order_assignments", Type: field.TypeString},
+	}
+	// ProviderOrderAssignmentsTable holds the schema information for the "provider_order_assignments" table.
+	ProviderOrderAssignmentsTable = &schema.Table{
+		Name:       "provider_order_assignments",
+		Columns:    ProviderOrderAssignmentsColumns,
+		PrimaryKey: []*schema.Column{ProviderOrderAssignmentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "provider_order_assignments_payment_orders_provider_assignments",
+				Columns:    []*schema.Column{ProviderOrderAssignmentsColumns[4]},
+				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "provider_order_assignments_provider_profiles_order_assignments",
+				Columns:    []*schema.Column{ProviderOrderAssignmentsColumns[5]},
+				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "providerorderassignment_assignment_status",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderOrderAssignmentsColumns[1]},
+			},
+			{
+				Name:    "providerorderassignment_payment_order_provider_assignments_provider_profile_order_assignments",
+				Unique:  true,
+				Columns: []*schema.Column{ProviderOrderAssignmentsColumns[4], ProviderOrderAssignmentsColumns[5]},
+			},
+		},
+	}
 	// ProviderOrderTokensColumns holds the columns for the "provider_order_tokens" table.
 	ProviderOrderTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -754,6 +795,7 @@ var (
 		PaymentWebhooksTable,
 		ProviderBalancesTable,
 		ProviderFiatAccountsTable,
+		ProviderOrderAssignmentsTable,
 		ProviderOrderTokensTable,
 		ProviderProfilesTable,
 		ProviderRatingsTable,
@@ -787,6 +829,8 @@ func init() {
 	ProviderBalancesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderBalancesTable.ForeignKeys[2].RefTable = TokensTable
 	ProviderFiatAccountsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
+	ProviderOrderAssignmentsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
+	ProviderOrderAssignmentsTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[2].RefTable = TokensTable

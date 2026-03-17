@@ -36,6 +36,8 @@ type Tx struct {
 	ProviderBalances *ProviderBalancesClient
 	// ProviderFiatAccount is the client for interacting with the ProviderFiatAccount builders.
 	ProviderFiatAccount *ProviderFiatAccountClient
+	// ProviderOrderAssignment is the client for interacting with the ProviderOrderAssignment builders.
+	ProviderOrderAssignment *ProviderOrderAssignmentClient
 	// ProviderOrderToken is the client for interacting with the ProviderOrderToken builders.
 	ProviderOrderToken *ProviderOrderTokenClient
 	// ProviderProfile is the client for interacting with the ProviderProfile builders.
@@ -201,6 +203,7 @@ func (tx *Tx) init() {
 	tx.PaymentWebhook = NewPaymentWebhookClient(tx.config)
 	tx.ProviderBalances = NewProviderBalancesClient(tx.config)
 	tx.ProviderFiatAccount = NewProviderFiatAccountClient(tx.config)
+	tx.ProviderOrderAssignment = NewProviderOrderAssignmentClient(tx.config)
 	tx.ProviderOrderToken = NewProviderOrderTokenClient(tx.config)
 	tx.ProviderProfile = NewProviderProfileClient(tx.config)
 	tx.ProviderRating = NewProviderRatingClient(tx.config)

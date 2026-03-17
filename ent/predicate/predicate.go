@@ -42,6 +42,9 @@ type ProviderBalances func(*sql.Selector)
 // ProviderFiatAccount is the predicate function for providerfiataccount builders.
 type ProviderFiatAccount func(*sql.Selector)
 
+// ProviderOrderAssignment is the predicate function for providerorderassignment builders.
+type ProviderOrderAssignment func(*sql.Selector)
+
 // ProviderOrderToken is the predicate function for providerordertoken builders.
 type ProviderOrderToken func(*sql.Selector)
 

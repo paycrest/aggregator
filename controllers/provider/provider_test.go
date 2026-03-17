@@ -15,6 +15,7 @@ import (
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/routers/middleware"
 	"github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
@@ -404,6 +405,55 @@ func TestProvider(t *testing.T) {
 			// Ensure cancellation_reasons is empty
 			cancellationReasons := data["cancellationReasons"].([]interface{})
 			assert.Empty(t, cancellationReasons)
+		})
+
+		t.Run("fetch orders with status=reassigned returns displayStatus reassigned", func(t *testing.T) {
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
+				"gateway_id": uuid.New().String(),
+				"provider":   testCtx.provider,
+			})
+			assert.NoError(t, err)
+			_, err = db.Client.ProviderOrderAssignment.Create().
+				SetPaymentOrder(order).
+				SetProvider(testCtx.provider).
+				SetAssignmentStatus(providerorderassignment.AssignmentStatusReassigned).
+				SetReassignedAt(time.Now()).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			ts := time.Now().Unix()
+			payload := map[string]interface{}{
+				"currency":  "NGN",
+				"status":   "reassigned",
+				"timestamp": ts,
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?currency=NGN&status=reassigned&timestamp=%v", ts), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, len(orders), 1, "expected at least one reassigned order")
+			found := false
+			for _, o := range orders {
+				om := o.(map[string]interface{})
+				if om["id"] == order.ID.String() {
+					assert.Equal(t, "reassigned", om["displayStatus"], "reassigned order should have displayStatus reassigned")
+					found = true
+					break
+				}
+			}
+			assert.True(t, found, "expected to find the reassigned order in the list")
 		})
 
 		t.Run("when filtering is applied", func(t *testing.T) {

@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -222,6 +223,21 @@ func (_u *ProviderProfileUpdate) AddAssignedOrders(v ...*PaymentOrder) *Provider
 	return _u.AddAssignedOrderIDs(ids...)
 }
 
+// AddOrderAssignmentIDs adds the "order_assignments" edge to the ProviderOrderAssignment entity by IDs.
+func (_u *ProviderProfileUpdate) AddOrderAssignmentIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	_u.mutation.AddOrderAssignmentIDs(ids...)
+	return _u
+}
+
+// AddOrderAssignments adds the "order_assignments" edges to the ProviderOrderAssignment entity.
+func (_u *ProviderProfileUpdate) AddOrderAssignments(v ...*ProviderOrderAssignment) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOrderAssignmentIDs(ids...)
+}
+
 // AddFiatAccountIDs adds the "fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
 func (_u *ProviderProfileUpdate) AddFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
 	_u.mutation.AddFiatAccountIDs(ids...)
@@ -336,6 +352,27 @@ func (_u *ProviderProfileUpdate) RemoveAssignedOrders(v ...*PaymentOrder) *Provi
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAssignedOrderIDs(ids...)
+}
+
+// ClearOrderAssignments clears all "order_assignments" edges to the ProviderOrderAssignment entity.
+func (_u *ProviderProfileUpdate) ClearOrderAssignments() *ProviderProfileUpdate {
+	_u.mutation.ClearOrderAssignments()
+	return _u
+}
+
+// RemoveOrderAssignmentIDs removes the "order_assignments" edge to ProviderOrderAssignment entities by IDs.
+func (_u *ProviderProfileUpdate) RemoveOrderAssignmentIDs(ids ...uuid.UUID) *ProviderProfileUpdate {
+	_u.mutation.RemoveOrderAssignmentIDs(ids...)
+	return _u
+}
+
+// RemoveOrderAssignments removes "order_assignments" edges to ProviderOrderAssignment entities.
+func (_u *ProviderProfileUpdate) RemoveOrderAssignments(v ...*ProviderOrderAssignment) *ProviderProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOrderAssignmentIDs(ids...)
 }
 
 // ClearFiatAccounts clears all "fiat_accounts" edges to the ProviderFiatAccount entity.
@@ -692,6 +729,51 @@ func (_u *ProviderProfileUpdate) sqlSave(ctx context.Context) (_node int, err er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.OrderAssignmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.OrderAssignmentsTable,
+			Columns: []string{providerprofile.OrderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOrderAssignmentsIDs(); len(nodes) > 0 && !_u.mutation.OrderAssignmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.OrderAssignmentsTable,
+			Columns: []string{providerprofile.OrderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OrderAssignmentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.OrderAssignmentsTable,
+			Columns: []string{providerprofile.OrderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _u.mutation.FiatAccountsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -943,6 +1025,21 @@ func (_u *ProviderProfileUpdateOne) AddAssignedOrders(v ...*PaymentOrder) *Provi
 	return _u.AddAssignedOrderIDs(ids...)
 }
 
+// AddOrderAssignmentIDs adds the "order_assignments" edge to the ProviderOrderAssignment entity by IDs.
+func (_u *ProviderProfileUpdateOne) AddOrderAssignmentIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	_u.mutation.AddOrderAssignmentIDs(ids...)
+	return _u
+}
+
+// AddOrderAssignments adds the "order_assignments" edges to the ProviderOrderAssignment entity.
+func (_u *ProviderProfileUpdateOne) AddOrderAssignments(v ...*ProviderOrderAssignment) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddOrderAssignmentIDs(ids...)
+}
+
 // AddFiatAccountIDs adds the "fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
 func (_u *ProviderProfileUpdateOne) AddFiatAccountIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
 	_u.mutation.AddFiatAccountIDs(ids...)
@@ -1057,6 +1154,27 @@ func (_u *ProviderProfileUpdateOne) RemoveAssignedOrders(v ...*PaymentOrder) *Pr
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveAssignedOrderIDs(ids...)
+}
+
+// ClearOrderAssignments clears all "order_assignments" edges to the ProviderOrderAssignment entity.
+func (_u *ProviderProfileUpdateOne) ClearOrderAssignments() *ProviderProfileUpdateOne {
+	_u.mutation.ClearOrderAssignments()
+	return _u
+}
+
+// RemoveOrderAssignmentIDs removes the "order_assignments" edge to ProviderOrderAssignment entities by IDs.
+func (_u *ProviderProfileUpdateOne) RemoveOrderAssignmentIDs(ids ...uuid.UUID) *ProviderProfileUpdateOne {
+	_u.mutation.RemoveOrderAssignmentIDs(ids...)
+	return _u
+}
+
+// RemoveOrderAssignments removes "order_assignments" edges to ProviderOrderAssignment entities.
+func (_u *ProviderProfileUpdateOne) RemoveOrderAssignments(v ...*ProviderOrderAssignment) *ProviderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveOrderAssignmentIDs(ids...)
 }
 
 // ClearFiatAccounts clears all "fiat_accounts" edges to the ProviderFiatAccount entity.
@@ -1436,6 +1554,51 @@ func (_u *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provide
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.OrderAssignmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.OrderAssignmentsTable,
+			Columns: []string{providerprofile.OrderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedOrderAssignmentsIDs(); len(nodes) > 0 && !_u.mutation.OrderAssignmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.OrderAssignmentsTable,
+			Columns: []string{providerprofile.OrderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.OrderAssignmentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.OrderAssignmentsTable,
+			Columns: []string{providerprofile.OrderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

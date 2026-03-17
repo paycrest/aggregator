@@ -105,6 +105,8 @@ const (
 	EdgeFulfillments = "fulfillments"
 	// EdgeTransactions holds the string denoting the transactions edge name in mutations.
 	EdgeTransactions = "transactions"
+	// EdgeProviderAssignments holds the string denoting the provider_assignments edge name in mutations.
+	EdgeProviderAssignments = "provider_assignments"
 	// Table holds the table name of the paymentorder in the database.
 	Table = "payment_orders"
 	// TokenTable is the table that holds the token relation/edge.
@@ -156,6 +158,13 @@ const (
 	TransactionsInverseTable = "transaction_logs"
 	// TransactionsColumn is the table column denoting the transactions relation/edge.
 	TransactionsColumn = "payment_order_transactions"
+	// ProviderAssignmentsTable is the table that holds the provider_assignments relation/edge.
+	ProviderAssignmentsTable = "provider_order_assignments"
+	// ProviderAssignmentsInverseTable is the table name for the ProviderOrderAssignment entity.
+	// It exists in this package in order to avoid circular dependency with the "providerorderassignment" package.
+	ProviderAssignmentsInverseTable = "provider_order_assignments"
+	// ProviderAssignmentsColumn is the table column denoting the provider_assignments relation/edge.
+	ProviderAssignmentsColumn = "payment_order_provider_assignments"
 )
 
 // Columns holds all SQL columns for paymentorder fields.
@@ -610,6 +619,20 @@ func ByTransactions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTransactionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByProviderAssignmentsCount orders the results by provider_assignments count.
+func ByProviderAssignmentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderAssignmentsStep(), opts...)
+	}
+}
+
+// ByProviderAssignments orders the results by provider_assignments terms.
+func ByProviderAssignments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderAssignmentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newTokenStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -657,5 +680,12 @@ func newTransactionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TransactionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TransactionsTable, TransactionsColumn),
+	)
+}
+func newProviderAssignmentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderAssignmentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderAssignmentsTable, ProviderAssignmentsColumn),
 	)
 }

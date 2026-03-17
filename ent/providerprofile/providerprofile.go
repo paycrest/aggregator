@@ -41,6 +41,8 @@ const (
 	EdgeProviderRating = "provider_rating"
 	// EdgeAssignedOrders holds the string denoting the assigned_orders edge name in mutations.
 	EdgeAssignedOrders = "assigned_orders"
+	// EdgeOrderAssignments holds the string denoting the order_assignments edge name in mutations.
+	EdgeOrderAssignments = "order_assignments"
 	// EdgeFiatAccounts holds the string denoting the fiat_accounts edge name in mutations.
 	EdgeFiatAccounts = "fiat_accounts"
 	// Table holds the table name of the providerprofile in the database.
@@ -92,6 +94,13 @@ const (
 	AssignedOrdersInverseTable = "payment_orders"
 	// AssignedOrdersColumn is the table column denoting the assigned_orders relation/edge.
 	AssignedOrdersColumn = "provider_profile_assigned_orders"
+	// OrderAssignmentsTable is the table that holds the order_assignments relation/edge.
+	OrderAssignmentsTable = "provider_order_assignments"
+	// OrderAssignmentsInverseTable is the table name for the ProviderOrderAssignment entity.
+	// It exists in this package in order to avoid circular dependency with the "providerorderassignment" package.
+	OrderAssignmentsInverseTable = "provider_order_assignments"
+	// OrderAssignmentsColumn is the table column denoting the order_assignments relation/edge.
+	OrderAssignmentsColumn = "provider_profile_order_assignments"
 	// FiatAccountsTable is the table that holds the fiat_accounts relation/edge.
 	FiatAccountsTable = "provider_fiat_accounts"
 	// FiatAccountsInverseTable is the table name for the ProviderFiatAccount entity.
@@ -319,6 +328,20 @@ func ByAssignedOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByOrderAssignmentsCount orders the results by order_assignments count.
+func ByOrderAssignmentsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOrderAssignmentsStep(), opts...)
+	}
+}
+
+// ByOrderAssignments orders the results by order_assignments terms.
+func ByOrderAssignments(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOrderAssignmentsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByFiatAccountsCount orders the results by fiat_accounts count.
 func ByFiatAccountsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -379,6 +402,13 @@ func newAssignedOrdersStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AssignedOrdersInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, AssignedOrdersTable, AssignedOrdersColumn),
+	)
+}
+func newOrderAssignmentsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OrderAssignmentsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OrderAssignmentsTable, OrderAssignmentsColumn),
 	)
 }
 func newFiatAccountsStep() *sqlgraph.Step {

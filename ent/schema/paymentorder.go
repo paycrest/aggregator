@@ -146,6 +146,7 @@ func (PaymentOrder) Edges() []ent.Edge {
 		edge.To("fulfillments", PaymentOrderFulfillment.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("transactions", TransactionLog.Type),
+		edge.To("provider_assignments", ProviderOrderAssignment.Type),
 	}
 }
 

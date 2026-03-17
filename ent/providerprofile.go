@@ -56,11 +56,13 @@ type ProviderProfileEdges struct {
 	ProviderRating *ProviderRating `json:"provider_rating,omitempty"`
 	// AssignedOrders holds the value of the assigned_orders edge.
 	AssignedOrders []*PaymentOrder `json:"assigned_orders,omitempty"`
+	// OrderAssignments holds the value of the order_assignments edge.
+	OrderAssignments []*ProviderOrderAssignment `json:"order_assignments,omitempty"`
 	// FiatAccounts holds the value of the fiat_accounts edge.
 	FiatAccounts []*ProviderFiatAccount `json:"fiat_accounts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [8]bool
+	loadedTypes [9]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -132,10 +134,19 @@ func (e ProviderProfileEdges) AssignedOrdersOrErr() ([]*PaymentOrder, error) {
 	return nil, &NotLoadedError{edge: "assigned_orders"}
 }
 
+// OrderAssignmentsOrErr returns the OrderAssignments value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProviderProfileEdges) OrderAssignmentsOrErr() ([]*ProviderOrderAssignment, error) {
+	if e.loadedTypes[7] {
+		return e.OrderAssignments, nil
+	}
+	return nil, &NotLoadedError{edge: "order_assignments"}
+}
+
 // FiatAccountsOrErr returns the FiatAccounts value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProviderProfileEdges) FiatAccountsOrErr() ([]*ProviderFiatAccount, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[8] {
 		return e.FiatAccounts, nil
 	}
 	return nil, &NotLoadedError{edge: "fiat_accounts"}
@@ -264,6 +275,11 @@ func (_m *ProviderProfile) QueryProviderRating() *ProviderRatingQuery {
 // QueryAssignedOrders queries the "assigned_orders" edge of the ProviderProfile entity.
 func (_m *ProviderProfile) QueryAssignedOrders() *PaymentOrderQuery {
 	return NewProviderProfileClient(_m.config).QueryAssignedOrders(_m)
+}
+
+// QueryOrderAssignments queries the "order_assignments" edge of the ProviderProfile entity.
+func (_m *ProviderProfile) QueryOrderAssignments() *ProviderOrderAssignmentQuery {
+	return NewProviderProfileClient(_m.config).QueryOrderAssignments(_m)
 }
 
 // QueryFiatAccounts queries the "fiat_accounts" edge of the ProviderProfile entity.

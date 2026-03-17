@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -237,6 +238,21 @@ func (_c *ProviderProfileCreate) AddAssignedOrders(v ...*PaymentOrder) *Provider
 		ids[i] = v[i].ID
 	}
 	return _c.AddAssignedOrderIDs(ids...)
+}
+
+// AddOrderAssignmentIDs adds the "order_assignments" edge to the ProviderOrderAssignment entity by IDs.
+func (_c *ProviderProfileCreate) AddOrderAssignmentIDs(ids ...uuid.UUID) *ProviderProfileCreate {
+	_c.mutation.AddOrderAssignmentIDs(ids...)
+	return _c
+}
+
+// AddOrderAssignments adds the "order_assignments" edges to the ProviderOrderAssignment entity.
+func (_c *ProviderProfileCreate) AddOrderAssignments(v ...*ProviderOrderAssignment) *ProviderProfileCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddOrderAssignmentIDs(ids...)
 }
 
 // AddFiatAccountIDs adds the "fiat_accounts" edge to the ProviderFiatAccount entity by IDs.
@@ -509,6 +525,22 @@ func (_c *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Creat
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.OrderAssignmentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerprofile.OrderAssignmentsTable,
+			Columns: []string{providerprofile.OrderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

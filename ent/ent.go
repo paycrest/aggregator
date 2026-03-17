@@ -24,6 +24,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -107,6 +108,7 @@ func checkColumn(t, c string) error {
 			paymentwebhook.Table:              paymentwebhook.ValidColumn,
 			providerbalances.Table:            providerbalances.ValidColumn,
 			providerfiataccount.Table:         providerfiataccount.ValidColumn,
+			providerorderassignment.Table:     providerorderassignment.ValidColumn,
 			providerordertoken.Table:          providerordertoken.ValidColumn,
 			providerprofile.Table:             providerprofile.ValidColumn,
 			providerrating.Table:              providerrating.ValidColumn,

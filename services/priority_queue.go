@@ -14,6 +14,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerbalances"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -1160,6 +1161,19 @@ func (s *PriorityQueueService) assignOtcOrder(ctx context.Context, order types.P
 					"ProviderID": order.ProviderID,
 				}).Errorf("failed to assign OTC order to provider")
 				return fmt.Errorf("failed to assign OTC order: %w", err)
+			}
+			_, err = tx.ProviderOrderAssignment.Create().
+				SetPaymentOrderID(order.ID).
+				SetProvider(provider).
+				SetAssignmentStatus(providerorderassignment.AssignmentStatusAssigned).
+				Save(ctx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":      fmt.Sprintf("%v", err),
+					"OrderID":    order.ID.String(),
+					"ProviderID": order.ProviderID,
+				}).Errorf("failed to create provider order assignment for OTC")
+				return fmt.Errorf("failed to create provider order assignment: %w", err)
 			}
 		}
 	}

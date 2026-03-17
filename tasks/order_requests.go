@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/balance"
@@ -90,6 +91,16 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 				"OrderID": order.ID.String(),
 			}).Errorf("failed to set TTL for order exclude list")
 		}
+
+		// Mark this provider's assignment as reassigned so they see it in Order History
+		_, _ = storage.Client.ProviderOrderAssignment.Update().
+			Where(
+				providerorderassignment.HasPaymentOrderWith(paymentorder.IDEQ(order.ID)),
+				providerorderassignment.HasProviderWith(providerprofile.IDEQ(order.Edges.Provider.ID)),
+			).
+			SetAssignmentStatus(providerorderassignment.AssignmentStatusReassigned).
+			SetReassignedAt(time.Now()).
+			Save(ctx)
 
 		// Defensive check: Verify order is still in a state that allows reassignment
 		// AND that the provider hasn't changed (race condition protection)

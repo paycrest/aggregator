@@ -26,6 +26,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerbalances"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
@@ -131,6 +132,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 
 	// Only filter by currency if the query parameter is provided
 	currency := ctx.Query("currency")
+	var institutionCodes []string
 	if currency != "" {
 		// Check if the provided currency exists in the provider's currencies
 		currencyExists, err := provider.QueryProviderBalances().
@@ -148,7 +150,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 		}
 
 		// Get all institution codes for the given currency in a single query
-		institutionCodes, err := storage.Client.Institution.
+		institutionCodes, err = storage.Client.Institution.
 			Query().
 			Where(
 				institution.HasFiatCurrencyWith(
@@ -173,7 +175,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 		return
 	}
 
-	// Filter by status if provided
+	// Filter by status if provided (including "reassigned" which uses assignment history)
 	statusMap := map[string]paymentorder.Status{
 		"pending":    paymentorder.StatusPending,
 		"validated":  paymentorder.StatusValidated,
@@ -188,6 +190,76 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 	}
 
 	statusQueryParam := ctx.Query("status")
+
+	if statusQueryParam == "reassigned" {
+		// Orders that were reassigned from this provider (from assignment history)
+		assignmentQuery := storage.Client.ProviderOrderAssignment.Query().
+			Where(
+				providerorderassignment.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				providerorderassignment.AssignmentStatusEQ(providerorderassignment.AssignmentStatusReassigned),
+				providerorderassignment.HasPaymentOrderWith(paymentorder.InstitutionIn(institutionCodes...)),
+			)
+		count, err := assignmentQuery.Clone().Count(reqCtx)
+		if err != nil {
+			logger.Errorf("error counting reassigned orders: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
+			return
+		}
+		assignments, err := assignmentQuery.
+			WithPaymentOrder(
+				func(q *ent.PaymentOrderQuery) {
+					q.WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() })
+				},
+			).
+			Order(ent.Desc(providerorderassignment.FieldReassignedAt)).
+			Limit(pageSize).
+			Offset(offset).
+			All(reqCtx)
+		if err != nil {
+			logger.Errorf("error fetching reassigned orders: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch orders", nil)
+			return
+		}
+		orders := make([]types.ProviderOrderResponse, 0, len(assignments))
+		for _, a := range assignments {
+			order := a.Edges.PaymentOrder
+			if order == nil || order.Edges.Token == nil {
+				continue
+			}
+			networkID := ""
+			if order.Edges.Token.Edges.Network != nil {
+				networkID = order.Edges.Token.Edges.Network.Identifier
+			}
+			orders = append(orders, types.ProviderOrderResponse{
+				ID:            order.ID,
+				Token:         order.Edges.Token.Symbol,
+				GatewayID:     order.GatewayID,
+				Amount:        order.Amount,
+				AmountInUSD:   order.AmountInUsd,
+				Rate:          order.Rate,
+				Institution:   order.Institution,
+				AccountIdentifier: order.AccountIdentifier,
+				AccountName:   order.AccountName,
+				TxHash:        order.TxHash,
+				Status:        order.Status,
+				DisplayStatus: "reassigned",
+				Memo:          order.Memo,
+				Network:       networkID,
+				CancellationReasons: order.CancellationReasons,
+				UpdatedAt:     order.UpdatedAt,
+				CreatedAt:     order.CreatedAt,
+				OrderType:     order.OrderType,
+			})
+		}
+		u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.ProviderOrderList{
+			Page:         page,
+			PageSize:     pageSize,
+			TotalRecords: count,
+			Orders:       orders,
+		})
+		return
+	}
+
 	if status, ok := statusMap[statusQueryParam]; ok {
 		paymentOrderQuery = paymentOrderQuery.Where(
 			paymentorder.StatusEQ(status),
@@ -915,6 +987,14 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	if err := tx.Commit(); err != nil {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
+	}
+	// Record assignment so provider sees this order in history (and reassigned list if later reassigned)
+	if updatedCount > 0 {
+		_, _ = storage.Client.ProviderOrderAssignment.Create().
+			SetPaymentOrderID(orderID).
+			SetProvider(provider).
+			SetAssignmentStatus(providerorderassignment.AssignmentStatusAssigned).
+			Save(reqCtx)
 	}
 	// Delete order request keys only after commit so retries can still find the order
 	if _, err := storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result(); err != nil {

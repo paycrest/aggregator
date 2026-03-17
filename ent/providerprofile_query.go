@@ -18,6 +18,7 @@ import (
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -39,6 +40,7 @@ type ProviderProfileQuery struct {
 	withOrderTokens      *ProviderOrderTokenQuery
 	withProviderRating   *ProviderRatingQuery
 	withAssignedOrders   *PaymentOrderQuery
+	withOrderAssignments *ProviderOrderAssignmentQuery
 	withFiatAccounts     *ProviderFiatAccountQuery
 	withFKs              bool
 	// intermediate query (i.e. traversal path).
@@ -224,6 +226,28 @@ func (_q *ProviderProfileQuery) QueryAssignedOrders() *PaymentOrderQuery {
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
 			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.AssignedOrdersTable, providerprofile.AssignedOrdersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryOrderAssignments chains the current query on the "order_assignments" edge.
+func (_q *ProviderProfileQuery) QueryOrderAssignments() *ProviderOrderAssignmentQuery {
+	query := (&ProviderOrderAssignmentClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
+			sqlgraph.To(providerorderassignment.Table, providerorderassignment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.OrderAssignmentsTable, providerprofile.OrderAssignmentsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -452,6 +476,7 @@ func (_q *ProviderProfileQuery) Clone() *ProviderProfileQuery {
 		withOrderTokens:      _q.withOrderTokens.Clone(),
 		withProviderRating:   _q.withProviderRating.Clone(),
 		withAssignedOrders:   _q.withAssignedOrders.Clone(),
+		withOrderAssignments: _q.withOrderAssignments.Clone(),
 		withFiatAccounts:     _q.withFiatAccounts.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
@@ -533,6 +558,17 @@ func (_q *ProviderProfileQuery) WithAssignedOrders(opts ...func(*PaymentOrderQue
 		opt(query)
 	}
 	_q.withAssignedOrders = query
+	return _q
+}
+
+// WithOrderAssignments tells the query-builder to eager-load the nodes that are connected to
+// the "order_assignments" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProviderProfileQuery) WithOrderAssignments(opts ...func(*ProviderOrderAssignmentQuery)) *ProviderProfileQuery {
+	query := (&ProviderOrderAssignmentClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withOrderAssignments = query
 	return _q
 }
 
@@ -626,7 +662,7 @@ func (_q *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 		nodes       = []*ProviderProfile{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [8]bool{
+		loadedTypes = [9]bool{
 			_q.withUser != nil,
 			_q.withAPIKey != nil,
 			_q.withProviderBalances != nil,
@@ -634,6 +670,7 @@ func (_q *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 			_q.withOrderTokens != nil,
 			_q.withProviderRating != nil,
 			_q.withAssignedOrders != nil,
+			_q.withOrderAssignments != nil,
 			_q.withFiatAccounts != nil,
 		}
 	)
@@ -708,6 +745,15 @@ func (_q *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 		if err := _q.loadAssignedOrders(ctx, query, nodes,
 			func(n *ProviderProfile) { n.Edges.AssignedOrders = []*PaymentOrder{} },
 			func(n *ProviderProfile, e *PaymentOrder) { n.Edges.AssignedOrders = append(n.Edges.AssignedOrders, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withOrderAssignments; query != nil {
+		if err := _q.loadOrderAssignments(ctx, query, nodes,
+			func(n *ProviderProfile) { n.Edges.OrderAssignments = []*ProviderOrderAssignment{} },
+			func(n *ProviderProfile, e *ProviderOrderAssignment) {
+				n.Edges.OrderAssignments = append(n.Edges.OrderAssignments, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -960,6 +1006,37 @@ func (_q *ProviderProfileQuery) loadAssignedOrders(ctx context.Context, query *P
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_assigned_orders" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ProviderProfileQuery) loadOrderAssignments(ctx context.Context, query *ProviderOrderAssignmentQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProviderOrderAssignment)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*ProviderProfile)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProviderOrderAssignment(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(providerprofile.OrderAssignmentsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.provider_profile_order_assignments
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "provider_profile_order_assignments" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_order_assignments" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
