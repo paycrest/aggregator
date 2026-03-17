@@ -125,7 +125,7 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 		}
 
 		// Mark this provider's assignment as reassigned so they see it in Order History (after guard succeeded)
-		_, err = storage.Client.ProviderOrderAssignment.Update().
+		assignmentUpdated, err := storage.Client.ProviderOrderAssignment.Update().
 			Where(
 				providerorderassignment.HasPaymentOrderWith(paymentorder.IDEQ(order.ID)),
 				providerorderassignment.HasProviderWith(providerprofile.IDEQ(order.Edges.Provider.ID)),
@@ -138,6 +138,11 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 				"Error":   fmt.Sprintf("%v", err),
 				"OrderID": order.ID.String(),
 			}).Errorf("reassignCancelledOrder: failed to mark assignment as reassigned")
+		} else if assignmentUpdated == 0 {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.Edges.Provider.ID,
+			}).Warnf("reassignCancelledOrder: no assignment row found for (order, provider); provider will not see reassigned in history")
 		}
 
 		// Best-effort: release any reserved balance held by this provider for the order.

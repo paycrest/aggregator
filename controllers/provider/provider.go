@@ -991,13 +991,37 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
 	}
-	// Record assignment so provider sees this order in history (and reassigned list if later reassigned)
+	// Record assignment as accepted so provider sees this order in history (idempotent: create or update to accepted)
 	if updatedCount > 0 {
-		_, _ = storage.Client.ProviderOrderAssignment.Create().
-			SetPaymentOrderID(orderID).
-			SetProvider(provider).
-			SetAssignmentStatus(providerorderassignment.AssignmentStatusAssigned).
-			Save(reqCtx)
+		exists, err := storage.Client.ProviderOrderAssignment.Query().
+			Where(
+				providerorderassignment.HasPaymentOrderWith(paymentorder.IDEQ(orderID)),
+				providerorderassignment.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			).
+			Exist(reqCtx)
+		if err != nil {
+			logger.Errorf("AcceptOrder: failed to check existing assignment for order %s: %v", orderID, err)
+		} else if exists {
+			_, err = storage.Client.ProviderOrderAssignment.Update().
+				Where(
+					providerorderassignment.HasPaymentOrderWith(paymentorder.IDEQ(orderID)),
+					providerorderassignment.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+				).
+				SetAssignmentStatus(providerorderassignment.AssignmentStatusAccepted).
+				Save(reqCtx)
+			if err != nil {
+				logger.Errorf("AcceptOrder: failed to update assignment to accepted for order %s: %v", orderID, err)
+			}
+		} else {
+			_, err = storage.Client.ProviderOrderAssignment.Create().
+				SetPaymentOrderID(orderID).
+				SetProvider(provider).
+				SetAssignmentStatus(providerorderassignment.AssignmentStatusAccepted).
+				Save(reqCtx)
+			if err != nil {
+				logger.Errorf("AcceptOrder: failed to create assignment for order %s: %v", orderID, err)
+			}
+		}
 	}
 	// Delete order request keys only after commit so retries can still find the order
 	if _, err := storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result(); err != nil {
