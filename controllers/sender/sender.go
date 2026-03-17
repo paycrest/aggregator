@@ -853,9 +853,9 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 
 	// Normalize mobile money account identifier: add country code and strip '+'
 	if institutionObj.Type == institution.TypeMobileMoney {
-		payload.Destination.Recipient.AccountIdentifier = u.NormalizeMobileMoneyAccountIdentifier(
+		destination.Recipient.AccountIdentifier = u.NormalizeMobileMoneyAccountIdentifier(
 			currency.Code,
-			payload.Destination.Recipient.AccountIdentifier,
+			destination.Recipient.AccountIdentifier,
 		)
 	}
 
