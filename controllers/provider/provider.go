@@ -197,7 +197,10 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 			Where(
 				providerorderassignment.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 				providerorderassignment.AssignmentStatusEQ(providerorderassignment.AssignmentStatusReassigned),
-				providerorderassignment.HasPaymentOrderWith(paymentorder.InstitutionIn(institutionCodes...)),
+				providerorderassignment.HasPaymentOrderWith(
+					paymentorder.InstitutionIn(institutionCodes...),
+					paymentorder.HasToken(),
+				),
 			)
 		count, err := assignmentQuery.Clone().Count(reqCtx)
 		if err != nil {

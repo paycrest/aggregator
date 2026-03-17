@@ -92,19 +92,7 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 			}).Errorf("failed to set TTL for order exclude list")
 		}
 
-		// Mark this provider's assignment as reassigned so they see it in Order History
-		_, _ = storage.Client.ProviderOrderAssignment.Update().
-			Where(
-				providerorderassignment.HasPaymentOrderWith(paymentorder.IDEQ(order.ID)),
-				providerorderassignment.HasProviderWith(providerprofile.IDEQ(order.Edges.Provider.ID)),
-			).
-			SetAssignmentStatus(providerorderassignment.AssignmentStatusReassigned).
-			SetReassignedAt(time.Now()).
-			Save(ctx)
-
 		// Defensive check: Verify order is still in a state that allows reassignment
-		// AND that the provider hasn't changed (race condition protection)
-		// Use atomic update to ensure order is still cancellable/processable by the SAME provider
 		updatedCount, err := storage.Client.PaymentOrder.
 			Update().
 			Where(
@@ -134,6 +122,22 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 				"ProviderID": order.Edges.Provider.ID,
 			}).Warnf("reassignCancelledOrder: Order status or provider changed, skipping reassignment")
 			return
+		}
+
+		// Mark this provider's assignment as reassigned so they see it in Order History (after guard succeeded)
+		_, err = storage.Client.ProviderOrderAssignment.Update().
+			Where(
+				providerorderassignment.HasPaymentOrderWith(paymentorder.IDEQ(order.ID)),
+				providerorderassignment.HasProviderWith(providerprofile.IDEQ(order.Edges.Provider.ID)),
+			).
+			SetAssignmentStatus(providerorderassignment.AssignmentStatusReassigned).
+			SetReassignedAt(time.Now()).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": order.ID.String(),
+			}).Errorf("reassignCancelledOrder: failed to mark assignment as reassigned")
 		}
 
 		// Best-effort: release any reserved balance held by this provider for the order.
