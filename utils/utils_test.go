@@ -115,7 +115,9 @@ func TestNormalizeMobileMoneyAccountIdentifier(t *testing.T) {
 		{"unknown currency with spaces", "XYZ", "  701234567  ", "701234567"},
 		// Edge: empty after trim
 		{"empty string unchanged", "UGX", "", ""},
-		{"only plus and spaces returns plus", "UGX", "  +   ", "+"},
+		{"only plus and spaces returns empty", "UGX", "  +   ", ""},
+		// Separator-heavy: strip all non-digits then normalize
+		{"UGX separator-heavy normalizes to digits only", "UGX", "+256 701-234-567", "256701234567"},
 		// Leading non-digits stripped; already has dial code returns digitOnly
 		{"UGX leading junk already has 256", "UGX", "x256701234567", "256701234567"},
 	}

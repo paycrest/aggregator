@@ -1412,9 +1412,14 @@ func NormalizeMobileMoneyAccountIdentifier(currencyCode, accountIdentifier strin
 	if digits == "" {
 		return accountIdentifier
 	}
-	digitOnly := strings.TrimLeftFunc(digits, func(r rune) bool { return r < '0' || r > '9' })
+	digitOnly := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, digits)
 	if digitOnly == "" {
-		return digits
+		return ""
 	}
 	var dialCode string
 	switch strings.ToUpper(currencyCode) {
@@ -1429,7 +1434,7 @@ func NormalizeMobileMoneyAccountIdentifier(currencyCode, accountIdentifier strin
 	case "MWK":
 		dialCode = "265"
 	default:
-		return digits
+		return digitOnly
 	}
 	if strings.HasPrefix(digitOnly, dialCode) {
 		return digitOnly // already has dial code; return cleaned digits
