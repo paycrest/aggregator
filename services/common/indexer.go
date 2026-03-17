@@ -151,56 +151,34 @@ func ProcessSettleOutOrders(ctx context.Context, network *ent.Network, orderIds 
 		return fmt.Errorf("ProcessSettleOutOrders.fetchLockOrders: %w", err)
 	}
 
-	lockOrderDetails := make([]map[string]interface{}, len(lockOrders))
-	for i, lo := range lockOrders {
-		lockOrderDetails[i] = map[string]interface{}{
-			"status":      lo.Status,
-			"amount":      lo.Amount,
-			"messageHash": lo.MessageHash,
-			"gatewayID":   lo.GatewayID,
-		}
-	}
-	logger.WithFields(logger.Fields{
-		"OrderIDs":   orderIds,
-		"LockOrders": lockOrderDetails,
-	}).Info("Processing settled orders")
-
 	// Map lock orders by ID so each event can be matched to its split order
 	lockOrderByID := make(map[uuid.UUID]*ent.PaymentOrder)
 	for _, lo := range lockOrders {
 		lockOrderByID[lo.ID] = lo
 	}
-	lockOrderIDStrs := make([]string, 0, len(lockOrders))
-	for _, lo := range lockOrders {
-		lockOrderIDStrs = append(lockOrderIDStrs, lo.ID.String())
-	}
-	logger.WithFields(logger.Fields{"LockOrderIDs": lockOrderIDStrs}).Infof("ProcessSettleOutOrders: lock orders by UUID (events must match one of these)")
 
 	var wg sync.WaitGroup
-	for orderIDKey, events := range orderIdToEvents {
+	for _, events := range orderIdToEvents {
 		for _, ev := range events {
 			trimmed := strings.TrimPrefix(ev.SplitOrderId, "0x")
 			splitID, err := uuid.Parse(trimmed)
 			if err != nil {
-				// EVM: SplitOrderId may be 32-byte hex; use first 16 bytes as UUID
-				if b, decodeErr := hex.DecodeString(trimmed); decodeErr == nil && len(b) >= 16 {
-					splitID, _ = uuid.FromBytes(b[:16])
-					logger.WithFields(logger.Fields{"OrderId": orderIDKey, "SplitOrderIdRaw": ev.SplitOrderId, "SplitID": splitID.String(), "HexLen": len(trimmed)}).Infof("ProcessSettleOutOrders: SplitOrderId parsed from hex (first 16 bytes)")
-				} else {
-					logger.WithFields(logger.Fields{"OrderId": orderIDKey, "SplitOrderId": ev.SplitOrderId, "ParseError": err.Error()}).Errorf("ProcessSettleOutOrders: SplitOrderId parse failed, skipping event")
+				// EVM: bytes32 is 16-byte UUID right-padded (b[16:32])
+				b, decodeErr := hex.DecodeString(trimmed)
+				if decodeErr != nil || len(b) != 32 {
 					continue
 				}
-			} else {
-				logger.WithFields(logger.Fields{"OrderId": orderIDKey, "SplitOrderId": ev.SplitOrderId, "SplitID": splitID.String()}).Infof("ProcessSettleOutOrders: SplitOrderId parsed as UUID")
+				splitID, err = uuid.FromBytes(b[16:32])
+				if err != nil {
+					continue
+				}
 			}
 			lockOrder, ok := lockOrderByID[splitID]
 			if !ok {
-				logger.WithFields(logger.Fields{"OrderId": orderIDKey, "SplitID": splitID.String(), "LockOrderIDs": lockOrderIDStrs}).Errorf("ProcessSettleOutOrders: no lock order for SplitID (event skipped)")
 				continue
 			}
 			se := ev
 			lo := lockOrder
-			logger.WithFields(logger.Fields{"PaymentOrderID": lo.ID.String(), "GatewayID": lo.GatewayID, "OrderId": se.OrderId}).Infof("ProcessSettleOutOrders: matched event to lock order, calling UpdateOrderStatusSettleOut")
 			wg.Add(1)
 			go func(lockOrder *ent.PaymentOrder, settledEvent *types.SettleOutEvent) {
 				defer wg.Done()

@@ -482,10 +482,6 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 		err := common.ProcessCreatedOrders(ctx, network, orderIDs, orderIDToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
-			}
 		}
 	}
 	eventCounts.OrderCreated = len(orderCreatedEvents)
@@ -501,10 +497,6 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 		err := common.ProcessOrderSettledOrders(ctx, network, orderIDs, orderIDToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderSettled events", len(orderSettledEvents))
-			}
 		}
 	}
 	eventCounts.SettleOut = len(orderSettledEvents)
@@ -520,10 +512,6 @@ func (s *IndexerStarknet) indexGatewayByTransaction(ctx context.Context, network
 		err := common.ProcessRefundedOrders(ctx, network, orderIDs, orderIDToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderRefunded events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderRefunded events", len(orderRefundedEvents))
-			}
 		}
 	}
 	eventCounts.OrderRefunded = len(orderRefundedEvents)
@@ -753,10 +741,6 @@ func (s *IndexerStarknet) indexProviderAddressByTransaction(ctx context.Context,
 		err := common.ProcessOrderSettledOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderSettled events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderSettled events for provider %s", len(orderSettledEvents), providerAddress)
-			}
 		}
 	}
 	eventCounts.SettleOut = len(orderSettledEvents)

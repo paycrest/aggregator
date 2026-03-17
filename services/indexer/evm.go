@@ -312,10 +312,6 @@ func (s *IndexerEVM) indexReceiveAddressByTransaction(ctx context.Context, token
 		err := common.ProcessCreatedOrders(ctx, token.Edges.Network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
-		} else {
-			if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
-			}
 		}
 		eventCounts.OrderCreated = len(orderCreatedEvents)
 	}
@@ -545,7 +541,6 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 	const gatewayTxConcurrency = 10
 	sem := make(chan struct{}, gatewayTxConcurrency)
 	var wg sync.WaitGroup
-	totalTxs := len(transactions)
 
 	for i, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
@@ -557,9 +552,6 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 			defer wg.Done()
 			sem <- struct{}{}        // acquire
 			defer func() { <-sem }() // release
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Processing gateway transaction %d/%d: %s", idx+1, totalTxs, hash[:10]+"...")
-			}
 			_, err := s.indexGatewayByTransaction(ctx, network, hash)
 			if err != nil {
 				logger.Errorf("Error processing gateway transaction %s: %v", hash[:10]+"...", err)
@@ -640,15 +632,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		default:
 			logger.Warnf("Unknown topics type: %T", topicsInterface)
 			continue
-		}
-
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			// Log the event signature being processed
-			logger.WithFields(logger.Fields{
-				"EventSignature": eventSignature,
-				"TxHash":         txHash,
-				"BlockNumber":    int64(eventMap["block_number"].(float64)),
-			}).Infof("Processing event signature")
 		}
 
 		// Safely extract block_number and transaction_hash
@@ -895,10 +878,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		err := common.ProcessCreatedOrders(ctx, network, orderIds, orderIdToEvent, s.order, s.priorityQueue)
 		if err != nil {
 			logger.Errorf("Failed to process OrderCreated events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
-			}
 		}
 	}
 	eventCounts.OrderCreated = len(orderCreatedEvents)
@@ -918,10 +897,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		err := common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvents)
 		if err != nil {
 			logger.Errorf("Failed to process SettleOut events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d SettleOut events", len(settleOutEvents))
-			}
 		}
 	}
 	eventCounts.SettleOut = len(settleOutEvents)
@@ -937,10 +912,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		err := common.ProcessSettleInOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process SettleIn events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d SettleIn events", len(settleInEvents))
-			}
 		}
 	}
 	eventCounts.SettleIn = len(settleInEvents)
@@ -956,10 +927,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		err := common.ProcessRefundedOrders(ctx, network, orderIds, orderIdToEvent)
 		if err != nil {
 			logger.Errorf("Failed to process OrderRefunded events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d OrderRefunded events", len(orderRefundedEvents))
-			}
 		}
 	}
 	eventCounts.OrderRefunded = len(orderRefundedEvents)
@@ -1099,10 +1066,6 @@ func (s *IndexerEVM) indexProviderAddressByTransaction(ctx context.Context, netw
 		err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvents)
 		if err != nil {
 			logger.Errorf("Failed to process SettleOut events: %v", err)
-		} else {
-			if network.ChainID != 56 && network.ChainID != 1135 {
-				logger.Infof("Successfully processed %d SettleOut events for provider %s", len(settleOutEvents), providerAddress)
-			}
 		}
 	}
 	eventCounts.SettleOut = len(settleOutEvents)

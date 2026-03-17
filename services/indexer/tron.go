@@ -322,8 +322,6 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 			err = common.ProcessCreatedOrders(ctx, network, txHashes, hashToEvent, s.order, s.priorityQueue)
 			if err != nil {
 				logger.Errorf("Failed to process OrderCreated events: %v", err)
-			} else {
-				logger.Infof("Successfully processed %d OrderCreated events", len(orderCreatedEvents))
 			}
 		}
 
@@ -341,8 +339,6 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 			err = common.ProcessSettleOutOrders(ctx, network, orderIds, orderIdToEvents)
 			if err != nil {
 				logger.Errorf("Failed to process SettleOut events: %v", err)
-			} else {
-				logger.Infof("Successfully processed %d SettleOut events", len(settleOutEvents))
 			}
 		}
 
@@ -356,8 +352,6 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 			err = common.ProcessSettleInOrders(ctx, network, orderIds, orderIdToEvent)
 			if err != nil {
 				logger.Errorf("Failed to process SettleIn events: %v", err)
-			} else {
-				logger.Infof("Successfully processed %d SettleIn events", len(settleInEvents))
 			}
 		}
 
@@ -371,8 +365,6 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 			err = common.ProcessRefundedOrders(ctx, network, txHashes, hashToEvent)
 			if err != nil {
 				logger.Errorf("Failed to process OrderRefunded events: %v", err)
-			} else {
-				logger.Infof("Successfully processed %d OrderRefunded events", len(orderRefundedEvents))
 			}
 		}
 

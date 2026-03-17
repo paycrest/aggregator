@@ -303,11 +303,8 @@ func ProcessPaymentOrderFromBlockchain(
 
 // UpdateOrderStatusRefunded updates the status of a payment order to refunded
 func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event *types.OrderRefundedEvent, messageHash string) error {
-	logger.WithFields(logger.Fields{"OrderId": event.OrderId, "TxHash": event.TxHash, "Network": network.Identifier}).Infof("UpdateOrderStatusRefunded: event received")
-
 	tx, err := db.Client.Tx(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{"Error": err.Error()}).Errorf("UpdateOrderStatusRefunded.db: tx begin failed")
 		return fmt.Errorf("UpdateOrderStatusRefunded.dbtransaction %v", err)
 	}
 
@@ -327,10 +324,8 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()
-		logger.WithFields(logger.Fields{"GatewayID": gatewayID, "Error": err.Error()}).Errorf("UpdateOrderStatusRefunded.updateRefunding: update order_refunding logs failed")
 		return fmt.Errorf("UpdateOrderStatusRefunded.updateRefunding: %v", err)
 	}
-	logger.WithFields(logger.Fields{"GatewayID": gatewayID, "UpdatedRefundingRows": updatedRefundingRows}).Infof("UpdateOrderStatusRefunded: order_refunding logs updated (or 0 if none existed)")
 
 	// If no order_refunding log was updated, do idempotency: match or create order_refunded log for this event
 	if updatedRefundingRows == 0 {
@@ -409,11 +404,10 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 
 	updatedOrderRows, err := paymentOrderUpdate.Save(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{"GatewayID": gatewayID, "Error": err.Error()}).Errorf("UpdateOrderStatusRefunded.aggregator: payment order update failed")
 		return fmt.Errorf("UpdateOrderStatusRefunded.aggregator: %v", err)
 	}
 	if updatedOrderRows == 0 {
-		logger.WithFields(logger.Fields{"GatewayID": gatewayID}).Errorf("UpdateOrderStatusRefunded: no payment order updated (order not found or not in status refunding/pending/cancelled)")
+		// Order not found or not in status refunding/pending/cancelled
 	}
 
 	// Release reserved balance for refunded orders
@@ -484,13 +478,8 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 
 // UpdateOrderStatusSettleOut updates the status of a payment order to settled (offramp / SettleOut).
 func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event *types.SettleOutEvent, messageHash string) error {
-	logger.WithFields(logger.Fields{
-		"OrderId": event.OrderId, "SplitOrderId": event.SplitOrderId, "TxHash": event.TxHash, "Network": network.Identifier,
-	}).Infof("UpdateOrderStatusSettleOut: event received")
-
 	tx, err := db.Client.Tx(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{"Error": err.Error()}).Errorf("UpdateOrderStatusSettleOut.db: tx begin failed")
 		return fmt.Errorf("UpdateOrderStatusSettleOut.db: %v", err)
 	}
 
@@ -509,10 +498,8 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 		SetTxHash(event.TxHash).
 		Save(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{"GatewayID": gatewayID, "Error": err.Error()}).Errorf("UpdateOrderStatusSettleOut.update: updating order_settling logs failed")
 		return fmt.Errorf("UpdateOrderStatusSettleOut.update: %v", err)
 	}
-	logger.WithFields(logger.Fields{"GatewayID": gatewayID, "UpdatedLogRows": updatedLogRows}).Infof("UpdateOrderStatusSettleOut: order_settling logs updated (or 0 if none existed)")
 
 	// If no existing order_settling log was updated, create a new order_settled log (e.g. legacy or indexer-first path).
 	// When updatedLogRows > 0, order already has that log linked; no need to AddTransactions again.
@@ -535,17 +522,19 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 	if strings.HasPrefix(network.Identifier, "starknet") {
 		splitOrderId, err = uuid.Parse(strings.ReplaceAll(event.SplitOrderId, "0x", ""))
 		if err != nil {
-			logger.WithFields(logger.Fields{"SplitOrderId": event.SplitOrderId, "Error": err.Error()}).Errorf("UpdateOrderStatusSettleOut.splitOrderId: parse failed (starknet)")
 			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: %v", err)
 		}
 	} else {
-		splitOrderId, err = uuid.Parse(string(ethcommon.FromHex(event.SplitOrderId)))
+		// EVM: bytes32 is 16-byte UUID right-padded (b[16:32])
+		b := ethcommon.FromHex(event.SplitOrderId)
+		if len(b) != 32 {
+			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: expected 32 bytes, got %d", len(b))
+		}
+		splitOrderId, err = uuid.FromBytes(b[16:32])
 		if err != nil {
-			logger.WithFields(logger.Fields{"SplitOrderId": event.SplitOrderId, "Error": err.Error()}).Errorf("UpdateOrderStatusSettleOut.splitOrderId: parse failed (evm)")
 			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: %v", err)
 		}
 	}
-	logger.WithFields(logger.Fields{"GatewayID": gatewayID, "SplitOrderId": splitOrderId.String()}).Infof("UpdateOrderStatusSettleOut: resolved splitOrderId")
 
 	// Only add percent_settled when this is the first time we process this event (new log).
 	// Re-processing the same event (e.g. re-index, duplicate path) must not add again.
@@ -574,11 +563,10 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 
 	updatedOrderRows, err := paymentOrderUpdate.Save(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{"SplitOrderId": splitOrderId.String(), "GatewayID": gatewayID, "Error": err.Error()}).Errorf("UpdateOrderStatusSettleOut.aggregator: payment order update failed")
 		return fmt.Errorf("UpdateOrderStatusSettleOut.aggregator: %v", err)
 	}
 	if updatedOrderRows == 0 {
-		logger.WithFields(logger.Fields{"SplitOrderId": splitOrderId.String(), "GatewayID": gatewayID}).Errorf("UpdateOrderStatusSettleOut: no payment order updated (order not found or not in status settling)")
+		// Order not found or not in status settling
 	}
 
 	// Update provider balance for settled orders

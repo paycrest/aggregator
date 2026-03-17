@@ -405,12 +405,14 @@ func (s *OrderEVM) settleCallData(ctx context.Context, order *ent.PaymentOrder) 
 		return nil, fmt.Errorf("failed to decode orderID: %w", err)
 	}
 
-	splitOrderID := strings.ReplaceAll(order.ID.String(), "-", "")
+	// bytes32 splitOrderId: 16-byte UUID right-padded (so indexer can use last 16 bytes as uuid.FromBytes)
+	var splitOrderIDBytes [32]byte
+	copy(splitOrderIDBytes[16:32], order.ID[:])
 
 	// Generate calldata for settlement (Gateway.settleOut)
 	data, err := gatewayABI.Pack(
 		"settleOut",
-		utils.StringToByte32(splitOrderID),
+		splitOrderIDBytes,
 		utils.StringToByte32(string(orderID)),
 		ethcommon.HexToAddress(token.SettlementAddress),
 		uint64(orderPercent),
