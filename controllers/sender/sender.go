@@ -300,6 +300,14 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
+	// Normalize mobile money account identifier: add country code and strip '+'
+	if institutionObj.Type == institution.TypeMobileMoney && institutionObj.Edges.FiatCurrency != nil {
+		payload.Recipient.AccountIdentifier = u.NormalizeMobileMoneyAccountIdentifier(
+			institutionObj.Edges.FiatCurrency.Code,
+			payload.Recipient.AccountIdentifier,
+		)
+	}
+
 	// Validate account and rate in parallel with fail fast logic before proceeding with order creation
 	type AccountResult struct {
 		accountName string
@@ -841,6 +849,14 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	if !strings.EqualFold(token.BaseCurrency, currency.Code) && !strings.EqualFold(token.BaseCurrency, "USD") {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("%s can only be converted to %s", token.Symbol, token.BaseCurrency), nil)
 		return
+	}
+
+	// Normalize mobile money account identifier: add country code and strip '+'
+	if institutionObj.Type == institution.TypeMobileMoney {
+		payload.Destination.Recipient.AccountIdentifier = u.NormalizeMobileMoneyAccountIdentifier(
+			currency.Code,
+			payload.Destination.Recipient.AccountIdentifier,
+		)
 	}
 
 	// Validate reference if provided

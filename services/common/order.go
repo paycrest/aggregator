@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	institutionent "github.com/paycrest/aggregator/ent/institution"
 	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
@@ -1346,8 +1347,13 @@ func validateAndPreparePaymentOrderData(
 		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, cancellationReason, refundOrder, existingOrder)
 	}
 
-	// Create payment order fields (normalize gateway ID for case-insensitive DB storage/lookup)
-	// Chain-created orders from OrderCreatedEvent are offramp (SettleOut flow)
+	// Normalize mobile money account identifier (same as sender API path)
+	accountIdentifier := recipient.AccountIdentifier
+	if institution.Type == institutionent.TypeMobileMoney && institution.Edges.FiatCurrency != nil {
+		accountIdentifier = utils.NormalizeMobileMoneyAccountIdentifier(currency.Code, recipient.AccountIdentifier)
+	}
+
+	// Create payment order fields
 	paymentOrderFields := &types.PaymentOrderFields{
 		Token:             token,
 		Network:           network,
@@ -1359,7 +1365,7 @@ func validateAndPreparePaymentOrderData(
 		BlockNumber:       int64(event.BlockNumber),
 		TxHash:            event.TxHash,
 		Institution:       recipient.Institution,
-		AccountIdentifier: recipient.AccountIdentifier,
+		AccountIdentifier: accountIdentifier,
 		AccountName:       recipient.AccountName,
 		Sender:            event.Sender,
 		ProviderID:        recipient.ProviderID,
@@ -1559,7 +1565,11 @@ func createBasicPaymentOrderAndCancel(
 	// Add recipient fields if available
 	if recipient != nil {
 		paymentOrder.Institution = recipient.Institution
-		paymentOrder.AccountIdentifier = recipient.AccountIdentifier
+		accountIdentifier := recipient.AccountIdentifier
+		if inst, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true); err == nil && inst != nil && inst.Edges.FiatCurrency != nil && inst.Type == institutionent.TypeMobileMoney {
+			accountIdentifier = utils.NormalizeMobileMoneyAccountIdentifier(inst.Edges.FiatCurrency.Code, recipient.AccountIdentifier)
+		}
+		paymentOrder.AccountIdentifier = accountIdentifier
 		paymentOrder.AccountName = recipient.AccountName
 		paymentOrder.ProviderID = recipient.ProviderID
 		paymentOrder.Memo = recipient.Memo
