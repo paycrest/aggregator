@@ -1441,13 +1441,17 @@ func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.Fia
 			"BestRate":      bestRate,
 		}).Warnf("ValidateRate.NoSuitableProvider: no provider found for the given parameters")
 
-		// Provide more specific error message
+		// Provide more specific error message (buy = fiat to crypto, sell = crypto to fiat)
 		networkMsg := networkIdentifier
 		if networkMsg == "" {
 			networkMsg = "any network"
 		}
+		from, to := token.Symbol, currency.Code
+		if side == RateSideBuy {
+			from, to = currency.Code, token.Symbol
+		}
 		return RateValidationResult{}, fmt.Errorf("no provider available for %s to %s conversion with amount %s on %s",
-			token.Symbol, currency.Code, amount, networkMsg)
+			from, to, amount, networkMsg)
 	}
 
 	return RateValidationResult{
