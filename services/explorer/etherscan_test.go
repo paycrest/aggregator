@@ -1,12 +1,16 @@
 package explorer
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/storage"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -175,6 +179,31 @@ func TestParseEtherscanTransactions(t *testing.T) {
 			assert.Len(t, result, tc.wantLen)
 		})
 	}
+}
+
+func TestProcessNextRequest_EmptyQueueReturnsNoRequestsError(t *testing.T) {
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	defer mr.Close()
+
+	originalRedisClient := storage.RedisClient
+	defer func() {
+		storage.RedisClient = originalRedisClient
+	}()
+
+	storage.RedisClient = redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+	defer storage.RedisClient.Close()
+
+	worker := &EtherscanWorker{
+		APIKey:    "test-api-key",
+		WorkerID:  1,
+		RateLimit: 3,
+	}
+
+	err = worker.processNextRequest(context.Background())
+	assert.EqualError(t, err, "no requests in queue")
 }
 
 // Helper function to test the parsing logic
