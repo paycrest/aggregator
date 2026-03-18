@@ -11,10 +11,14 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerbalances"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/routers/middleware"
 	"github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
@@ -1949,6 +1953,177 @@ func TestProvider(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "Order fulfilled successfully", response.Message)
+		})
+
+		t.Run("onramp success promotes pending order before settling", func(t *testing.T) {
+			_, _, cleanup := setupIsolatedTest(t)
+			defer cleanup()
+
+			originalCryptoConf := cryptoConf
+			cryptoConf.AggregatorAccountEVM = "0x1111111111111111111111111111111111111111"
+			defer func() { cryptoConf = originalCryptoConf }()
+
+			senderUser, err := test.CreateTestUser(map[string]interface{}{
+				"email": fmt.Sprintf("sender_%s@test.com", uuid.New().String()),
+				"scope": "sender",
+			})
+			assert.NoError(t, err)
+
+			senderProfile, err := test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": senderUser.ID,
+				"token":   testCtx.token.Symbol,
+			})
+			assert.NoError(t, err)
+
+			_, err = db.Client.Network.UpdateOneID(testCtx.token.Edges.Network.ID).
+				SetGatewayContractAddress("0x2222222222222222222222222222222222222222").
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			_, err = db.Client.ProviderBalances.Create().
+				SetProviderID(testCtx.provider.ID).
+				SetToken(testCtx.token).
+				SetAvailableBalance(decimal.NewFromInt(0)).
+				SetTotalBalance(decimal.NewFromInt(200)).
+				SetReservedBalance(decimal.NewFromInt(100)).
+				SetIsAvailable(true).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			_, err = test.AddProviderOrderTokenToProvider(map[string]interface{}{
+				"provider":           testCtx.provider,
+				"token_id":           testCtx.token.ID,
+				"currency_id":        testCtx.currency.ID,
+				"network":            testCtx.token.Edges.Network.Identifier,
+				"settlement_address": "0x3333333333333333333333333333333333333333",
+			})
+			assert.NoError(t, err)
+
+			order, err := test.CreateTestPaymentOrder(testCtx.token, map[string]interface{}{
+				"sender":                      senderProfile,
+				"provider":                    testCtx.provider,
+				"gateway_id":                  "",
+				"status":                      "pending",
+				"memo":                        "",
+				"refund_or_recipient_address": "0x4444444444444444444444444444444444444444",
+			})
+			assert.NoError(t, err)
+
+			order, err = order.Update().
+				SetDirection(paymentorder.DirectionOnramp).
+				SetSenderFee(decimal.NewFromInt(5)).
+				SetAmount(decimal.NewFromInt(10)).
+				SetRate(decimal.NewFromInt(750)).
+				SetFeeAddress("0x1234567890123456789012345678901234567890").
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			txID := "0xpayin" + fmt.Sprint(rand.Intn(1000000))
+			payload := map[string]interface{}{
+				"timestamp":        time.Now().Unix(),
+				"validationStatus": "success",
+				"txId":             txID,
+				"psp":              "psp-name",
+				"authorization":    (*coretypes.SetCodeAuthorization)(nil),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/orders/"+order.ID.String()+"/fulfill", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusInternalServerError, res.Code)
+
+			updatedOrder, err := db.Client.PaymentOrder.Query().
+				Where(paymentorder.IDEQ(order.ID)).
+				WithTransactions().
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.Equal(t, paymentorder.StatusSettling, updatedOrder.Status)
+
+			fulfillingLogExists, err := db.Client.TransactionLog.Query().
+				Where(
+					transactionlog.StatusEQ(transactionlog.StatusOrderFulfilling),
+					transactionlog.HasPaymentOrderWith(paymentorder.IDEQ(order.ID)),
+				).
+				Exist(context.Background())
+			assert.NoError(t, err)
+			assert.True(t, fulfillingLogExists)
+		})
+
+		t.Run("onramp late failed callback does not overwrite settling order", func(t *testing.T) {
+			_, _, cleanup := setupIsolatedTest(t)
+			defer cleanup()
+
+			senderUser, err := test.CreateTestUser(map[string]interface{}{
+				"email": fmt.Sprintf("sender_settling_%s@test.com", uuid.New().String()),
+				"scope": "sender",
+			})
+			assert.NoError(t, err)
+
+			senderProfile, err := test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": senderUser.ID,
+				"token":   testCtx.token.Symbol,
+			})
+			assert.NoError(t, err)
+
+			tokenBalance, err := db.Client.ProviderBalances.Create().
+				SetProviderID(testCtx.provider.ID).
+				SetToken(testCtx.token).
+				SetAvailableBalance(decimal.NewFromInt(0)).
+				SetTotalBalance(decimal.NewFromInt(200)).
+				SetReservedBalance(decimal.NewFromInt(25)).
+				SetIsAvailable(true).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			order, err := test.CreateTestPaymentOrder(testCtx.token, map[string]interface{}{
+				"sender":                      senderProfile,
+				"provider":                    testCtx.provider,
+				"gateway_id":                  "0xsettling-order",
+				"status":                      "settling",
+				"memo":                        "",
+				"refund_or_recipient_address": "0x4444444444444444444444444444444444444444",
+			})
+			assert.NoError(t, err)
+
+			order, err = order.Update().
+				SetDirection(paymentorder.DirectionOnramp).
+				SetSenderFee(decimal.NewFromInt(5)).
+				SetAmount(decimal.NewFromInt(10)).
+				SetRate(decimal.NewFromInt(750)).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			txID := "0xlatefail" + fmt.Sprint(rand.Intn(1000000))
+			payload := map[string]interface{}{
+				"timestamp":        time.Now().Unix(),
+				"validationStatus": "failed",
+				"validationError":  "late callback",
+				"txId":             txID,
+				"psp":              "psp-name",
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/orders/"+order.ID.String()+"/fulfill", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			updatedOrder, err := db.Client.PaymentOrder.Get(context.Background(), order.ID)
+			assert.NoError(t, err)
+			assert.Equal(t, paymentorder.StatusSettling, updatedOrder.Status)
+
+			updatedBalance, err := db.Client.ProviderBalances.Query().
+				Where(providerbalances.IDEQ(tokenBalance.ID)).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.Equal(t, decimal.NewFromInt(25), updatedBalance.ReservedBalance)
 		})
 	})
 
