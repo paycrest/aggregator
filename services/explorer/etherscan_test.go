@@ -1,6 +1,7 @@
 package explorer
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -95,6 +96,85 @@ func TestMultiKeyParsingEmpty(t *testing.T) {
 	keys := parseAPIKeys(apiKeys)
 
 	assert.Equal(t, 0, len(keys))
+}
+
+func TestParseEtherscanTransactions(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   map[string]interface{}
+		wantLen int
+		wantErr string
+		chainID int64
+		wallet  string
+	}{
+		{
+			name: "parses successful response",
+			input: map[string]interface{}{
+				"status": "1",
+				"result": []interface{}{
+					map[string]interface{}{"hash": "0xabc"},
+				},
+			},
+			wantLen: 1,
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+		{
+			name: "no transactions found",
+			input: map[string]interface{}{
+				"status":  "0",
+				"message": "No transactions found",
+			},
+			wantLen: 0,
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+		{
+			name: "handles non-string message without panic",
+			input: map[string]interface{}{
+				"status":  "0",
+				"message": 123,
+			},
+			wantErr: "unknown error",
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+		{
+			name: "rejects invalid result shape",
+			input: map[string]interface{}{
+				"status": "1",
+				"result": map[string]interface{}{"hash": "0xabc"},
+			},
+			wantErr: "unexpected etherscan result type",
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+		{
+			name: "rejects invalid transaction type",
+			input: map[string]interface{}{
+				"status": "1",
+				"result": []interface{}{"not-a-map"},
+			},
+			wantErr: fmt.Sprintf("unexpected transaction type at index %d", 0),
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := parseEtherscanTransactions(tc.input, tc.chainID, tc.wallet)
+
+			if tc.wantErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Len(t, result, tc.wantLen)
+		})
+	}
 }
 
 // Helper function to test the parsing logic

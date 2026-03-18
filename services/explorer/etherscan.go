@@ -3,6 +3,7 @@ package explorer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
+	"github.com/redis/go-redis/v9"
 )
 
 // ErrorType represents different types of errors for smart handling
@@ -271,7 +273,6 @@ func startMultiKeyEtherscanWorkers(ctx context.Context, apiKeys string) {
 
 	logger.WithFields(logger.Fields{
 		"TotalKeys": len(cleanKeys),
-		"Keys":      cleanKeys,
 	}).Info("Starting multi-key Etherscan workers")
 
 	// Get rate limit from config (default: 3 req/sec for free tier, override in prod with a paid plan)
@@ -336,8 +337,12 @@ func startDailyLimitReset(ctx context.Context) {
 	// Set initial reset time
 	dailyLimitResetTime = nextMidnight
 
-	// Wait until midnight
-	time.Sleep(initialDelay)
+	// Wait until midnight or cancellation
+	select {
+	case <-ctx.Done():
+		return
+	case <-time.After(initialDelay):
+	}
 
 	// Reset counter and schedule next reset
 	ticker := time.NewTicker(24 * time.Hour)
@@ -641,7 +646,11 @@ func (w *EtherscanWorker) processNextRequest(ctx context.Context) error {
 	// Get the next request from the queue
 	requestData, err := storage.RedisClient.LPop(ctx, "etherscan_queue").Result()
 	if err != nil {
-		return fmt.Errorf("no requests in queue")
+		if errors.Is(err, redis.Nil) {
+			return fmt.Errorf("no requests in queue")
+		}
+
+		return fmt.Errorf("failed to pop request from queue: %w", err)
 	}
 
 	var request EtherscanRequest
@@ -840,9 +849,9 @@ func (w *EtherscanWorker) makeEtherscanAPICall(request EtherscanRequest) ([]map[
 	res, err := fastshot.NewClient("https://api.etherscan.io").
 		Config().SetCustomTransport(utils.GetHTTPClient().Transport).Config().SetTimeout(30 * time.Second).
 		Header().AddAll(map[header.Type]string{
-			header.Accept:       "application/json",
-			header.ContentType: "application/json",
-		}).
+		header.Accept:      "application/json",
+		header.ContentType: "application/json",
+	}).
 		Build().GET("/v2/api").
 		Query().AddParams(params).Send()
 
@@ -861,11 +870,15 @@ func (w *EtherscanWorker) makeEtherscanAPICall(request EtherscanRequest) ([]map[
 		return nil, fmt.Errorf("failed to parse JSON response: %w", err)
 	}
 
+	return parseEtherscanTransactions(data, request.ChainID, request.WalletAddress)
+}
+
+func parseEtherscanTransactions(data map[string]interface{}, chainID int64, walletAddress string) ([]map[string]interface{}, error) {
 	// Check if the response indicates success
-	if data["status"] != "1" {
+	if status, _ := data["status"].(string); status != "1" {
 		message := "unknown error"
-		if data["message"] != nil {
-			message = data["message"].(string)
+		if msg, ok := data["message"].(string); ok {
+			message = msg
 		}
 
 		if message == "No transactions found" {
@@ -877,21 +890,29 @@ func (w *EtherscanWorker) makeEtherscanAPICall(request EtherscanRequest) ([]map[
 
 		// Log the error type for monitoring and debugging
 		logger.Debugf("Etherscan API error classified as %v for chain %d, address %s: %s",
-			errorType, request.ChainID, request.WalletAddress, message)
+			errorType, chainID, walletAddress, message)
 
 		return nil, fmt.Errorf("etherscan API error for chain %d, address %s: %s",
-			request.ChainID, request.WalletAddress, message)
+			chainID, walletAddress, message)
 	}
 
 	if data["result"] == nil {
 		return []map[string]interface{}{}, nil
 	}
 
-	transactions := data["result"].([]interface{})
-	result := make([]map[string]interface{}, len(transactions))
+	transactions, ok := data["result"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected etherscan result type %T for chain %d, address %s",
+			data["result"], chainID, walletAddress)
+	}
 
+	result := make([]map[string]interface{}, 0, len(transactions))
 	for i, tx := range transactions {
-		result[i] = tx.(map[string]interface{})
+		txMap, ok := tx.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected transaction type at index %d: %T", i, tx)
+		}
+		result = append(result, txMap)
 	}
 
 	return result, nil
