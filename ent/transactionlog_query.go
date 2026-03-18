@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 )
@@ -19,11 +20,12 @@ import (
 // TransactionLogQuery is the builder for querying TransactionLog entities.
 type TransactionLogQuery struct {
 	config
-	ctx        *QueryContext
-	order      []transactionlog.OrderOption
-	inters     []Interceptor
-	predicates []predicate.TransactionLog
-	withFKs    bool
+	ctx              *QueryContext
+	order            []transactionlog.OrderOption
+	inters           []Interceptor
+	predicates       []predicate.TransactionLog
+	withPaymentOrder *PaymentOrderQuery
+	withFKs          bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +60,28 @@ func (_q *TransactionLogQuery) Unique(unique bool) *TransactionLogQuery {
 func (_q *TransactionLogQuery) Order(o ...transactionlog.OrderOption) *TransactionLogQuery {
 	_q.order = append(_q.order, o...)
 	return _q
+}
+
+// QueryPaymentOrder chains the current query on the "payment_order" edge.
+func (_q *TransactionLogQuery) QueryPaymentOrder() *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(transactionlog.Table, transactionlog.FieldID, selector),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, transactionlog.PaymentOrderTable, transactionlog.PaymentOrderColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first TransactionLog entity from the query.
@@ -247,15 +271,27 @@ func (_q *TransactionLogQuery) Clone() *TransactionLogQuery {
 		return nil
 	}
 	return &TransactionLogQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]transactionlog.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.TransactionLog{}, _q.predicates...),
+		config:           _q.config,
+		ctx:              _q.ctx.Clone(),
+		order:            append([]transactionlog.OrderOption{}, _q.order...),
+		inters:           append([]Interceptor{}, _q.inters...),
+		predicates:       append([]predicate.TransactionLog{}, _q.predicates...),
+		withPaymentOrder: _q.withPaymentOrder.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
+}
+
+// WithPaymentOrder tells the query-builder to eager-load the nodes that are connected to
+// the "payment_order" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TransactionLogQuery) WithPaymentOrder(opts ...func(*PaymentOrderQuery)) *TransactionLogQuery {
+	query := (&PaymentOrderClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withPaymentOrder = query
+	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -334,10 +370,16 @@ func (_q *TransactionLogQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *TransactionLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TransactionLog, error) {
 	var (
-		nodes   = []*TransactionLog{}
-		withFKs = _q.withFKs
-		_spec   = _q.querySpec()
+		nodes       = []*TransactionLog{}
+		withFKs     = _q.withFKs
+		_spec       = _q.querySpec()
+		loadedTypes = [1]bool{
+			_q.withPaymentOrder != nil,
+		}
 	)
+	if _q.withPaymentOrder != nil {
+		withFKs = true
+	}
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, transactionlog.ForeignKeys...)
 	}
@@ -347,6 +389,7 @@ func (_q *TransactionLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &TransactionLog{config: _q.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -358,7 +401,46 @@ func (_q *TransactionLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := _q.withPaymentOrder; query != nil {
+		if err := _q.loadPaymentOrder(ctx, query, nodes, nil,
+			func(n *TransactionLog, e *PaymentOrder) { n.Edges.PaymentOrder = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (_q *TransactionLogQuery) loadPaymentOrder(ctx context.Context, query *PaymentOrderQuery, nodes []*TransactionLog, init func(*TransactionLog), assign func(*TransactionLog, *PaymentOrder)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*TransactionLog)
+	for i := range nodes {
+		if nodes[i].payment_order_transactions == nil {
+			continue
+		}
+		fk := *nodes[i].payment_order_transactions
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(paymentorder.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "payment_order_transactions" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (_q *TransactionLogQuery) sqlCount(ctx context.Context) (int, error) {

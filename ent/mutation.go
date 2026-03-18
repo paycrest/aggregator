@@ -20025,18 +20025,20 @@ func (m *TokenMutation) ResetEdge(name string) error {
 // TransactionLogMutation represents an operation that mutates the TransactionLog nodes in the graph.
 type TransactionLogMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	gateway_id    *string
-	status        *transactionlog.Status
-	network       *string
-	tx_hash       *string
-	created_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*TransactionLog, error)
-	predicates    []predicate.TransactionLog
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	gateway_id           *string
+	status               *transactionlog.Status
+	network              *string
+	tx_hash              *string
+	created_at           *time.Time
+	clearedFields        map[string]struct{}
+	payment_order        *uuid.UUID
+	clearedpayment_order bool
+	done                 bool
+	oldValue             func(context.Context) (*TransactionLog, error)
+	predicates           []predicate.TransactionLog
 }
 
 var _ ent.Mutation = (*TransactionLogMutation)(nil)
@@ -20362,6 +20364,45 @@ func (m *TransactionLogMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
+// SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by id.
+func (m *TransactionLogMutation) SetPaymentOrderID(id uuid.UUID) {
+	m.payment_order = &id
+}
+
+// ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
+func (m *TransactionLogMutation) ClearPaymentOrder() {
+	m.clearedpayment_order = true
+}
+
+// PaymentOrderCleared reports if the "payment_order" edge to the PaymentOrder entity was cleared.
+func (m *TransactionLogMutation) PaymentOrderCleared() bool {
+	return m.clearedpayment_order
+}
+
+// PaymentOrderID returns the "payment_order" edge ID in the mutation.
+func (m *TransactionLogMutation) PaymentOrderID() (id uuid.UUID, exists bool) {
+	if m.payment_order != nil {
+		return *m.payment_order, true
+	}
+	return
+}
+
+// PaymentOrderIDs returns the "payment_order" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PaymentOrderID instead. It exists only for internal usage by the builders.
+func (m *TransactionLogMutation) PaymentOrderIDs() (ids []uuid.UUID) {
+	if id := m.payment_order; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPaymentOrder resets all changes to the "payment_order" edge.
+func (m *TransactionLogMutation) ResetPaymentOrder() {
+	m.payment_order = nil
+	m.clearedpayment_order = false
+}
+
 // Where appends a list predicates to the TransactionLogMutation builder.
 func (m *TransactionLogMutation) Where(ps ...predicate.TransactionLog) {
 	m.predicates = append(m.predicates, ps...)
@@ -20584,19 +20625,28 @@ func (m *TransactionLogMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TransactionLogMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.payment_order != nil {
+		edges = append(edges, transactionlog.EdgePaymentOrder)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *TransactionLogMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case transactionlog.EdgePaymentOrder:
+		if id := m.payment_order; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TransactionLogMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -20608,25 +20658,42 @@ func (m *TransactionLogMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TransactionLogMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedpayment_order {
+		edges = append(edges, transactionlog.EdgePaymentOrder)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *TransactionLogMutation) EdgeCleared(name string) bool {
+	switch name {
+	case transactionlog.EdgePaymentOrder:
+		return m.clearedpayment_order
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *TransactionLogMutation) ClearEdge(name string) error {
+	switch name {
+	case transactionlog.EdgePaymentOrder:
+		m.ClearPaymentOrder()
+		return nil
+	}
 	return fmt.Errorf("unknown TransactionLog unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *TransactionLogMutation) ResetEdge(name string) error {
+	switch name {
+	case transactionlog.EdgePaymentOrder:
+		m.ResetPaymentOrder()
+		return nil
+	}
 	return fmt.Errorf("unknown TransactionLog edge %s", name)
 }
 

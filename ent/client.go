@@ -3875,6 +3875,22 @@ func (c *TransactionLogClient) GetX(ctx context.Context, id uuid.UUID) *Transact
 	return obj
 }
 
+// QueryPaymentOrder queries the payment_order edge of a TransactionLog.
+func (c *TransactionLogClient) QueryPaymentOrder(_m *TransactionLog) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(transactionlog.Table, transactionlog.FieldID, id),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, transactionlog.PaymentOrderTable, transactionlog.PaymentOrderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TransactionLogClient) Hooks() []Hook {
 	return c.hooks.TransactionLog

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 )
 
@@ -25,8 +26,17 @@ const (
 	FieldTxHash = "tx_hash"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
+	// EdgePaymentOrder holds the string denoting the payment_order edge name in mutations.
+	EdgePaymentOrder = "payment_order"
 	// Table holds the table name of the transactionlog in the database.
 	Table = "transaction_logs"
+	// PaymentOrderTable is the table that holds the payment_order relation/edge.
+	PaymentOrderTable = "transaction_logs"
+	// PaymentOrderInverseTable is the table name for the PaymentOrder entity.
+	// It exists in this package in order to avoid circular dependency with the "paymentorder" package.
+	PaymentOrderInverseTable = "payment_orders"
+	// PaymentOrderColumn is the table column denoting the payment_order relation/edge.
+	PaymentOrderColumn = "payment_order_transactions"
 )
 
 // Columns holds all SQL columns for transactionlog fields.
@@ -134,4 +144,18 @@ func ByTxHash(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByPaymentOrderField orders the results by payment_order field.
+func ByPaymentOrderField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newPaymentOrderStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newPaymentOrderStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(PaymentOrderInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, PaymentOrderTable, PaymentOrderColumn),
+	)
 }

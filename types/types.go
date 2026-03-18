@@ -218,9 +218,21 @@ type AcceptOrderRequest struct {
 	Amount    string `json:"amount,omitempty"`    // Required for payin orders
 }
 
+// BatchCallItem is one call in a payin execute batch (to, value, data).
+type BatchCallItem struct {
+	To    string `json:"to"`    // hex address
+	Value string `json:"value"` // "0"
+	Data  string `json:"data"`  // hex calldata
+}
+
+// AcceptOrderBatch is returned only for payin so the provider can sign execute(calls, signature).
+type AcceptOrderBatch struct {
+	Calls []BatchCallItem `json:"calls"`
+}
+
 // AcceptOrderResponse is the unified response for the accept order endpoint (payin and payout).
 // Common: id, direction, amount, institution, accountIdentifier, accountName.
-// Payout-only: memo, metadata. Payin-only: chainId, rpcUrl, delegationAddress.
+// Payout-only: memo, metadata. Payin-only: chainId, rpcUrl, delegationAddress, batch (for batch signing).
 type AcceptOrderResponse struct {
 	ID                string                 `json:"id"`
 	Direction         string                 `json:"direction"` // "payin" or "payout"
@@ -233,6 +245,7 @@ type AcceptOrderResponse struct {
 	ChainId           string                 `json:"chainId,omitempty"`
 	RpcUrl            string                 `json:"rpcUrl,omitempty"`
 	DelegationAddress string                 `json:"delegationAddress,omitempty"`
+	Batch             *AcceptOrderBatch      `json:"batch,omitempty"`
 }
 
 // FulfillOrderPayload is the payload for the fulfill order endpoint
@@ -242,6 +255,7 @@ type FulfillOrderPayload struct {
 	ValidationStatus paymentorderfulfillment.ValidationStatus `json:"validationStatus"`
 	ValidationError  string                                   `json:"validationError"`
 	Authorization    *coretypes.SetCodeAuthorization         `json:"authorization,omitempty"` // Required for payin orders (EIP-7702; JSON: yParity, chainId, address, nonce, r, s)
+	BatchSignature   string                                   `json:"batchSignature,omitempty"` // hex-encoded; for payin execute(calls, signature)
 }
 
 // CancelOrderPayload is the payload for the cancel order endpoint

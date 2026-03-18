@@ -588,6 +588,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			Query().
 			Where(paymentorder.IDEQ(orderID)).
 			WithProvider().
+			WithSenderProfile().
 			WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
 			WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) { pbq.WithCurrency() }).
 			Only(reqCtx)
@@ -608,7 +609,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		if fallbackOrder.Status == paymentorder.StatusFulfilling {
 			_, _ = storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
 			_, _ = storage.RedisClient.Del(reqCtx, orderRequestKey).Result()
-			acceptOrderRespondWithOrder(ctx, fallbackOrder, orderID, provider)
+			acceptOrderRespondWithOrder(ctrl, ctx, fallbackOrder, orderID, provider)
 			return
 		}
 		if fallbackOrder.Status != paymentorder.StatusPending {
@@ -659,6 +660,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			Query().
 			Where(paymentorder.IDEQ(orderID)).
 			WithProvider().
+			WithSenderProfile().
 			WithToken(func(tq *ent.TokenQuery) {
 				tq.WithNetwork()
 			}).
@@ -688,7 +690,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			// Delete Redis keys so repeated retries don't keep hitting DB (same as Redis-fallback idempotent path).
 			_, _ = storage.RedisClient.Del(reqCtx, fmt.Sprintf("order_request_meta_%s", orderID)).Result()
 			_, _ = storage.RedisClient.Del(reqCtx, orderRequestKey).Result()
-			response := buildAcceptOrderResponse(currentOrder, orderID, provider)
+			response := ctrl.buildAcceptOrderResponse(ctx, currentOrder, orderID, provider)
 			u.APIResponse(ctx, http.StatusCreated, "success", "Order accepted", response)
 			return
 		}
@@ -897,6 +899,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			Query().
 			Where(paymentorder.IDEQ(orderID)).
 			WithProvider().
+			WithSenderProfile().
 			WithToken(func(tq *ent.TokenQuery) {
 				tq.WithNetwork()
 			}).
@@ -925,12 +928,70 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 	}
 
 	// Unified AcceptOrder response for both payin and payout
-	response := buildAcceptOrderResponse(order, orderID, provider)
+	response := ctrl.buildAcceptOrderResponse(ctx, order, orderID, provider)
 	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", response)
 }
 
+// buildPayinBatchForAccept builds the batch.calls for payin AcceptOrder response so the provider can sign execute(calls, signature).
+func (ctrl *ProviderController) buildPayinBatchForAccept(ctx *gin.Context, order *ent.PaymentOrder, provider *ent.ProviderProfile) (*types.AcceptOrderBatch, error) {
+	if order.Edges.Token == nil || order.Edges.Token.Edges.Network == nil || order.Edges.SenderProfile == nil {
+		return nil, fmt.Errorf("order missing token, network, or sender profile")
+	}
+	network := order.Edges.Token.Edges.Network
+	gatewayAddress := network.GatewayContractAddress
+	if gatewayAddress == "" {
+		return nil, fmt.Errorf("gateway contract address not set for network")
+	}
+	reqCtx := ctx.Request.Context()
+	institution, err := u.GetInstitutionByCode(reqCtx, order.Institution, true)
+	if err != nil || institution == nil || institution.Edges.FiatCurrency == nil {
+		return nil, fmt.Errorf("institution or fiat currency not found: %w", err)
+	}
+	currencyCode := institution.Edges.FiatCurrency.Code
+	providerOrderToken, err := storage.Client.ProviderOrderToken.
+		Query().
+		Where(
+			providerordertoken.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			providerordertoken.HasTokenWith(token.IDEQ(order.Edges.Token.ID)),
+			providerordertoken.NetworkEQ(network.Identifier),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
+		).
+		Only(reqCtx)
+	if err != nil || providerOrderToken.PayoutAddress == "" {
+		return nil, fmt.Errorf("provider order token or payout address not found: %w", err)
+	}
+	if cryptoConf.AggregatorAccountEVM == "" {
+		return nil, fmt.Errorf("aggregator EVM address not configured")
+	}
+	gatewayOrderID, err := gatewayOrderIDFromEncode(
+		providerOrderToken.PayoutAddress,
+		cryptoConf.AggregatorAccountEVM,
+		order.ID,
+		network.ChainID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("gateway order ID: %w", err)
+	}
+	settleInData, err := ctrl.prepareSettleInCallData(ctx.Request.Context(), order, gatewayOrderID)
+	if err != nil {
+		return nil, fmt.Errorf("prepareSettleInCallData: %w", err)
+	}
+	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress)
+	if err != nil {
+		return nil, fmt.Errorf("prepareApproveCallData: %w", err)
+	}
+	tokenAddr := ethcommon.HexToAddress(order.Edges.Token.ContractAddress)
+	gatewayAddr := ethcommon.HexToAddress(gatewayAddress)
+	return &types.AcceptOrderBatch{
+		Calls: []types.BatchCallItem{
+			{To: tokenAddr.Hex(), Value: "0", Data: hex.EncodeToString(approveData)},
+			{To: gatewayAddr.Hex(), Value: "0", Data: hex.EncodeToString(settleInData)},
+		},
+	}, nil
+}
+
 // buildAcceptOrderResponse builds the shared AcceptOrderResponse from an order (used by idempotent path, main accept path, and acceptOrderRespondWithOrder).
-func buildAcceptOrderResponse(order *ent.PaymentOrder, orderID uuid.UUID, provider *ent.ProviderProfile) *types.AcceptOrderResponse {
+func (ctrl *ProviderController) buildAcceptOrderResponse(ctx *gin.Context, order *ent.PaymentOrder, orderID uuid.UUID, provider *ent.ProviderProfile) *types.AcceptOrderResponse {
 	isPayin := order.Direction == paymentorder.DirectionOnramp
 	response := &types.AcceptOrderResponse{
 		ID:                orderID.String(),
@@ -948,6 +1009,15 @@ func buildAcceptOrderResponse(order *ent.PaymentOrder, orderID uuid.UUID, provid
 			response.ChainId = fmt.Sprintf("%d", network.ChainID)
 			response.RpcUrl = network.RPCEndpoint
 			response.DelegationAddress = network.DelegationContractAddress
+			batch, err := ctrl.buildPayinBatchForAccept(ctx, order, provider)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"OrderID": orderID.String(),
+					"Error":   err.Error(),
+				}).Errorf("Failed to build payin batch for accept response, omitting batch")
+			} else if batch != nil {
+				response.Batch = batch
+			}
 		}
 	} else {
 		response.Direction = "payout"
@@ -965,8 +1035,8 @@ func buildAcceptOrderResponse(order *ent.PaymentOrder, orderID uuid.UUID, provid
 }
 
 // acceptOrderRespondWithOrder sends the same AcceptOrder success response using an already-loaded order (e.g. idempotent retry when Redis was cleared).
-func acceptOrderRespondWithOrder(ctx *gin.Context, order *ent.PaymentOrder, orderID uuid.UUID, provider *ent.ProviderProfile) {
-	response := buildAcceptOrderResponse(order, orderID, provider)
+func acceptOrderRespondWithOrder(ctrl *ProviderController, ctx *gin.Context, order *ent.PaymentOrder, orderID uuid.UUID, provider *ent.ProviderProfile) {
+	response := ctrl.buildAcceptOrderResponse(ctx, order, orderID, provider)
 	u.APIResponse(ctx, http.StatusCreated, "success", "Order request accepted successfully", response)
 }
 
@@ -1767,7 +1837,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 
 	// Prepare settleIn call data
 	// settleIn(_orderId, _token, _amount, _senderFeeRecipient, _senderFee, _recipient, _rate)
-	settleInData, err := ctrl.prepareSettleInCallData(ctx, orderWithDetails, gatewayOrderID)
+	settleInData, err := ctrl.prepareSettleInCallData(ctx.Request.Context(), orderWithDetails, gatewayOrderID)
 	if err != nil {
 		logger.Errorf("Failed to prepare settleIn call data: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to prepare settlement data", nil)
@@ -1821,8 +1891,19 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
+	// Decode batch signature from payload when present (provider-signed execute batch)
+	var batchSig []byte
+	if payload.BatchSignature != "" {
+		batchSig, err = hex.DecodeString(strings.TrimPrefix(payload.BatchSignature, "0x"))
+		if err != nil {
+			logger.Errorf("Invalid batchSignature hex: %v", err)
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid batchSignature", nil)
+			return
+		}
+	}
 	// Execute EIP-7702 transaction (after marker is persisted so retries are idempotent)
-	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, payload.Authorization, settleInData); err != nil {
+	// Single tx to provider EOA with execute([approve, settleIn], signature) so relayer pays gas and batch runs in provider context.
+	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, providerOrderToken.PayoutAddress, payload.Authorization, settleInData, batchSig); err != nil {
 		logger.Errorf("Failed to execute payin settlement: %v", err)
 		// Compensating update: revert order status and remove settlement log so provider can retry
 		txCompensate, txErr := storage.Client.Tx(ctx)
@@ -1920,7 +2001,7 @@ func gatewayOrderIDFromEncode(payoutAddress, aggregatorAddress string, paymentOr
 }
 
 // prepareSettleInCallData prepares the call data for Gateway settleIn method
-func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order *ent.PaymentOrder, gatewayOrderID string) ([]byte, error) {
+func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, order *ent.PaymentOrder, gatewayOrderID string) ([]byte, error) {
 	if order.Edges.SenderProfile == nil {
 		return nil, fmt.Errorf("order has no sender profile")
 	}
@@ -1991,13 +2072,35 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx *gin.Context, order 
 	return data, nil
 }
 
-// executePayinSettlement executes the EIP-7702 transaction for payin settlement via native RPC (NativeService).
-// If authorization is nil (provider already delegated), authList is nil; otherwise the provided auth is validated and used.
-func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, authorization *coretypes.SetCodeAuthorization, settleInData []byte) error {
+// prepareApproveCallData prepares ERC20 approve(spender, amount) calldata so the gateway can transfer tokens during settleIn.
+func (ctrl *ProviderController) prepareApproveCallData(order *ent.PaymentOrder, gatewayAddress string) ([]byte, error) {
+	if order.Edges.Token == nil {
+		return nil, fmt.Errorf("order has no token")
+	}
+	erc20ABI, err := abi.JSON(strings.NewReader(contracts.ERC20TokenMetaData.ABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ERC20 ABI: %w", err)
+	}
+	amount := order.Amount.Add(order.SenderFee)
+	amountBig := u.ToSubunit(amount, order.Edges.Token.Decimals)
+	calldata, err := erc20ABI.Pack("approve", ethcommon.HexToAddress(gatewayAddress), amountBig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack approve ABI: %w", err)
+	}
+	return calldata, nil
+}
+
+// executePayinSettlement runs payin settlement in one EIP-7702 tx: relayer sends to provider EOA with
+// data = execute([approve, settleIn], signature). When batchSignature is provided (provider-signed), it is used;
+// otherwise empty signature is used (backward compatibility; delegation contract may accept it).
+func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, providerEOA string, authorization *coretypes.SetCodeAuthorization, settleInData []byte, batchSignature []byte) error {
 	network := order.Edges.Token.Edges.Network
 	gatewayAddress := network.GatewayContractAddress
 	if gatewayAddress == "" {
 		return fmt.Errorf("gateway contract address not set for network")
+	}
+	if providerEOA == "" {
+		return fmt.Errorf("provider EOA (payout address) required for batch execute")
 	}
 
 	var authList []coretypes.SetCodeAuthorization
@@ -2018,10 +2121,31 @@ func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *
 		authList = []coretypes.SetCodeAuthorization{*authorization}
 	}
 
-	reqCtx := ctx.Request.Context()
-	_, err := ctrl.nativeService.SendTransaction(reqCtx, order.ID.String(), network, ethcommon.HexToAddress(gatewayAddress), settleInData, authList)
+	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress)
 	if err != nil {
-		return fmt.Errorf("send transaction with authorizationList: %w", err)
+		return fmt.Errorf("build payin approve calldata: %w", err)
+	}
+
+	tokenAddr := ethcommon.HexToAddress(order.Edges.Token.ContractAddress)
+	gatewayAddr := ethcommon.HexToAddress(gatewayAddress)
+	calls := []services.Call7702{
+		{To: tokenAddr, Value: big.NewInt(0), Data: approveData},
+		{To: gatewayAddr, Value: big.NewInt(0), Data: settleInData},
+	}
+	sig := batchSignature
+	if sig == nil {
+		sig = []byte{}
+	}
+	batchData, err := services.PackExecute(calls, sig)
+	if err != nil {
+		return fmt.Errorf("pack execute batch: %w", err)
+	}
+
+	providerAddr := ethcommon.HexToAddress(providerEOA)
+	reqCtx := ctx.Request.Context()
+	_, err = ctrl.nativeService.SendTransaction(reqCtx, order.ID.String(), network, providerAddr, batchData, authList)
+	if err != nil {
+		return fmt.Errorf("send payin batch transaction: %w", err)
 	}
 	return nil
 }

@@ -629,7 +629,7 @@ var (
 		{Name: "network", Type: field.TypeString, Nullable: true},
 		{Name: "tx_hash", Type: field.TypeString, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "payment_order_transactions", Type: field.TypeUUID, Nullable: true},
+		{Name: "payment_order_transactions", Type: field.TypeUUID},
 	}
 	// TransactionLogsTable holds the schema information for the "transaction_logs" table.
 	TransactionLogsTable = &schema.Table{
@@ -641,7 +641,7 @@ var (
 				Symbol:     "transaction_logs_payment_orders_transactions",
 				Columns:    []*schema.Column{TransactionLogsColumns[6]},
 				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 	}

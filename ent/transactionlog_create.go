@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 )
 
@@ -108,6 +109,17 @@ func (_c *TransactionLogCreate) SetNillableID(v *uuid.UUID) *TransactionLogCreat
 	return _c
 }
 
+// SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
+func (_c *TransactionLogCreate) SetPaymentOrderID(id uuid.UUID) *TransactionLogCreate {
+	_c.mutation.SetPaymentOrderID(id)
+	return _c
+}
+
+// SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
+func (_c *TransactionLogCreate) SetPaymentOrder(v *PaymentOrder) *TransactionLogCreate {
+	return _c.SetPaymentOrderID(v.ID)
+}
+
 // Mutation returns the TransactionLogMutation object of the builder.
 func (_c *TransactionLogCreate) Mutation() *TransactionLogMutation {
 	return _c.mutation
@@ -170,6 +182,9 @@ func (_c *TransactionLogCreate) check() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "TransactionLog.created_at"`)}
 	}
+	if len(_c.mutation.PaymentOrderIDs()) == 0 {
+		return &ValidationError{Name: "payment_order", err: errors.New(`ent: missing required edge "TransactionLog.payment_order"`)}
+	}
 	return nil
 }
 
@@ -225,6 +240,23 @@ func (_c *TransactionLogCreate) createSpec() (*TransactionLog, *sqlgraph.CreateS
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(transactionlog.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := _c.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   transactionlog.PaymentOrderTable,
+			Columns: []string{transactionlog.PaymentOrderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.payment_order_transactions = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/predicate"
 )
@@ -358,6 +359,29 @@ func CreatedAtLT(v time.Time) predicate.TransactionLog {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.TransactionLog {
 	return predicate.TransactionLog(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// HasPaymentOrder applies the HasEdge predicate on the "payment_order" edge.
+func HasPaymentOrder() predicate.TransactionLog {
+	return predicate.TransactionLog(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, PaymentOrderTable, PaymentOrderColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasPaymentOrderWith applies the HasEdge predicate on the "payment_order" edge with a given conditions (other predicates).
+func HasPaymentOrderWith(preds ...predicate.PaymentOrder) predicate.TransactionLog {
+	return predicate.TransactionLog(func(s *sql.Selector) {
+		step := newPaymentOrderStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

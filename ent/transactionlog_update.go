@@ -10,6 +10,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 )
@@ -87,9 +89,26 @@ func (_u *TransactionLogUpdate) ClearTxHash() *TransactionLogUpdate {
 	return _u
 }
 
+// SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
+func (_u *TransactionLogUpdate) SetPaymentOrderID(id uuid.UUID) *TransactionLogUpdate {
+	_u.mutation.SetPaymentOrderID(id)
+	return _u
+}
+
+// SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
+func (_u *TransactionLogUpdate) SetPaymentOrder(v *PaymentOrder) *TransactionLogUpdate {
+	return _u.SetPaymentOrderID(v.ID)
+}
+
 // Mutation returns the TransactionLogMutation object of the builder.
 func (_u *TransactionLogUpdate) Mutation() *TransactionLogMutation {
 	return _u.mutation
+}
+
+// ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
+func (_u *TransactionLogUpdate) ClearPaymentOrder() *TransactionLogUpdate {
+	_u.mutation.ClearPaymentOrder()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -119,7 +138,18 @@ func (_u *TransactionLogUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *TransactionLogUpdate) check() error {
+	if _u.mutation.PaymentOrderCleared() && len(_u.mutation.PaymentOrderIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "TransactionLog.payment_order"`)
+	}
+	return nil
+}
+
 func (_u *TransactionLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(transactionlog.Table, transactionlog.Columns, sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -145,6 +175,35 @@ func (_u *TransactionLogUpdate) sqlSave(ctx context.Context) (_node int, err err
 	}
 	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(transactionlog.FieldTxHash, field.TypeString)
+	}
+	if _u.mutation.PaymentOrderCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   transactionlog.PaymentOrderTable,
+			Columns: []string{transactionlog.PaymentOrderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   transactionlog.PaymentOrderTable,
+			Columns: []string{transactionlog.PaymentOrderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -226,9 +285,26 @@ func (_u *TransactionLogUpdateOne) ClearTxHash() *TransactionLogUpdateOne {
 	return _u
 }
 
+// SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
+func (_u *TransactionLogUpdateOne) SetPaymentOrderID(id uuid.UUID) *TransactionLogUpdateOne {
+	_u.mutation.SetPaymentOrderID(id)
+	return _u
+}
+
+// SetPaymentOrder sets the "payment_order" edge to the PaymentOrder entity.
+func (_u *TransactionLogUpdateOne) SetPaymentOrder(v *PaymentOrder) *TransactionLogUpdateOne {
+	return _u.SetPaymentOrderID(v.ID)
+}
+
 // Mutation returns the TransactionLogMutation object of the builder.
 func (_u *TransactionLogUpdateOne) Mutation() *TransactionLogMutation {
 	return _u.mutation
+}
+
+// ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
+func (_u *TransactionLogUpdateOne) ClearPaymentOrder() *TransactionLogUpdateOne {
+	_u.mutation.ClearPaymentOrder()
+	return _u
 }
 
 // Where appends a list predicates to the TransactionLogUpdate builder.
@@ -271,7 +347,18 @@ func (_u *TransactionLogUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (_u *TransactionLogUpdateOne) check() error {
+	if _u.mutation.PaymentOrderCleared() && len(_u.mutation.PaymentOrderIDs()) > 0 {
+		return errors.New(`ent: clearing a required unique edge "TransactionLog.payment_order"`)
+	}
+	return nil
+}
+
 func (_u *TransactionLogUpdateOne) sqlSave(ctx context.Context) (_node *TransactionLog, err error) {
+	if err := _u.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(transactionlog.Table, transactionlog.Columns, sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -314,6 +401,35 @@ func (_u *TransactionLogUpdateOne) sqlSave(ctx context.Context) (_node *Transact
 	}
 	if _u.mutation.TxHashCleared() {
 		_spec.ClearField(transactionlog.FieldTxHash, field.TypeString)
+	}
+	if _u.mutation.PaymentOrderCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   transactionlog.PaymentOrderTable,
+			Columns: []string{transactionlog.PaymentOrderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.PaymentOrderIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   transactionlog.PaymentOrderTable,
+			Columns: []string{transactionlog.PaymentOrderColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &TransactionLog{config: _u.config}
 	_spec.Assign = _node.assignValues
