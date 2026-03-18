@@ -1669,7 +1669,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 			u.APIResponse(ctx, http.StatusOK, "success", "Order already settling", nil)
 			return
 		}
-		_, err := fulfillment.Update().
+		_, err = fulfillment.Update().
 			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
 			SetValidationError(payload.ValidationError).
 			Save(ctx)
