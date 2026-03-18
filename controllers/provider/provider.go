@@ -59,7 +59,7 @@ type ProviderController struct {
 func NewProviderController() *ProviderController {
 	return &ProviderController{
 		balanceService: balance.New(),
-		nativeService:   services.NewNativeService(),
+		nativeService:  services.NewNativeService(),
 	}
 }
 
@@ -1211,6 +1211,12 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 	// Check if this is a payin order (onramp)
 	isPayin := fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Direction == paymentorder.DirectionOnramp
 
+	// Short-circuit payin orders already in settling: treat as success to avoid double-processing
+	if isPayin && fulfillment.Edges.Order.Status == paymentorder.StatusSettling {
+		u.APIResponse(ctx, http.StatusOK, "success", "Order already settling", nil)
+		return
+	}
+
 	// Handle payin orders
 	if isPayin {
 		ctrl.handlePayinFulfillment(ctx, orderID, payload, fulfillment, provider)
@@ -1655,11 +1661,21 @@ func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context,
 
 // handlePayinFulfillment handles payin (onramp) order fulfillment
 func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
+	reqCtx := ctx.Request.Context()
+
 	// Only proceed to settlement when validation succeeded; reject failed/pending like handlePayoutFulfillment
 	// Authorization is required only for settlement (ValidationStatusSuccess); failed validation reports do not need it
 	switch payload.ValidationStatus {
 	case paymentorderfulfillment.ValidationStatusFailed:
-		_, err := fulfillment.Update().
+		currentOrder, err := storage.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(orderID)).
+			Only(reqCtx)
+		if err == nil && currentOrder != nil && currentOrder.Status == paymentorder.StatusSettling {
+			u.APIResponse(ctx, http.StatusOK, "success", "Order already settling", nil)
+			return
+		}
+		_, err = fulfillment.Update().
 			SetValidationStatus(paymentorderfulfillment.ValidationStatusFailed).
 			SetValidationError(payload.ValidationError).
 			Save(ctx)
@@ -1705,15 +1721,23 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		}).
 		WithProvider().
 		WithSenderProfile().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to fetch order details: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order details", nil)
 		return
 	}
+	if orderWithDetails.Status == paymentorder.StatusSettling {
+		u.APIResponse(ctx, http.StatusOK, "success", "Settlement already submitted or completed", nil)
+		return
+	}
+	if orderWithDetails.Status != paymentorder.StatusPending && orderWithDetails.Status != paymentorder.StatusFulfilling {
+		u.APIResponse(ctx, http.StatusConflict, "error", fmt.Sprintf("Order must be fulfilling before settlement, current status is %s", orderWithDetails.Status), nil)
+		return
+	}
 
 	// Derive currency from order's institution (provider can have same token for multiple fiat currencies)
-	institution, err := u.GetInstitutionByCode(ctx, orderWithDetails.Institution, true)
+	institution, err := u.GetInstitutionByCode(reqCtx, orderWithDetails.Institution, true)
 	if err != nil {
 		logger.Errorf("Failed to fetch institution for payin settlement: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order institution", nil)
@@ -1735,7 +1759,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 			providerordertoken.NetworkEQ(orderWithDetails.Edges.Token.Edges.Network.Identifier),
 			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to fetch provider order token: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider configuration", nil)
@@ -1745,6 +1769,23 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 	if providerOrderToken.PayoutAddress == "" {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider payout address not configured", nil)
 		return
+	}
+
+	if orderWithDetails.Status == paymentorder.StatusPending {
+		orderWithDetails, err = ctrl.promotePendingPayinOrderToFulfilling(reqCtx, orderWithDetails, provider)
+		if err != nil {
+			logger.Errorf("Failed to promote payin order to fulfilling: %v", err)
+			u.APIResponse(ctx, http.StatusConflict, "error", err.Error(), nil)
+			return
+		}
+		if orderWithDetails.Status == paymentorder.StatusSettling {
+			u.APIResponse(ctx, http.StatusOK, "success", "Settlement already submitted or completed", nil)
+			return
+		}
+		if orderWithDetails.Status != paymentorder.StatusFulfilling {
+			u.APIResponse(ctx, http.StatusConflict, "error", fmt.Sprintf("Order must be fulfilling before settlement, current status is %s", orderWithDetails.Status), nil)
+			return
+		}
 	}
 
 	// Generate Gateway order ID for settleIn: keccak256(abi.encode(payoutAddress, aggregatorAddress, paymentOrderID, chainID))
@@ -2024,6 +2065,111 @@ func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *
 		return fmt.Errorf("send transaction with authorizationList: %w", err)
 	}
 	return nil
+}
+
+func (ctrl *ProviderController) promotePendingPayinOrderToFulfilling(ctx context.Context, order *ent.PaymentOrder, provider *ent.ProviderProfile) (*ent.PaymentOrder, error) {
+	if order == nil {
+		return nil, fmt.Errorf("order not found")
+	}
+	if order.Direction != paymentorder.DirectionOnramp {
+		return nil, fmt.Errorf("order is not an onramp order")
+	}
+	if order.Status == paymentorder.StatusFulfilling {
+		return order, nil
+	}
+	if order.Status == paymentorder.StatusSettling {
+		return order, nil
+	}
+	if order.Status != paymentorder.StatusPending {
+		return nil, fmt.Errorf("order must be pending or fulfilling before settlement, current status is %s", order.Status)
+	}
+	if order.Edges.Provider != nil && order.Edges.Provider.ID != provider.ID {
+		return nil, fmt.Errorf("order does not belong to provider")
+	}
+
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start transaction: %w", err)
+	}
+
+	var transactionLog *ent.TransactionLog
+	_, err = tx.PaymentOrder.
+		Query().
+		Where(
+			paymentorder.IDEQ(order.ID),
+			paymentorder.HasTransactionsWith(
+				transactionlog.StatusEQ(transactionlog.StatusOrderFulfilling),
+			),
+		).
+		Only(ctx)
+	if err != nil {
+		if !ent.IsNotFound(err) {
+			_ = tx.Rollback()
+			return nil, fmt.Errorf("failed to check fulfilling log: %w", err)
+		}
+		transactionLog, err = tx.TransactionLog.
+			Create().
+			SetStatus(transactionlog.StatusOrderFulfilling).
+			Save(ctx)
+		if err != nil {
+			_ = tx.Rollback()
+			return nil, fmt.Errorf("failed to create fulfilling log: %w", err)
+		}
+	}
+
+	orderBuilder := tx.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.IDEQ(order.ID),
+			paymentorder.StatusEQ(paymentorder.StatusPending),
+		).
+		SetStatus(paymentorder.StatusFulfilling)
+
+	if order.Edges.Provider == nil {
+		orderBuilder = orderBuilder.SetProviderID(provider.ID)
+	}
+	if transactionLog != nil {
+		orderBuilder = orderBuilder.AddTransactions(transactionLog)
+	}
+
+	updatedCount, err := orderBuilder.Save(ctx)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, fmt.Errorf("failed to update order status to fulfilling: %w", err)
+	}
+	if updatedCount == 0 {
+		_ = tx.Rollback()
+		refreshed, refErr := storage.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(order.ID)).
+			WithProvider().
+			WithToken(func(tq *ent.TokenQuery) {
+				tq.WithNetwork()
+			}).
+			WithSenderProfile().
+			Only(ctx)
+		if refErr != nil {
+			return nil, fmt.Errorf("failed to reload order after pending->fulfilling race: %w", refErr)
+		}
+		if refreshed.Status != paymentorder.StatusFulfilling && refreshed.Status != paymentorder.StatusSettling {
+			return nil, fmt.Errorf("unexpected order status after pending->fulfilling race: %s", refreshed.Status)
+		}
+		return refreshed, nil
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit pending->fulfilling promotion: %w", err)
+	}
+
+	return storage.Client.PaymentOrder.
+		Query().
+		Where(paymentorder.IDEQ(order.ID)).
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		WithSenderProfile().
+		Only(ctx)
 }
 
 // CancelOrder controller cancels an order
