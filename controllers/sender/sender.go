@@ -1958,6 +1958,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create virtual account", nil)
 		return
 	}
+	logger.Infof("Provider new_order response: %v", providerResponse)
 
 	// Extract virtual account details from provider response
 	accountIdentifier, ok := providerResponse["accountIdentifier"].(string)

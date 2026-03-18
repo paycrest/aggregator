@@ -10,6 +10,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/types"
 	"github.com/paycrest/aggregator/utils"
 	blockchainUtils "github.com/paycrest/aggregator/utils/blockchain"
@@ -121,6 +122,7 @@ func (svc *Service) FetchProviderTokenBalances(ctx context.Context, providerID s
 	pots, err := svc.client.ProviderOrderToken.Query().
 		Where(
 			providerordertoken.HasProviderWith(providerprofile.IDEQ(providerID)),
+			providerordertoken.HasTokenWith(token.IsEnabledEQ(true)),
 			providerordertoken.PayoutAddressNEQ(""),
 		).
 		WithToken(func(q *ent.TokenQuery) { q.WithNetwork() }).

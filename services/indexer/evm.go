@@ -393,15 +393,9 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 	if fromBlock == 0 && toBlock == 0 {
 		// No block range - get last 5 transactions
 		limit = 5
-		if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing transactions for address: %s", userAddress)
-		}
 	} else {
 		// Block range provided - get up to 100 transactions in range
 		limit = 100
-		if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for address: %s", fromBlock, toBlock, userAddress)
-		}
 	}
 
 	// Get address's transaction history with fallback
@@ -430,13 +424,10 @@ func (s *IndexerEVM) indexReceiveAddressByUserAddressWithBypass(ctx context.Cont
 	}
 
 	// Process each transaction to find transfer events to receive addresses
-	for i, tx := range transactions {
+	for _, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
 		if !ok || txHash == "" {
 			continue
-		}
-		if token.Edges.Network.ChainID != 56 && token.Edges.Network.ChainID != 1135 {
-			logger.Infof("Processing transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 		}
 
 		// Index transfer events for this specific transaction
@@ -510,9 +501,6 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 	} else {
 		// Block range provided - get up to 100 transactions in range
 		limit = 100
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for gateway contract: %s", fromBlock, toBlock, address)
-		}
 	}
 
 	// Get gateway contract's transaction history with fallback
@@ -1081,9 +1069,6 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 	} else {
 		// Block range provided - get up to 100 transactions in range
 		limit = 100
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing transactions in block range %d-%d for provider address: %s", fromBlock, toBlock, providerAddress)
-		}
 	}
 
 	// Get provider address's transaction history with fallback
@@ -1106,13 +1091,10 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 	}
 
 	// Process each transaction to find SettleOut events
-	for i, tx := range transactions {
+	for _, tx := range transactions {
 		txHash, ok := tx["hash"].(string)
 		if !ok || txHash == "" {
 			continue
-		}
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logger.Infof("Processing provider transaction %d/%d: %s", i+1, len(transactions), txHash[:10]+"...")
 		}
 
 		// Index provider address events for this specific transaction

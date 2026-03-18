@@ -247,16 +247,6 @@ func (s *IndexerStarknet) processReceiveAddressByTransactionEvents(ctx context.C
 		addressToEvent := map[string]*types.TokenTransferEvent{
 			toStr: transferEvent,
 		}
-		logger.WithFields(logger.Fields{
-			"Token":        token.Symbol,
-			"UserAddress":  userAccountAddress,
-			"ToAddress":    toStr,
-			"From":         fromStr,
-			"ValueStr":     valueStr,
-			"ValueDecimal": transferEvent.Value.String(),
-			"BlockNumber":  blockNumber,
-			"TxHash":       txHashFromEvent[:10] + "...",
-		}).Infof("Processing transfer event")
 
 		err = common.ProcessTransfers(ctx, s.order, s.priorityQueue, []string{toStr}, addressToEvent)
 		if err != nil {
