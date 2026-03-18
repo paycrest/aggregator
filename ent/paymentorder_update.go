@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/senderprofile"
@@ -826,6 +827,21 @@ func (_u *PaymentOrderUpdate) AddTransactions(v ...*TransactionLog) *PaymentOrde
 	return _u.AddTransactionIDs(ids...)
 }
 
+// AddProviderAssignmentIDs adds the "provider_assignments" edge to the ProviderOrderAssignment entity by IDs.
+func (_u *PaymentOrderUpdate) AddProviderAssignmentIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.AddProviderAssignmentIDs(ids...)
+	return _u
+}
+
+// AddProviderAssignments adds the "provider_assignments" edges to the ProviderOrderAssignment entity.
+func (_u *PaymentOrderUpdate) AddProviderAssignments(v ...*ProviderOrderAssignment) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddProviderAssignmentIDs(ids...)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (_u *PaymentOrderUpdate) Mutation() *PaymentOrderMutation {
 	return _u.mutation
@@ -901,6 +917,27 @@ func (_u *PaymentOrderUpdate) RemoveTransactions(v ...*TransactionLog) *PaymentO
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTransactionIDs(ids...)
+}
+
+// ClearProviderAssignments clears all "provider_assignments" edges to the ProviderOrderAssignment entity.
+func (_u *PaymentOrderUpdate) ClearProviderAssignments() *PaymentOrderUpdate {
+	_u.mutation.ClearProviderAssignments()
+	return _u
+}
+
+// RemoveProviderAssignmentIDs removes the "provider_assignments" edge to ProviderOrderAssignment entities by IDs.
+func (_u *PaymentOrderUpdate) RemoveProviderAssignmentIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.RemoveProviderAssignmentIDs(ids...)
+	return _u
+}
+
+// RemoveProviderAssignments removes "provider_assignments" edges to ProviderOrderAssignment entities.
+func (_u *PaymentOrderUpdate) RemoveProviderAssignments(v ...*ProviderOrderAssignment) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProviderAssignmentIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1465,6 +1502,51 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProviderAssignmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentsTable,
+			Columns: []string{paymentorder.ProviderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedProviderAssignmentsIDs(); len(nodes) > 0 && !_u.mutation.ProviderAssignmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentsTable,
+			Columns: []string{paymentorder.ProviderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderAssignmentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentsTable,
+			Columns: []string{paymentorder.ProviderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -2280,6 +2362,21 @@ func (_u *PaymentOrderUpdateOne) AddTransactions(v ...*TransactionLog) *PaymentO
 	return _u.AddTransactionIDs(ids...)
 }
 
+// AddProviderAssignmentIDs adds the "provider_assignments" edge to the ProviderOrderAssignment entity by IDs.
+func (_u *PaymentOrderUpdateOne) AddProviderAssignmentIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.AddProviderAssignmentIDs(ids...)
+	return _u
+}
+
+// AddProviderAssignments adds the "provider_assignments" edges to the ProviderOrderAssignment entity.
+func (_u *PaymentOrderUpdateOne) AddProviderAssignments(v ...*ProviderOrderAssignment) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddProviderAssignmentIDs(ids...)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (_u *PaymentOrderUpdateOne) Mutation() *PaymentOrderMutation {
 	return _u.mutation
@@ -2355,6 +2452,27 @@ func (_u *PaymentOrderUpdateOne) RemoveTransactions(v ...*TransactionLog) *Payme
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTransactionIDs(ids...)
+}
+
+// ClearProviderAssignments clears all "provider_assignments" edges to the ProviderOrderAssignment entity.
+func (_u *PaymentOrderUpdateOne) ClearProviderAssignments() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProviderAssignments()
+	return _u
+}
+
+// RemoveProviderAssignmentIDs removes the "provider_assignments" edge to ProviderOrderAssignment entities by IDs.
+func (_u *PaymentOrderUpdateOne) RemoveProviderAssignmentIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.RemoveProviderAssignmentIDs(ids...)
+	return _u
+}
+
+// RemoveProviderAssignments removes "provider_assignments" edges to ProviderOrderAssignment entities.
+func (_u *PaymentOrderUpdateOne) RemoveProviderAssignments(v ...*ProviderOrderAssignment) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProviderAssignmentIDs(ids...)
 }
 
 // Where appends a list predicates to the PaymentOrderUpdate builder.
@@ -2949,6 +3067,51 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProviderAssignmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentsTable,
+			Columns: []string{paymentorder.ProviderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedProviderAssignmentsIDs(); len(nodes) > 0 && !_u.mutation.ProviderAssignmentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentsTable,
+			Columns: []string{paymentorder.ProviderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderAssignmentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentsTable,
+			Columns: []string{paymentorder.ProviderAssignmentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerorderassignment.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

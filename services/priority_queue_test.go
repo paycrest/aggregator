@@ -23,6 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -689,6 +690,73 @@ func TestPriorityQueueTest(t *testing.T) {
 			ProvisionBucket:   order.Edges.ProvisionBucket,
 		})
 		assert.NoError(t, err)
+	})
+
+	t.Run("TestAssignOtcOrderCreatesProviderOrderAssignment", func(t *testing.T) {
+		ctx := context.Background()
+
+		bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
+			"provider_id": testCtxForPQ.publicProviderProfile.ID,
+			"min_amount":  testCtxForPQ.minAmount,
+			"max_amount":  testCtxForPQ.maxAmount,
+			"currency_id": testCtxForPQ.currency.ID,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, bucket)
+
+		_order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
+			"provider":   testCtxForPQ.publicProviderProfile,
+			"rate":       100.0,
+			"token_id":   testCtxForPQ.token.ID,
+			"gateway_id": "order-otc-assignment",
+		})
+		require.NoError(t, err)
+		require.NotNil(t, _order)
+
+		_, err = db.Client.PaymentOrder.UpdateOneID(_order.ID).
+			SetOrderType(paymentorder.OrderTypeOtc).
+			Save(ctx)
+		require.NoError(t, err)
+
+		_, err = test.AddProvisionBucketToPaymentOrder(_order, bucket.ID)
+		require.NoError(t, err)
+
+		order, err := db.Client.PaymentOrder.
+			Query().
+			Where(paymentorder.IDEQ(_order.ID)).
+			WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
+				pb.WithCurrency()
+			}).
+			WithToken().
+			Only(ctx)
+		require.NoError(t, err)
+		require.NotNil(t, order)
+
+		err = service.AssignPaymentOrder(ctx, types.PaymentOrderFields{
+			ID:                order.ID,
+			OrderType:         "otc",
+			ProviderID:        testCtxForPQ.publicProviderProfile.ID,
+			Token:             testCtxForPQ.token,
+			GatewayID:         order.GatewayID,
+			Amount:            order.Amount,
+			Rate:              order.Rate,
+			BlockNumber:       order.BlockNumber,
+			Institution:       order.Institution,
+			AccountIdentifier: order.AccountIdentifier,
+			AccountName:       order.AccountName,
+			Memo:              order.Memo,
+			ProvisionBucket:   order.Edges.ProvisionBucket,
+		})
+		assert.NoError(t, err)
+
+		assignment, err := db.Client.ProviderOrderAssignment.Query().
+			Where(
+				providerorderassignment.HasPaymentOrderWith(paymentorder.IDEQ(order.ID)),
+				providerorderassignment.HasProviderWith(providerprofile.IDEQ(testCtxForPQ.publicProviderProfile.ID)),
+			).
+			Only(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, providerorderassignment.AssignmentStatusAssigned, assignment.AssignmentStatus)
 	})
 
 	t.Run("TestAssignPaymentOrderReturnsErrorWhenQueueEmpty", func(t *testing.T) {

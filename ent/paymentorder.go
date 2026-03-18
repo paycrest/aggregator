@@ -126,9 +126,11 @@ type PaymentOrderEdges struct {
 	Fulfillments []*PaymentOrderFulfillment `json:"fulfillments,omitempty"`
 	// Transactions holds the value of the transactions edge.
 	Transactions []*TransactionLog `json:"transactions,omitempty"`
+	// ProviderAssignments holds the value of the provider_assignments edge.
+	ProviderAssignments []*ProviderOrderAssignment `json:"provider_assignments,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // TokenOrErr returns the Token value or an error if the edge
@@ -202,6 +204,15 @@ func (e PaymentOrderEdges) TransactionsOrErr() ([]*TransactionLog, error) {
 		return e.Transactions, nil
 	}
 	return nil, &NotLoadedError{edge: "transactions"}
+}
+
+// ProviderAssignmentsOrErr returns the ProviderAssignments value or an error if the edge
+// was not loaded in eager-loading.
+func (e PaymentOrderEdges) ProviderAssignmentsOrErr() ([]*ProviderOrderAssignment, error) {
+	if e.loadedTypes[7] {
+		return e.ProviderAssignments, nil
+	}
+	return nil, &NotLoadedError{edge: "provider_assignments"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -559,6 +570,11 @@ func (_m *PaymentOrder) QueryFulfillments() *PaymentOrderFulfillmentQuery {
 // QueryTransactions queries the "transactions" edge of the PaymentOrder entity.
 func (_m *PaymentOrder) QueryTransactions() *TransactionLogQuery {
 	return NewPaymentOrderClient(_m.config).QueryTransactions(_m)
+}
+
+// QueryProviderAssignments queries the "provider_assignments" edge of the PaymentOrder entity.
+func (_m *PaymentOrder) QueryProviderAssignments() *ProviderOrderAssignmentQuery {
+	return NewPaymentOrderClient(_m.config).QueryProviderAssignments(_m)
 }
 
 // Update returns a builder for updating this PaymentOrder.

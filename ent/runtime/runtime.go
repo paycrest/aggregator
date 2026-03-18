@@ -18,6 +18,7 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -469,6 +470,16 @@ func init() {
 	providerfiataccountDescID := providerfiataccountFields[0].Descriptor()
 	// providerfiataccount.DefaultID holds the default value on creation for the id field.
 	providerfiataccount.DefaultID = providerfiataccountDescID.Default.(func() uuid.UUID)
+	providerorderassignmentFields := schema.ProviderOrderAssignment{}.Fields()
+	_ = providerorderassignmentFields
+	// providerorderassignmentDescAssignedAt is the schema descriptor for assigned_at field.
+	providerorderassignmentDescAssignedAt := providerorderassignmentFields[2].Descriptor()
+	// providerorderassignment.DefaultAssignedAt holds the default value on creation for the assigned_at field.
+	providerorderassignment.DefaultAssignedAt = providerorderassignmentDescAssignedAt.Default.(func() time.Time)
+	// providerorderassignmentDescID is the schema descriptor for id field.
+	providerorderassignmentDescID := providerorderassignmentFields[0].Descriptor()
+	// providerorderassignment.DefaultID holds the default value on creation for the id field.
+	providerorderassignment.DefaultID = providerorderassignmentDescID.Default.(func() uuid.UUID)
 	providerordertokenMixin := schema.ProviderOrderToken{}.Mixin()
 	providerordertokenMixinFields0 := providerordertokenMixin[0].Fields()
 	_ = providerordertokenMixinFields0

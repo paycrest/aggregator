@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/balance"
@@ -92,8 +93,6 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 		}
 
 		// Defensive check: Verify order is still in a state that allows reassignment
-		// AND that the provider hasn't changed (race condition protection)
-		// Use atomic update to ensure order is still cancellable/processable by the SAME provider
 		updatedCount, err := storage.Client.PaymentOrder.
 			Update().
 			Where(
@@ -123,6 +122,27 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 				"ProviderID": order.Edges.Provider.ID,
 			}).Warnf("reassignCancelledOrder: Order status or provider changed, skipping reassignment")
 			return
+		}
+
+		// Mark this provider's assignment as reassigned so they see it in Order History (after guard succeeded)
+		assignmentUpdated, err := storage.Client.ProviderOrderAssignment.Update().
+			Where(
+				providerorderassignment.HasPaymentOrderWith(paymentorder.IDEQ(order.ID)),
+				providerorderassignment.HasProviderWith(providerprofile.IDEQ(order.Edges.Provider.ID)),
+			).
+			SetAssignmentStatus(providerorderassignment.AssignmentStatusReassigned).
+			SetReassignedAt(time.Now()).
+			Save(ctx)
+		if err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": order.ID.String(),
+			}).Errorf("reassignCancelledOrder: failed to mark assignment as reassigned")
+		} else if assignmentUpdated == 0 {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.Edges.Provider.ID,
+			}).Warnf("reassignCancelledOrder: no assignment row found for (order, provider); provider will not see reassigned in history")
 		}
 
 		// Best-effort: release any reserved balance held by this provider for the order.

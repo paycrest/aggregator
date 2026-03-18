@@ -25,6 +25,7 @@ import (
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
+	"github.com/paycrest/aggregator/ent/providerorderassignment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
@@ -60,6 +61,7 @@ const (
 	TypePaymentWebhook              = "PaymentWebhook"
 	TypeProviderBalances            = "ProviderBalances"
 	TypeProviderFiatAccount         = "ProviderFiatAccount"
+	TypeProviderOrderAssignment     = "ProviderOrderAssignment"
 	TypeProviderOrderToken          = "ProviderOrderToken"
 	TypeProviderProfile             = "ProviderProfile"
 	TypeProviderRating              = "ProviderRating"
@@ -6575,6 +6577,9 @@ type PaymentOrderMutation struct {
 	transactions                map[uuid.UUID]struct{}
 	removedtransactions         map[uuid.UUID]struct{}
 	clearedtransactions         bool
+	provider_assignments        map[uuid.UUID]struct{}
+	removedprovider_assignments map[uuid.UUID]struct{}
+	clearedprovider_assignments bool
 	done                        bool
 	oldValue                    func(context.Context) (*PaymentOrder, error)
 	predicates                  []predicate.PaymentOrder
@@ -8817,6 +8822,60 @@ func (m *PaymentOrderMutation) ResetTransactions() {
 	m.removedtransactions = nil
 }
 
+// AddProviderAssignmentIDs adds the "provider_assignments" edge to the ProviderOrderAssignment entity by ids.
+func (m *PaymentOrderMutation) AddProviderAssignmentIDs(ids ...uuid.UUID) {
+	if m.provider_assignments == nil {
+		m.provider_assignments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.provider_assignments[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProviderAssignments clears the "provider_assignments" edge to the ProviderOrderAssignment entity.
+func (m *PaymentOrderMutation) ClearProviderAssignments() {
+	m.clearedprovider_assignments = true
+}
+
+// ProviderAssignmentsCleared reports if the "provider_assignments" edge to the ProviderOrderAssignment entity was cleared.
+func (m *PaymentOrderMutation) ProviderAssignmentsCleared() bool {
+	return m.clearedprovider_assignments
+}
+
+// RemoveProviderAssignmentIDs removes the "provider_assignments" edge to the ProviderOrderAssignment entity by IDs.
+func (m *PaymentOrderMutation) RemoveProviderAssignmentIDs(ids ...uuid.UUID) {
+	if m.removedprovider_assignments == nil {
+		m.removedprovider_assignments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.provider_assignments, ids[i])
+		m.removedprovider_assignments[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProviderAssignments returns the removed IDs of the "provider_assignments" edge to the ProviderOrderAssignment entity.
+func (m *PaymentOrderMutation) RemovedProviderAssignmentsIDs() (ids []uuid.UUID) {
+	for id := range m.removedprovider_assignments {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProviderAssignmentsIDs returns the "provider_assignments" edge IDs in the mutation.
+func (m *PaymentOrderMutation) ProviderAssignmentsIDs() (ids []uuid.UUID) {
+	for id := range m.provider_assignments {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProviderAssignments resets all changes to the "provider_assignments" edge.
+func (m *PaymentOrderMutation) ResetProviderAssignments() {
+	m.provider_assignments = nil
+	m.clearedprovider_assignments = false
+	m.removedprovider_assignments = nil
+}
+
 // Where appends a list predicates to the PaymentOrderMutation builder.
 func (m *PaymentOrderMutation) Where(ps ...predicate.PaymentOrder) {
 	m.predicates = append(m.predicates, ps...)
@@ -9826,7 +9885,7 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PaymentOrderMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.token != nil {
 		edges = append(edges, paymentorder.EdgeToken)
 	}
@@ -9847,6 +9906,9 @@ func (m *PaymentOrderMutation) AddedEdges() []string {
 	}
 	if m.transactions != nil {
 		edges = append(edges, paymentorder.EdgeTransactions)
+	}
+	if m.provider_assignments != nil {
+		edges = append(edges, paymentorder.EdgeProviderAssignments)
 	}
 	return edges
 }
@@ -9887,18 +9949,27 @@ func (m *PaymentOrderMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case paymentorder.EdgeProviderAssignments:
+		ids := make([]ent.Value, 0, len(m.provider_assignments))
+		for id := range m.provider_assignments {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PaymentOrderMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.removedfulfillments != nil {
 		edges = append(edges, paymentorder.EdgeFulfillments)
 	}
 	if m.removedtransactions != nil {
 		edges = append(edges, paymentorder.EdgeTransactions)
+	}
+	if m.removedprovider_assignments != nil {
+		edges = append(edges, paymentorder.EdgeProviderAssignments)
 	}
 	return edges
 }
@@ -9919,13 +9990,19 @@ func (m *PaymentOrderMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case paymentorder.EdgeProviderAssignments:
+		ids := make([]ent.Value, 0, len(m.removedprovider_assignments))
+		for id := range m.removedprovider_assignments {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PaymentOrderMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.clearedtoken {
 		edges = append(edges, paymentorder.EdgeToken)
 	}
@@ -9946,6 +10023,9 @@ func (m *PaymentOrderMutation) ClearedEdges() []string {
 	}
 	if m.clearedtransactions {
 		edges = append(edges, paymentorder.EdgeTransactions)
+	}
+	if m.clearedprovider_assignments {
+		edges = append(edges, paymentorder.EdgeProviderAssignments)
 	}
 	return edges
 }
@@ -9968,6 +10048,8 @@ func (m *PaymentOrderMutation) EdgeCleared(name string) bool {
 		return m.clearedfulfillments
 	case paymentorder.EdgeTransactions:
 		return m.clearedtransactions
+	case paymentorder.EdgeProviderAssignments:
+		return m.clearedprovider_assignments
 	}
 	return false
 }
@@ -10019,6 +10101,9 @@ func (m *PaymentOrderMutation) ResetEdge(name string) error {
 		return nil
 	case paymentorder.EdgeTransactions:
 		m.ResetTransactions()
+		return nil
+	case paymentorder.EdgeProviderAssignments:
+		m.ResetProviderAssignments()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder edge %s", name)
@@ -12964,6 +13049,594 @@ func (m *ProviderFiatAccountMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ProviderFiatAccount edge %s", name)
 }
 
+// ProviderOrderAssignmentMutation represents an operation that mutates the ProviderOrderAssignment nodes in the graph.
+type ProviderOrderAssignmentMutation struct {
+	config
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	assignment_status    *providerorderassignment.AssignmentStatus
+	assigned_at          *time.Time
+	reassigned_at        *time.Time
+	clearedFields        map[string]struct{}
+	payment_order        *uuid.UUID
+	clearedpayment_order bool
+	provider             *string
+	clearedprovider      bool
+	done                 bool
+	oldValue             func(context.Context) (*ProviderOrderAssignment, error)
+	predicates           []predicate.ProviderOrderAssignment
+}
+
+var _ ent.Mutation = (*ProviderOrderAssignmentMutation)(nil)
+
+// providerorderassignmentOption allows management of the mutation configuration using functional options.
+type providerorderassignmentOption func(*ProviderOrderAssignmentMutation)
+
+// newProviderOrderAssignmentMutation creates new mutation for the ProviderOrderAssignment entity.
+func newProviderOrderAssignmentMutation(c config, op Op, opts ...providerorderassignmentOption) *ProviderOrderAssignmentMutation {
+	m := &ProviderOrderAssignmentMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeProviderOrderAssignment,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withProviderOrderAssignmentID sets the ID field of the mutation.
+func withProviderOrderAssignmentID(id uuid.UUID) providerorderassignmentOption {
+	return func(m *ProviderOrderAssignmentMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ProviderOrderAssignment
+		)
+		m.oldValue = func(ctx context.Context) (*ProviderOrderAssignment, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ProviderOrderAssignment.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withProviderOrderAssignment sets the old ProviderOrderAssignment of the mutation.
+func withProviderOrderAssignment(node *ProviderOrderAssignment) providerorderassignmentOption {
+	return func(m *ProviderOrderAssignmentMutation) {
+		m.oldValue = func(context.Context) (*ProviderOrderAssignment, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ProviderOrderAssignmentMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ProviderOrderAssignmentMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ProviderOrderAssignment entities.
+func (m *ProviderOrderAssignmentMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ProviderOrderAssignmentMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProviderOrderAssignmentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProviderOrderAssignment.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetAssignmentStatus sets the "assignment_status" field.
+func (m *ProviderOrderAssignmentMutation) SetAssignmentStatus(ps providerorderassignment.AssignmentStatus) {
+	m.assignment_status = &ps
+}
+
+// AssignmentStatus returns the value of the "assignment_status" field in the mutation.
+func (m *ProviderOrderAssignmentMutation) AssignmentStatus() (r providerorderassignment.AssignmentStatus, exists bool) {
+	v := m.assignment_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAssignmentStatus returns the old "assignment_status" field's value of the ProviderOrderAssignment entity.
+// If the ProviderOrderAssignment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderAssignmentMutation) OldAssignmentStatus(ctx context.Context) (v providerorderassignment.AssignmentStatus, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAssignmentStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAssignmentStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAssignmentStatus: %w", err)
+	}
+	return oldValue.AssignmentStatus, nil
+}
+
+// ResetAssignmentStatus resets all changes to the "assignment_status" field.
+func (m *ProviderOrderAssignmentMutation) ResetAssignmentStatus() {
+	m.assignment_status = nil
+}
+
+// SetAssignedAt sets the "assigned_at" field.
+func (m *ProviderOrderAssignmentMutation) SetAssignedAt(t time.Time) {
+	m.assigned_at = &t
+}
+
+// AssignedAt returns the value of the "assigned_at" field in the mutation.
+func (m *ProviderOrderAssignmentMutation) AssignedAt() (r time.Time, exists bool) {
+	v := m.assigned_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAssignedAt returns the old "assigned_at" field's value of the ProviderOrderAssignment entity.
+// If the ProviderOrderAssignment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderAssignmentMutation) OldAssignedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAssignedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAssignedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAssignedAt: %w", err)
+	}
+	return oldValue.AssignedAt, nil
+}
+
+// ResetAssignedAt resets all changes to the "assigned_at" field.
+func (m *ProviderOrderAssignmentMutation) ResetAssignedAt() {
+	m.assigned_at = nil
+}
+
+// SetReassignedAt sets the "reassigned_at" field.
+func (m *ProviderOrderAssignmentMutation) SetReassignedAt(t time.Time) {
+	m.reassigned_at = &t
+}
+
+// ReassignedAt returns the value of the "reassigned_at" field in the mutation.
+func (m *ProviderOrderAssignmentMutation) ReassignedAt() (r time.Time, exists bool) {
+	v := m.reassigned_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReassignedAt returns the old "reassigned_at" field's value of the ProviderOrderAssignment entity.
+// If the ProviderOrderAssignment object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderAssignmentMutation) OldReassignedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReassignedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReassignedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReassignedAt: %w", err)
+	}
+	return oldValue.ReassignedAt, nil
+}
+
+// ClearReassignedAt clears the value of the "reassigned_at" field.
+func (m *ProviderOrderAssignmentMutation) ClearReassignedAt() {
+	m.reassigned_at = nil
+	m.clearedFields[providerorderassignment.FieldReassignedAt] = struct{}{}
+}
+
+// ReassignedAtCleared returns if the "reassigned_at" field was cleared in this mutation.
+func (m *ProviderOrderAssignmentMutation) ReassignedAtCleared() bool {
+	_, ok := m.clearedFields[providerorderassignment.FieldReassignedAt]
+	return ok
+}
+
+// ResetReassignedAt resets all changes to the "reassigned_at" field.
+func (m *ProviderOrderAssignmentMutation) ResetReassignedAt() {
+	m.reassigned_at = nil
+	delete(m.clearedFields, providerorderassignment.FieldReassignedAt)
+}
+
+// SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by id.
+func (m *ProviderOrderAssignmentMutation) SetPaymentOrderID(id uuid.UUID) {
+	m.payment_order = &id
+}
+
+// ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
+func (m *ProviderOrderAssignmentMutation) ClearPaymentOrder() {
+	m.clearedpayment_order = true
+}
+
+// PaymentOrderCleared reports if the "payment_order" edge to the PaymentOrder entity was cleared.
+func (m *ProviderOrderAssignmentMutation) PaymentOrderCleared() bool {
+	return m.clearedpayment_order
+}
+
+// PaymentOrderID returns the "payment_order" edge ID in the mutation.
+func (m *ProviderOrderAssignmentMutation) PaymentOrderID() (id uuid.UUID, exists bool) {
+	if m.payment_order != nil {
+		return *m.payment_order, true
+	}
+	return
+}
+
+// PaymentOrderIDs returns the "payment_order" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PaymentOrderID instead. It exists only for internal usage by the builders.
+func (m *ProviderOrderAssignmentMutation) PaymentOrderIDs() (ids []uuid.UUID) {
+	if id := m.payment_order; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPaymentOrder resets all changes to the "payment_order" edge.
+func (m *ProviderOrderAssignmentMutation) ResetPaymentOrder() {
+	m.payment_order = nil
+	m.clearedpayment_order = false
+}
+
+// SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
+func (m *ProviderOrderAssignmentMutation) SetProviderID(id string) {
+	m.provider = &id
+}
+
+// ClearProvider clears the "provider" edge to the ProviderProfile entity.
+func (m *ProviderOrderAssignmentMutation) ClearProvider() {
+	m.clearedprovider = true
+}
+
+// ProviderCleared reports if the "provider" edge to the ProviderProfile entity was cleared.
+func (m *ProviderOrderAssignmentMutation) ProviderCleared() bool {
+	return m.clearedprovider
+}
+
+// ProviderID returns the "provider" edge ID in the mutation.
+func (m *ProviderOrderAssignmentMutation) ProviderID() (id string, exists bool) {
+	if m.provider != nil {
+		return *m.provider, true
+	}
+	return
+}
+
+// ProviderIDs returns the "provider" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProviderID instead. It exists only for internal usage by the builders.
+func (m *ProviderOrderAssignmentMutation) ProviderIDs() (ids []string) {
+	if id := m.provider; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProvider resets all changes to the "provider" edge.
+func (m *ProviderOrderAssignmentMutation) ResetProvider() {
+	m.provider = nil
+	m.clearedprovider = false
+}
+
+// Where appends a list predicates to the ProviderOrderAssignmentMutation builder.
+func (m *ProviderOrderAssignmentMutation) Where(ps ...predicate.ProviderOrderAssignment) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ProviderOrderAssignmentMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProviderOrderAssignmentMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProviderOrderAssignment, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ProviderOrderAssignmentMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProviderOrderAssignmentMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ProviderOrderAssignment).
+func (m *ProviderOrderAssignmentMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ProviderOrderAssignmentMutation) Fields() []string {
+	fields := make([]string, 0, 3)
+	if m.assignment_status != nil {
+		fields = append(fields, providerorderassignment.FieldAssignmentStatus)
+	}
+	if m.assigned_at != nil {
+		fields = append(fields, providerorderassignment.FieldAssignedAt)
+	}
+	if m.reassigned_at != nil {
+		fields = append(fields, providerorderassignment.FieldReassignedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ProviderOrderAssignmentMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case providerorderassignment.FieldAssignmentStatus:
+		return m.AssignmentStatus()
+	case providerorderassignment.FieldAssignedAt:
+		return m.AssignedAt()
+	case providerorderassignment.FieldReassignedAt:
+		return m.ReassignedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ProviderOrderAssignmentMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case providerorderassignment.FieldAssignmentStatus:
+		return m.OldAssignmentStatus(ctx)
+	case providerorderassignment.FieldAssignedAt:
+		return m.OldAssignedAt(ctx)
+	case providerorderassignment.FieldReassignedAt:
+		return m.OldReassignedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ProviderOrderAssignment field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderOrderAssignmentMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case providerorderassignment.FieldAssignmentStatus:
+		v, ok := value.(providerorderassignment.AssignmentStatus)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAssignmentStatus(v)
+		return nil
+	case providerorderassignment.FieldAssignedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAssignedAt(v)
+		return nil
+	case providerorderassignment.FieldReassignedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReassignedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderOrderAssignment field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ProviderOrderAssignmentMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ProviderOrderAssignmentMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderOrderAssignmentMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown ProviderOrderAssignment numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ProviderOrderAssignmentMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(providerorderassignment.FieldReassignedAt) {
+		fields = append(fields, providerorderassignment.FieldReassignedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ProviderOrderAssignmentMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ProviderOrderAssignmentMutation) ClearField(name string) error {
+	switch name {
+	case providerorderassignment.FieldReassignedAt:
+		m.ClearReassignedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderOrderAssignment nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ProviderOrderAssignmentMutation) ResetField(name string) error {
+	switch name {
+	case providerorderassignment.FieldAssignmentStatus:
+		m.ResetAssignmentStatus()
+		return nil
+	case providerorderassignment.FieldAssignedAt:
+		m.ResetAssignedAt()
+		return nil
+	case providerorderassignment.FieldReassignedAt:
+		m.ResetReassignedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderOrderAssignment field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ProviderOrderAssignmentMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.payment_order != nil {
+		edges = append(edges, providerorderassignment.EdgePaymentOrder)
+	}
+	if m.provider != nil {
+		edges = append(edges, providerorderassignment.EdgeProvider)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ProviderOrderAssignmentMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case providerorderassignment.EdgePaymentOrder:
+		if id := m.payment_order; id != nil {
+			return []ent.Value{*id}
+		}
+	case providerorderassignment.EdgeProvider:
+		if id := m.provider; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ProviderOrderAssignmentMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ProviderOrderAssignmentMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ProviderOrderAssignmentMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedpayment_order {
+		edges = append(edges, providerorderassignment.EdgePaymentOrder)
+	}
+	if m.clearedprovider {
+		edges = append(edges, providerorderassignment.EdgeProvider)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ProviderOrderAssignmentMutation) EdgeCleared(name string) bool {
+	switch name {
+	case providerorderassignment.EdgePaymentOrder:
+		return m.clearedpayment_order
+	case providerorderassignment.EdgeProvider:
+		return m.clearedprovider
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ProviderOrderAssignmentMutation) ClearEdge(name string) error {
+	switch name {
+	case providerorderassignment.EdgePaymentOrder:
+		m.ClearPaymentOrder()
+		return nil
+	case providerorderassignment.EdgeProvider:
+		m.ClearProvider()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderOrderAssignment unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ProviderOrderAssignmentMutation) ResetEdge(name string) error {
+	switch name {
+	case providerorderassignment.EdgePaymentOrder:
+		m.ResetPaymentOrder()
+		return nil
+	case providerorderassignment.EdgeProvider:
+		m.ResetProvider()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderOrderAssignment edge %s", name)
+}
+
 // ProviderOrderTokenMutation represents an operation that mutates the ProviderOrderToken nodes in the graph.
 type ProviderOrderTokenMutation struct {
 	config
@@ -14629,6 +15302,9 @@ type ProviderProfileMutation struct {
 	assigned_orders          map[uuid.UUID]struct{}
 	removedassigned_orders   map[uuid.UUID]struct{}
 	clearedassigned_orders   bool
+	order_assignments        map[uuid.UUID]struct{}
+	removedorder_assignments map[uuid.UUID]struct{}
+	clearedorder_assignments bool
 	fiat_accounts            map[uuid.UUID]struct{}
 	removedfiat_accounts     map[uuid.UUID]struct{}
 	clearedfiat_accounts     bool
@@ -15316,6 +15992,60 @@ func (m *ProviderProfileMutation) ResetAssignedOrders() {
 	m.removedassigned_orders = nil
 }
 
+// AddOrderAssignmentIDs adds the "order_assignments" edge to the ProviderOrderAssignment entity by ids.
+func (m *ProviderProfileMutation) AddOrderAssignmentIDs(ids ...uuid.UUID) {
+	if m.order_assignments == nil {
+		m.order_assignments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.order_assignments[ids[i]] = struct{}{}
+	}
+}
+
+// ClearOrderAssignments clears the "order_assignments" edge to the ProviderOrderAssignment entity.
+func (m *ProviderProfileMutation) ClearOrderAssignments() {
+	m.clearedorder_assignments = true
+}
+
+// OrderAssignmentsCleared reports if the "order_assignments" edge to the ProviderOrderAssignment entity was cleared.
+func (m *ProviderProfileMutation) OrderAssignmentsCleared() bool {
+	return m.clearedorder_assignments
+}
+
+// RemoveOrderAssignmentIDs removes the "order_assignments" edge to the ProviderOrderAssignment entity by IDs.
+func (m *ProviderProfileMutation) RemoveOrderAssignmentIDs(ids ...uuid.UUID) {
+	if m.removedorder_assignments == nil {
+		m.removedorder_assignments = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.order_assignments, ids[i])
+		m.removedorder_assignments[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedOrderAssignments returns the removed IDs of the "order_assignments" edge to the ProviderOrderAssignment entity.
+func (m *ProviderProfileMutation) RemovedOrderAssignmentsIDs() (ids []uuid.UUID) {
+	for id := range m.removedorder_assignments {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// OrderAssignmentsIDs returns the "order_assignments" edge IDs in the mutation.
+func (m *ProviderProfileMutation) OrderAssignmentsIDs() (ids []uuid.UUID) {
+	for id := range m.order_assignments {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetOrderAssignments resets all changes to the "order_assignments" edge.
+func (m *ProviderProfileMutation) ResetOrderAssignments() {
+	m.order_assignments = nil
+	m.clearedorder_assignments = false
+	m.removedorder_assignments = nil
+}
+
 // AddFiatAccountIDs adds the "fiat_accounts" edge to the ProviderFiatAccount entity by ids.
 func (m *ProviderProfileMutation) AddFiatAccountIDs(ids ...uuid.UUID) {
 	if m.fiat_accounts == nil {
@@ -15603,7 +16333,7 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProviderProfileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.user != nil {
 		edges = append(edges, providerprofile.EdgeUser)
 	}
@@ -15624,6 +16354,9 @@ func (m *ProviderProfileMutation) AddedEdges() []string {
 	}
 	if m.assigned_orders != nil {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.order_assignments != nil {
+		edges = append(edges, providerprofile.EdgeOrderAssignments)
 	}
 	if m.fiat_accounts != nil {
 		edges = append(edges, providerprofile.EdgeFiatAccounts)
@@ -15671,6 +16404,12 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case providerprofile.EdgeOrderAssignments:
+		ids := make([]ent.Value, 0, len(m.order_assignments))
+		for id := range m.order_assignments {
+			ids = append(ids, id)
+		}
+		return ids
 	case providerprofile.EdgeFiatAccounts:
 		ids := make([]ent.Value, 0, len(m.fiat_accounts))
 		for id := range m.fiat_accounts {
@@ -15683,7 +16422,7 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderProfileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.removedprovider_balances != nil {
 		edges = append(edges, providerprofile.EdgeProviderBalances)
 	}
@@ -15695,6 +16434,9 @@ func (m *ProviderProfileMutation) RemovedEdges() []string {
 	}
 	if m.removedassigned_orders != nil {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.removedorder_assignments != nil {
+		edges = append(edges, providerprofile.EdgeOrderAssignments)
 	}
 	if m.removedfiat_accounts != nil {
 		edges = append(edges, providerprofile.EdgeFiatAccounts)
@@ -15730,6 +16472,12 @@ func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case providerprofile.EdgeOrderAssignments:
+		ids := make([]ent.Value, 0, len(m.removedorder_assignments))
+		for id := range m.removedorder_assignments {
+			ids = append(ids, id)
+		}
+		return ids
 	case providerprofile.EdgeFiatAccounts:
 		ids := make([]ent.Value, 0, len(m.removedfiat_accounts))
 		for id := range m.removedfiat_accounts {
@@ -15742,7 +16490,7 @@ func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProviderProfileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.cleareduser {
 		edges = append(edges, providerprofile.EdgeUser)
 	}
@@ -15763,6 +16511,9 @@ func (m *ProviderProfileMutation) ClearedEdges() []string {
 	}
 	if m.clearedassigned_orders {
 		edges = append(edges, providerprofile.EdgeAssignedOrders)
+	}
+	if m.clearedorder_assignments {
+		edges = append(edges, providerprofile.EdgeOrderAssignments)
 	}
 	if m.clearedfiat_accounts {
 		edges = append(edges, providerprofile.EdgeFiatAccounts)
@@ -15788,6 +16539,8 @@ func (m *ProviderProfileMutation) EdgeCleared(name string) bool {
 		return m.clearedprovider_rating
 	case providerprofile.EdgeAssignedOrders:
 		return m.clearedassigned_orders
+	case providerprofile.EdgeOrderAssignments:
+		return m.clearedorder_assignments
 	case providerprofile.EdgeFiatAccounts:
 		return m.clearedfiat_accounts
 	}
@@ -15835,6 +16588,9 @@ func (m *ProviderProfileMutation) ResetEdge(name string) error {
 		return nil
 	case providerprofile.EdgeAssignedOrders:
 		m.ResetAssignedOrders()
+		return nil
+	case providerprofile.EdgeOrderAssignments:
+		m.ResetOrderAssignments()
 		return nil
 	case providerprofile.EdgeFiatAccounts:
 		m.ResetFiatAccounts()

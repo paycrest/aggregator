@@ -451,6 +451,7 @@ type ProviderOrderResponse struct {
 	Memo                string                 `json:"memo"`
 	Network             string                 `json:"network"`
 	Status              paymentorder.Status    `json:"status"`
+	DisplayStatus       string                 `json:"displayStatus,omitempty"` // e.g. "reassigned" when order was reassigned from this provider
 	UpdatedAt           time.Time              `json:"updatedAt"`
 	CreatedAt           time.Time              `json:"createdAt"`
 	Transactions        []TransactionLog       `json:"transactionLogs"`
