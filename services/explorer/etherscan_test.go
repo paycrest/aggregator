@@ -163,6 +163,17 @@ func TestParseEtherscanTransactions(t *testing.T) {
 			chainID: 1,
 			wallet:  "0x1234567890123456789012345678901234567890",
 		},
+		{
+			name: "uses result field when message is notok",
+			input: map[string]interface{}{
+				"status":  "0",
+				"message": "NOTOK",
+				"result":  "Max rate limit reached, please use API Key for higher rate limit",
+			},
+			wantErr: "Max rate limit reached",
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
 	}
 
 	for _, tc := range tests {
@@ -204,6 +215,29 @@ func TestProcessNextRequest_EmptyQueueReturnsNoRequestsError(t *testing.T) {
 
 	err = worker.processNextRequest(context.Background())
 	assert.EqualError(t, err, "no requests in queue")
+	assert.ErrorIs(t, err, errNoRequestsInQueue)
+}
+
+func TestProcessNextRequest_RedisFailureWrapsQueueBackendError(t *testing.T) {
+	originalRedisClient := storage.RedisClient
+	defer func() {
+		storage.RedisClient = originalRedisClient
+	}()
+
+	storage.RedisClient = redis.NewClient(&redis.Options{
+		Addr: "127.0.0.1:0",
+	})
+	defer storage.RedisClient.Close()
+
+	worker := &EtherscanWorker{
+		APIKey:    "test-api-key",
+		WorkerID:  1,
+		RateLimit: 3,
+	}
+
+	err := worker.processNextRequest(context.Background())
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, errQueueBackend)
 }
 
 // Helper function to test the parsing logic
