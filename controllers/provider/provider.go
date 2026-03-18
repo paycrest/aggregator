@@ -1210,10 +1210,6 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 
 	// Check if this is a payin order (onramp)
 	isPayin := fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Direction == paymentorder.DirectionOnramp
-	if isPayin && fulfillment.Edges.Order.Status == paymentorder.StatusSettling {
-		u.APIResponse(ctx, http.StatusOK, "success", "Order already settling", nil)
-		return
-	}
 
 	// Handle payin orders
 	if isPayin {
@@ -1659,6 +1655,8 @@ func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context,
 
 // handlePayinFulfillment handles payin (onramp) order fulfillment
 func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment, provider *ent.ProviderProfile) {
+	reqCtx := ctx.Request.Context()
+
 	// Only proceed to settlement when validation succeeded; reject failed/pending like handlePayoutFulfillment
 	// Authorization is required only for settlement (ValidationStatusSuccess); failed validation reports do not need it
 	switch payload.ValidationStatus {
@@ -1666,7 +1664,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		currentOrder, err := storage.Client.PaymentOrder.
 			Query().
 			Where(paymentorder.IDEQ(orderID)).
-			Only(ctx)
+			Only(reqCtx)
 		if err == nil && currentOrder != nil && currentOrder.Status == paymentorder.StatusSettling {
 			u.APIResponse(ctx, http.StatusOK, "success", "Order already settling", nil)
 			return
@@ -1717,31 +1715,23 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		}).
 		WithProvider().
 		WithSenderProfile().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to fetch order details: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order details", nil)
 		return
 	}
-	if orderWithDetails.Status == paymentorder.StatusPending {
-		orderWithDetails, err = ctrl.promotePendingPayinOrderToFulfilling(ctx, orderWithDetails, provider)
-		if err != nil {
-			logger.Errorf("Failed to promote payin order to fulfilling: %v", err)
-			u.APIResponse(ctx, http.StatusConflict, "error", err.Error(), nil)
-			return
-		}
-	}
 	if orderWithDetails.Status == paymentorder.StatusSettling {
 		u.APIResponse(ctx, http.StatusOK, "success", "Settlement already submitted or completed", nil)
 		return
 	}
-	if orderWithDetails.Status != paymentorder.StatusFulfilling {
+	if orderWithDetails.Status != paymentorder.StatusPending && orderWithDetails.Status != paymentorder.StatusFulfilling {
 		u.APIResponse(ctx, http.StatusConflict, "error", fmt.Sprintf("Order must be fulfilling before settlement, current status is %s", orderWithDetails.Status), nil)
 		return
 	}
 
 	// Derive currency from order's institution (provider can have same token for multiple fiat currencies)
-	institution, err := u.GetInstitutionByCode(ctx, orderWithDetails.Institution, true)
+	institution, err := u.GetInstitutionByCode(reqCtx, orderWithDetails.Institution, true)
 	if err != nil {
 		logger.Errorf("Failed to fetch institution for payin settlement: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch order institution", nil)
@@ -1763,7 +1753,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 			providerordertoken.NetworkEQ(orderWithDetails.Edges.Token.Edges.Network.Identifier),
 			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currencyCode)),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		logger.Errorf("Failed to fetch provider order token: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch provider configuration", nil)
@@ -1773,6 +1763,23 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 	if providerOrderToken.PayoutAddress == "" {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Provider payout address not configured", nil)
 		return
+	}
+
+	if orderWithDetails.Status == paymentorder.StatusPending {
+		orderWithDetails, err = ctrl.promotePendingPayinOrderToFulfilling(reqCtx, orderWithDetails, provider)
+		if err != nil {
+			logger.Errorf("Failed to promote payin order to fulfilling: %v", err)
+			u.APIResponse(ctx, http.StatusConflict, "error", err.Error(), nil)
+			return
+		}
+		if orderWithDetails.Status == paymentorder.StatusSettling {
+			u.APIResponse(ctx, http.StatusOK, "success", "Settlement already submitted or completed", nil)
+			return
+		}
+		if orderWithDetails.Status != paymentorder.StatusFulfilling {
+			u.APIResponse(ctx, http.StatusConflict, "error", fmt.Sprintf("Order must be fulfilling before settlement, current status is %s", orderWithDetails.Status), nil)
+			return
+		}
 	}
 
 	// Generate Gateway order ID for settleIn: keccak256(abi.encode(payoutAddress, aggregatorAddress, paymentOrderID, chainID))
@@ -2054,7 +2061,7 @@ func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *
 	return nil
 }
 
-func (ctrl *ProviderController) promotePendingPayinOrderToFulfilling(ctx *gin.Context, order *ent.PaymentOrder, provider *ent.ProviderProfile) (*ent.PaymentOrder, error) {
+func (ctrl *ProviderController) promotePendingPayinOrderToFulfilling(ctx context.Context, order *ent.PaymentOrder, provider *ent.ProviderProfile) (*ent.PaymentOrder, error) {
 	if order == nil {
 		return nil, fmt.Errorf("order not found")
 	}
@@ -2137,6 +2144,9 @@ func (ctrl *ProviderController) promotePendingPayinOrderToFulfilling(ctx *gin.Co
 			Only(ctx)
 		if refErr != nil {
 			return nil, fmt.Errorf("failed to reload order after pending->fulfilling race: %w", refErr)
+		}
+		if refreshed.Status != paymentorder.StatusFulfilling && refreshed.Status != paymentorder.StatusSettling {
+			return nil, fmt.Errorf("unexpected order status after pending->fulfilling race: %s", refreshed.Status)
 		}
 		return refreshed, nil
 	}

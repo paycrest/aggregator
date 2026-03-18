@@ -1955,6 +1955,77 @@ func TestProvider(t *testing.T) {
 			assert.Equal(t, "Order fulfilled successfully", response.Message)
 		})
 
+		t.Run("onramp preflight failure leaves pending order unchanged", func(t *testing.T) {
+			_, _, cleanup := setupIsolatedTest(t)
+			defer cleanup()
+
+			originalCryptoConf := cryptoConf
+			cryptoConf.AggregatorAccountEVM = "0x1111111111111111111111111111111111111111"
+			defer func() { cryptoConf = originalCryptoConf }()
+
+			senderUser, err := test.CreateTestUser(map[string]interface{}{
+				"email": fmt.Sprintf("sender_preflight_%s@test.com", uuid.New().String()),
+				"scope": "sender",
+			})
+			assert.NoError(t, err)
+
+			senderProfile, err := test.CreateTestSenderProfile(map[string]interface{}{
+				"user_id": senderUser.ID,
+				"token":   testCtx.token.Symbol,
+			})
+			assert.NoError(t, err)
+
+			order, err := test.CreateTestPaymentOrder(testCtx.token, map[string]interface{}{
+				"sender":                      senderProfile,
+				"provider":                    testCtx.provider,
+				"gateway_id":                  "",
+				"status":                      "pending",
+				"memo":                        "",
+				"refund_or_recipient_address": "0x4444444444444444444444444444444444444444",
+			})
+			assert.NoError(t, err)
+
+			order, err = order.Update().
+				SetDirection(paymentorder.DirectionOnramp).
+				SetSenderFee(decimal.NewFromInt(5)).
+				SetAmount(decimal.NewFromInt(10)).
+				SetRate(decimal.NewFromInt(750)).
+				Save(context.Background())
+			assert.NoError(t, err)
+
+			txID := "0xpreflight" + fmt.Sprint(rand.Intn(1000000))
+			payload := map[string]interface{}{
+				"timestamp":        time.Now().Unix(),
+				"validationStatus": "success",
+				"txId":             txID,
+				"psp":              "psp-name",
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "POST", "/orders/"+order.ID.String()+"/fulfill", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusInternalServerError, res.Code)
+
+			updatedOrder, err := db.Client.PaymentOrder.Query().
+				Where(paymentorder.IDEQ(order.ID)).
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.Equal(t, paymentorder.StatusPending, updatedOrder.Status)
+
+			fulfillingLogExists, err := db.Client.TransactionLog.Query().
+				Where(
+					transactionlog.StatusEQ(transactionlog.StatusOrderFulfilling),
+					transactionlog.HasPaymentOrderWith(paymentorder.IDEQ(order.ID)),
+				).
+				Exist(context.Background())
+			assert.NoError(t, err)
+			assert.False(t, fulfillingLogExists)
+		})
+
 		t.Run("onramp success promotes pending order before settling", func(t *testing.T) {
 			_, _, cleanup := setupIsolatedTest(t)
 			defer cleanup()
