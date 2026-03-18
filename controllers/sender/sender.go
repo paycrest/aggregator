@@ -1950,6 +1950,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 
 	// Call provider new_order endpoint
+	logger.Infof("Calling provider new_order endpoint: %v", orderRequestData)
 	providerResponse, err := u.CallProviderWithHMAC(ctx, providerID, "POST", "/new_order", orderRequestData)
 	if err != nil {
 		logger.Errorf("Failed to call provider new_order: %v", err)
