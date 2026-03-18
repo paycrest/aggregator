@@ -507,9 +507,6 @@ func (s *IndexerEVM) indexGatewayByContractAddress(ctx context.Context, network 
 
 	if fromBlock == 0 && toBlock == 0 {
 		limit = 10
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing last %d transactions for gateway contract: %s", limit, address)
-		}
 	} else {
 		// Block range provided - get up to 100 transactions in range
 		limit = 100
@@ -1081,9 +1078,6 @@ func (s *IndexerEVM) indexProviderAddressByAddress(ctx context.Context, network 
 
 	if fromBlock == 0 && toBlock == 0 {
 		limit = 20
-		if network.ChainID != 56 && network.ChainID != 1135 {
-			logMessage = fmt.Sprintf("Processing last %d transactions for provider address: %s", limit, providerAddress)
-		}
 	} else {
 		// Block range provided - get up to 100 transactions in range
 		limit = 100

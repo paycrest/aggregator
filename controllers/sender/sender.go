@@ -1921,13 +1921,14 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		return
 	}
 
-	compensateFailedOnrampInit := func() {
+	// On virtual account step failure: release balance and delete the order.
+	deleteFailedOnrampOrder := func() {
 		totalCryptoReserved := paymentOrder.Amount.Add(paymentOrder.SenderFee)
 		if relErr := balanceService.ReleaseTokenBalance(ctx, providerID, token.ID, totalCryptoReserved, nil); relErr != nil {
 			logger.Errorf("Failed to release token balance after onramp init failure (order %s): %v", paymentOrder.ID, relErr)
 		}
-		if _, updErr := storage.Client.PaymentOrder.UpdateOneID(paymentOrder.ID).SetStatus(paymentorder.StatusCancelled).Save(ctx); updErr != nil {
-			logger.Errorf("Failed to cancel order after onramp init failure (order %s): %v", paymentOrder.ID, updErr)
+		if delErr := storage.Client.PaymentOrder.DeleteOneID(paymentOrder.ID).Exec(ctx); delErr != nil {
+			logger.Errorf("Failed to delete order after onramp init failure (order %s): %v", paymentOrder.ID, delErr)
 		}
 	}
 
@@ -1952,7 +1953,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	providerResponse, err := u.CallProviderWithHMAC(ctx, providerID, "POST", "/new_order", orderRequestData)
 	if err != nil {
 		logger.Errorf("Failed to call provider new_order: %v", err)
-		compensateFailedOnrampInit()
+		deleteFailedOnrampOrder()
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to create virtual account", nil)
 		return
 	}
@@ -1961,7 +1962,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	accountIdentifier, ok := providerResponse["accountIdentifier"].(string)
 	if !ok {
 		logger.Errorf("Invalid provider response: missing accountIdentifier")
-		compensateFailedOnrampInit()
+		deleteFailedOnrampOrder()
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Invalid provider response", nil)
 		return
 	}
@@ -1997,7 +1998,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	orderMetadata["providerAccount"] = providerAccountMap
 	if _, err := storage.Client.PaymentOrder.UpdateOneID(paymentOrder.ID).SetMetadata(orderMetadata).Save(ctx); err != nil {
 		logger.Errorf("Failed to save provider account to order metadata: %v", err)
-		compensateFailedOnrampInit()
+		deleteFailedOnrampOrder()
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
@@ -2011,7 +2012,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		"orderId", paymentOrder.ID.String(),
 	).Err(); err != nil {
 		logger.Errorf("Failed to set order_request for payin: %v", err)
-		compensateFailedOnrampInit()
+		deleteFailedOnrampOrder()
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
