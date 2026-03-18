@@ -1,11 +1,16 @@
 package explorer
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/paycrest/aggregator/config"
+	"github.com/paycrest/aggregator/storage"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -95,6 +100,144 @@ func TestMultiKeyParsingEmpty(t *testing.T) {
 	keys := parseAPIKeys(apiKeys)
 
 	assert.Equal(t, 0, len(keys))
+}
+
+func TestParseEtherscanTransactions(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   map[string]interface{}
+		wantLen int
+		wantErr string
+		chainID int64
+		wallet  string
+	}{
+		{
+			name: "parses successful response",
+			input: map[string]interface{}{
+				"status": "1",
+				"result": []interface{}{
+					map[string]interface{}{"hash": "0xabc"},
+				},
+			},
+			wantLen: 1,
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+		{
+			name: "no transactions found",
+			input: map[string]interface{}{
+				"status":  "0",
+				"message": "No transactions found",
+			},
+			wantLen: 0,
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+		{
+			name: "handles non-string message without panic",
+			input: map[string]interface{}{
+				"status":  "0",
+				"message": 123,
+			},
+			wantErr: "unknown error",
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+		{
+			name: "rejects invalid result shape",
+			input: map[string]interface{}{
+				"status": "1",
+				"result": map[string]interface{}{"hash": "0xabc"},
+			},
+			wantErr: "unexpected etherscan result type",
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+		{
+			name: "rejects invalid transaction type",
+			input: map[string]interface{}{
+				"status": "1",
+				"result": []interface{}{"not-a-map"},
+			},
+			wantErr: fmt.Sprintf("unexpected transaction type at index %d", 0),
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+		{
+			name: "uses result field when message is notok",
+			input: map[string]interface{}{
+				"status":  "0",
+				"message": "NOTOK",
+				"result":  "Max rate limit reached, please use API Key for higher rate limit",
+			},
+			wantErr: "Max rate limit reached",
+			chainID: 1,
+			wallet:  "0x1234567890123456789012345678901234567890",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := parseEtherscanTransactions(tc.input, tc.chainID, tc.wallet)
+
+			if tc.wantErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Len(t, result, tc.wantLen)
+		})
+	}
+}
+
+func TestProcessNextRequest_EmptyQueueReturnsNoRequestsError(t *testing.T) {
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	defer mr.Close()
+
+	originalRedisClient := storage.RedisClient
+	defer func() {
+		storage.RedisClient = originalRedisClient
+	}()
+
+	storage.RedisClient = redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+	defer storage.RedisClient.Close()
+
+	worker := &EtherscanWorker{
+		APIKey:    "test-api-key",
+		WorkerID:  1,
+		RateLimit: 3,
+	}
+
+	err = worker.processNextRequest(context.Background())
+	assert.EqualError(t, err, "no requests in queue")
+	assert.ErrorIs(t, err, errNoRequestsInQueue)
+}
+
+func TestProcessNextRequest_RedisFailureWrapsQueueBackendError(t *testing.T) {
+	originalRedisClient := storage.RedisClient
+	defer func() {
+		storage.RedisClient = originalRedisClient
+	}()
+
+	storage.RedisClient = redis.NewClient(&redis.Options{
+		Addr: "127.0.0.1:0",
+	})
+	defer storage.RedisClient.Close()
+
+	worker := &EtherscanWorker{
+		APIKey:    "test-api-key",
+		WorkerID:  1,
+		RateLimit: 3,
+	}
+
+	err := worker.processNextRequest(context.Background())
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, errQueueBackend)
 }
 
 // Helper function to test the parsing logic
