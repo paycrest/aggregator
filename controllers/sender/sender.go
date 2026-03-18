@@ -1960,20 +1960,32 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 	logger.Infof("Provider new_order response: %v", providerResponse)
 
-	// Extract virtual account details from provider response
-	accountIdentifier, ok := providerResponse["accountIdentifier"].(string)
-	if !ok {
+	vaData, ok := providerResponse["data"].(map[string]interface{})
+	if !ok || vaData == nil {
+		logger.Errorf("Invalid provider response: missing data")
+		deleteFailedOnrampOrder()
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Invalid provider response", nil)
+		return
+	}
+
+	accountIdentifier, _ := vaData["accountIdentifier"].(string)
+	if accountIdentifier == "" {
+		if n, ok := vaData["accountIdentifier"].(float64); ok {
+			accountIdentifier = strconv.FormatFloat(n, 'f', 0, 64)
+		}
+	}
+	if accountIdentifier == "" {
 		logger.Errorf("Invalid provider response: missing accountIdentifier")
 		deleteFailedOnrampOrder()
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Invalid provider response", nil)
 		return
 	}
-	accountName, _ := providerResponse["accountName"].(string)
-	institutionName, _ := providerResponse["institutionName"].(string)
-	reference, _ := providerResponse["reference"].(string)
+	accountName, _ := vaData["accountName"].(string)
+	institutionName, _ := vaData["institutionName"].(string)
+	reference, _ := vaData["reference"].(string)
 
 	var validUntil time.Time
-	if validUntilStr, ok := providerResponse["validUntil"].(string); ok {
+	if validUntilStr, ok := vaData["validUntil"].(string); ok {
 		var err error
 		validUntil, err = time.Parse(time.RFC3339, validUntilStr)
 		if err != nil {
