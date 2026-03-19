@@ -292,6 +292,25 @@ func ProcessPaymentOrderFromBlockchain(
 		return fmt.Errorf("%s - failed to create payment order: %w", paymentOrderFields.GatewayID, err)
 	}
 
+	// When ensureTransactionLog returned nil (new order, no existing log), create the log now with the new order ID (required edge)
+	if transactionLog == nil {
+		transactionLog, err = tx.TransactionLog.
+			Create().
+			SetStatus(transactionlog.StatusOrderCreated).
+			SetTxHash(paymentOrderFields.TxHash).
+			SetNetwork(network.Identifier).
+			SetGatewayID(paymentOrderFields.GatewayID).
+			SetPaymentOrderID(orderCreated.ID).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("%s - failed to create transaction log for new order: %w", paymentOrderFields.GatewayID, err)
+		}
+		_, err = tx.PaymentOrder.UpdateOneID(orderCreated.ID).AddTransactions(transactionLog).Save(ctx)
+		if err != nil {
+			return fmt.Errorf("%s - failed to link transaction log to order: %w", paymentOrderFields.GatewayID, err)
+		}
+	}
+
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("%s - failed to create payment order: %w", paymentOrderFields.GatewayID, err)
@@ -357,16 +376,36 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 				Only(ctx)
 			if err != nil {
 				if ent.IsNotFound(err) {
-					transactionLog, err = tx.TransactionLog.
-						Create().
-						SetStatus(transactionlog.StatusOrderRefunded).
-						SetTxHash(event.TxHash).
-						SetGatewayID(gatewayID).
-						SetNetwork(network.Identifier).
-						Save(ctx)
-					if err != nil {
-						_ = tx.Rollback()
-						return fmt.Errorf("UpdateOrderStatusRefunded.create: %v", err)
+					// Only create a log when we have an order to attach (required edge)
+					refundOrder, orderErr := tx.PaymentOrder.
+						Query().
+						Where(
+							paymentorder.GatewayIDEQ(gatewayID),
+							paymentorder.Or(
+								paymentorder.StatusEQ(paymentorder.StatusRefunding),
+								paymentorder.StatusEQ(paymentorder.StatusPending),
+								paymentorder.StatusEQ(paymentorder.StatusCancelled),
+							),
+							paymentorder.HasTokenWith(
+								tokenent.HasNetworkWith(
+									networkent.IdentifierEQ(network.Identifier),
+								),
+							),
+						).
+						First(ctx)
+					if orderErr == nil && refundOrder != nil {
+						transactionLog, err = tx.TransactionLog.
+							Create().
+							SetStatus(transactionlog.StatusOrderRefunded).
+							SetTxHash(event.TxHash).
+							SetGatewayID(gatewayID).
+							SetNetwork(network.Identifier).
+							SetPaymentOrderID(refundOrder.ID).
+							Save(ctx)
+						if err != nil {
+							_ = tx.Rollback()
+							return fmt.Errorf("UpdateOrderStatusRefunded.create: %v", err)
+						}
 					}
 				} else {
 					_ = tx.Rollback()
@@ -485,8 +524,25 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 
 	gatewayID := normalizeGatewayID(event.OrderId)
 
+	// Parse splitOrderId so we can query the order and only create a log when we have an order to attach.
+	var splitOrderId uuid.UUID
+	if strings.HasPrefix(network.Identifier, "starknet") {
+		splitOrderId, err = uuid.Parse(strings.ReplaceAll(event.SplitOrderId, "0x", ""))
+		if err != nil {
+			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: %v", err)
+		}
+	} else {
+		b := ethcommon.FromHex(event.SplitOrderId)
+		if len(b) != 32 {
+			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: expected 32 bytes, got %d", len(b))
+		}
+		splitOrderId, err = uuid.FromBytes(b[16:32])
+		if err != nil {
+			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: %v", err)
+		}
+	}
+
 	// Update any existing order_settling log(s) for this event (same gateway_id, network) by setting tx_hash.
-	// Row count is used to decide whether to create a new order_settled log below.
 	var transactionLog *ent.TransactionLog
 	updatedLogRows, err := tx.TransactionLog.
 		Update().
@@ -501,38 +557,32 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 		return fmt.Errorf("UpdateOrderStatusSettleOut.update: %v", err)
 	}
 
-	// If no existing order_settling log was updated, create a new order_settled log (e.g. legacy or indexer-first path).
-	// When updatedLogRows > 0, order already has that log linked; no need to AddTransactions again.
+	// Only create a new order_settled log when we have an order to attach (avoid orphans).
 	if updatedLogRows == 0 {
-		transactionLog, err = tx.TransactionLog.
-			Create().
-			SetStatus(transactionlog.StatusOrderSettled).
-			SetTxHash(event.TxHash).
-			SetGatewayID(gatewayID).
-			SetNetwork(network.Identifier).
-			Save(ctx)
-		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettleOut.create: %v", err)
-		}
-	}
-
-	// Update payment order status
-	var splitOrderId uuid.UUID
-
-	if strings.HasPrefix(network.Identifier, "starknet") {
-		splitOrderId, err = uuid.Parse(strings.ReplaceAll(event.SplitOrderId, "0x", ""))
-		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: %v", err)
-		}
-	} else {
-		// EVM: bytes32 is 16-byte UUID right-padded (b[16:32])
-		b := ethcommon.FromHex(event.SplitOrderId)
-		if len(b) != 32 {
-			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: expected 32 bytes, got %d", len(b))
-		}
-		splitOrderId, err = uuid.FromBytes(b[16:32])
-		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettleOut.splitOrderId: %v", err)
+		order, orderErr := tx.PaymentOrder.
+			Query().
+			Where(
+				paymentorder.IDEQ(splitOrderId),
+				paymentorder.StatusEQ(paymentorder.StatusSettling),
+				paymentorder.HasTokenWith(
+					tokenent.HasNetworkWith(
+						networkent.IdentifierEQ(network.Identifier),
+					),
+				),
+			).
+			First(ctx)
+		if orderErr == nil && order != nil {
+			transactionLog, err = tx.TransactionLog.
+				Create().
+				SetStatus(transactionlog.StatusOrderSettled).
+				SetTxHash(event.TxHash).
+				SetGatewayID(gatewayID).
+				SetNetwork(network.Identifier).
+				SetPaymentOrderID(order.ID).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("UpdateOrderStatusSettleOut.create: %v", err)
+			}
 		}
 	}
 
@@ -672,16 +722,33 @@ func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusSettleIn.update: %v", err)
 	}
 
+	// Only create a new order_settled log when we have an order to attach (avoid orphans).
 	if updatedLogRows == 0 {
-		transactionLog, err = tx.TransactionLog.
-			Create().
-			SetStatus(transactionlog.StatusOrderSettled).
-			SetTxHash(event.TxHash).
-			SetGatewayID(gatewayID).
-			SetNetwork(network.Identifier).
-			Save(ctx)
-		if err != nil {
-			return fmt.Errorf("UpdateOrderStatusSettleIn.create: %v", err)
+		order, orderErr := tx.PaymentOrder.
+			Query().
+			Where(
+				paymentorder.GatewayIDEQ(gatewayID),
+				paymentorder.StatusEQ(paymentorder.StatusSettling),
+				paymentorder.DirectionEQ(paymentorder.DirectionOnramp),
+				paymentorder.HasTokenWith(
+					tokenent.HasNetworkWith(
+						networkent.IdentifierEQ(network.Identifier),
+					),
+				),
+			).
+			First(ctx)
+		if orderErr == nil && order != nil {
+			transactionLog, err = tx.TransactionLog.
+				Create().
+				SetStatus(transactionlog.StatusOrderSettled).
+				SetTxHash(event.TxHash).
+				SetGatewayID(gatewayID).
+				SetNetwork(network.Identifier).
+				SetPaymentOrderID(order.ID).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("UpdateOrderStatusSettleIn.create: %v", err)
+			}
 		}
 	}
 
@@ -1119,13 +1186,14 @@ func ensureTransactionLog(
 
 			if linkedToDifferentOrder {
 				// Transaction log is already linked to a different payment order
-				// Create a new transaction log for this payment order
+				// Create a new transaction log for this payment order (required edge)
 				transactionLog, err := tx.TransactionLog.
 					Create().
 					SetStatus(transactionlog.StatusOrderCreated).
 					SetTxHash(paymentOrderFields.TxHash).
 					SetNetwork(network.Identifier).
 					SetGatewayID(paymentOrderFields.GatewayID).
+					SetPaymentOrderID(*paymentOrderID).
 					Save(ctx)
 				if err != nil {
 					return nil, fmt.Errorf("%s - failed to create transaction log: %w", paymentOrderFields.GatewayID, err)
@@ -1138,13 +1206,17 @@ func ensureTransactionLog(
 		return existingLog, nil
 	}
 
-	// Create new transaction log
+	// Create new transaction log only when we have an order to attach (required edge)
+	if paymentOrderID == nil {
+		return nil, nil
+	}
 	transactionLog, err := tx.TransactionLog.
 		Create().
 		SetStatus(transactionlog.StatusOrderCreated).
 		SetTxHash(paymentOrderFields.TxHash).
 		SetNetwork(network.Identifier).
 		SetGatewayID(paymentOrderFields.GatewayID).
+		SetPaymentOrderID(*paymentOrderID).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s - failed to create transaction log: %w", paymentOrderFields.GatewayID, err)

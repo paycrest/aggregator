@@ -760,6 +760,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 				SetStatus(transactionlog.StatusOrderRefunding).
 				SetGatewayID(orderID.String()).
 				SetNetwork(networkID).
+				SetPaymentOrderID(orderID).
 				Save(reqCtx)
 			if err != nil {
 				_ = tx.Rollback()
@@ -840,6 +841,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		transactionLog, err = tx.TransactionLog.
 			Create().
 			SetStatus(transactionlog.StatusOrderFulfilling).
+			SetPaymentOrderID(orderID).
 			Save(reqCtx)
 		if err != nil {
 			_ = tx.Rollback()
@@ -1346,6 +1348,7 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 		transactionLog, err := tx.TransactionLog.Create().
 			SetStatus(transactionlog.StatusOrderValidated).
 			SetNetwork(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier).
+			SetPaymentOrderID(orderID).
 			Save(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -1580,30 +1583,57 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 		}
 
 	default:
-		transactionLog, err := storage.Client.TransactionLog.Create().
-			SetStatus(transactionlog.StatusOrderFulfilled).
-			SetNetwork(fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier).
-			Save(reqCtx)
+		// Create log and update order in one transaction so the log is never orphaned
+		tx, err := storage.Client.Tx(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
 				"Trx Id":  payload.TxID,
 				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+			}).Errorf("Failed to start transaction for order_fulfilled log")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+		orderID := fulfillment.Edges.Order.ID
+		networkID := fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier
+		_, err = tx.TransactionLog.Create().
+			SetStatus(transactionlog.StatusOrderFulfilled).
+			SetNetwork(networkID).
+			SetPaymentOrderID(orderID).
+			Save(reqCtx)
+		if err != nil {
+			_ = tx.Rollback()
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"Trx Id":  payload.TxID,
+				"Network": networkID,
 			}).Errorf("Failed to create transaction log: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		}
-
-		_, err = updateLockOrder.
+		_, err = tx.PaymentOrder.
+			Update().
+			Where(
+				paymentorder.IDEQ(orderID),
+				paymentorder.Or(
+					paymentorder.StatusEQ(paymentorder.StatusFulfilling),
+					paymentorder.StatusEQ(paymentorder.StatusFulfilled),
+				),
+			).
 			SetStatus(paymentorder.StatusFulfilled).
-			AddTransactions(transactionLog).
 			Save(reqCtx)
 		if err != nil {
+			_ = tx.Rollback()
 			logger.WithFields(logger.Fields{
 				"Error":   fmt.Sprintf("%v", err),
 				"Trx Id":  payload.TxID,
-				"Network": fulfillment.Edges.Order.Edges.Token.Edges.Network.Identifier,
+				"Network": networkID,
 			}).Errorf("Failed to update order status: %v", err)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
+			return
+		}
+		if err = tx.Commit(); err != nil {
+			logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err)}).Errorf("Failed to commit transaction")
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			return
 		}
@@ -1891,6 +1921,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		SetStatus(transactionlog.StatusOrderSettling).
 		SetGatewayID(gatewayOrderID).
 		SetNetwork(orderWithDetails.Edges.Token.Edges.Network.Identifier).
+		SetPaymentOrderID(orderID).
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()
@@ -2228,6 +2259,7 @@ func (ctrl *ProviderController) promotePendingPayinOrderToFulfilling(ctx context
 		transactionLog, err = tx.TransactionLog.
 			Create().
 			SetStatus(transactionlog.StatusOrderFulfilling).
+			SetPaymentOrderID(order.ID).
 			Save(ctx)
 		if err != nil {
 			_ = tx.Rollback()

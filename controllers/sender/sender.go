@@ -509,20 +509,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		}
 	}
 
-	// Create transaction Log
-	transactionLog, err := tx.TransactionLog.
-		Create().
-		SetStatus(transactionlog.StatusOrderInitiated).
-		SetNetwork(token.Edges.Network.Identifier).
-		Save(ctx)
-	if err != nil {
-		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-		_ = tx.Rollback()
-		return
-	}
-
-	// Create payment order with inlined recipient and receive address fields
+	// Create payment order first, then transaction log (required edge)
 	paymentOrderBuilder := tx.PaymentOrder.
 		Create().
 		SetSenderProfile(sender).
@@ -544,14 +531,34 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		SetAccountIdentifier(payload.Recipient.AccountIdentifier).
 		SetAccountName(payload.Recipient.AccountName).
 		SetMemo(payload.Recipient.Memo).
-		SetMetadata(payload.Recipient.Metadata).
-		AddTransactions(transactionLog)
+		SetMetadata(payload.Recipient.Metadata)
 
 	if receiveAddressSalt != nil {
 		paymentOrderBuilder = paymentOrderBuilder.SetReceiveAddressSalt(receiveAddressSalt)
 	}
 
 	paymentOrder, err := paymentOrderBuilder.Save(reqCtx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		_ = tx.Rollback()
+		return
+	}
+
+	// Create transaction log after payment order (required edge)
+	transactionLog, err := tx.TransactionLog.
+		Create().
+		SetStatus(transactionlog.StatusOrderInitiated).
+		SetNetwork(token.Edges.Network.Identifier).
+		SetPaymentOrderID(paymentOrder.ID).
+		Save(reqCtx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		_ = tx.Rollback()
+		return
+	}
+	_, err = tx.PaymentOrder.UpdateOneID(paymentOrder.ID).AddTransactions(transactionLog).Save(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -1214,19 +1221,6 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		return
 	}
 
-	// Create transaction log
-	transactionLog, err := tx.TransactionLog.
-		Create().
-		SetStatus(transactionlog.StatusOrderInitiated).
-		SetNetwork(token.Edges.Network.Identifier).
-		Save(reqCtx)
-	if err != nil {
-		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-		_ = tx.Rollback()
-		return
-	}
-
 	// Build metadata with KYC and recipient metadata
 	metadata := make(map[string]interface{})
 	if destination.Recipient.Metadata != nil {
@@ -1246,7 +1240,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		metadata["amountIn"] = payload.AmountIn
 	}
 
-	// Create payment order
+	// Create payment order first, then transaction log (required edge)
 	paymentOrderBuilder := tx.PaymentOrder.
 		Create().
 		SetSenderProfile(sender).
@@ -1268,8 +1262,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		SetAccountIdentifier(destination.Recipient.AccountIdentifier).
 		SetAccountName(destination.Recipient.AccountName).
 		SetMemo(destination.Recipient.Memo).
-		SetMetadata(metadata).
-		AddTransactions(transactionLog)
+		SetMetadata(metadata)
 
 	// Set provider ID if available from rate validation result
 	if rateValidationResult.ProviderID != "" {
@@ -1281,6 +1274,27 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	}
 
 	paymentOrder, err := paymentOrderBuilder.Save(reqCtx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		_ = tx.Rollback()
+		return
+	}
+
+	// Create transaction log after payment order (required edge)
+	transactionLog, err := tx.TransactionLog.
+		Create().
+		SetStatus(transactionlog.StatusOrderInitiated).
+		SetNetwork(token.Edges.Network.Identifier).
+		SetPaymentOrderID(paymentOrder.ID).
+		Save(reqCtx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		_ = tx.Rollback()
+		return
+	}
+	_, err = tx.PaymentOrder.UpdateOneID(paymentOrder.ID).AddTransactions(transactionLog).Save(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -1844,19 +1858,6 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		return
 	}
 
-	// Create transaction log
-	transactionLog, err := tx.TransactionLog.
-		Create().
-		SetStatus(transactionlog.StatusOrderInitiated).
-		SetNetwork(token.Edges.Network.Identifier).
-		Save(ctx)
-	if err != nil {
-		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-		_ = tx.Rollback()
-		return
-	}
-
 	// Build metadata
 	metadata := make(map[string]interface{})
 	if source.RefundAccount.Metadata != nil {
@@ -1881,7 +1882,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	// Calculate amount in USD (onramp: use buy rate when available)
 	amountInUSD := u.CalculatePaymentOrderAmountInUSD(cryptoAmountOut, token, refundInstitution, paymentorder.DirectionOnramp)
 
-	// Create payment order
+	// Create payment order first, then transaction log (required edge)
 	paymentOrderBuilder := tx.PaymentOrder.
 		Create().
 		SetSenderProfile(sender).
@@ -1903,10 +1904,30 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		SetMemo(""). // Onramp doesn't use memo
 		SetMetadata(metadata).
 		SetProviderID(providerID).
-		SetStatus(paymentorder.StatusPending). // VA issued at init; provider already assigned at this point.
-		AddTransactions(transactionLog)
+		SetStatus(paymentorder.StatusPending) // VA issued at init; provider already assigned at this point.
 
 	paymentOrder, err := paymentOrderBuilder.Save(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		_ = tx.Rollback()
+		return
+	}
+
+	// Create transaction log after payment order (required edge)
+	transactionLog, err := tx.TransactionLog.
+		Create().
+		SetStatus(transactionlog.StatusOrderInitiated).
+		SetNetwork(token.Edges.Network.Identifier).
+		SetPaymentOrderID(paymentOrder.ID).
+		Save(ctx)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		_ = tx.Rollback()
+		return
+	}
+	_, err = tx.PaymentOrder.UpdateOneID(paymentOrder.ID).AddTransactions(transactionLog).Save(ctx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -3062,6 +3083,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 	transactionLog, err := tx.TransactionLog.Create().
 		SetStatus(transactionlog.StatusOrderValidated).
 		SetNetwork(paymentOrder.Edges.Token.Edges.Network.Identifier).
+		SetPaymentOrderID(paymentOrder.ID).
 		Save(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
