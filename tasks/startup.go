@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
-	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils/logger"
 )
@@ -40,30 +39,15 @@ func SubscribeToRedisKeyspaceEvents() func() {
 func StartCronJobs() {
 	// Use the system's local timezone instead of hardcoded UTC to prevent timezone conflicts
 	scheduler := gocron.NewScheduler(time.Local)
-	priorityQueue := services.NewPriorityQueueService()
-
 	err := ComputeMarketRate()
 	if err != nil {
 		logger.Errorf("StartCronJobs for ComputeMarketRate: %v", err)
-	}
-
-	if serverConf.Environment != "production" {
-		err = priorityQueue.ProcessBucketQueues()
-		if err != nil {
-			logger.Errorf("StartCronJobs for ProcessBucketQueues: %v", err)
-		}
 	}
 
 	// Compute market rate every 9 minutes
 	_, err = scheduler.Every(9).Minutes().Do(ComputeMarketRate)
 	if err != nil {
 		logger.Errorf("StartCronJobs for ComputeMarketRate: %v", err)
-	}
-
-	// Refresh provision bucket priority queues every X minutes
-	_, err = scheduler.Every(orderConf.BucketQueueRebuildInterval).Minutes().Do(priorityQueue.ProcessBucketQueues)
-	if err != nil {
-		logger.Errorf("StartCronJobs for ProcessBucketQueues: %v", err)
 	}
 
 	// Retry failed webhook notifications every 13 minutes
