@@ -246,7 +246,7 @@ func (s *IndexerTron) IndexGateway(ctx context.Context, network *ent.Network, ad
 				}
 				settleOutEvents = append(settleOutEvents, settledEvent)
 
-			case "44de25d68888fdbe51bc67bbc990724fb5fa28119062e5f4ca623aefcaa70ecb": // SettleIn (onramp)
+			case "b5273ccce1412b056c9246e834895f9d717974c505f8e5a6c7d08cd0300a066b": // SettleIn (onramp); must match utils.SettleInEventSignature (no 0x prefix)
 				unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "SettleIn")
 				if err != nil {
 					logger.WithFields(logger.Fields{
@@ -622,7 +622,7 @@ func (s *IndexerTron) indexSettleInByBlockRange(ctx context.Context, network *en
 			}
 			for _, event := range data["log"].([]interface{}) {
 				eventData := event.(map[string]interface{})
-				if eventData["topics"].([]interface{})[0] == "44de25d68888fdbe51bc67bbc990724fb5fa28119062e5f4ca623aefcaa70ecb" {
+				if eventData["topics"].([]interface{})[0] == "b5273ccce1412b056c9246e834895f9d717974c505f8e5a6c7d08cd0300a066b" {
 					unpackedEventData, err := utils.UnpackEventData(eventData["data"].(string), contracts.GatewayMetaData.ABI, "SettleIn")
 					if err != nil {
 						continue
