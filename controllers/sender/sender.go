@@ -559,7 +559,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 	_ = transactionLog
-	
+
 	if createTransferWebhook {
 		engineService := svc.NewEngineService()
 		webhookID, webhookSecret, webhookErr := engineService.CreateTransferWebhook(reqCtx, token.Edges.Network.ChainID, token.ContractAddress, receiveAddress, paymentOrder.ID.String())
@@ -1346,7 +1346,6 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		Status:           string(paymentOrder.Status),
 		Timestamp:        paymentOrder.CreatedAt,
 		Amount:           cryptoAmount.String(),
-		AmountIn:         payload.AmountIn,
 		SenderFee:        senderFee.String(),
 		SenderFeePercent: senderFeePercentStr,
 		TransactionFee:   transactionFee.String(),
@@ -2008,6 +2007,8 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		"accountIdentifier": accountIdentifier,
 		"accountName":       accountName,
 		"validUntil":        validUntil.Format(time.RFC3339),
+		"amountToTransfer":  totalFiatToPay.String(),
+		"currency":          source.Currency,
 	}
 	if reference != "" {
 		providerAccountMap["reference"] = reference
@@ -2042,25 +2043,32 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 
 	// Build response
+	destOnrampResp := types.V2CryptoDestinationOnrampResponse{
+		Type:       destination.Type,
+		Currency:   destination.Currency,
+		ProviderID: destination.ProviderID,
+		Recipient:  types.V2CryptoRecipientOnrampResponse{Address: destination.Recipient.Address},
+	}
 	transactionFee := paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee)
 	response := &types.V2PaymentOrderResponse{
 		ID:               paymentOrder.ID,
 		Status:           string(paymentOrder.Status),
 		Timestamp:        paymentOrder.CreatedAt,
 		Amount:           cryptoAmountOut.String(),
-		AmountIn:         payload.AmountIn,
 		SenderFee:        senderFeeCrypto.String(),
 		SenderFeePercent: senderFeePercentStr,
 		TransactionFee:   transactionFee.String(),
 		Reference:        paymentOrder.Reference,
 		ProviderAccount: types.V2FiatProviderAccount{
-			Institution:       institutionName,
-			AccountIdentifier: accountIdentifier,
-			AccountName:       accountName,
-			ValidUntil:        validUntil,
+			Institution:         institutionName,
+			AccountIdentifier:   accountIdentifier,
+			AccountName:         accountName,
+			ValidUntil:          validUntil,
+			AmountToTransfer:    totalFiatToPay.String(),
+			Currency:            source.Currency,
 		},
 		Source:      source,
-		Destination: destination,
+		Destination: destOnrampResp,
 	}
 
 	// Add rate to response if available
@@ -3077,7 +3085,7 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		_ = tx.Rollback()
 		return
 	}
-	_ = transactionLog 
+	_ = transactionLog
 
 	_, err = tx.PaymentOrder.
 		Update().

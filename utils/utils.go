@@ -502,11 +502,20 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 				if t, ok := ParseValidUntilFromMetadata(pa["validUntil"]); ok {
 					validUntil = t
 				}
+				var amountToTransfer, currency string
+				if v, ok := pa["amountToTransfer"].(string); ok {
+					amountToTransfer = v
+				}
+				if v, ok := pa["currency"].(string); ok {
+					currency = v
+				}
 				providerAccount = &types.V2FiatProviderAccount{
 					Institution:       inst,
 					AccountIdentifier: acctID,
 					AccountName:       acctName,
 					ValidUntil:        validUntil,
+					AmountToTransfer:  amountToTransfer,
+					Currency:          currency,
 				}
 			}
 		}
@@ -533,15 +542,11 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 				Metadata:          refundAccountMetadata,
 			},
 		}
-		destination = &types.V2CryptoDestination{
+		destination = &types.V2CryptoDestinationOnrampResponse{
 			Type:       "crypto",
 			Currency:   tokenSymbol,
-			Network:    networkID,
 			ProviderID: providerID,
-			Recipient: types.V2CryptoRecipient{
-				Address: paymentOrder.RefundOrRecipientAddress,
-				Network: networkID,
-			},
+			Recipient:  types.V2CryptoRecipientOnrampResponse{Address: paymentOrder.RefundOrRecipientAddress},
 		}
 	} else {
 		if paymentOrder.ReceiveAddress != "" {
@@ -628,18 +633,6 @@ func BuildV2PaymentOrderGetResponse(
 		TransactionLogs:     transactionLogs,
 		CancellationReasons: cancellationReasons,
 		OTCExpiry:           otcExpiry,
-	}
-	if paymentOrder.Metadata != nil {
-		if amountIn, ok := paymentOrder.Metadata["amountIn"].(string); ok {
-			resp.AmountIn = amountIn
-		}
-	}
-	if resp.AmountIn == "" {
-		if paymentOrder.Direction == paymentorder.DirectionOnramp {
-			resp.AmountIn = "fiat"
-		} else {
-			resp.AmountIn = "crypto"
-		}
 	}
 	return resp
 }

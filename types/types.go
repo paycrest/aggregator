@@ -215,7 +215,7 @@ type RegisterResponse struct {
 // AcceptOrderRequest is the request payload for the accept order endpoint
 type AcceptOrderRequest struct {
 	Direction string `json:"direction,omitempty" validate:"omitempty,oneof=payin payout"` // "payin" or "payout" (default: "payout" for backward compatibility)
-	Amount    string `json:"amount,omitempty"`    // Required for payin orders
+	Amount    string `json:"amount,omitempty"`                                            // Required for payin orders
 }
 
 // BatchCallItem is one call in a payin execute batch (to, value, data).
@@ -254,7 +254,7 @@ type FulfillOrderPayload struct {
 	TxID             string                                   `json:"txId" binding:"required"`
 	ValidationStatus paymentorderfulfillment.ValidationStatus `json:"validationStatus"`
 	ValidationError  string                                   `json:"validationError"`
-	Authorization    *coretypes.SetCodeAuthorization         `json:"authorization,omitempty"` // Required for payin orders (EIP-7702; JSON: yParity, chainId, address, nonce, r, s)
+	Authorization    *coretypes.SetCodeAuthorization          `json:"authorization,omitempty"`  // Required for payin orders (EIP-7702; JSON: yParity, chainId, address, nonce, r, s)
 	BatchSignature   string                                   `json:"batchSignature,omitempty"` // hex-encoded; for payin execute(calls, signature)
 }
 
@@ -704,6 +704,19 @@ type V2CryptoDestination struct {
 	KYC        *KYCDetail        `json:"kyc,omitempty"`
 }
 
+// V2CryptoDestinationOnrampResponse is the onramp v2 API response shape for destination.
+type V2CryptoDestinationOnrampResponse struct {
+	Type       string                         `json:"type"`
+	Currency   string                         `json:"currency"`
+	ProviderID string                         `json:"providerId,omitempty"`
+	Recipient  V2CryptoRecipientOnrampResponse `json:"recipient"`
+}
+
+// V2CryptoRecipientOnrampResponse is the onramp v2 API response shape for recipient.
+type V2CryptoRecipientOnrampResponse struct {
+	Address string `json:"address"`
+}
+
 // V2CryptoRecipient represents the crypto recipient configuration for onramp v2 payment orders
 type V2CryptoRecipient struct {
 	Address string `json:"address" binding:"required"`
@@ -813,24 +826,25 @@ type V2FiatProviderAccount struct {
 	AccountIdentifier string    `json:"accountIdentifier"`
 	AccountName       string    `json:"accountName"`
 	ValidUntil        time.Time `json:"validUntil"`
+	AmountToTransfer  string    `json:"amountToTransfer,omitempty"` // fiat amount to transfer into the VA
+	Currency          string    `json:"currency,omitempty"`         // fiat currency code (e.g. NGN)
 }
 
 // V2PaymentOrderResponse is the response type for v2 payment order creation
 // ProviderAccount, Source, and Destination are polymorphic (any) to support both offramp and onramp flows
 type V2PaymentOrderResponse struct {
-	ID               uuid.UUID `json:"id"`
-	Status           string    `json:"status"`
-	Timestamp        time.Time `json:"timestamp"`
-	Amount           string    `json:"amount"`   // Crypto amount (token units) - consistent for both flows
-	AmountIn         string    `json:"amountIn"` // Echo/normalize the input amount (crypto | fiat)
-	Rate             string    `json:"rate,omitempty"`
-	SenderFee        string    `json:"senderFee"` // Crypto amount (token units) - consistent for both flows
-	SenderFeePercent string    `json:"senderFeePercent"`
-	TransactionFee   string    `json:"transactionFee"`
-	Reference        string    `json:"reference"`
-	ProviderAccount  any       `json:"providerAccount"` // V2CryptoProviderAccount for offramp, V2FiatProviderAccount for onramp
-	Source           any       `json:"source"`          // V2CryptoSource for offramp, V2FiatSource for onramp
-	Destination      any       `json:"destination"`     // V2FiatDestination for offramp, V2CryptoDestination for onramp
+	ID                uuid.UUID `json:"id"`
+	Status            string    `json:"status"`
+	Timestamp         time.Time `json:"timestamp"`
+	Amount            string    `json:"amount"` // Crypto amount (token units) - consistent for both flows
+	Rate              string    `json:"rate,omitempty"`
+	SenderFee         string    `json:"senderFee"` // Crypto amount (token units) - consistent for both flows
+	SenderFeePercent  string    `json:"senderFeePercent"`
+	TransactionFee    string    `json:"transactionFee"`
+	Reference         string    `json:"reference"`
+	ProviderAccount   any       `json:"providerAccount"` // V2CryptoProviderAccount for offramp, V2FiatProviderAccount for onramp
+	Source            any       `json:"source"`           // V2CryptoSource for offramp, V2FiatSource for onramp
+	Destination       any       `json:"destination"`     // V2FiatDestination for offramp, V2CryptoDestinationOnrampResponse for onramp
 }
 
 // V2PaymentOrderGetResponse is the v2 response for GET payment order (single or list item). Aligned with v2 API schema.
@@ -841,7 +855,6 @@ type V2PaymentOrderGetResponse struct {
 	CreatedAt           time.Time        `json:"createdAt"`
 	UpdatedAt           time.Time        `json:"updatedAt"`
 	Amount              string           `json:"amount"`
-	AmountIn            string           `json:"amountIn"`
 	AmountInUsd         string           `json:"amountInUsd,omitempty"`
 	AmountPaid          string           `json:"amountPaid,omitempty"`
 	AmountReturned      string           `json:"amountReturned,omitempty"`
