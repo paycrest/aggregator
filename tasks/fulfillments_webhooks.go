@@ -119,9 +119,6 @@ func SyncPaymentOrderFulfillments() {
 			pq.WithAPIKey()
 		}).
 		WithFulfillments().
-		WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
-			pb.WithCurrency()
-		}).
 		All(ctx)
 	if err != nil {
 		return
@@ -139,9 +136,6 @@ func SyncPaymentOrderFulfillments() {
 				pq.WithAPIKey()
 			}).
 			WithFulfillments().
-			WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
-				pb.WithCurrency()
-			}).
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
@@ -180,26 +174,19 @@ func SyncPaymentOrderFulfillments() {
 				continue
 			}
 
-			if order.Edges.ProvisionBucket == nil {
+			currencyCode, curErr := utils.GetInstitutionCurrencyCode(ctx, order.Institution, true)
+			if curErr != nil || currencyCode == "" {
 				logger.WithFields(logger.Fields{
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: ProvisionBucket is nil",
-				}).Errorf("SyncPaymentOrderFulfillments.MissingProvisionBucket")
-				continue
-			}
-			if order.Edges.ProvisionBucket.Edges.Currency == nil {
-				logger.WithFields(logger.Fields{
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: ProvisionBucket Currency is nil",
+					"Reason":     "internal: institution currency lookup failed",
 				}).Errorf("SyncPaymentOrderFulfillments.MissingCurrency")
 				continue
 			}
 
 			payload := map[string]interface{}{
 				"reference": getTxStatusReferenceForVA(order),
-				"currency":  order.Edges.ProvisionBucket.Edges.Currency.Code,
+				"currency":  currencyCode,
 			}
 			data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 			if err != nil {
@@ -326,19 +313,12 @@ func SyncPaymentOrderFulfillments() {
 				}
 			}
 		} else {
-			if order.Edges.ProvisionBucket == nil {
+			currencyCode, curErr := utils.GetInstitutionCurrencyCode(ctx, order.Institution, true)
+			if curErr != nil || currencyCode == "" {
 				logger.WithFields(logger.Fields{
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: ProvisionBucket is nil",
-				}).Errorf("SyncPaymentOrderFulfillments.MissingProvisionBucket")
-				continue
-			}
-			if order.Edges.ProvisionBucket.Edges.Currency == nil {
-				logger.WithFields(logger.Fields{
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: ProvisionBucket Currency is nil",
+					"Reason":     "internal: institution currency lookup failed",
 				}).Errorf("SyncPaymentOrderFulfillments.MissingCurrency")
 				continue
 			}
@@ -347,7 +327,7 @@ func SyncPaymentOrderFulfillments() {
 				if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusPending {
 					payload := map[string]interface{}{
 						"reference": getTxStatusReferenceForVA(order),
-						"currency":  order.Edges.ProvisionBucket.Edges.Currency.Code,
+						"currency":  currencyCode,
 						"psp":       fulfillment.Psp,
 						"txId":      fulfillment.TxID,
 					}
@@ -491,9 +471,13 @@ func SyncPaymentOrderFulfillments() {
 
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed &&
 					shouldRetryTxStatusFiveMinFailure(fulfillment) {
+					currencyCode, curErr := utils.GetInstitutionCurrencyCode(ctx, order.Institution, true)
+					if curErr != nil || currencyCode == "" {
+						continue
+					}
 					payload := map[string]interface{}{
 						"orderId":  order.ID.String(),
-						"currency": order.Edges.ProvisionBucket.Edges.Currency.Code,
+						"currency": currencyCode,
 						"psp":      fulfillment.Psp,
 						"txId":     fulfillment.TxID,
 					}
@@ -758,11 +742,12 @@ func RetryFailedWebhookNotifications() error {
 
 // syncRefundingOrder calls the provider /tx_status for an onramp order in Refunding and updates order/fulfillment to refunded/failed/pending.
 func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
-	if order.Edges.ProvisionBucket == nil || order.Edges.ProvisionBucket.Edges.Currency == nil {
+	currencyCode, curErr := utils.GetInstitutionCurrencyCode(ctx, order.Institution, true)
+	if curErr != nil || currencyCode == "" {
 		logger.WithFields(logger.Fields{
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.Edges.Provider.ID,
-		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: missing ProvisionBucket or Currency")
+		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: missing institution currency")
 		return
 	}
 
@@ -778,7 +763,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 
 	payload := map[string]interface{}{
 		"reference": refundReference,
-		"currency":  order.Edges.ProvisionBucket.Edges.Currency.Code,
+		"currency":  currencyCode,
 	}
 	data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 	if err != nil {
@@ -953,6 +938,10 @@ func callRequestAuthorization(ctx context.Context, order *ent.PaymentOrder, psp,
 
 // callTxRefundAndStore calls POST /tx_refund via CallProviderWithHMAC; on 200 stores refundReference in order metadata and returns it.
 func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder) (refundReference string, err error) {
+	currencyCode, curErr := utils.GetInstitutionCurrencyCode(ctx, order.Institution, true)
+	if curErr != nil || currencyCode == "" {
+		return "", fmt.Errorf("institution currency lookup failed")
+	}
 	fiatAmount := order.Amount.Add(order.SenderFee).Mul(order.Rate).RoundBank(0).String()
 	refundAccount := map[string]interface{}{
 		"accountIdentifier": order.AccountIdentifier,
@@ -966,7 +955,7 @@ func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder) (refundR
 	}
 	body := map[string]interface{}{
 		"orderId":       order.ID.String(),
-		"currency":      order.Edges.ProvisionBucket.Edges.Currency.Code,
+		"currency":      currencyCode,
 		"amount":        fiatAmount,
 		"refundAccount": refundAccount,
 	}

@@ -448,9 +448,6 @@ func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, prov
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
-		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-			pbq.WithCurrency()
-		}).
 		Limit(maxExportLimit).
 		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
 		All(reqCtx)
@@ -524,10 +521,7 @@ func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, prov
 			institutionName = name
 		}
 
-		var currencyCode string
-		if paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-			currencyCode = paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		}
+		currencyCode, _ := u.GetInstitutionCurrencyCode(reqCtx, paymentOrder.Institution, true)
 
 		row := []string{
 			paymentOrder.ID.String(),
@@ -590,7 +584,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			WithProvider().
 			WithSenderProfile().
 			WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
-			WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) { pbq.WithCurrency() }).
 			Only(reqCtx)
 		if fallbackErr != nil || fallbackOrder == nil {
 			if fallbackErr != nil && !ent.IsNotFound(fallbackErr) {
@@ -628,12 +621,9 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		}
 		if fallbackOrder.Direction == paymentorder.DirectionOnramp {
 			result["amount"] = fallbackOrder.Amount.Add(fallbackOrder.SenderFee).Mul(fallbackOrder.Rate).RoundBank(0).String()
-			if fallbackOrder.Edges.ProvisionBucket != nil && fallbackOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-				result["currency"] = fallbackOrder.Edges.ProvisionBucket.Edges.Currency.Code
-			} else if fallbackOrder.Institution != "" {
-				inst, instErr := u.GetInstitutionByCode(reqCtx, fallbackOrder.Institution, true)
-				if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
-					result["currency"] = inst.Edges.FiatCurrency.Code
+			if fallbackOrder.Institution != "" {
+				if currencyCode, curErr := u.GetInstitutionCurrencyCode(reqCtx, fallbackOrder.Institution, true); curErr == nil {
+					result["currency"] = currencyCode
 				}
 			}
 		}
@@ -1407,16 +1397,7 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 			return
 		}
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
-		currency := ""
-		if fulfillment.Edges.Order.Edges.ProvisionBucket != nil && fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency != nil {
-			currency = fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
-		}
-		if currency == "" && fulfillment.Edges.Order.Institution != "" {
-			inst, instErr := u.GetInstitutionByCode(reqCtx, fulfillment.Edges.Order.Institution, true)
-			if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
-				currency = inst.Edges.FiatCurrency.Code
-			}
-		}
+		currency, _ := u.GetInstitutionCurrencyCode(reqCtx, fulfillment.Edges.Order.Institution, true)
 		if currency == "" {
 			logger.WithFields(logger.Fields{
 				"OrderID": orderID.String(),
@@ -1548,16 +1529,7 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 			return
 		}
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
-		currency := ""
-		if fulfillment.Edges.Order.Edges.ProvisionBucket != nil && fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency != nil {
-			currency = fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
-		}
-		if currency == "" && fulfillment.Edges.Order.Institution != "" {
-			inst, instErr := u.GetInstitutionByCode(reqCtx, fulfillment.Edges.Order.Institution, true)
-			if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
-				currency = inst.Edges.FiatCurrency.Code
-			}
-		}
+		currency, _ := u.GetInstitutionCurrencyCode(reqCtx, fulfillment.Edges.Order.Institution, true)
 		if currency == "" {
 			logger.WithFields(logger.Fields{
 				"OrderID": orderID.String(),
@@ -2358,9 +2330,6 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 			tq.WithNetwork()
 		}).
 		WithProvider().
-		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-			pbq.WithCurrency()
-		}).
 		Only(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -2381,49 +2350,8 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	} else if payload.Reason != "Insufficient funds" {
 		cancellationCount += 1
 		orderUpdate.AppendCancellationReasons([]string{payload.Reason})
-	} else if payload.Reason == "Insufficient funds" && order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
-		// Search for the specific provider in the queue using a Redis list (private orders with nil bucket are not in the queue)
-		redisKey := fmt.Sprintf("bucket_%s_%s_%s", order.Edges.ProvisionBucket.Edges.Currency.Code, order.Edges.ProvisionBucket.MinAmount, order.Edges.ProvisionBucket.MaxAmount)
-
-		// Check if the provider ID exists in the list
-		for index := -1; ; index-- {
-			providerData, err := storage.RedisClient.LIndex(reqCtx, redisKey, int64(index)).Result()
-			if err != nil {
-				break
-			}
-
-			// Extract the id from the data (format "providerID:token:network:rate:minAmount:maxAmount")
-			parts := strings.Split(providerData, ":")
-			if len(parts) != 6 {
-				logger.WithFields(logger.Fields{
-					"Provider Data": providerData,
-				}).Error("Invalid provider data format")
-				continue // Skip this entry due to invalid format
-			}
-
-			if parts[0] == provider.ID {
-				// Remove the provider from the list
-				placeholder := "DELETED_PROVIDER" // Define a placeholder value
-				_, err := storage.RedisClient.LSet(reqCtx, redisKey, int64(index), placeholder).Result()
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error": fmt.Sprintf("%v", err),
-						"Index": index,
-					}).Errorf("Failed to set placeholder at index %d: %v", index, err)
-				}
-
-				// Remove all occurences of the placeholder from the list
-				_, err = storage.RedisClient.LRem(reqCtx, redisKey, 0, placeholder).Result()
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":       fmt.Sprintf("%v", err),
-						"Placeholder": placeholder,
-					}).Errorf("Failed to remove placeholder from circular queue: %v", err)
-				}
-
-				break
-			}
-		}
+	} else if payload.Reason == "Insufficient funds" {
+		// DB-driven provider selection no longer removes providers from Redis bucket queues here.
 	}
 
 	// Update order status to cancelled
@@ -2446,16 +2374,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 
 	// Release reserved balance for this cancelled order
 	providerID := order.Edges.Provider.ID
-	currency := ""
-	if order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
-		currency = order.Edges.ProvisionBucket.Edges.Currency.Code
-	}
-	if currency == "" && order.Institution != "" {
-		inst, instErr := u.GetInstitutionByCode(reqCtx, order.Institution, true)
-		if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
-			currency = inst.Edges.FiatCurrency.Code
-		}
-	}
+	currency, _ := u.GetInstitutionCurrencyCode(reqCtx, order.Institution, true)
 	if currency != "" {
 		amount := order.Amount.Mul(order.Rate).RoundBank(0)
 		err = ctrl.balanceService.ReleaseFiatBalance(reqCtx, providerID, currency, amount, nil)

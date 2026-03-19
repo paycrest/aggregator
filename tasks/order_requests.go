@@ -14,6 +14,7 @@ import (
 	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
+	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
@@ -30,8 +31,11 @@ func canReassignCancelledOrder(order *ent.PaymentOrder) bool {
 // cleanupStuckFulfilledFailedOrder clears provider and sets status to Pending for orders stuck in Fulfilled+failed outside refund window (state cleanup only).
 func cleanupStuckFulfilledFailedOrder(ctx context.Context, order *ent.PaymentOrder) {
 	// Release reserved fiat balance for the provider before clearing (same logic as reassignCancelledOrder).
-	if order.Edges.Provider != nil && order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
-		currency := order.Edges.ProvisionBucket.Edges.Currency.Code
+	if order.Edges.Provider != nil {
+		currency, err := utils.GetInstitutionCurrencyCode(ctx, order.Institution, true)
+		if err != nil || currency == "" {
+			goto clearOrder
+		}
 		amount := order.Amount.Mul(order.Rate).RoundBank(0)
 		balanceSvc := balance.New()
 		if relErr := balanceSvc.ReleaseFiatBalance(ctx, order.Edges.Provider.ID, currency, amount, nil); relErr != nil {
@@ -45,6 +49,7 @@ func cleanupStuckFulfilledFailedOrder(ctx context.Context, order *ent.PaymentOrd
 		}
 	}
 
+clearOrder:
 	_, err := storage.Client.PaymentOrder.
 		Update().
 		Where(
@@ -127,8 +132,7 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 
 		// Best-effort: release any reserved balance held by this provider for the order.
 		// This prevents "stuck" reserved balances from blocking future assignments.
-		if order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
-			currency := order.Edges.ProvisionBucket.Edges.Currency.Code
+		if currency, curErr := utils.GetInstitutionCurrencyCode(ctx, order.Institution, true); curErr == nil && currency != "" {
 			amount := order.Amount.Mul(order.Rate).RoundBank(0)
 			balanceSvc := balance.New()
 			if relErr := balanceSvc.ReleaseFiatBalance(ctx, order.Edges.Provider.ID, currency, amount, nil); relErr != nil {
@@ -174,7 +178,6 @@ func reassignCancelledOrder(ctx context.Context, order *ent.PaymentOrder, fulfil
 			AccountName:       order.AccountName,
 			ProviderID:        "",
 			Memo:              order.Memo,
-			ProvisionBucket:   order.Edges.ProvisionBucket,
 		}
 
 		err = services.NewPriorityQueueService().AssignPaymentOrder(ctx, paymentOrder)
@@ -250,9 +253,6 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 				Where(
 					paymentorder.IDEQ(orderUUID),
 				).
-				WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-					pbq.WithCurrency()
-				}).
 				WithProvider().
 				WithToken(func(tq *ent.TokenQuery) {
 					tq.WithNetwork()
@@ -310,19 +310,20 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 
 				// Cleanup metadata key regardless of success to avoid stale entries.
 				_, _ = storage.RedisClient.Del(ctx, metaKey).Result()
-			} else if order.Edges.Provider != nil && order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+			} else if order.Edges.Provider != nil {
 				// Fallback: no meta (e.g. key missing/expired) but order has provider and bucket (e.g. private/pre-set).
 				// Release so reserved balance is not left stuck.
-				currency := order.Edges.ProvisionBucket.Edges.Currency.Code
-				amount := order.Amount.Mul(order.Rate).RoundBank(0)
-				if relErr := balanceSvc.ReleaseFiatBalance(ctx, order.Edges.Provider.ID, currency, amount, nil); relErr != nil {
-					logger.WithFields(logger.Fields{
-						"Error":      fmt.Sprintf("%v", relErr),
-						"OrderID":    order.ID.String(),
-						"ProviderID": order.Edges.Provider.ID,
-						"Currency":   currency,
-						"Amount":     amount.String(),
-					}).Warnf("ReassignStaleOrderRequest: failed to release reserved balance from order (best effort)")
+				if currency, curErr := utils.GetInstitutionCurrencyCode(ctx, order.Institution, true); curErr == nil && currency != "" {
+					amount := order.Amount.Mul(order.Rate).RoundBank(0)
+					if relErr := balanceSvc.ReleaseFiatBalance(ctx, order.Edges.Provider.ID, currency, amount, nil); relErr != nil {
+						logger.WithFields(logger.Fields{
+							"Error":      fmt.Sprintf("%v", relErr),
+							"OrderID":    order.ID.String(),
+							"ProviderID": order.Edges.Provider.ID,
+							"Currency":   currency,
+							"Amount":     amount.String(),
+						}).Warnf("ReassignStaleOrderRequest: failed to release reserved balance from order (best effort)")
+					}
 				}
 			}
 
@@ -406,7 +407,6 @@ func ReassignStaleOrderRequest(ctx context.Context, orderRequestChan <-chan *red
 				Memo:              order.Memo,
 				ProviderID:        providerID,
 				MessageHash:       order.MessageHash,
-				ProvisionBucket:   order.Edges.ProvisionBucket,
 			}
 
 			// Include token and network if available

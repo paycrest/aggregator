@@ -504,12 +504,10 @@ func GetProviderAddressFromOrder(ctx context.Context, order *ent.PaymentOrder) (
 		return "", fmt.Errorf("payment order has no provider")
 	}
 
-	// Get the currency from the provision bucket
-	if order.Edges.ProvisionBucket == nil {
-		return "", fmt.Errorf("payment order has no provision bucket")
+	currencyCode, err := utils.GetInstitutionCurrencyCode(ctx, order.Institution, true)
+	if err != nil {
+		return "", fmt.Errorf("payment order institution currency lookup failed: %w", err)
 	}
-
-	currencyCode := order.Edges.ProvisionBucket.Edges.Currency.Code
 
 	// Get provider order token for this provider, token, and currency
 	providerOrderToken, err := storage.Client.ProviderOrderToken.

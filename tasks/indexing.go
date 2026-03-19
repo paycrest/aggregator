@@ -432,15 +432,11 @@ func ProcessStuckValidatedOrders() error {
 						),
 					),
 					paymentorder.HasProvider(),
-					paymentorder.HasProvisionBucket(),
 				).
 				WithToken(func(tq *ent.TokenQuery) {
 					tq.WithNetwork()
 				}).
 				WithProvider().
-				WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
-					pb.WithCurrency()
-				}).
 				All(runCtx)
 			if err != nil {
 				logger.WithFields(logger.Fields{

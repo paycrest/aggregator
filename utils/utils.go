@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -976,81 +975,31 @@ func IsBase64(s string) bool {
 // GetTokenRateFromQueue gets the rate of a token from the priority queue for the given side (buy/sell).
 // Bucket keys are side-suffixed: bucket_{currency}_{min}_{max}_{side}. Scanning without side would mix buy and sell rates.
 func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiatCurrency string, marketRate decimal.Decimal, side RateSide) (decimal.Decimal, error) {
-	ctx := context.Background()
-
-	// Scan for side-specific bucket keys: bucket_{currency}_{min}_{max}_{side}
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+fiatCurrency+"_*_*_"+string(side), 100).Result()
+	tokenEntities, err := storage.Client.Token.Query().Where(tokenEnt.SymbolEQ(tokenSymbol)).All(context.Background())
 	if err != nil {
 		return decimal.Decimal{}, err
 	}
-
-	rateResponse := marketRate
-	highestMaxAmount := decimal.NewFromInt(0)
-
-	// Scan through the buckets to find a suitable rate
-	for _, key := range keys {
-		bd, err := parseBucketKey(key)
-		if err != nil {
+	if len(tokenEntities) == 0 {
+		return decimal.Decimal{}, fmt.Errorf("token not found")
+	}
+	currency, err := storage.Client.FiatCurrency.Query().Where(fiatcurrency.CodeEQ(fiatCurrency)).Only(context.Background())
+	if err != nil {
+		return decimal.Decimal{}, err
+	}
+	bestRate := decimal.Zero
+	for _, tokenEntity := range tokenEntities {
+		result, rateErr := validateBucketRate(context.Background(), tokenEntity, currency, orderAmount, "", side)
+		if rateErr != nil {
 			continue
 		}
-		minAmount, maxAmount := bd.MinAmount, bd.MaxAmount
-
-		for index := 0; ; index++ {
-			// Get the topmost provider in the priority queue of the bucket
-			providerData, err := storage.RedisClient.LIndex(ctx, key, int64(index)).Result()
-			if err != nil {
-				break
-			}
-			parts := strings.Split(providerData, ":")
-			if len(parts) != 6 {
-				logger.WithFields(logger.Fields{
-					"Error":        fmt.Sprintf("%v", err),
-					"ProviderData": providerData,
-					"Token":        tokenSymbol,
-					"Currency":     fiatCurrency,
-					"MinAmount":    minAmount,
-					"MaxAmount":    maxAmount,
-				}).Errorf("GetTokenRate.InvalidProviderData: %v", providerData)
-				continue
-			}
-
-			// Skip entry if token doesn't match
-			if parts[1] != tokenSymbol {
-				continue
-			}
-
-			// Skip entry if order amount is not within provider's min and max order amount
-			minOrderAmount, err := decimal.NewFromString(parts[4])
-			if err != nil {
-				continue
-			}
-
-			maxOrderAmount, err := decimal.NewFromString(parts[5])
-			if err != nil {
-				continue
-			}
-
-			if orderAmount.LessThan(minOrderAmount) || orderAmount.GreaterThan(maxOrderAmount) {
-				continue
-			}
-
-			// Get fiat equivalent of the token amount
-			rate, _ := decimal.NewFromString(parts[3])
-			fiatAmount := orderAmount.Mul(rate)
-
-			// Check if fiat amount is within the bucket range and set the rate
-			if fiatAmount.GreaterThanOrEqual(minAmount) && fiatAmount.LessThanOrEqual(maxAmount) {
-				rateResponse = rate
-				break
-			} else if maxAmount.GreaterThan(highestMaxAmount) {
-				// Get the highest max amount
-				highestMaxAmount = maxAmount
-				rateResponse = rate
-			}
+		if bestRate.IsZero() || result.Rate.GreaterThan(bestRate) {
+			bestRate = result.Rate
 		}
 	}
-
-	return rateResponse, nil
+	if bestRate.IsZero() {
+		return decimal.Decimal{}, fmt.Errorf("no provider available for this token/currency pair")
+	}
+	return bestRate, nil
 }
 
 // GetInstitutionByCode returns the institution for a given institution code
@@ -1074,6 +1023,17 @@ func GetInstitutionByCode(ctx context.Context, institutionCode string, enabledFi
 		return nil, err
 	}
 	return institution, nil
+}
+
+func GetInstitutionCurrencyCode(ctx context.Context, institutionCode string, enabledFiatCurrency bool) (string, error) {
+	institution, err := GetInstitutionByCode(ctx, institutionCode, enabledFiatCurrency)
+	if err != nil {
+		return "", err
+	}
+	if institution == nil || institution.Edges.FiatCurrency == nil {
+		return "", fmt.Errorf("institution %s has no fiat currency", institutionCode)
+	}
+	return institution.Edges.FiatCurrency.Code, nil
 }
 
 // Helper function to validate HTTPS URL
@@ -1349,116 +1309,102 @@ func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, curr
 
 // validateBucketRate handles bucket-based rate validation
 func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string, side RateSide) (RateValidationResult, error) {
-	// Get redis keys for provision buckets for the specific side
-	// Scan for side-specific bucket keys: bucket_{currency}_{min}_{max}_{side}
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*_"+string(side), 100).Result()
+	q := storage.Client.ProviderOrderToken.Query().
+		Where(
+			providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+			providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+			providerordertoken.SettlementAddressNEQ(""),
+			providerordertoken.HasProviderWith(
+				providerprofile.IsActive(true),
+				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+			),
+		).
+		WithProvider(func(pq *ent.ProviderProfileQuery) { pq.WithProviderRating() }).
+		WithCurrency()
+	if networkIdentifier != "" {
+		q = q.Where(providerordertoken.NetworkEQ(networkIdentifier))
+	}
+	orderTokens, err := q.All(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":    fmt.Sprintf("%v", err),
-			"Currency": currency.Code,
-			"Network":  networkIdentifier,
-		}).Errorf("Failed to scan Redis buckets for bucket rate")
 		return RateValidationResult{}, fmt.Errorf("internal server error")
 	}
-
-	// Track the best available rate and reason for logging
-	var bestRate decimal.Decimal
-	var foundExactMatch bool
-	var selectedProviderID string
-	var selectedOrderType paymentorder.OrderType
-	var anySkippedDueToStuck bool
-	var currencyForStuck string
-
-	// Scan through the buckets to find a matching rate
-	for _, key := range keys {
-		bucketData, err := parseBucketKey(key)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Key":   key,
-				"Error": err,
-			}).Errorf("ValidateRate.InvalidBucketKey: failed to parse bucket key")
+	var best RateValidationResult
+	for _, orderToken := range orderTokens {
+		providerID := ""
+		if orderToken.Edges.Provider != nil {
+			providerID = orderToken.Edges.Provider.ID
+		}
+		if amount.LessThan(orderToken.MinOrderAmount) {
 			continue
 		}
-
-		// Get all providers in this bucket to find the first suitable one (priority queue order)
-		providers, err := storage.RedisClient.LRange(ctx, key, 0, -1).Result()
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Key":   key,
-				"Error": err,
-			}).Errorf("ValidateRate.FailedToGetProviders: failed to get providers from bucket")
+		orderType := DetermineOrderType(orderToken, amount)
+		if orderType == paymentorder.OrderTypeRegular && amount.GreaterThan(orderToken.MaxOrderAmount) {
 			continue
 		}
-
-		// Find the first provider at the top of the queue that matches our criteria
-		result := findSuitableProviderRate(ctx, providers, token, networkIdentifier, amount, bucketData, side)
-		if result.Found {
-			foundExactMatch = true
-			bestRate = result.Rate
-			selectedProviderID = result.ProviderID
-			selectedOrderType = result.OrderType
-			break // Found exact match, no need to continue
-		}
-		if result.AllSkippedDueToStuck && result.CurrencyCode != "" {
-			anySkippedDueToStuck = true
-			currencyForStuck = result.CurrencyCode
-		}
-
-		// Track the best available rate for logging purposes
-		if result.Rate.GreaterThan(bestRate) {
-			bestRate = result.Rate
-		}
-	}
-
-	// If no exact match found, try fallback provider (if configured) even though it's not on the bucket queue
-	if !foundExactMatch {
-		if fallbackID := config.OrderConfig().FallbackProviderID; fallbackID != "" {
-			fallbackResult, fallbackErr := validateProviderRate(ctx, token, currency, amount, fallbackID, networkIdentifier, side)
-			if fallbackErr == nil {
-				// Quote the queue's best rate when amount was below/above queue providers' min/max but fallback accepts it
-				if bestRate.GreaterThan(decimal.Zero) {
-					return RateValidationResult{
-						Rate:       bestRate,
-						ProviderID: fallbackResult.ProviderID,
-						OrderType:  fallbackResult.OrderType,
-					}, nil
-				}
-				return fallbackResult, nil
+		if orderType == paymentorder.OrderTypeOtc {
+			if orderToken.MinOrderAmountOtc.IsZero() || orderToken.MaxOrderAmountOtc.IsZero() {
+				continue
 			}
-			var errStuck *types.ErrNoProviderDueToStuck
-			if errors.As(fallbackErr, &errStuck) {
-				return RateValidationResult{}, fallbackErr
+			if amount.LessThan(orderToken.MinOrderAmountOtc) || amount.GreaterThan(orderToken.MaxOrderAmountOtc) {
+				continue
 			}
 		}
-		if anySkippedDueToStuck && currencyForStuck != "" {
-			return RateValidationResult{}, &types.ErrNoProviderDueToStuck{CurrencyCode: currencyForStuck}
+		if orderType == paymentorder.OrderTypeRegular && config.OrderConfig().ProviderStuckFulfillmentThreshold > 0 && providerID != "" {
+			stuckCount, errStuck := GetProviderStuckOrderCount(ctx, providerID)
+			if errStuck == nil && stuckCount >= config.OrderConfig().ProviderStuckFulfillmentThreshold {
+				continue
+			}
 		}
-		logger.WithFields(logger.Fields{
-			"Token":         token.Symbol,
-			"Currency":      currency.Code,
-			"Amount":        amount,
-			"NetworkFilter": networkIdentifier,
-			"BestRate":      bestRate,
-		}).Warnf("ValidateRate.NoSuitableProvider: no provider found for the given parameters")
-
-		// Provide more specific error message (buy = fiat to crypto, sell = crypto to fiat)
-		networkMsg := networkIdentifier
-		if networkMsg == "" {
-			networkMsg = "any network"
-		}
-		from, to := token.Symbol, currency.Code
+		rate := decimal.Zero
 		if side == RateSideBuy {
-			from, to = currency.Code, token.Symbol
+			if !orderToken.FixedBuyRate.IsZero() {
+				rate = orderToken.FixedBuyRate
+			} else if currency.MarketBuyRate.IsZero() {
+				continue
+			} else {
+				rate = currency.MarketBuyRate.Add(orderToken.FloatingBuyDelta).RoundBank(2)
+			}
+		} else {
+			if !orderToken.FixedSellRate.IsZero() {
+				rate = orderToken.FixedSellRate
+			} else if currency.MarketSellRate.IsZero() {
+				continue
+			} else {
+				rate = currency.MarketSellRate.Add(orderToken.FloatingSellDelta).RoundBank(2)
+			}
 		}
-		return RateValidationResult{}, fmt.Errorf("no provider available for %s to %s conversion with amount %s on %s",
-			from, to, amount, networkMsg)
+		if rate.IsZero() {
+			continue
+		}
+		hasBalance := false
+		if side == RateSideBuy {
+			hasBalance, err = storage.Client.ProviderBalances.Query().
+				Where(
+					providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
+					providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+					providerbalances.AvailableBalanceGTE(amount),
+					providerbalances.IsAvailableEQ(true),
+				).Exist(ctx)
+		} else {
+			hasBalance, err = storage.Client.ProviderBalances.Query().
+				Where(
+					providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+					providerbalances.AvailableBalanceGTE(amount.Mul(rate).RoundBank(0)),
+					providerbalances.IsAvailableEQ(true),
+				).Exist(ctx)
+		}
+		if err != nil || !hasBalance {
+			continue
+		}
+		if best.Rate.IsZero() || rate.GreaterThan(best.Rate) {
+			best = RateValidationResult{Rate: rate, ProviderID: providerID, OrderType: orderType}
+		}
 	}
-
-	return RateValidationResult{
-		Rate:       bestRate,
-		ProviderID: selectedProviderID,
-		OrderType:  selectedOrderType,
-	}, nil
+	if best.Rate.IsZero() {
+		return RateValidationResult{}, fmt.Errorf("no provider available for this token/currency pair")
+	}
+	return best, nil
 }
 
 // parseBucketKey parses and validates bucket key format
