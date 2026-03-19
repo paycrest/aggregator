@@ -558,14 +558,8 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		_ = tx.Rollback()
 		return
 	}
-	_, err = tx.PaymentOrder.UpdateOneID(paymentOrder.ID).AddTransactions(transactionLog).Save(reqCtx)
-	if err != nil {
-		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-		_ = tx.Rollback()
-		return
-	}
-
+	_ = transactionLog
+	
 	if createTransferWebhook {
 		engineService := svc.NewEngineService()
 		webhookID, webhookSecret, webhookErr := engineService.CreateTransferWebhook(reqCtx, token.Edges.Network.ChainID, token.ContractAddress, receiveAddress, paymentOrder.ID.String())
@@ -1294,13 +1288,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		_ = tx.Rollback()
 		return
 	}
-	_, err = tx.PaymentOrder.UpdateOneID(paymentOrder.ID).AddTransactions(transactionLog).Save(reqCtx)
-	if err != nil {
-		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-		_ = tx.Rollback()
-		return
-	}
+	_ = transactionLog
 
 	if createTransferWebhook {
 		engineService := svc.NewEngineService()
@@ -1927,13 +1915,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		_ = tx.Rollback()
 		return
 	}
-	_, err = tx.PaymentOrder.UpdateOneID(paymentOrder.ID).AddTransactions(transactionLog).Save(ctx)
-	if err != nil {
-		logger.Errorf("error: %v", err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
-		_ = tx.Rollback()
-		return
-	}
+	_ = transactionLog
 
 	// Commit before any external HTTP call so the DB transaction is not held during network I/O.
 	if err := tx.Commit(); err != nil {
@@ -3095,13 +3077,12 @@ func (ctrl *SenderController) ValidateOrder(ctx *gin.Context) {
 		_ = tx.Rollback()
 		return
 	}
+	_ = transactionLog 
 
-	// Update payment order status within transaction
 	_, err = tx.PaymentOrder.
 		Update().
 		Where(paymentorder.IDEQ(paymentOrder.ID)).
 		SetStatus(paymentorder.StatusValidated).
-		AddTransactions(transactionLog).
 		Save(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{

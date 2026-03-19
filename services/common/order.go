@@ -283,9 +283,6 @@ func ProcessPaymentOrderFromBlockchain(
 		}
 	}
 
-	if transactionLog != nil {
-		orderBuilder = orderBuilder.AddTransactions(transactionLog)
-	}
 
 	orderCreated, err := orderBuilder.Save(ctx)
 	if err != nil {
@@ -305,10 +302,7 @@ func ProcessPaymentOrderFromBlockchain(
 		if err != nil {
 			return fmt.Errorf("%s - failed to create transaction log for new order: %w", paymentOrderFields.GatewayID, err)
 		}
-		_, err = tx.PaymentOrder.UpdateOneID(orderCreated.ID).AddTransactions(transactionLog).Save(ctx)
-		if err != nil {
-			return fmt.Errorf("%s - failed to link transaction log to order: %w", paymentOrderFields.GatewayID, err)
-		}
+		_ = transactionLog
 	}
 
 	// Commit the transaction
@@ -328,7 +322,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 	}
 
 	gatewayID := normalizeGatewayID(event.OrderId)
-	var transactionLog *ent.TransactionLog
 
 	// Update any existing order_refunding log (created when refund tx was submitted) by setting tx_hash.
 	// Note: TransactionLog status is not updated here; the ent TransactionLogUpdate builder may not expose SetStatus. Order status is set to Refunded via PaymentOrder update.
@@ -394,7 +387,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 						).
 						First(ctx)
 					if orderErr == nil && refundOrder != nil {
-						transactionLog, err = tx.TransactionLog.
+						_, err = tx.TransactionLog.
 							Create().
 							SetStatus(transactionlog.StatusOrderRefunded).
 							SetTxHash(event.TxHash).
@@ -412,7 +405,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 					return fmt.Errorf("UpdateOrderStatusRefunded.query: %v", err)
 				}
 			} else {
-				transactionLog = existingLog
+				_ = existingLog
 			}
 		}
 	}
@@ -437,9 +430,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		SetTxHash(event.TxHash).
 		SetStatus(paymentorder.StatusRefunded)
 
-	if transactionLog != nil {
-		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
-	}
 
 	updatedOrderRows, err := paymentOrderUpdate.Save(ctx)
 	if err != nil {
@@ -543,7 +533,6 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 	}
 
 	// Update any existing order_settling log(s) for this event (same gateway_id, network) by setting tx_hash.
-	var transactionLog *ent.TransactionLog
 	updatedLogRows, err := tx.TransactionLog.
 		Update().
 		Where(
@@ -572,7 +561,7 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 			).
 			First(ctx)
 		if orderErr == nil && order != nil {
-			transactionLog, err = tx.TransactionLog.
+			_, err = tx.TransactionLog.
 				Create().
 				SetStatus(transactionlog.StatusOrderSettled).
 				SetTxHash(event.TxHash).
@@ -607,9 +596,6 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 		paymentOrderUpdate = paymentOrderUpdate.AddPercentSettled(event.SettlePercent.Div(decimal.NewFromInt(1000)))
 	}
 
-	if transactionLog != nil {
-		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
-	}
 
 	updatedOrderRows, err := paymentOrderUpdate.Save(ctx)
 	if err != nil {
@@ -708,7 +694,6 @@ func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event 
 	gatewayID := normalizeGatewayID(event.OrderId)
 
 	// Update any existing order_settling log(s) for this gateway order by setting tx_hash
-	var transactionLog *ent.TransactionLog
 	updatedLogRows, err := tx.TransactionLog.
 		Update().
 		Where(
@@ -738,7 +723,7 @@ func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event 
 			).
 			First(ctx)
 		if orderErr == nil && order != nil {
-			transactionLog, err = tx.TransactionLog.
+			_, err = tx.TransactionLog.
 				Create().
 				SetStatus(transactionlog.StatusOrderSettled).
 				SetTxHash(event.TxHash).
@@ -770,9 +755,6 @@ func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event 
 		SetTxHash(event.TxHash).
 		SetStatus(paymentorder.StatusSettled)
 
-	if transactionLog != nil {
-		paymentOrderUpdate = paymentOrderUpdate.AddTransactions(transactionLog)
-	}
 
 	updatedOrderRows, err := paymentOrderUpdate.Save(ctx)
 	if err != nil {
@@ -1200,10 +1182,14 @@ func ensureTransactionLog(
 				}
 				return transactionLog, nil
 			}
+
+			// Existing log for this tx/hash; not linked to *this* order and not to another (e.g. legacy row) — caller may still need it
+			return existingLog, nil
 		}
 
-		// Existing log is not linked to any payment order, or no payment order ID provided
-		return existingLog, nil
+		// paymentOrderID == nil: new PaymentOrder will be created next; create log after Save with SetPaymentOrderID.
+		// Do not return existingLog — it may already be linked to another order (ent "already connected" on AddTransactions).
+		return nil, nil
 	}
 
 	// Create new transaction log only when we have an order to attach (required edge)

@@ -768,10 +768,10 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 				return
 			}
+			_ = transactionLog
 			_, err = tx.PaymentOrder.
 				UpdateOneID(orderID).
 				SetStatus(paymentorder.StatusRefunding).
-				AddTransactions(transactionLog).
 				Save(reqCtx)
 			if err != nil {
 				_ = tx.Rollback()
@@ -864,9 +864,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		SetStatus(paymentorder.StatusFulfilling).
 		SetProviderID(provider.ID)
 
-	if transactionLog != nil {
-		orderBuilder = orderBuilder.AddTransactions(transactionLog)
-	}
+	_ = transactionLog
 
 	updatedCount, err := orderBuilder.Save(reqCtx)
 	if err != nil {
@@ -1360,6 +1358,7 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 			_ = tx.Rollback()
 			return
 		}
+		_ = transactionLog
 
 		// Check order status again before updating (race condition protection)
 		// This prevents updating orders that were settled by another process
@@ -1381,12 +1380,10 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 			}
 		}
 
-		// Update order status within transaction
 		_, err = tx.PaymentOrder.
 			Update().
 			Where(paymentorder.IDEQ(orderID)).
 			SetStatus(paymentorder.StatusValidated).
-			AddTransactions(transactionLog).
 			Save(reqCtx)
 		if err != nil {
 			logger.WithFields(logger.Fields{
@@ -1938,7 +1935,6 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		).
 		SetStatus(paymentorder.StatusSettling).
 		SetGatewayID(gatewayOrderID).
-		AddTransactions(transactionLog).
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()
@@ -2278,9 +2274,7 @@ func (ctrl *ProviderController) promotePendingPayinOrderToFulfilling(ctx context
 	if order.Edges.Provider == nil {
 		orderBuilder = orderBuilder.SetProviderID(provider.ID)
 	}
-	if transactionLog != nil {
-		orderBuilder = orderBuilder.AddTransactions(transactionLog)
-	}
+	_ = transactionLog
 
 	updatedCount, err := orderBuilder.Save(ctx)
 	if err != nil {
