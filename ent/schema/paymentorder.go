@@ -42,6 +42,9 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.Float("sender_fee").
 			GoType(decimal.Decimal{}).
 			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("provider_fee").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
 		field.Float("network_fee").
 			GoType(decimal.Decimal{}).
 			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),

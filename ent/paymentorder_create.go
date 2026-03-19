@@ -134,6 +134,20 @@ func (_c *PaymentOrderCreate) SetNillableSenderFee(v *decimal.Decimal) *PaymentO
 	return _c
 }
 
+// SetProviderFee sets the "provider_fee" field.
+func (_c *PaymentOrderCreate) SetProviderFee(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetProviderFee(v)
+	return _c
+}
+
+// SetNillableProviderFee sets the "provider_fee" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableProviderFee(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetProviderFee(*v)
+	}
+	return _c
+}
+
 // SetNetworkFee sets the "network_fee" field.
 func (_c *PaymentOrderCreate) SetNetworkFee(v decimal.Decimal) *PaymentOrderCreate {
 	_c.mutation.SetNetworkFee(v)
@@ -668,6 +682,10 @@ func (_c *PaymentOrderCreate) defaults() {
 		v := paymentorder.DefaultSenderFee()
 		_c.mutation.SetSenderFee(v)
 	}
+	if _, ok := _c.mutation.ProviderFee(); !ok {
+		v := paymentorder.DefaultProviderFee()
+		_c.mutation.SetProviderFee(v)
+	}
 	if _, ok := _c.mutation.NetworkFee(); !ok {
 		v := paymentorder.DefaultNetworkFee()
 		_c.mutation.SetNetworkFee(v)
@@ -742,6 +760,9 @@ func (_c *PaymentOrderCreate) check() error {
 	}
 	if _, ok := _c.mutation.SenderFee(); !ok {
 		return &ValidationError{Name: "sender_fee", err: errors.New(`ent: missing required field "PaymentOrder.sender_fee"`)}
+	}
+	if _, ok := _c.mutation.ProviderFee(); !ok {
+		return &ValidationError{Name: "provider_fee", err: errors.New(`ent: missing required field "PaymentOrder.provider_fee"`)}
 	}
 	if _, ok := _c.mutation.NetworkFee(); !ok {
 		return &ValidationError{Name: "network_fee", err: errors.New(`ent: missing required field "PaymentOrder.network_fee"`)}
@@ -925,6 +946,10 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.SenderFee(); ok {
 		_spec.SetField(paymentorder.FieldSenderFee, field.TypeFloat64, value)
 		_node.SenderFee = value
+	}
+	if value, ok := _c.mutation.ProviderFee(); ok {
+		_spec.SetField(paymentorder.FieldProviderFee, field.TypeFloat64, value)
+		_node.ProviderFee = value
 	}
 	if value, ok := _c.mutation.NetworkFee(); ok {
 		_spec.SetField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
@@ -1341,6 +1366,24 @@ func (u *PaymentOrderUpsert) UpdateSenderFee() *PaymentOrderUpsert {
 // AddSenderFee adds v to the "sender_fee" field.
 func (u *PaymentOrderUpsert) AddSenderFee(v decimal.Decimal) *PaymentOrderUpsert {
 	u.Add(paymentorder.FieldSenderFee, v)
+	return u
+}
+
+// SetProviderFee sets the "provider_fee" field.
+func (u *PaymentOrderUpsert) SetProviderFee(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldProviderFee, v)
+	return u
+}
+
+// UpdateProviderFee sets the "provider_fee" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateProviderFee() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldProviderFee)
+	return u
+}
+
+// AddProviderFee adds v to the "provider_fee" field.
+func (u *PaymentOrderUpsert) AddProviderFee(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldProviderFee, v)
 	return u
 }
 
@@ -2027,6 +2070,27 @@ func (u *PaymentOrderUpsertOne) AddSenderFee(v decimal.Decimal) *PaymentOrderUps
 func (u *PaymentOrderUpsertOne) UpdateSenderFee() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateSenderFee()
+	})
+}
+
+// SetProviderFee sets the "provider_fee" field.
+func (u *PaymentOrderUpsertOne) SetProviderFee(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetProviderFee(v)
+	})
+}
+
+// AddProviderFee adds v to the "provider_fee" field.
+func (u *PaymentOrderUpsertOne) AddProviderFee(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddProviderFee(v)
+	})
+}
+
+// UpdateProviderFee sets the "provider_fee" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateProviderFee() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateProviderFee()
 	})
 }
 
@@ -2959,6 +3023,27 @@ func (u *PaymentOrderUpsertBulk) AddSenderFee(v decimal.Decimal) *PaymentOrderUp
 func (u *PaymentOrderUpsertBulk) UpdateSenderFee() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.UpdateSenderFee()
+	})
+}
+
+// SetProviderFee sets the "provider_fee" field.
+func (u *PaymentOrderUpsertBulk) SetProviderFee(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetProviderFee(v)
+	})
+}
+
+// AddProviderFee adds v to the "provider_fee" field.
+func (u *PaymentOrderUpsertBulk) AddProviderFee(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddProviderFee(v)
+	})
+}
+
+// UpdateProviderFee sets the "provider_fee" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateProviderFee() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateProviderFee()
 	})
 }
 

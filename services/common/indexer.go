@@ -279,6 +279,21 @@ func ProcessSettleInOrders(ctx context.Context, network *ent.Network, orderIds [
 	return nil
 }
 
+// ProcessLocalTransferFeeSplitEvents processes LocalTransferFeeSplit events and updates provider fees.
+func ProcessLocalTransferFeeSplitEvents(ctx context.Context, network *ent.Network, events []*types.LocalTransferFeeSplitEvent) error {
+	for _, event := range events {
+		if err := UpdateProviderFee(ctx, network, event); err != nil {
+			logger.WithFields(logger.Fields{
+				"Error":   fmt.Sprintf("%v", err),
+				"OrderID": event.OrderId,
+				"TxHash":  event.TxHash,
+				"Network": network.Identifier,
+			}).Errorf("Failed to update provider fee for order %s", event.OrderId)
+		}
+	}
+	return nil
+}
+
 // ProcessRefundedOrders processes refunded orders for a network
 func ProcessRefundedOrders(ctx context.Context, network *ent.Network, orderIds []string, orderIdToEvent map[string]*types.OrderRefundedEvent) error {
 	lockOrders, err := storage.Client.PaymentOrder.

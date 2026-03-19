@@ -35,6 +35,8 @@ const (
 	FieldPercentSettled = "percent_settled"
 	// FieldSenderFee holds the string denoting the sender_fee field in the database.
 	FieldSenderFee = "sender_fee"
+	// FieldProviderFee holds the string denoting the provider_fee field in the database.
+	FieldProviderFee = "provider_fee"
 	// FieldNetworkFee holds the string denoting the network_fee field in the database.
 	FieldNetworkFee = "network_fee"
 	// FieldProtocolFee holds the string denoting the protocol_fee field in the database.
@@ -170,6 +172,7 @@ var Columns = []string{
 	FieldAmountReturned,
 	FieldPercentSettled,
 	FieldSenderFee,
+	FieldProviderFee,
 	FieldNetworkFee,
 	FieldProtocolFee,
 	FieldOrderPercent,
@@ -240,6 +243,8 @@ var (
 	DefaultPercentSettled func() decimal.Decimal
 	// DefaultSenderFee holds the default value on creation for the "sender_fee" field.
 	DefaultSenderFee func() decimal.Decimal
+	// DefaultProviderFee holds the default value on creation for the "provider_fee" field.
+	DefaultProviderFee func() decimal.Decimal
 	// DefaultNetworkFee holds the default value on creation for the "network_fee" field.
 	DefaultNetworkFee func() decimal.Decimal
 	// DefaultProtocolFee holds the default value on creation for the "protocol_fee" field.
@@ -421,6 +426,11 @@ func ByPercentSettled(opts ...sql.OrderTermOption) OrderOption {
 // BySenderFee orders the results by the sender_fee field.
 func BySenderFee(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSenderFee, opts...).ToFunc()
+}
+
+// ByProviderFee orders the results by the provider_fee field.
+func ByProviderFee(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProviderFee, opts...).ToFunc()
 }
 
 // ByNetworkFee orders the results by the network_fee field.

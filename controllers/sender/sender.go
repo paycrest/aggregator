@@ -2894,8 +2894,9 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 
 	// Get USD volume
 	var w []struct {
-		Sum               decimal.Decimal
-		SumFieldSenderFee decimal.Decimal
+		Sum                 decimal.Decimal
+		SumFieldSenderFee   decimal.Decimal
+		SumFieldProviderFee decimal.Decimal
 	}
 	err := storage.Client.PaymentOrder.
 		Query().
@@ -2907,6 +2908,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 		Aggregate(
 			ent.Sum(paymentorder.FieldAmount),
 			ent.As(ent.Sum(paymentorder.FieldSenderFee), "SumFieldSenderFee"),
+			ent.As(ent.Sum(paymentorder.FieldProviderFee), "SumFieldProviderFee"),
 		).
 		Scan(reqCtx, &w)
 	if err != nil {
@@ -2932,6 +2934,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 
 	var localStablecoinSum decimal.Decimal
 	var localStablecoinSenderFee decimal.Decimal
+	var localStablecoinProviderFee decimal.Decimal
 
 	// Convert local stablecoin volume to USD (direction-aware: onramp use buy rate, offramp use sell rate)
 	for _, paymentOrder := range paymentOrders {
@@ -2957,9 +2960,13 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 		if paymentOrder.SenderFee.GreaterThan(decimal.Zero) {
 			paymentOrder.SenderFee = paymentOrder.SenderFee.Div(rate)
 		}
+		if paymentOrder.ProviderFee.GreaterThan(decimal.Zero) {
+			paymentOrder.ProviderFee = paymentOrder.ProviderFee.Div(rate)
+		}
 
 		localStablecoinSum = localStablecoinSum.Add(paymentOrder.Amount)
 		localStablecoinSenderFee = localStablecoinSenderFee.Add(paymentOrder.SenderFee)
+		localStablecoinProviderFee = localStablecoinProviderFee.Add(paymentOrder.ProviderFee)
 	}
 
 	count, err := storage.Client.PaymentOrder.
@@ -2975,9 +2982,10 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Sender stats retrieved successfully", types.SenderStatsResponse{
-		TotalOrders:      count,
-		TotalOrderVolume: w[0].Sum.Add(localStablecoinSum),
-		TotalFeeEarnings: w[0].SumFieldSenderFee.Add(localStablecoinSenderFee),
+		TotalOrders:       count,
+		TotalOrderVolume:  w[0].Sum.Add(localStablecoinSum),
+		TotalFeeEarnings:  w[0].SumFieldSenderFee.Add(localStablecoinSenderFee),
+		TotalProviderFees: w[0].SumFieldProviderFee.Add(localStablecoinProviderFee),
 	})
 }
 
