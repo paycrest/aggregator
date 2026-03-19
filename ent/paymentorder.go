@@ -43,6 +43,8 @@ type PaymentOrder struct {
 	PercentSettled decimal.Decimal `json:"percent_settled,omitempty"`
 	// SenderFee holds the value of the "sender_fee" field.
 	SenderFee decimal.Decimal `json:"sender_fee,omitempty"`
+	// ProviderFee holds the value of the "provider_fee" field.
+	ProviderFee decimal.Decimal `json:"provider_fee,omitempty"`
 	// NetworkFee holds the value of the "network_fee" field.
 	NetworkFee decimal.Decimal `json:"network_fee,omitempty"`
 	// ProtocolFee holds the value of the "protocol_fee" field.
@@ -211,7 +213,7 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case paymentorder.FieldReceiveAddressSalt, paymentorder.FieldMetadata, paymentorder.FieldCancellationReasons:
 			values[i] = new([]byte)
-		case paymentorder.FieldAmount, paymentorder.FieldRate, paymentorder.FieldAmountInUsd, paymentorder.FieldAmountPaid, paymentorder.FieldAmountReturned, paymentorder.FieldPercentSettled, paymentorder.FieldSenderFee, paymentorder.FieldNetworkFee, paymentorder.FieldProtocolFee, paymentorder.FieldOrderPercent, paymentorder.FieldFeePercent:
+		case paymentorder.FieldAmount, paymentorder.FieldRate, paymentorder.FieldAmountInUsd, paymentorder.FieldAmountPaid, paymentorder.FieldAmountReturned, paymentorder.FieldPercentSettled, paymentorder.FieldSenderFee, paymentorder.FieldProviderFee, paymentorder.FieldNetworkFee, paymentorder.FieldProtocolFee, paymentorder.FieldOrderPercent, paymentorder.FieldFeePercent:
 			values[i] = new(decimal.Decimal)
 		case paymentorder.FieldBlockNumber, paymentorder.FieldCancellationCount:
 			values[i] = new(sql.NullInt64)
@@ -305,6 +307,12 @@ func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field sender_fee", values[i])
 			} else if value != nil {
 				_m.SenderFee = *value
+			}
+		case paymentorder.FieldProviderFee:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_fee", values[i])
+			} else if value != nil {
+				_m.ProviderFee = *value
 			}
 		case paymentorder.FieldNetworkFee:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
@@ -610,6 +618,9 @@ func (_m *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("sender_fee=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SenderFee))
+	builder.WriteString(", ")
+	builder.WriteString("provider_fee=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ProviderFee))
 	builder.WriteString(", ")
 	builder.WriteString("network_fee=")
 	builder.WriteString(fmt.Sprintf("%v", _m.NetworkFee))

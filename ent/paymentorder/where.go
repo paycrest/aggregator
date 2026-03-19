@@ -102,6 +102,11 @@ func SenderFee(v decimal.Decimal) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldSenderFee, v))
 }
 
+// ProviderFee applies equality check predicate on the "provider_fee" field. It's identical to ProviderFeeEQ.
+func ProviderFee(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldProviderFee, v))
+}
+
 // NetworkFee applies equality check predicate on the "network_fee" field. It's identical to NetworkFeeEQ.
 func NetworkFee(v decimal.Decimal) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldNetworkFee, v))
@@ -575,6 +580,46 @@ func SenderFeeLT(v decimal.Decimal) predicate.PaymentOrder {
 // SenderFeeLTE applies the LTE predicate on the "sender_fee" field.
 func SenderFeeLTE(v decimal.Decimal) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldLTE(FieldSenderFee, v))
+}
+
+// ProviderFeeEQ applies the EQ predicate on the "provider_fee" field.
+func ProviderFeeEQ(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldProviderFee, v))
+}
+
+// ProviderFeeNEQ applies the NEQ predicate on the "provider_fee" field.
+func ProviderFeeNEQ(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldProviderFee, v))
+}
+
+// ProviderFeeIn applies the In predicate on the "provider_fee" field.
+func ProviderFeeIn(vs ...decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldProviderFee, vs...))
+}
+
+// ProviderFeeNotIn applies the NotIn predicate on the "provider_fee" field.
+func ProviderFeeNotIn(vs ...decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldProviderFee, vs...))
+}
+
+// ProviderFeeGT applies the GT predicate on the "provider_fee" field.
+func ProviderFeeGT(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldProviderFee, v))
+}
+
+// ProviderFeeGTE applies the GTE predicate on the "provider_fee" field.
+func ProviderFeeGTE(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldProviderFee, v))
+}
+
+// ProviderFeeLT applies the LT predicate on the "provider_fee" field.
+func ProviderFeeLT(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldProviderFee, v))
+}
+
+// ProviderFeeLTE applies the LTE predicate on the "provider_fee" field.
+func ProviderFeeLTE(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldProviderFee, v))
 }
 
 // NetworkFeeEQ applies the EQ predicate on the "network_fee" field.

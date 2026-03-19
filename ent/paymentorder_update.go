@@ -191,6 +191,27 @@ func (_u *PaymentOrderUpdate) AddSenderFee(v decimal.Decimal) *PaymentOrderUpdat
 	return _u
 }
 
+// SetProviderFee sets the "provider_fee" field.
+func (_u *PaymentOrderUpdate) SetProviderFee(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetProviderFee()
+	_u.mutation.SetProviderFee(v)
+	return _u
+}
+
+// SetNillableProviderFee sets the "provider_fee" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableProviderFee(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetProviderFee(*v)
+	}
+	return _u
+}
+
+// AddProviderFee adds value to the "provider_fee" field.
+func (_u *PaymentOrderUpdate) AddProviderFee(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddProviderFee(v)
+	return _u
+}
+
 // SetNetworkFee sets the "network_fee" field.
 func (_u *PaymentOrderUpdate) SetNetworkFee(v decimal.Decimal) *PaymentOrderUpdate {
 	_u.mutation.ResetNetworkFee()
@@ -1079,6 +1100,12 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.AddedSenderFee(); ok {
 		_spec.AddField(paymentorder.FieldSenderFee, field.TypeFloat64, value)
 	}
+	if value, ok := _u.mutation.ProviderFee(); ok {
+		_spec.SetField(paymentorder.FieldProviderFee, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedProviderFee(); ok {
+		_spec.AddField(paymentorder.FieldProviderFee, field.TypeFloat64, value)
+	}
 	if value, ok := _u.mutation.NetworkFee(); ok {
 		_spec.SetField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
 	}
@@ -1642,6 +1669,27 @@ func (_u *PaymentOrderUpdateOne) SetNillableSenderFee(v *decimal.Decimal) *Payme
 // AddSenderFee adds value to the "sender_fee" field.
 func (_u *PaymentOrderUpdateOne) AddSenderFee(v decimal.Decimal) *PaymentOrderUpdateOne {
 	_u.mutation.AddSenderFee(v)
+	return _u
+}
+
+// SetProviderFee sets the "provider_fee" field.
+func (_u *PaymentOrderUpdateOne) SetProviderFee(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetProviderFee()
+	_u.mutation.SetProviderFee(v)
+	return _u
+}
+
+// SetNillableProviderFee sets the "provider_fee" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableProviderFee(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetProviderFee(*v)
+	}
+	return _u
+}
+
+// AddProviderFee adds value to the "provider_fee" field.
+func (_u *PaymentOrderUpdateOne) AddProviderFee(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddProviderFee(v)
 	return _u
 }
 
@@ -2562,6 +2610,12 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	}
 	if value, ok := _u.mutation.AddedSenderFee(); ok {
 		_spec.AddField(paymentorder.FieldSenderFee, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.ProviderFee(); ok {
+		_spec.SetField(paymentorder.FieldProviderFee, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedProviderFee(); ok {
+		_spec.AddField(paymentorder.FieldProviderFee, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.NetworkFee(); ok {
 		_spec.SetField(paymentorder.FieldNetworkFee, field.TypeFloat64, value)
