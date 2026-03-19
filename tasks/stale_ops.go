@@ -174,10 +174,21 @@ func RetryStaleUserOperations() error {
 						}).Errorf("RetryStaleUserOperations.payinRevert: failed to start tx")
 						continue
 					}
+					// Delete settling log first. RemoveTransactions would NULL payment_order_transactions,
+					// which violates NOT NULL on the required TransactionLog.payment_order edge.
+					if delErr := txRev.TransactionLog.DeleteOneID(settlingLog.ID).Exec(ctx); delErr != nil {
+						_ = txRev.Rollback()
+						logger.WithFields(logger.Fields{
+							"Error":     fmt.Sprintf("%v", delErr),
+							"OrderID":   order.ID.String(),
+							"LogID":     settlingLog.ID.String(),
+							"GatewayID": order.GatewayID,
+						}).Errorf("RetryStaleUserOperations.payinRevert: failed to remove settling log")
+						continue
+					}
 					_, updErr := txRev.PaymentOrder.
 						UpdateOneID(order.ID).
 						SetStatus(paymentorder.StatusFulfilling).
-						RemoveTransactions(settlingLog).
 						Save(ctx)
 					if updErr != nil {
 						_ = txRev.Rollback()
@@ -187,16 +198,6 @@ func RetryStaleUserOperations() error {
 							"LogID":     settlingLog.ID.String(),
 							"GatewayID": order.GatewayID,
 						}).Errorf("RetryStaleUserOperations.payinRevert: failed to revert order")
-						continue
-					}
-					if delErr := txRev.TransactionLog.DeleteOneID(settlingLog.ID).Exec(ctx); delErr != nil {
-						_ = txRev.Rollback()
-						logger.WithFields(logger.Fields{
-							"Error":     fmt.Sprintf("%v", delErr),
-							"OrderID":   order.ID.String(),
-							"LogID":     settlingLog.ID.String(),
-							"GatewayID": order.GatewayID,
-						}).Errorf("RetryStaleUserOperations.payinRevert: failed to remove settling log")
 						continue
 					}
 					if commitErr := txRev.Commit(); commitErr != nil {

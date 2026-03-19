@@ -290,12 +290,13 @@ func (s *OrderTron) RefundOrder(ctx context.Context, network *ent.Network, order
 	if err != nil {
 		return fmt.Errorf("%s - Tron.RefundOrder.tx: %w", orderIDPrefix, err)
 	}
-	transactionLog, err := tx.TransactionLog.
+	_, err = tx.TransactionLog.
 		Create().
 		SetStatus(transactionlog.StatusOrderRefunding).
 		SetGatewayID(lockOrder.GatewayID).
 		SetTxHash(txHash).
 		SetNetwork(lockOrder.Edges.Token.Edges.Network.Identifier).
+		SetPaymentOrderID(lockOrder.ID).
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()
@@ -305,7 +306,6 @@ func (s *OrderTron) RefundOrder(ctx context.Context, network *ent.Network, order
 		UpdateOneID(lockOrder.ID).
 		SetTxHash(txHash).
 		SetStatus(paymentorder.StatusRefunding).
-		AddTransactions(transactionLog).
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()

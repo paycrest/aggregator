@@ -1974,21 +1974,21 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
 			return
 		}
-		_, txErr = txCompensate.PaymentOrder.
-			UpdateOneID(orderID).
-			SetStatus(paymentorder.StatusFulfilling).
-			RemoveTransactions(transactionLog).
-			Save(ctx)
-		if txErr != nil {
-			_ = txCompensate.Rollback()
-			logger.Errorf("Failed to revert order status on settlement error: %v", txErr)
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
-			return
-		}
+		// Delete settling log first; RemoveTransactions would NULL payment_order_transactions (NOT NULL).
 		txErr = txCompensate.TransactionLog.DeleteOneID(transactionLog.ID).Exec(ctx)
 		if txErr != nil {
 			_ = txCompensate.Rollback()
 			logger.Errorf("Failed to remove settlement log on settlement error: %v", txErr)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
+			return
+		}
+		_, txErr = txCompensate.PaymentOrder.
+			UpdateOneID(orderID).
+			SetStatus(paymentorder.StatusFulfilling).
+			Save(ctx)
+		if txErr != nil {
+			_ = txCompensate.Rollback()
+			logger.Errorf("Failed to revert order status on settlement error: %v", txErr)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to execute settlement", nil)
 			return
 		}

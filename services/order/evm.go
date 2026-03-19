@@ -219,11 +219,12 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	if err != nil {
 		return fmt.Errorf("%s - RefundOrder.tx: %w", orderIDPrefix, err)
 	}
-	transactionLog, err := tx.TransactionLog.
+	_, err = tx.TransactionLog.
 		Create().
 		SetStatus(transactionlog.StatusOrderRefunding).
 		SetGatewayID(lockOrder.GatewayID).
 		SetNetwork(lockOrder.Edges.Token.Edges.Network.Identifier).
+		SetPaymentOrderID(lockOrder.ID).
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()
@@ -232,7 +233,6 @@ func (s *OrderEVM) RefundOrder(ctx context.Context, network *ent.Network, orderI
 	_, err = tx.PaymentOrder.
 		UpdateOneID(lockOrder.ID).
 		SetStatus(paymentorder.StatusRefunding).
-		AddTransactions(transactionLog).
 		Save(ctx)
 	if err != nil {
 		_ = tx.Rollback()

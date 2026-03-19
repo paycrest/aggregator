@@ -396,12 +396,13 @@ func UpdateReceiveAddressStatus(
 		}
 
 		if paymentOrder.AmountPaid.GreaterThanOrEqual(decimal.Zero) && paymentOrder.AmountPaid.LessThan(orderAmountWithFees) {
-			transactionLog, err := tx.TransactionLog.
+			_, err = tx.TransactionLog.
 				Create().
 				SetStatus(transactionlog.StatusCryptoDeposited).
 				SetGatewayID(paymentOrder.GatewayID).
 				SetTxHash(event.TxHash).
 				SetNetwork(paymentOrder.Edges.Token.Edges.Network.Identifier).
+				SetPaymentOrderID(paymentOrder.ID).
 				Save(ctx)
 			if err != nil {
 				return true, fmt.Errorf("UpdateReceiveAddressStatus.transactionlog: %v", err)
@@ -413,7 +414,6 @@ func UpdateReceiveAddressStatus(
 				SetBlockNumber(int64(event.BlockNumber)).
 				SetStatus(paymentorder.StatusDeposited).
 				AddAmountPaid(event.Value).
-				AddTransactions(transactionLog).
 				Save(ctx)
 			if err != nil {
 				return true, fmt.Errorf("UpdateReceiveAddressStatus.db: %v", err)

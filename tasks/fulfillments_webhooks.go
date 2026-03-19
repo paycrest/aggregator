@@ -301,10 +301,11 @@ func SyncPaymentOrderFulfillments() {
 					}).Errorf("SyncPaymentOrderFulfillments.MissingNetwork")
 					continue
 				}
-				transactionLog, err := storage.Client.TransactionLog.
+				_, err = storage.Client.TransactionLog.
 					Create().
 					SetStatus(transactionlog.StatusOrderValidated).
 					SetNetwork(order.Edges.Token.Edges.Network.Identifier).
+					SetPaymentOrderID(order.ID).
 					Save(ctx)
 				if err != nil {
 					continue
@@ -312,7 +313,6 @@ func SyncPaymentOrderFulfillments() {
 				_, err = storage.Client.PaymentOrder.
 					UpdateOneID(order.ID).
 					SetStatus(paymentorder.StatusValidated).
-					AddTransactions(transactionLog).
 					Save(ctx)
 				if err != nil {
 					continue
@@ -462,10 +462,11 @@ func SyncPaymentOrderFulfillments() {
 							continue
 						}
 
-						transactionLog, err := storage.Client.TransactionLog.
+						_, err = storage.Client.TransactionLog.
 							Create().
 							SetStatus(transactionlog.StatusOrderValidated).
 							SetNetwork(order.Edges.Token.Edges.Network.Identifier).
+							SetPaymentOrderID(order.ID).
 							Save(ctx)
 						if err != nil {
 							continue
@@ -474,7 +475,6 @@ func SyncPaymentOrderFulfillments() {
 						_, err = storage.Client.PaymentOrder.
 							UpdateOneID(order.ID).
 							SetStatus(paymentorder.StatusValidated).
-							AddTransactions(transactionLog).
 							Save(ctx)
 						if err != nil {
 							continue
@@ -531,16 +531,15 @@ func SyncPaymentOrderFulfillments() {
 							continue
 						}
 						if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
-							transactionLog, err := storage.Client.TransactionLog.
+							if _, createErr := storage.Client.TransactionLog.
 								Create().
 								SetStatus(transactionlog.StatusOrderValidated).
 								SetNetwork(order.Edges.Token.Edges.Network.Identifier).
-								Save(ctx)
-							if err == nil && transactionLog != nil {
+								SetPaymentOrderID(order.ID).
+								Save(ctx); createErr == nil {
 								_, _ = storage.Client.PaymentOrder.
 									UpdateOneID(order.ID).
 									SetStatus(paymentorder.StatusValidated).
-									AddTransactions(transactionLog).
 									Save(ctx)
 								_ = utils.SendPaymentOrderWebhook(ctx, order)
 							}
@@ -584,10 +583,11 @@ func SyncPaymentOrderFulfillments() {
 						continue
 					}
 
-					transactionLog, err := storage.Client.TransactionLog.
+					_, err = storage.Client.TransactionLog.
 						Create().
 						SetStatus(transactionlog.StatusOrderValidated).
 						SetNetwork(order.Edges.Token.Edges.Network.Identifier).
+						SetPaymentOrderID(order.ID).
 						Save(ctx)
 					if err != nil {
 						continue
@@ -596,7 +596,6 @@ func SyncPaymentOrderFulfillments() {
 					_, err = storage.Client.PaymentOrder.
 						UpdateOneID(order.ID).
 						SetStatus(paymentorder.StatusValidated).
-						AddTransactions(transactionLog).
 						Save(ctx)
 					if err != nil {
 						continue
