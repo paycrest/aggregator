@@ -87,7 +87,7 @@ func setup() error {
 		SetDecimals(6).
 		SetNetworkID(networkId).
 		SetIsEnabled(true).
-		SetBaseCurrency("NGN"). // Set to NGN to avoid Redis dependency
+		SetBaseCurrency("NGN"). // Direct NGN/NGN match: ValidateRate normalizes to 1; payloads must use rate 1 (symmetric tolerance vs queue 750)
 		OnConflict().
 		UpdateNewValues().
 		ID(context.Background())
@@ -120,7 +120,7 @@ func setup() error {
 		return fmt.Errorf("CreateTestProviderProfile.sender_test: %w", err)
 	}
 
-	// Create ProviderOrderToken for rate validation (two-sided rates; match test payload rate 750)
+	// Create ProviderOrderToken for rate validation (Redis queue uses 750; NGN/NGN direct match normalizes ValidateRate to 1, matching payload rate "1")
 	providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
 		"provider":             providerProfile,
 		"token_id":             int(tokenId),
@@ -139,7 +139,7 @@ func setup() error {
 	}
 
 	// Create ProvisionBucket for bucket-based rate validation
-	// Bucket range should accommodate: amount (100) * rate (750) = 75,000 fiat
+	// Bucket range accommodates fiat notionally from queue rate (e.g. 100 * 750); initiation uses direct-match rate 1
 	bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
 		"provider_id": providerProfile.ID,
 		"currency_id": currency.ID,
@@ -418,7 +418,7 @@ func TestSender(t *testing.T) {
 			validPayload := map[string]interface{}{
 				"amount":  "100",
 				"token":   testCtx.nativeTokenSymbol,
-				"rate":    "750",
+				"rate":    "1",
 				"network": testCtx.nativeNetworkIdentifier,
 				"recipient": map[string]interface{}{
 					"institution":       "MOMONGPC",
@@ -492,7 +492,7 @@ func TestSender(t *testing.T) {
 			payload := map[string]interface{}{
 				"amount":  "0",
 				"token":   testCtx.token.Symbol,
-				"rate":    "750",
+				"rate":    "1",
 				"network": network.Identifier,
 				"recipient": map[string]interface{}{
 					"institution":       "MOMONGPC",
@@ -528,7 +528,7 @@ func TestSender(t *testing.T) {
 			payload := map[string]interface{}{
 				"amount":  "-100",
 				"token":   testCtx.token.Symbol,
-				"rate":    "750",
+				"rate":    "1",
 				"network": network.Identifier,
 				"recipient": map[string]interface{}{
 					"institution":       "MOMONGPC",
@@ -644,7 +644,7 @@ func TestSender(t *testing.T) {
 			payload := map[string]interface{}{
 				"amount":  "100",
 				"token":   testCtx.token.Symbol,
-				"rate":    "750",
+				"rate":    "1",
 				"network": network.Identifier,
 				"recipient": map[string]interface{}{
 					"institution":       "MOMONGPC",
@@ -795,7 +795,7 @@ func TestSender(t *testing.T) {
 			assert.NotNil(t, providerOrderToken, "Provider order token should be created")
 
 			// Create ProvisionBucket for bucket-based rate validation
-			// Bucket range should accommodate: amount (100) * rate (750) = 75,000 fiat
+			// Bucket range accommodates fiat notionally from queue rate (e.g. 100 * 750); initiation uses direct-match rate 1
 			bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
 				"provider_id": providerProfile.ID,
 				"currency_id": currency.ID,
@@ -872,7 +872,7 @@ func TestSender(t *testing.T) {
 			payload := map[string]interface{}{
 				"amount":    "100",
 				"token":     testCtx.token.Symbol,
-				"rate":      "750",
+				"rate":      "1",
 				"network":   testNetwork.Identifier,
 				"reference": fmt.Sprintf("maxfeecap_test_%d", time.Now().UnixNano()),
 				"recipient": map[string]interface{}{
@@ -982,7 +982,7 @@ func TestSender(t *testing.T) {
 			assert.NotNil(t, providerOrderToken, "Provider order token should be created")
 
 			// Create ProvisionBucket for bucket-based rate validation
-			// Bucket range should accommodate: amount (100) * rate (750) = 75,000 fiat
+			// Bucket range accommodates fiat notionally from queue rate (e.g. 100 * 750); initiation uses direct-match rate 1
 			bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
 				"provider_id": providerProfile.ID,
 				"currency_id": currency.ID,
@@ -1058,7 +1058,7 @@ func TestSender(t *testing.T) {
 			payload := map[string]interface{}{
 				"amount":    "100",
 				"token":     testCtx.token.Symbol,
-				"rate":      "750",
+				"rate":      "1",
 				"network":   testNetwork.Identifier,
 				"reference": fmt.Sprintf("maxfeecap_below_%d", time.Now().UnixNano()),
 				"recipient": map[string]interface{}{
@@ -1154,7 +1154,7 @@ func TestSender(t *testing.T) {
 				"currency_id":           currency.ID,
 				"network":               testCtx.networkIdentifier,
 				"conversion_rate_type":  "fixed",
-				"fixed_conversion_rate": decimal.NewFromFloat(750.0), // Match test payload rate
+				"fixed_conversion_rate": decimal.NewFromFloat(750.0), // Provider DB rate; ValidateRate still returns 1 for NGN/NGN direct match vs payload "1"
 				"max_order_amount":      decimal.NewFromFloat(10000),
 				"min_order_amount":      decimal.NewFromFloat(1),
 				"max_order_amount_otc":  decimal.Zero,
@@ -1168,7 +1168,7 @@ func TestSender(t *testing.T) {
 			assert.NotNil(t, providerOrderToken, "Provider order token should be created")
 
 			// Create ProvisionBucket for bucket-based rate validation
-			// Bucket range should accommodate: amount (100) * rate (750) = 75,000 fiat
+			// Bucket range accommodates fiat notionally from queue rate (e.g. 100 * 750); initiation uses direct-match rate 1
 			bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
 				"provider_id": providerProfile.ID,
 				"currency_id": currency.ID,
@@ -1237,7 +1237,7 @@ func TestSender(t *testing.T) {
 			payload := map[string]interface{}{
 				"amount":    "100",
 				"token":     testCtx.token.Symbol,
-				"rate":      "750",
+				"rate":      "1",
 				"network":   testNetwork.Identifier,
 				"reference": fmt.Sprintf("nomaxfeecap_%d", time.Now().UnixNano()),
 				"recipient": map[string]interface{}{
