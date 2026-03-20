@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"testing"
@@ -124,6 +125,121 @@ func TestSlackService(t *testing.T) {
 			assert.NoError(t, err, "formatting current timestamp should not produce an error")
 			assert.NotEmpty(t, formattedTime, "formatted time should not be empty")
 			assert.Contains(t, formattedTime, now.In(time.FixedZone("GMT+1", 3600)).Format("2006"))
+		})
+
+		t.Run("PostKYBSubmissionMessage", func(t *testing.T) {
+			slackAPI := "https://slack.com/api/chat.postMessage"
+			slackService := NewSlackService("")
+
+			t.Run("returns ts on success", func(t *testing.T) {
+				httpmock.RegisterResponder("POST", slackAPI,
+					func(r *http.Request) (*http.Response, error) {
+						var body map[string]interface{}
+						if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+							t.Fatalf("decode body: %v", err)
+						}
+						assert.Equal(t, "C01234", body["channel"], "channel must be set")
+						blocks, ok := body["blocks"].([]interface{})
+						assert.True(t, ok, "blocks must be present")
+						var hasReviewButton bool
+						for _, b := range blocks {
+							blk, _ := b.(map[string]interface{})
+							if blk["type"] == "actions" {
+								elements, _ := blk["elements"].([]interface{})
+								for _, e := range elements {
+									el, _ := e.(map[string]interface{})
+									if el["action_id"] == "review_kyb" && el["value"] == "sub-123" {
+										hasReviewButton = true
+										break
+									}
+								}
+								break
+							}
+						}
+						assert.True(t, hasReviewButton, "payload must include review_kyb button with value sub-123")
+						return httpmock.NewBytesResponse(200, []byte(`{"ok": true, "ts": "1234567890.123456"}`)), nil
+					},
+				)
+				ts, err := slackService.PostKYBSubmissionMessage("xoxb-token", "C01234", "Jane", "jane@example.com", "sub-123")
+				assert.NoError(t, err)
+				assert.Equal(t, "1234567890.123456", ts)
+			})
+
+			t.Run("returns error when bot token is empty", func(t *testing.T) {
+				ts, err := slackService.PostKYBSubmissionMessage("", "C01234", "Jane", "jane@example.com", "sub-123")
+				assert.Error(t, err)
+				assert.Empty(t, ts)
+				assert.Contains(t, err.Error(), "bot token and channel ID are required")
+			})
+
+			t.Run("returns error when channel ID is empty", func(t *testing.T) {
+				ts, err := slackService.PostKYBSubmissionMessage("xoxb-token", "", "Jane", "jane@example.com", "sub-123")
+				assert.Error(t, err)
+				assert.Empty(t, ts)
+			})
+
+			t.Run("returns error when Slack API returns ok:false", func(t *testing.T) {
+				httpmock.RegisterResponder("POST", slackAPI,
+					httpmock.NewBytesResponder(200, []byte(`{"ok": false, "error": "channel_not_found"}`)),
+				)
+				ts, err := slackService.PostKYBSubmissionMessage("xoxb-token", "C01234", "Jane", "jane@example.com", "sub-123")
+				assert.Error(t, err)
+				assert.Empty(t, ts)
+				assert.Contains(t, err.Error(), "channel_not_found")
+			})
+		})
+
+		t.Run("UpdateKYBSubmissionMessage", func(t *testing.T) {
+			slackAPI := "https://slack.com/api/chat.update"
+			slackService := NewSlackService("")
+
+			t.Run("returns nil on success", func(t *testing.T) {
+				httpmock.RegisterResponder("POST", slackAPI,
+					func(r *http.Request) (*http.Response, error) {
+						var body map[string]interface{}
+						if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+							t.Fatalf("decode body: %v", err)
+						}
+						assert.Equal(t, "C01234", body["channel"], "channel must be set")
+						assert.Equal(t, "1234567890.123456", body["ts"], "ts must be set")
+						blocks, ok := body["blocks"].([]interface{})
+						assert.True(t, ok, "blocks must be present")
+						assert.Len(t, blocks, 3, "chat.update must send status-only blocks")
+						for _, b := range blocks {
+							blk, _ := b.(map[string]interface{})
+							assert.NotEqualf(t, "actions", blk["type"], "chat.update must not contain actions block (buttons removed)")
+							if textObj, _ := blk["text"].(map[string]interface{}); textObj != nil {
+								if text, _ := textObj["text"].(string); text != "" {
+									assert.NotContains(t, text, "http", "chat.update must hide document links")
+								}
+							}
+						}
+						return httpmock.NewBytesResponse(200, []byte(`{"ok": true}`)), nil
+					},
+				)
+				err := slackService.UpdateKYBSubmissionMessage("xoxb-token", "C01234", "1234567890.123456", "Acme Ltd", "Approved", "KYB submission approved successfully")
+				assert.NoError(t, err)
+			})
+
+			t.Run("returns error when bot token is empty", func(t *testing.T) {
+				err := slackService.UpdateKYBSubmissionMessage("", "C01234", "123.456", "Acme Ltd", "Rejected", "Incomplete documents")
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "bot token, channel ID and message ts are required")
+			})
+
+			t.Run("returns error when message ts is empty", func(t *testing.T) {
+				err := slackService.UpdateKYBSubmissionMessage("xoxb-token", "C01234", "", "Acme Ltd", "Rejected", "Incomplete documents")
+				assert.Error(t, err)
+			})
+
+			t.Run("returns error when Slack API returns ok:false", func(t *testing.T) {
+				httpmock.RegisterResponder("POST", slackAPI,
+					httpmock.NewBytesResponder(200, []byte(`{"ok": false, "error": "message_not_found"}`)),
+				)
+				err := slackService.UpdateKYBSubmissionMessage("xoxb-token", "C01234", "123.456", "Acme Ltd", "Rejected", "Incomplete documents")
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "message_not_found")
+			})
 		})
 	})
 }

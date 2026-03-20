@@ -277,3 +277,182 @@ func (s *SlackService) SendSubmissionNotification(firstName, email, submissionID
 	}
 	return nil
 }
+
+// PostKYBSubmissionMessage sends a KYB submission notification via chat.postMessage (Bot Token)
+// and returns the message ts so the message can be updated later after approve/reject.
+func (s *SlackService) PostKYBSubmissionMessage(botToken, channelID, firstName, email, submissionID string) (msgTs string, err error) {
+	if botToken == "" || channelID == "" {
+		return "", fmt.Errorf("bot token and channel ID are required")
+	}
+
+	blocks := []map[string]interface{}{
+		{
+			"type": "section",
+			"text": map[string]interface{}{
+				"type": "mrkdwn",
+				"text": "*New KYB Submission*",
+			},
+		},
+		{
+			"type": "section",
+			"text": map[string]interface{}{
+				"type": "mrkdwn",
+				"text": fmt.Sprintf("First Name: %s", firstName),
+			},
+		},
+		{
+			"type": "section",
+			"text": map[string]interface{}{
+				"type": "mrkdwn",
+				"text": fmt.Sprintf("Email: %s", email),
+			},
+		},
+		{
+			"type": "section",
+			"text": map[string]interface{}{
+				"type": "mrkdwn",
+				"text": fmt.Sprintf("Submission ID: %s", submissionID),
+			},
+		},
+		{
+			"type": "actions",
+			"elements": []map[string]interface{}{
+				{
+					"type": "button",
+					"text": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Review",
+					},
+					"action_id": "review_kyb",
+					"style":     "primary",
+					"value":     submissionID,
+				},
+				{
+					"type": "button",
+					"text": map[string]interface{}{
+						"type": "plain_text",
+						"text": "Reject",
+					},
+					"action_id": "reject_kyb_" + submissionID,
+					"style":     "danger",
+					"value":     submissionID,
+				},
+			},
+		},
+	}
+
+	payload := map[string]interface{}{
+		"channel": channelID,
+		"blocks":  blocks,
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://slack.com/api/chat.postMessage", bytes.NewReader(jsonPayload))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+botToken)
+
+	resp, err := utils.GetHTTPClient().Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to post message: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+	var result struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+		TS    string `json:"ts"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+	if !result.OK {
+		return "", fmt.Errorf("chat.postMessage failed: %s", result.Error)
+	}
+	return result.TS, nil
+}
+
+// UpdateKYBSubmissionMessage updates the original KYB submission message in Slack to remove
+// Review/Reject buttons and show only company name, action, and reason. Requires Slack Bot Token (chat:write).
+func (s *SlackService) UpdateKYBSubmissionMessage(botToken, channelID, messageTs, companyName, actionLabel, reason string) error {
+	if botToken == "" || channelID == "" || messageTs == "" {
+		return fmt.Errorf("bot token, channel ID and message ts are required to update KYB message")
+	}
+
+	blocks := []map[string]interface{}{
+		{
+			"type": "section",
+			"text": map[string]interface{}{
+				"type": "mrkdwn",
+				"text": fmt.Sprintf("CompanyName: %s", companyName),
+			},
+		},
+		{
+			"type": "section",
+			"text": map[string]interface{}{
+				"type": "mrkdwn",
+				"text": fmt.Sprintf("Action: %s", actionLabel),
+			},
+		},
+		{
+			"type": "section",
+			"text": map[string]interface{}{
+				"type": "mrkdwn",
+				"text": fmt.Sprintf("Reason: %s", reason),
+			},
+		},
+	}
+
+	payload := map[string]interface{}{
+		"channel": channelID,
+		"ts":      messageTs,
+		"blocks":  blocks,
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal chat.update payload: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://slack.com/api/chat.update", bytes.NewReader(jsonPayload))
+	if err != nil {
+		return fmt.Errorf("failed to create chat.update request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+botToken)
+	resp, err := utils.GetHTTPClient().Do(req)
+	if err != nil {
+		logger.Errorf("Failed to call Slack chat.update: %v", err)
+		return fmt.Errorf("failed to call Slack chat.update: %w", err)
+	}
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+		}
+	}()
+
+	body, _ := io.ReadAll(resp.Body)
+	var result struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+	}
+	_ = json.Unmarshal(body, &result)
+	if !result.OK {
+		logger.Errorf("Slack chat.update failed: %s", result.Error)
+		return fmt.Errorf("slack chat.update failed: %s", result.Error)
+	}
+	return nil
+}

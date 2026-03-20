@@ -19,6 +19,7 @@ type AuthConfiguration struct {
 	// Slack config
 	SlackSigningSecret string
 	SlackBotToken      string
+	SlackChannelID     string // Channel ID for KYB notifications (required for chat.postMessage so message can be updated later)
 
 	// Turnstile config
 	TurnstileSiteKey   string
@@ -60,6 +61,7 @@ func AuthConfig() *AuthConfiguration {
 			Secret:                viper.GetString("SECRET"),
 			SlackSigningSecret:    viper.GetString("SLACK_SIGNING_SECRET"),
 			SlackBotToken:         viper.GetString("SLACK_BOT_TOKEN"),
+			SlackChannelID:        viper.GetString("SLACK_CHANNEL_ID"),
 			JwtAccessLifespan:     time.Duration(viper.GetInt("JWT_ACCESS_LIFESPAN")) * time.Minute,
 			JwtRefreshLifespan:    time.Duration(viper.GetInt("JWT_REFRESH_LIFESPAN")) * time.Minute,
 			HmacTimestampAge:      time.Duration(viper.GetInt("HMAC_TIMESTAMP_AGE")) * time.Minute,
