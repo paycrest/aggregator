@@ -18,6 +18,7 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
@@ -385,14 +386,42 @@ func CreateTestSenderProfile(overrides map[string]interface{}) (*ent.SenderProfi
 		payload[key] = value
 	}
 
-	_token, err := db.Client.Token.
-		Query().
-		Where(
-			token.SymbolEQ(payload["token"].(string)),
-		).
-		Only(context.Background())
-	if err != nil {
-		return nil, err
+	var _token *ent.Token
+	var err error
+	if tid, ok := payload["token_id"]; ok && tid != nil {
+		switch v := tid.(type) {
+		case int:
+			_token, err = db.Client.Token.Get(context.Background(), v)
+		case int32:
+			_token, err = db.Client.Token.Get(context.Background(), int(v))
+		case int64:
+			_token, err = db.Client.Token.Get(context.Background(), int(v))
+		default:
+			return nil, fmt.Errorf("CreateTestSenderProfile: unsupported token_id type %T", tid)
+		}
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		symbol := payload["token"].(string)
+		q := db.Client.Token.Query().Where(token.SymbolEQ(symbol))
+		if nid, ok := payload["network_id"]; ok && nid != nil {
+			switch v := nid.(type) {
+			case int:
+				q = q.Where(token.HasNetworkWith(network.IDEQ(v)))
+			case int32:
+				q = q.Where(token.HasNetworkWith(network.IDEQ(int(v))))
+			case int64:
+				q = q.Where(token.HasNetworkWith(network.IDEQ(int(v))))
+			}
+		}
+		_token, err = q.Only(context.Background())
+		if err != nil && ent.IsNotSingular(err) {
+			_token, err = q.Order(ent.Asc(token.FieldID)).First(context.Background())
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	feePercent, _ := decimal.NewFromString(payload["fee_percent"].(string))
@@ -518,6 +547,13 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		payload[key] = value
 	}
 
+	var payoutAddr string
+	if v, ok := payload["payout_address"].(string); ok && v != "" {
+		payoutAddr = v
+	} else {
+		payoutAddr = payload["settlement_address"].(string)
+	}
+
 	if payload["token_id"].(int) == 0 {
 		// Create test token
 		token, err := CreateERC20Token(map[string]interface{}{})
@@ -540,6 +576,7 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		SetFloatingBuyDelta(payload["floating_buy_delta"].(decimal.Decimal)).
 		SetFloatingSellDelta(payload["floating_sell_delta"].(decimal.Decimal)).
 		SetSettlementAddress(payload["settlement_address"].(string)).
+		SetPayoutAddress(payoutAddr).
 		SetNetwork(payload["network"].(string)).
 		SetTokenID(payload["token_id"].(int)).
 		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
