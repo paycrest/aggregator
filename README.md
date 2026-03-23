@@ -68,6 +68,10 @@ That's it! The server will now be running at http://localhost:8000. You can use 
 	 - **DAI** on Base Sepolia
 	 - **USDT** on Ethereum Sepolia and Arbitrum Sepolia
 
+### Local currency fee indexing (backfill)
+
+For orders settled before the indexer recorded `LocalTransferFeeSplit` / `SenderFeeTransferred` events, re-run the **gateway index** for the affected **transaction hashes** or **block ranges** so the EVM indexer can replay those logs and populate `sender_fee` / `protocol_fee` on `payment_order`. The indexer applies each settlement tx at most once per order (see `metadata.indexed_fee_tx_hashes`). If on-chain history is unavailable, a one-off repair script keyed by `gateway_id` may be required.
+
 
 ## Contributing
 

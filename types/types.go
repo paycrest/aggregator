@@ -135,6 +135,26 @@ type OrderRefundedEvent struct {
 	OrderId     string
 }
 
+// LocalTransferFeeSplitEvent matches Gateway LocalTransferFeeSplit (orderId indexed; amounts in data).
+// Amounts are raw chain subunits (uint256) before decimal normalization.
+type LocalTransferFeeSplitEvent struct {
+	BlockNumber      int64
+	TxHash           string
+	OrderId          string
+	SenderAmount     decimal.Decimal
+	ProviderAmount   decimal.Decimal
+	AggregatorAmount decimal.Decimal
+}
+
+// SenderFeeTransferredEvent matches Gateway SenderFeeTransferred (orderId, sender, amount indexed).
+type SenderFeeTransferredEvent struct {
+	BlockNumber int64
+	TxHash      string
+	OrderId     string
+	Sender      string
+	Amount      decimal.Decimal
+}
+
 // OrderService provides an interface for the OrderService
 type OrderService interface {
 	CreateOrder(ctx context.Context, orderID uuid.UUID) error
@@ -1136,11 +1156,13 @@ type IndexTransactionResponse struct {
 
 // EventCounts represents the count of different event types found during indexing
 type EventCounts struct {
-	Transfer      int `json:"Transfer"`
-	OrderCreated  int `json:"OrderCreated"`
-	SettleOut     int `json:"SettleOut"` // SettleOut (offramp); Starknet OrderSettled is mapped here
-	SettleIn      int `json:"SettleIn"`  // SettleIn (onramp)
-	OrderRefunded int `json:"OrderRefunded"`
+	Transfer              int `json:"Transfer"`
+	OrderCreated          int `json:"OrderCreated"`
+	SettleOut             int `json:"SettleOut"` // SettleOut (offramp); Starknet OrderSettled is mapped here
+	SettleIn              int `json:"SettleIn"`  // SettleIn (onramp)
+	OrderRefunded         int `json:"OrderRefunded"`
+	LocalTransferFeeSplit int `json:"LocalTransferFeeSplit"`
+	SenderFeeTransferred  int `json:"SenderFeeTransferred"`
 }
 
 // ThirdwebWebhookPayload represents the structure of thirdweb insight webhook payload

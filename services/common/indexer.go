@@ -18,6 +18,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
+	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
 	db "github.com/paycrest/aggregator/storage"
@@ -526,4 +527,204 @@ func GetProviderAddressFromOrder(ctx context.Context, order *ent.PaymentOrder) (
 	}
 
 	return providerOrderToken.SettlementAddress, nil
+}
+
+// ProcessLocalTransferFeeEvents updates sender_fee and protocol_fee from LocalTransferFeeSplit and SenderFeeTransferred
+// (local-currency settlement). Aggregator amounts are accumulated per tx; sender_fee takes the max of event amounts.
+// Idempotency: metadata key "indexed_fee_tx_hashes" records tx hashes already applied for fee indexing.
+func ProcessLocalTransferFeeEvents(
+	ctx context.Context,
+	network *ent.Network,
+	splits []*types.LocalTransferFeeSplitEvent,
+	senderFees []*types.SenderFeeTransferredEvent,
+) error {
+	if len(splits) == 0 && len(senderFees) == 0 {
+		return nil
+	}
+
+	txHash := ""
+	gatewaySet := make(map[string]struct{})
+	for _, s := range splits {
+		if s == nil {
+			continue
+		}
+		gatewaySet[normalizeGatewayID(s.OrderId)] = struct{}{}
+		if s.TxHash != "" {
+			txHash = s.TxHash
+		}
+	}
+	for _, s := range senderFees {
+		if s == nil {
+			continue
+		}
+		gatewaySet[normalizeGatewayID(s.OrderId)] = struct{}{}
+		if s.TxHash != "" {
+			txHash = s.TxHash
+		}
+	}
+	if len(gatewaySet) == 0 {
+		return nil
+	}
+
+	type agg struct {
+		aggSum         decimal.Decimal
+		maxSender      decimal.Decimal
+		maxSplitSender decimal.Decimal
+	}
+	byGW := make(map[string]*agg)
+	for id := range gatewaySet {
+		byGW[id] = &agg{
+			aggSum:         decimal.Zero,
+			maxSender:      decimal.Zero,
+			maxSplitSender: decimal.Zero,
+		}
+	}
+	for _, s := range splits {
+		if s == nil {
+			continue
+		}
+		gw := normalizeGatewayID(s.OrderId)
+		a, ok := byGW[gw]
+		if !ok {
+			continue
+		}
+		a.aggSum = a.aggSum.Add(s.AggregatorAmount)
+		if s.SenderAmount.GreaterThan(a.maxSplitSender) {
+			a.maxSplitSender = s.SenderAmount
+		}
+	}
+	for _, s := range senderFees {
+		if s == nil {
+			continue
+		}
+		gw := normalizeGatewayID(s.OrderId)
+		a, ok := byGW[gw]
+		if !ok {
+			continue
+		}
+		if s.Amount.GreaterThan(a.maxSender) {
+			a.maxSender = s.Amount
+		}
+	}
+
+	gatewayIDs := make([]string, 0, len(gatewaySet))
+	for id := range gatewaySet {
+		gatewayIDs = append(gatewayIDs, id)
+	}
+
+	orders, err := storage.Client.PaymentOrder.Query().
+		Where(
+			paymentorder.GatewayIDIn(gatewayIDs...),
+			paymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("ProcessLocalTransferFeeEvents.query: %w", err)
+	}
+
+	for _, order := range orders {
+		if order.GatewayID == "" {
+			continue
+		}
+		gw := normalizeGatewayID(order.GatewayID)
+		a, ok := byGW[gw]
+		if !ok || order.Edges.Token == nil {
+			continue
+		}
+
+		if txHash != "" && feeTxAlreadyIndexed(order.Metadata, txHash) {
+			continue
+		}
+
+		decimals := int8(order.Edges.Token.Decimals)
+		aggProto := utils.FromSubunit(a.aggSum.BigInt(), decimals)
+		maxSenderNorm := utils.FromSubunit(a.maxSender.BigInt(), decimals)
+		maxSplitNorm := utils.FromSubunit(a.maxSplitSender.BigInt(), decimals)
+
+		newSender := order.SenderFee
+		if a.maxSender.GreaterThan(decimal.Zero) && maxSenderNorm.GreaterThan(newSender) {
+			newSender = maxSenderNorm
+		}
+		if a.maxSplitSender.GreaterThan(decimal.Zero) && maxSplitNorm.GreaterThan(newSender) {
+			newSender = maxSplitNorm
+		}
+
+		newProto := order.ProtocolFee.Add(aggProto)
+
+		protoChanged := aggProto.GreaterThan(decimal.Zero)
+		senderChanged := newSender.GreaterThan(order.SenderFee)
+		if !protoChanged && !senderChanged {
+			continue
+		}
+
+		ub := storage.Client.PaymentOrder.UpdateOneID(order.ID).
+			SetProtocolFee(newProto).
+			SetSenderFee(newSender)
+		if txHash != "" {
+			ub = ub.SetMetadata(cloneMetadataAddFeeTx(order.Metadata, txHash))
+		}
+		if _, err := ub.Save(ctx); err != nil {
+			logger.WithFields(logger.Fields{
+				"error":      err,
+				"gateway_id": gw,
+				"tx_hash":    txHash,
+			}).Errorf("ProcessLocalTransferFeeEvents.update failed")
+			continue
+		}
+	}
+
+	return nil
+}
+
+func feeTxAlreadyIndexed(md map[string]interface{}, txHash string) bool {
+	if md == nil || txHash == "" {
+		return false
+	}
+	v, ok := md["indexed_fee_tx_hashes"]
+	if !ok {
+		return false
+	}
+	switch s := v.(type) {
+	case []interface{}:
+		for _, x := range s {
+			if str, ok := x.(string); ok && str == txHash {
+				return true
+			}
+		}
+	case []string:
+		for _, str := range s {
+			if str == txHash {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func cloneMetadataAddFeeTx(md map[string]interface{}, txHash string) map[string]interface{} {
+	out := map[string]interface{}{}
+	for k, v := range md {
+		out[k] = v
+	}
+	var hashes []interface{}
+	if v, ok := out["indexed_fee_tx_hashes"]; ok {
+		switch x := v.(type) {
+		case []interface{}:
+			hashes = append(hashes, x...)
+		case []string:
+			for _, s := range x {
+				hashes = append(hashes, s)
+			}
+		}
+	}
+	hashes = append(hashes, txHash)
+	out["indexed_fee_tx_hashes"] = hashes
+	return out
 }

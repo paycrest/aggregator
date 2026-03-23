@@ -557,6 +557,8 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 	settleOutEvents := []*types.SettleOutEvent{}
 	settleInEvents := []*types.SettleInEvent{}
 	orderRefundedEvents := []*types.OrderRefundedEvent{}
+	localTransferFeeSplits := []*types.LocalTransferFeeSplitEvent{}
+	senderFeeTransferreds := []*types.SenderFeeTransferredEvent{}
 
 	// Use GetContractEventsWithFallback to try Thirdweb first and fall back to RPC
 	eventPayload := map[string]string{
@@ -590,9 +592,6 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 			continue
 		}
 		eventParams := decoded
-		if eventParams["non_indexed_params"] == nil {
-			continue
-		}
 
 		// Get event name from the first topic (event signature)
 		topicsInterface := eventMap["topics"]
@@ -639,7 +638,7 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 
 		nonIndexedParams, ok := eventParams["non_indexed_params"].(map[string]interface{})
 		if !ok || nonIndexedParams == nil {
-			continue
+			nonIndexedParams = map[string]interface{}{}
 		}
 
 		switch eventSignature {
@@ -849,6 +848,69 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 				Fee:         fee,
 			}
 			orderRefundedEvents = append(orderRefundedEvents, refundedEvent)
+
+		case utils.LocalTransferFeeSplitEventSignature:
+			orderIdStr, ok := indexedParams["orderId"].(string)
+			if !ok || orderIdStr == "" {
+				continue
+			}
+			saStr, ok := nonIndexedParams["senderAmount"].(string)
+			if !ok || saStr == "" {
+				continue
+			}
+			paStr, ok := nonIndexedParams["providerAmount"].(string)
+			if !ok || paStr == "" {
+				continue
+			}
+			aggStr, ok := nonIndexedParams["aggregatorAmount"].(string)
+			if !ok || aggStr == "" {
+				continue
+			}
+			sa, err := decimal.NewFromString(saStr)
+			if err != nil {
+				continue
+			}
+			pa, err := decimal.NewFromString(paStr)
+			if err != nil {
+				continue
+			}
+			agg, err := decimal.NewFromString(aggStr)
+			if err != nil {
+				continue
+			}
+			localTransferFeeSplits = append(localTransferFeeSplits, &types.LocalTransferFeeSplitEvent{
+				BlockNumber:      blockNumber,
+				TxHash:           txHashFromEvent,
+				OrderId:          orderIdStr,
+				SenderAmount:     sa,
+				ProviderAmount:   pa,
+				AggregatorAmount: agg,
+			})
+
+		case utils.SenderFeeTransferredEventSignature, utils.SenderFeeTransferredEventSignatureLegacy:
+			orderIdStr, ok := indexedParams["orderId"].(string)
+			if !ok || orderIdStr == "" {
+				continue
+			}
+			senderStr, ok := indexedParams["sender"].(string)
+			if !ok || senderStr == "" {
+				continue
+			}
+			amountStr, ok := indexedParams["amount"].(string)
+			if !ok || amountStr == "" {
+				continue
+			}
+			amt, err := decimal.NewFromString(amountStr)
+			if err != nil {
+				continue
+			}
+			senderFeeTransferreds = append(senderFeeTransferreds, &types.SenderFeeTransferredEvent{
+				BlockNumber: blockNumber,
+				TxHash:      txHashFromEvent,
+				OrderId:     orderIdStr,
+				Sender:      ethcommon.HexToAddress(senderStr).Hex(),
+				Amount:      amt,
+			})
 		}
 	}
 
@@ -885,6 +947,15 @@ func (s *IndexerEVM) indexGatewayByTransaction(ctx context.Context, network *ent
 		}
 	}
 	eventCounts.SettleOut = len(settleOutEvents)
+
+	// Local-currency fee splits (after SettleOut so order status is settled when fees apply)
+	if len(localTransferFeeSplits) > 0 || len(senderFeeTransferreds) > 0 {
+		if err := common.ProcessLocalTransferFeeEvents(ctx, network, localTransferFeeSplits, senderFeeTransferreds); err != nil {
+			logger.Errorf("Failed to process LocalTransferFeeSplit / SenderFeeTransferred events: %v", err)
+		}
+	}
+	eventCounts.LocalTransferFeeSplit = len(localTransferFeeSplits)
+	eventCounts.SenderFeeTransferred = len(senderFeeTransferreds)
 
 	// Process SettleIn (onramp) events
 	if len(settleInEvents) > 0 {

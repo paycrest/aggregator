@@ -19,7 +19,13 @@ const (
 
 	// SettleIn (onramp): Gateway emits SettleIn(bytes32 indexed orderId, address indexed liquidityProvider, address indexed recipient, uint256 amount, address token, uint256 aggregatorFee, uint96 rate)
 	// Topic must match contracts (see Gateway.go FilterSettleIn); legacy topic 0x44de25d6... was an older indexed-parameter layout and will not match current deployments.
-	SettleInEventSignature        = "0xb5273ccce1412b056c9246e834895f9d717974c505f8e5a6c7d08cd0300a066b"
+	SettleInEventSignature = "0xb5273ccce1412b056c9246e834895f9d717974c505f8e5a6c7d08cd0300a066b"
+
+	// LocalTransferFeeSplit(bytes32 indexed orderId, uint256 senderAmount, uint256 providerAmount, uint256 aggregatorAmount)
+	LocalTransferFeeSplitEventSignature = "0x831c7cc0006d91462607c476603366c48469d125de6228c0791a7090efd7f7a4"
+	// SenderFeeTransferred(bytes32 indexed orderId, address indexed sender, uint256 indexed amount)
+	SenderFeeTransferredEventSignature      = "0x44f6938ca4a10313aabb76f874cced61e35710a734a126e4afb34461bf8c2501"
+	SenderFeeTransferredEventSignatureLegacy = "0x879f6eb4f1506eb3029982039d90b0e82b07d54f5e911a3c644a974863a98a6c" // abigen Gateway.go
 	OrderCreatedStarknetSelector  = "0x3427759bfd3b941f14e687e129519da3c9b0046c5b9aaa290bb1dede63753b3"
 	OrderSettledStarknetSelector  = "0x2f4d375c16c9a465e9396e640dcf9032795bee57646a3117d94b9304be0868c"
 	OrderRefundedStarknetSelector = "0x2b1527a936433fc64df27b599aa49d8cbaac3a88b1b3888cf4384b9e8bea9cd"
@@ -217,6 +223,51 @@ func DecodeOrderRefundedEvent(log types.Log) (map[string]interface{}, error) {
 	}, nil
 }
 
+// DecodeLocalTransferFeeSplitEvent decodes LocalTransferFeeSplit from an RPC log.
+func DecodeLocalTransferFeeSplitEvent(log types.Log) (map[string]interface{}, error) {
+	// Topics: [eventSignature, orderId]
+	// Data: senderAmount, providerAmount, aggregatorAmount (32 bytes each)
+	if len(log.Topics) != 2 {
+		return nil, fmt.Errorf("invalid LocalTransferFeeSplit event: expected 2 topics, got %d", len(log.Topics))
+	}
+	if len(log.Data) < 96 {
+		return nil, fmt.Errorf("invalid LocalTransferFeeSplit event data: too short")
+	}
+	orderId := common.BytesToHash(log.Topics[1].Bytes())
+	senderAmount := new(big.Int).SetBytes(log.Data[:32])
+	providerAmount := new(big.Int).SetBytes(log.Data[32:64])
+	aggregatorAmount := new(big.Int).SetBytes(log.Data[64:96])
+	return map[string]interface{}{
+		"indexed_params": map[string]interface{}{
+			"orderId": orderId.Hex(),
+		},
+		"non_indexed_params": map[string]interface{}{
+			"senderAmount":     senderAmount.String(),
+			"providerAmount":   providerAmount.String(),
+			"aggregatorAmount": aggregatorAmount.String(),
+		},
+	}, nil
+}
+
+// DecodeSenderFeeTransferredEvent decodes SenderFeeTransferred from an RPC log (all args indexed).
+func DecodeSenderFeeTransferredEvent(log types.Log) (map[string]interface{}, error) {
+	// Topics: [eventSignature, orderId, sender, amount]
+	if len(log.Topics) != 4 {
+		return nil, fmt.Errorf("invalid SenderFeeTransferred event: expected 4 topics, got %d", len(log.Topics))
+	}
+	orderId := common.BytesToHash(log.Topics[1].Bytes())
+	sender := common.HexToAddress(log.Topics[2].Hex())
+	amount := new(big.Int).SetBytes(log.Topics[3].Bytes())
+	return map[string]interface{}{
+		"indexed_params": map[string]interface{}{
+			"orderId": orderId.Hex(),
+			"sender":  sender.Hex(),
+			"amount":  amount.String(),
+		},
+		"non_indexed_params": map[string]interface{}{},
+	}, nil
+}
+
 // ProcessRPCEvents processes RPC events and converts them to the same format as Thirdweb Insight
 func ProcessRPCEvents(events []interface{}, eventSignature string) error {
 	for _, event := range events {
@@ -259,6 +310,10 @@ func ProcessRPCEvents(events []interface{}, eventSignature string) error {
 				decoded, err = DecodeSettleInEvent(mockLog)
 			case OrderRefundedEventSignature:
 				decoded, err = DecodeOrderRefundedEvent(mockLog)
+			case LocalTransferFeeSplitEventSignature:
+				decoded, err = DecodeLocalTransferFeeSplitEvent(mockLog)
+			case SenderFeeTransferredEventSignature, SenderFeeTransferredEventSignatureLegacy:
+				decoded, err = DecodeSenderFeeTransferredEvent(mockLog)
 			default:
 				continue
 			}
@@ -319,6 +374,10 @@ func ProcessRPCEventsBySignature(events []interface{}) error {
 				decoded, err = DecodeSettleInEvent(mockLog)
 			case OrderRefundedEventSignature:
 				decoded, err = DecodeOrderRefundedEvent(mockLog)
+			case LocalTransferFeeSplitEventSignature:
+				decoded, err = DecodeLocalTransferFeeSplitEvent(mockLog)
+			case SenderFeeTransferredEventSignature, SenderFeeTransferredEventSignatureLegacy:
+				decoded, err = DecodeSenderFeeTransferredEvent(mockLog)
 			default:
 				continue
 			}
