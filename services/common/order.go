@@ -45,8 +45,8 @@ var (
 	orderConf  = config.OrderConfig()
 )
 
-// normalizeGatewayID ensures "0x" prefix and lowercases the value for case-insensitive DB comparisons.
-func normalizeGatewayID(orderID string) string {
+// NormalizeGatewayID ensures "0x" prefix and lowercases the value for case-insensitive DB comparisons.
+func NormalizeGatewayID(orderID string) string {
 	s := orderID
 	if !strings.HasPrefix(s, "0x") {
 		s = "0x" + s
@@ -71,7 +71,7 @@ func ProcessPaymentOrderFromBlockchain(
 	refundOrder func(context.Context, *ent.Network, string) error,
 	assignPaymentOrder func(context.Context, types.PaymentOrderFields) error,
 ) error {
-	normalizedGatewayID := normalizeGatewayID(event.OrderId)
+	normalizedGatewayID := NormalizeGatewayID(event.OrderId)
 
 	// Check if order already exists with gatewayID (already indexed from blockchain)
 	existingOrderWithGatewayID, err := db.Client.PaymentOrder.
@@ -321,7 +321,7 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusRefunded.dbtransaction %v", err)
 	}
 
-	gatewayID := normalizeGatewayID(event.OrderId)
+	gatewayID := NormalizeGatewayID(event.OrderId)
 
 	// Update any existing order_refunding log (created when refund tx was submitted) by setting tx_hash.
 	// Note: TransactionLog status is not updated here; the ent TransactionLogUpdate builder may not expose SetStatus. Order status is set to Refunded via PaymentOrder update.
@@ -505,6 +505,34 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 	return nil
 }
 
+// UpdatePaymentOrderTransferFees sets sender_fee and protocol_fee from onramp fee-split events (raw chain subunits).
+// senderAmount → sender_fee; aggregatorAmount → protocol_fee. Provider leg from LocalTransferFeeSplit is not stored (no column).
+// Multiple events per gateway id: resolved when building the indexer map (last wins).
+func UpdatePaymentOrderTransferFees(ctx context.Context, order *ent.PaymentOrder, senderAmountRaw, aggregatorAmountRaw decimal.Decimal) error {
+	if order == nil || order.Edges.Token == nil {
+		return nil
+	}
+	if order.GatewayID == "" {
+		return nil
+	}
+
+	decimals := int8(order.Edges.Token.Decimals)
+	senderAmount := utils.FromSubunit(senderAmountRaw.BigInt(), decimals)
+	aggregatorAmount := utils.FromSubunit(aggregatorAmountRaw.BigInt(), decimals)
+
+	if senderAmount.Equal(order.SenderFee) && aggregatorAmount.Equal(order.ProtocolFee) {
+		return nil
+	}
+
+	if _, err := db.Client.PaymentOrder.UpdateOneID(order.ID).
+		SetSenderFee(senderAmount).
+		SetProtocolFee(aggregatorAmount).
+		Save(ctx); err != nil {
+		return fmt.Errorf("UpdatePaymentOrderTransferFees.save: %w", err)
+	}
+	return nil
+}
+
 // UpdateOrderStatusSettleOut updates the status of a payment order to settled (offramp / SettleOut).
 func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event *types.SettleOutEvent, messageHash string) error {
 	tx, err := db.Client.Tx(ctx)
@@ -512,7 +540,7 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 		return fmt.Errorf("UpdateOrderStatusSettleOut.db: %v", err)
 	}
 
-	gatewayID := normalizeGatewayID(event.OrderId)
+	gatewayID := NormalizeGatewayID(event.OrderId)
 
 	// Parse splitOrderId so we can query the order and only create a log when we have an order to attach.
 	var splitOrderId uuid.UUID
@@ -691,7 +719,7 @@ func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event 
 		return fmt.Errorf("UpdateOrderStatusSettleIn.db: %v", err)
 	}
 
-	gatewayID := normalizeGatewayID(event.OrderId)
+	gatewayID := NormalizeGatewayID(event.OrderId)
 
 	// Update any existing order_settling log(s) for this gateway order by setting tx_hash
 	updatedLogRows, err := tx.TransactionLog.
@@ -989,9 +1017,9 @@ func handleCancellationForIndexedOrder(
 	reason string,
 	refundOrder func(context.Context, *ent.Network, string) error,
 ) error {
-	normGW := normalizeGatewayID(gatewayID)
+	normGW := NormalizeGatewayID(gatewayID)
 	var orderToCancel *ent.PaymentOrder
-	if existingOrder != nil && normalizeGatewayID(existingOrder.GatewayID) == normGW {
+	if existingOrder != nil && NormalizeGatewayID(existingOrder.GatewayID) == normGW {
 		orderToCancel = existingOrder
 	} else {
 		foundOrder, err := db.Client.PaymentOrder.
@@ -1468,7 +1496,7 @@ func validateAndPreparePaymentOrderData(
 	paymentOrderFields := &types.PaymentOrderFields{
 		Token:             token,
 		Network:           network,
-		GatewayID:         normalizeGatewayID(event.OrderId),
+		GatewayID:         NormalizeGatewayID(event.OrderId),
 		Amount:            event.Amount,
 		Rate:              event.Rate,
 		ProtocolFee:       event.ProtocolFee,
@@ -1612,11 +1640,11 @@ func createBasicPaymentOrderAndCancel(
 	refundOrder func(context.Context, *ent.Network, string) error,
 	existingOrder *ent.PaymentOrder,
 ) error {
-	normalizedGatewayID := normalizeGatewayID(event.OrderId)
+	normalizedGatewayID := NormalizeGatewayID(event.OrderId)
 
 	// Check if order already exists with gatewayID (should exist if we updated it before validation)
 	var orderToCancel *ent.PaymentOrder
-	if existingOrder != nil && normalizeGatewayID(existingOrder.GatewayID) == normalizedGatewayID {
+	if existingOrder != nil && NormalizeGatewayID(existingOrder.GatewayID) == normalizedGatewayID {
 		orderToCancel = existingOrder
 	} else {
 		// Try to find existing order by gatewayID as fallback

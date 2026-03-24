@@ -14,6 +14,7 @@ import (
 	"github.com/paycrest/aggregator/types"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func setupTestDB(t *testing.T) (*ent.Client, func()) {
@@ -229,4 +230,76 @@ func TestUpdateReceiveAddressStatus_DuplicateTxHashIgnored(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.False(t, done)
+}
+
+func TestProcessTransferFeeEvents(t *testing.T) {
+	_, cleanup := setupTestDB(t)
+	defer cleanup()
+	ctx := context.Background()
+
+	network, err := db.Client.Network.Create().
+		SetIdentifier("polygon").
+		SetChainID(137).
+		SetRPCEndpoint("https://polygon-rpc.com").
+		SetGatewayContractAddress("0xGateway").
+		SetIsTestnet(false).
+		SetBlockTime(decimal.NewFromFloat(2.0)).
+		SetFee(decimal.NewFromFloat(0.1)).
+		Save(ctx)
+	require.NoError(t, err)
+
+	token, err := db.Client.Token.Create().
+		SetSymbol("USDT").
+		SetContractAddress("0xTokenContract").
+		SetDecimals(6).
+		SetBaseCurrency("USD").
+		SetIsEnabled(true).
+		SetNetwork(network).
+		Save(ctx)
+	require.NoError(t, err)
+
+	gw := "0xabcdefabcdefabcdefabcdefabcdefabcdefabcdabcdabcdabcdabcdabcdabcdabcd"
+	o, err := db.Client.PaymentOrder.Create().
+		SetAmount(decimal.NewFromFloat(10)).
+		SetAmountInUsd(decimal.NewFromFloat(10)).
+		SetAmountPaid(decimal.Zero).
+		SetAmountReturned(decimal.Zero).
+		SetPercentSettled(decimal.Zero).
+		SetNetworkFee(network.Fee).
+		SetSenderFee(decimal.Zero).
+		SetProtocolFee(decimal.Zero).
+		SetRate(decimal.NewFromFloat(1.0)).
+		SetToken(token).
+		SetGatewayID(gw).
+		SetInstitution("ABNGNGLA").
+		SetAccountIdentifier("1234567890").
+		SetAccountName("Test").
+		SetStatus(paymentorder.StatusSettled).
+		Save(ctx)
+	require.NoError(t, err)
+
+	gwNorm := NormalizeGatewayID(gw)
+	feeEvent := &types.FeeSplitEvent{
+		OrderId:          gw,
+		SenderAmount:     decimal.NewFromInt(1_000_000),
+		ProviderAmount:   decimal.NewFromInt(2_000_000),
+		AggregatorAmount: decimal.NewFromInt(3_000_000),
+	}
+	orderIdToEvent := map[string]*types.FeeSplitEvent{gwNorm: feeEvent}
+
+	err = ProcessTransferFeeEvents(ctx, network, []string{gwNorm}, orderIdToEvent)
+	require.NoError(t, err)
+
+	updated, err := db.Client.PaymentOrder.Get(ctx, o.ID)
+	require.NoError(t, err)
+	assert.True(t, updated.ProtocolFee.Equal(decimal.NewFromInt(3)))
+	assert.True(t, updated.SenderFee.Equal(decimal.NewFromInt(1)))
+
+	// No events: no further updates.
+	err = ProcessTransferFeeEvents(ctx, network, nil, nil)
+	require.NoError(t, err)
+	unchanged, err := db.Client.PaymentOrder.Get(ctx, o.ID)
+	require.NoError(t, err)
+	assert.True(t, unchanged.ProtocolFee.Equal(decimal.NewFromInt(3)))
+	assert.True(t, unchanged.SenderFee.Equal(decimal.NewFromInt(1)))
 }

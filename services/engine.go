@@ -798,6 +798,8 @@ func (s *EngineService) GetContractEventsRPC(ctx context.Context, rpcEndpoint st
 			utils.SettleOutEventSignature,
 			utils.SettleInEventSignature,
 			utils.OrderRefundedEventSignature,
+			utils.LocalTransferFeeSplitEventSignature,
+			utils.FxTransferFeeSplitEventSignature,
 		}
 	}
 
