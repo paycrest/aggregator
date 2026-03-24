@@ -364,13 +364,13 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	rateValidationResult := rateResult.rateResult
 	achievableRate := rateValidationResult.Rate
 
-	// Validate that the provided rate is achievable
-	// Allow for a small tolerance (0.1%) to account for minor rate fluctuations
+	// Validate provided rate against market rate with same symmetric 0.1% band as blockchain indexer
+	// (validateAndPreparePaymentOrderData: abs(event.Rate - validated) <= tolerance).
 	tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001)) // 0.1% tolerance
-	if payload.Rate.LessThan(achievableRate.Sub(tolerance)) {
+	if payload.Rate.Sub(achievableRate).Abs().GreaterThan(tolerance) {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 			Field:   "Rate",
-			Message: fmt.Sprintf("Provided rate %s is not achievable. Available rate is %s", payload.Rate, achievableRate),
+			Message: fmt.Sprintf("Provided rate %s is outside 0.1%% tolerance of market rate %s", payload.Rate, achievableRate),
 		})
 		return
 	}
@@ -946,11 +946,11 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 			}
 			rateValidationResult = rateResult
 			achievableRate := rateValidationResult.Rate
-			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001))
-			if providedRate.LessThan(achievableRate.Sub(tolerance)) {
+			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001)) // 0.1% — symmetric with indexer
+			if providedRate.Sub(achievableRate).Abs().GreaterThan(tolerance) {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
-					Message: fmt.Sprintf("Provided rate %s is not achievable. Available rate is %s", providedRate, achievableRate),
+					Message: fmt.Sprintf("Provided rate %s is outside 0.1%% tolerance of market rate %s", providedRate, achievableRate),
 				})
 				return
 			}
@@ -1015,11 +1015,11 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 			}
 			rateValidationResult = rateResult
 			achievableRate := rateValidationResult.Rate
-			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001)) // 0.1% tolerance
-			if providedRate.LessThan(achievableRate.Sub(tolerance)) {
+			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001)) // 0.1% — symmetric with indexer
+			if providedRate.Sub(achievableRate).Abs().GreaterThan(tolerance) {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
-					Message: fmt.Sprintf("Provided rate %s is not achievable. Available rate is %s", providedRate, achievableRate),
+					Message: fmt.Sprintf("Provided rate %s is outside 0.1%% tolerance of market rate %s", providedRate, achievableRate),
 				})
 				return
 			}
@@ -1594,11 +1594,11 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			}
 			rateValidationResult = rateResult
 			achievableRate := rateValidationResult.Rate
-			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001))
-			if providedRate.GreaterThan(achievableRate.Add(tolerance)) {
+			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001)) // 0.1% — symmetric with indexer
+			if providedRate.Sub(achievableRate).Abs().GreaterThan(tolerance) {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
-					Message: fmt.Sprintf("Provided rate %s is not achievable. Available rate is %s", providedRate, achievableRate),
+					Message: fmt.Sprintf("Provided rate %s is outside 0.1%% tolerance of market rate %s", providedRate, achievableRate),
 				})
 				return
 			}
@@ -1662,11 +1662,11 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			}
 			rateValidationResult = rateResult
 			achievableRate := rateValidationResult.Rate
-			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001))
-			if providedRate.GreaterThan(achievableRate.Add(tolerance)) {
+			tolerance := achievableRate.Mul(decimal.NewFromFloat(0.001)) // 0.1% — symmetric with indexer
+			if providedRate.Sub(achievableRate).Abs().GreaterThan(tolerance) {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
-					Message: fmt.Sprintf("Provided rate %s is not achievable. Available rate is %s", providedRate, achievableRate),
+					Message: fmt.Sprintf("Provided rate %s is outside 0.1%% tolerance of market rate %s", providedRate, achievableRate),
 				})
 				return
 			}

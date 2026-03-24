@@ -891,6 +891,48 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 	return nil
 }
 
+// handleCancellationForIndexedOrder updates the existing payment order for this gateway when one exists
+// (e.g. API order linked in ProcessPaymentOrderFromBlockchain before validation). Calling
+// HandleCancellation(ctx, nil, paymentOrderFields, ...) creates a second row with the same gateway_id
+// while the original can remain pending — duplicate orders.
+func handleCancellationForIndexedOrder(
+	ctx context.Context,
+	network *ent.Network,
+	gatewayID string,
+	existingOrder *ent.PaymentOrder,
+	paymentOrderFields *types.PaymentOrderFields,
+	reason string,
+	refundOrder func(context.Context, *ent.Network, string) error,
+) error {
+	normGW := normalizeGatewayID(gatewayID)
+	var orderToCancel *ent.PaymentOrder
+	if existingOrder != nil && normalizeGatewayID(existingOrder.GatewayID) == normGW {
+		orderToCancel = existingOrder
+	} else {
+		foundOrder, err := db.Client.PaymentOrder.
+			Query().
+			Where(
+				paymentorder.GatewayIDEQ(normGW),
+				paymentorder.HasTokenWith(
+					tokenent.HasNetworkWith(
+						networkent.IdentifierEQ(network.Identifier),
+					),
+				),
+			).
+			Only(ctx)
+		if err != nil && !ent.IsNotFound(err) {
+			return fmt.Errorf("%s - failed to query order for cancellation: %w", normGW, err)
+		}
+		if foundOrder != nil {
+			orderToCancel = foundOrder
+		}
+	}
+	if orderToCancel != nil {
+		return HandleCancellation(ctx, orderToCancel, nil, reason, refundOrder)
+	}
+	return HandleCancellation(ctx, nil, paymentOrderFields, reason, refundOrder)
+}
+
 // CheckAMLCompliance checks if a transaction is compliant with AML regulations.
 func CheckAMLCompliance(rpcUrl string, txHash string) (bool, error) {
 	if !strings.Contains(rpcUrl, "shield3") {
@@ -1324,16 +1366,17 @@ func validateAndPreparePaymentOrderData(
 		utils.RateSideSell, // This is for offramp orders
 	)
 
-	if rateResult.Rate == decimal.NewFromInt(1) && paymentOrderFields.Rate != decimal.NewFromInt(1) {
-		err := HandleCancellation(ctx, nil, paymentOrderFields, "Rate validation failed", refundOrder)
+	// Must check rateErr before using rateResult (error path may leave result zero-valued).
+	if rateErr != nil {
+		err := handleCancellationForIndexedOrder(ctx, network, paymentOrderFields.GatewayID, existingOrder, paymentOrderFields, fmt.Sprintf("Rate validation failed: %s", rateErr.Error()), refundOrder)
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
 		}
 		return nil, nil, nil, nil, nil
 	}
 
-	if rateErr != nil {
-		err := HandleCancellation(ctx, nil, paymentOrderFields, fmt.Sprintf("Rate validation failed: %s", rateErr.Error()), refundOrder)
+	if rateResult.Rate == decimal.NewFromInt(1) && paymentOrderFields.Rate != decimal.NewFromInt(1) {
+		err := handleCancellationForIndexedOrder(ctx, network, paymentOrderFields.GatewayID, existingOrder, paymentOrderFields, "Rate validation failed", refundOrder)
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
 		}
@@ -1345,7 +1388,7 @@ func validateAndPreparePaymentOrderData(
 	rateDiff := event.Rate.Sub(rateResult.Rate).Abs()
 
 	if rateDiff.GreaterThan(tolerance) {
-		err := HandleCancellation(ctx, nil, paymentOrderFields, "Rate validation failed", refundOrder)
+		err := handleCancellationForIndexedOrder(ctx, network, paymentOrderFields.GatewayID, existingOrder, paymentOrderFields, "Rate validation failed", refundOrder)
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
 		}
@@ -1389,13 +1432,27 @@ func validateAndPreparePaymentOrderData(
 				// 3. Provider does not support the network
 				// 4. Provider does not support the currency
 				// 5. Provider have not configured a settlement address for the network
-				_ = HandleCancellation(ctx, nil, paymentOrderFields, "Provider not available", refundOrder)
-				return nil, nil, nil, nil, nil
+				if cErr := handleCancellationForIndexedOrder(ctx, network, paymentOrderFields.GatewayID, existingOrder, paymentOrderFields, "Provider not available", refundOrder); cErr != nil {
+					return nil, nil, nil, nil, nil, fmt.Errorf("%s - failed to handle cancellation: %w", paymentOrderFields.GatewayID, cErr)
+				}
+				return nil, nil, nil, nil, nil, nil
 			} else {
 				return nil, nil, nil, nil, fmt.Errorf("%s - failed to fetch provider: %w", paymentOrderFields.GatewayID, err)
 			}
 		}
 
+		// Check if provider is private - private orders don't require provision buckets
+		if orderToken != nil && orderToken.Edges.Provider != nil && orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
+			isPrivate = true
+		}
+	}
+
+	if provisionBucket == nil && !isPrivate {
+		err := handleCancellationForIndexedOrder(ctx, network, paymentOrderFields.GatewayID, existingOrder, paymentOrderFields, "Amount is larger than the maximum bucket", refundOrder)
+		if err != nil {
+			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
+		}
+		return nil, nil, nil, nil, nil, nil
 	}
 
 	return paymentOrderFields, token, institution, currency, nil
