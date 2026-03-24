@@ -1433,26 +1433,12 @@ func validateAndPreparePaymentOrderData(
 				// 4. Provider does not support the currency
 				// 5. Provider have not configured a settlement address for the network
 				if cErr := handleCancellationForIndexedOrder(ctx, network, paymentOrderFields.GatewayID, existingOrder, paymentOrderFields, "Provider not available", refundOrder); cErr != nil {
-					return nil, nil, nil, nil, nil, fmt.Errorf("%s - failed to handle cancellation: %w", paymentOrderFields.GatewayID, cErr)
+					return nil, nil, nil, nil, fmt.Errorf("%s - failed to handle cancellation: %w", paymentOrderFields.GatewayID, cErr)
 				}
-				return nil, nil, nil, nil, nil, nil
-			} else {
-				return nil, nil, nil, nil, fmt.Errorf("%s - failed to fetch provider: %w", paymentOrderFields.GatewayID, err)
+				return nil, nil, nil, nil, nil
 			}
+			return nil, nil, nil, nil, fmt.Errorf("%s - failed to fetch provider: %w", paymentOrderFields.GatewayID, err)
 		}
-
-		// Check if provider is private - private orders don't require provision buckets
-		if orderToken != nil && orderToken.Edges.Provider != nil && orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
-			isPrivate = true
-		}
-	}
-
-	if provisionBucket == nil && !isPrivate {
-		err := handleCancellationForIndexedOrder(ctx, network, paymentOrderFields.GatewayID, existingOrder, paymentOrderFields, "Amount is larger than the maximum bucket", refundOrder)
-		if err != nil {
-			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
-		}
-		return nil, nil, nil, nil, nil, nil
 	}
 
 	return paymentOrderFields, token, institution, currency, nil
