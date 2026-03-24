@@ -2958,7 +2958,8 @@ func (c *ProviderOrderTokenScoreHistoryClient) QueryProviderOrderToken(_m *Provi
 
 // Hooks returns the client hooks.
 func (c *ProviderOrderTokenScoreHistoryClient) Hooks() []Hook {
-	return c.hooks.ProviderOrderTokenScoreHistory
+	hooks := c.hooks.ProviderOrderTokenScoreHistory
+	return append(hooks[:len(hooks):len(hooks)], providerordertokenscorehistory.Hooks[:]...)
 }
 
 // Interceptors returns the client interceptors.

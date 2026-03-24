@@ -216,7 +216,7 @@ func (s *Service) TryFallbackAssignment(ctx context.Context, order *ent.PaymentO
 		SetOrderPercent(decimal.NewFromInt(100)).
 		Save(ctx); setErr != nil {
 		logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": setErr}).Errorf("[FALLBACK_ASSIGNMENT] failed to set fallback_tried_at on order")
-		return fmt.Errorf("fallback: failed to set fallback_tried_at (idempotency): %w", setErr)
+		// Non-fatal: order request was sent; persistence can be reconciled later.
 	}
 	logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "FallbackID": fallbackID}).Infof("[FALLBACK_ASSIGNMENT] successful fallback assignment")
 	return nil
@@ -508,6 +508,39 @@ func (s *Service) sendOrderRequest(ctx context.Context, order types.PaymentOrder
 	currency := inst.Edges.FiatCurrency.Code
 	amount := order.Amount.Mul(order.Rate).RoundBank(0)
 
+	orderKey := fmt.Sprintf("order_request_%s", order.ID)
+
+	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"OrderKey":   orderKey,
+		}).Errorf("Failed to check if order request exists in Redis")
+		return err
+	}
+	if exists > 0 {
+		existingProviderID, hErr := storage.RedisClient.HGet(ctx, orderKey, "providerId").Result()
+		if hErr == nil && existingProviderID == order.ProviderID {
+			logger.WithFields(logger.Fields{
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+				"OrderKey":   orderKey,
+			}).Errorf("Order request already exists in Redis - skipping duplicate notification")
+			return nil
+		}
+		if hErr == nil && existingProviderID != order.ProviderID {
+			logger.WithFields(logger.Fields{
+				"OrderID":            order.ID.String(),
+				"ProviderID":         order.ProviderID,
+				"ExistingProviderID": existingProviderID,
+				"OrderKey":           orderKey,
+			}).Errorf("Order request exists for different provider - potential race condition")
+			return fmt.Errorf("order request exists for different provider")
+		}
+	}
+
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -519,8 +552,9 @@ func (s *Service) sendOrderRequest(ctx context.Context, order types.PaymentOrder
 		}).Errorf("Failed to start transaction for order processing")
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
+	txCommitted := false
 	defer func() {
-		if err != nil {
+		if err != nil && !txCommitted {
 			_ = tx.Rollback()
 		}
 	}()
@@ -535,48 +569,6 @@ func (s *Service) sendOrderRequest(ctx context.Context, order types.PaymentOrder
 			"Amount":     amount.String(),
 		}).Errorf("Failed to reserve balance for order")
 		return err
-	}
-
-	orderKey := fmt.Sprintf("order_request_%s", order.ID)
-
-	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"OrderID":    order.ID.String(),
-			"ProviderID": order.ProviderID,
-			"OrderKey":   orderKey,
-		}).Errorf("Failed to check if order request exists in Redis")
-		return err
-	}
-	if exists > 0 {
-		existingProviderID, err := storage.RedisClient.HGet(ctx, orderKey, "providerId").Result()
-		if err == nil && existingProviderID == order.ProviderID {
-			logger.WithFields(logger.Fields{
-				"OrderID":    order.ID.String(),
-				"ProviderID": order.ProviderID,
-				"OrderKey":   orderKey,
-			}).Errorf("Order request already exists in Redis - skipping duplicate notification")
-			err = tx.Commit()
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.ProviderID,
-				}).Errorf("Failed to commit transaction for existing order request")
-				return fmt.Errorf("failed to commit transaction: %w", err)
-			}
-			return nil
-		} else if err == nil && existingProviderID != order.ProviderID {
-			logger.WithFields(logger.Fields{
-				"OrderID":            order.ID.String(),
-				"ProviderID":         order.ProviderID,
-				"ExistingProviderID": existingProviderID,
-				"OrderKey":           orderKey,
-			}).Errorf("Order request exists for different provider - potential race condition")
-			_ = tx.Rollback()
-			return fmt.Errorf("order request exists for different provider")
-		}
 	}
 
 	orderRequestData := map[string]interface{}{
@@ -658,23 +650,6 @@ func (s *Service) sendOrderRequest(ctx context.Context, order types.PaymentOrder
 	}
 
 	orderRequestData["orderId"] = order.ID.String()
-	err = s.notifyProvider(ctx, orderRequestData)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"OrderID":    order.ID.String(),
-			"ProviderID": order.ProviderID,
-		}).Errorf("Failed to notify provider")
-		cleanupErr := storage.RedisClient.Del(ctx, orderKey).Err()
-		if cleanupErr != nil {
-			logger.WithFields(logger.Fields{
-				"Error":    fmt.Sprintf("%v", cleanupErr),
-				"OrderKey": orderKey,
-			}).Errorf("Failed to cleanup orderKey after notifyProvider failure")
-		}
-		_ = storage.RedisClient.Del(ctx, metaKey).Err()
-		return err
-	}
 
 	err = tx.Commit()
 	if err != nil {
@@ -686,6 +661,34 @@ func (s *Service) sendOrderRequest(ctx context.Context, order types.PaymentOrder
 		_ = storage.RedisClient.Del(ctx, orderKey).Err()
 		_ = storage.RedisClient.Del(ctx, metaKey).Err()
 		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	txCommitted = true
+
+	err = s.notifyProvider(ctx, orderRequestData)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":      fmt.Sprintf("%v", err),
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+		}).Errorf("Failed to notify provider")
+		if relErr := s.balanceService.ReleaseFiatBalance(ctx, order.ProviderID, currency, amount, nil); relErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":      fmt.Sprintf("%v", relErr),
+				"OrderID":    order.ID.String(),
+				"ProviderID": order.ProviderID,
+				"Currency":   currency,
+				"Amount":     amount.String(),
+			}).Errorf("Failed to release fiat balance after notifyProvider failure")
+		}
+		cleanupErr := storage.RedisClient.Del(ctx, orderKey).Err()
+		if cleanupErr != nil {
+			logger.WithFields(logger.Fields{
+				"Error":    fmt.Sprintf("%v", cleanupErr),
+				"OrderKey": orderKey,
+			}).Errorf("Failed to cleanup orderKey after notifyProvider failure")
+		}
+		_ = storage.RedisClient.Del(ctx, metaKey).Err()
+		return err
 	}
 
 	logger.WithFields(logger.Fields{

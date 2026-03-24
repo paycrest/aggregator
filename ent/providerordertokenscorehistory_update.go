@@ -16,7 +16,6 @@ import (
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
-	"github.com/shopspring/decimal"
 )
 
 // ProviderOrderTokenScoreHistoryUpdate is the builder for updating ProviderOrderTokenScoreHistory entities.
@@ -35,41 +34,6 @@ func (_u *ProviderOrderTokenScoreHistoryUpdate) Where(ps ...predicate.ProviderOr
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *ProviderOrderTokenScoreHistoryUpdate) SetUpdatedAt(v time.Time) *ProviderOrderTokenScoreHistoryUpdate {
 	_u.mutation.SetUpdatedAt(v)
-	return _u
-}
-
-// SetEventType sets the "event_type" field.
-func (_u *ProviderOrderTokenScoreHistoryUpdate) SetEventType(v string) *ProviderOrderTokenScoreHistoryUpdate {
-	_u.mutation.SetEventType(v)
-	return _u
-}
-
-// SetNillableEventType sets the "event_type" field if the given value is not nil.
-func (_u *ProviderOrderTokenScoreHistoryUpdate) SetNillableEventType(v *string) *ProviderOrderTokenScoreHistoryUpdate {
-	if v != nil {
-		_u.SetEventType(*v)
-	}
-	return _u
-}
-
-// SetDelta sets the "delta" field.
-func (_u *ProviderOrderTokenScoreHistoryUpdate) SetDelta(v decimal.Decimal) *ProviderOrderTokenScoreHistoryUpdate {
-	_u.mutation.ResetDelta()
-	_u.mutation.SetDelta(v)
-	return _u
-}
-
-// SetNillableDelta sets the "delta" field if the given value is not nil.
-func (_u *ProviderOrderTokenScoreHistoryUpdate) SetNillableDelta(v *decimal.Decimal) *ProviderOrderTokenScoreHistoryUpdate {
-	if v != nil {
-		_u.SetDelta(*v)
-	}
-	return _u
-}
-
-// AddDelta adds value to the "delta" field.
-func (_u *ProviderOrderTokenScoreHistoryUpdate) AddDelta(v decimal.Decimal) *ProviderOrderTokenScoreHistoryUpdate {
-	_u.mutation.AddDelta(v)
 	return _u
 }
 
@@ -114,7 +78,9 @@ func (_u *ProviderOrderTokenScoreHistoryUpdate) ClearProviderOrderToken() *Provi
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *ProviderOrderTokenScoreHistoryUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -141,20 +107,19 @@ func (_u *ProviderOrderTokenScoreHistoryUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *ProviderOrderTokenScoreHistoryUpdate) defaults() {
+func (_u *ProviderOrderTokenScoreHistoryUpdate) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if providerordertokenscorehistory.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized providerordertokenscorehistory.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := providerordertokenscorehistory.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ProviderOrderTokenScoreHistoryUpdate) check() error {
-	if v, ok := _u.mutation.EventType(); ok {
-		if err := providerordertokenscorehistory.EventTypeValidator(v); err != nil {
-			return &ValidationError{Name: "event_type", err: fmt.Errorf(`ent: validator failed for field "ProviderOrderTokenScoreHistory.event_type": %w`, err)}
-		}
-	}
 	if _u.mutation.PaymentOrderCleared() && len(_u.mutation.PaymentOrderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderOrderTokenScoreHistory.payment_order"`)
 	}
@@ -178,15 +143,6 @@ func (_u *ProviderOrderTokenScoreHistoryUpdate) sqlSave(ctx context.Context) (_n
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerordertokenscorehistory.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := _u.mutation.EventType(); ok {
-		_spec.SetField(providerordertokenscorehistory.FieldEventType, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.Delta(); ok {
-		_spec.SetField(providerordertokenscorehistory.FieldDelta, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedDelta(); ok {
-		_spec.AddField(providerordertokenscorehistory.FieldDelta, field.TypeFloat64, value)
 	}
 	if _u.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -272,41 +228,6 @@ func (_u *ProviderOrderTokenScoreHistoryUpdateOne) SetUpdatedAt(v time.Time) *Pr
 	return _u
 }
 
-// SetEventType sets the "event_type" field.
-func (_u *ProviderOrderTokenScoreHistoryUpdateOne) SetEventType(v string) *ProviderOrderTokenScoreHistoryUpdateOne {
-	_u.mutation.SetEventType(v)
-	return _u
-}
-
-// SetNillableEventType sets the "event_type" field if the given value is not nil.
-func (_u *ProviderOrderTokenScoreHistoryUpdateOne) SetNillableEventType(v *string) *ProviderOrderTokenScoreHistoryUpdateOne {
-	if v != nil {
-		_u.SetEventType(*v)
-	}
-	return _u
-}
-
-// SetDelta sets the "delta" field.
-func (_u *ProviderOrderTokenScoreHistoryUpdateOne) SetDelta(v decimal.Decimal) *ProviderOrderTokenScoreHistoryUpdateOne {
-	_u.mutation.ResetDelta()
-	_u.mutation.SetDelta(v)
-	return _u
-}
-
-// SetNillableDelta sets the "delta" field if the given value is not nil.
-func (_u *ProviderOrderTokenScoreHistoryUpdateOne) SetNillableDelta(v *decimal.Decimal) *ProviderOrderTokenScoreHistoryUpdateOne {
-	if v != nil {
-		_u.SetDelta(*v)
-	}
-	return _u
-}
-
-// AddDelta adds value to the "delta" field.
-func (_u *ProviderOrderTokenScoreHistoryUpdateOne) AddDelta(v decimal.Decimal) *ProviderOrderTokenScoreHistoryUpdateOne {
-	_u.mutation.AddDelta(v)
-	return _u
-}
-
 // SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by ID.
 func (_u *ProviderOrderTokenScoreHistoryUpdateOne) SetPaymentOrderID(id uuid.UUID) *ProviderOrderTokenScoreHistoryUpdateOne {
 	_u.mutation.SetPaymentOrderID(id)
@@ -361,7 +282,9 @@ func (_u *ProviderOrderTokenScoreHistoryUpdateOne) Select(field string, fields .
 
 // Save executes the query and returns the updated ProviderOrderTokenScoreHistory entity.
 func (_u *ProviderOrderTokenScoreHistoryUpdateOne) Save(ctx context.Context) (*ProviderOrderTokenScoreHistory, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -388,20 +311,19 @@ func (_u *ProviderOrderTokenScoreHistoryUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *ProviderOrderTokenScoreHistoryUpdateOne) defaults() {
+func (_u *ProviderOrderTokenScoreHistoryUpdateOne) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if providerordertokenscorehistory.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized providerordertokenscorehistory.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := providerordertokenscorehistory.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ProviderOrderTokenScoreHistoryUpdateOne) check() error {
-	if v, ok := _u.mutation.EventType(); ok {
-		if err := providerordertokenscorehistory.EventTypeValidator(v); err != nil {
-			return &ValidationError{Name: "event_type", err: fmt.Errorf(`ent: validator failed for field "ProviderOrderTokenScoreHistory.event_type": %w`, err)}
-		}
-	}
 	if _u.mutation.PaymentOrderCleared() && len(_u.mutation.PaymentOrderIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "ProviderOrderTokenScoreHistory.payment_order"`)
 	}
@@ -442,15 +364,6 @@ func (_u *ProviderOrderTokenScoreHistoryUpdateOne) sqlSave(ctx context.Context) 
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(providerordertokenscorehistory.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := _u.mutation.EventType(); ok {
-		_spec.SetField(providerordertokenscorehistory.FieldEventType, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.Delta(); ok {
-		_spec.SetField(providerordertokenscorehistory.FieldDelta, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedDelta(); ok {
-		_spec.AddField(providerordertokenscorehistory.FieldDelta, field.TypeFloat64, value)
 	}
 	if _u.mutation.PaymentOrderCleared() {
 		edge := &sqlgraph.EdgeSpec{

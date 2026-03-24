@@ -110,7 +110,9 @@ func (_c *ProviderOrderTokenScoreHistoryCreate) Mutation() *ProviderOrderTokenSc
 
 // Save creates the ProviderOrderTokenScoreHistory in the database.
 func (_c *ProviderOrderTokenScoreHistoryCreate) Save(ctx context.Context) (*ProviderOrderTokenScoreHistory, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -137,19 +139,29 @@ func (_c *ProviderOrderTokenScoreHistoryCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *ProviderOrderTokenScoreHistoryCreate) defaults() {
+func (_c *ProviderOrderTokenScoreHistoryCreate) defaults() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if providerordertokenscorehistory.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized providerordertokenscorehistory.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := providerordertokenscorehistory.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if providerordertokenscorehistory.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized providerordertokenscorehistory.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := providerordertokenscorehistory.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
 	if _, ok := _c.mutation.ID(); !ok {
+		if providerordertokenscorehistory.DefaultID == nil {
+			return fmt.Errorf("ent: uninitialized providerordertokenscorehistory.DefaultID (forgotten import ent/runtime?)")
+		}
 		v := providerordertokenscorehistory.DefaultID()
 		_c.mutation.SetID(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -327,36 +339,6 @@ func (u *ProviderOrderTokenScoreHistoryUpsert) UpdateUpdatedAt() *ProviderOrderT
 	return u
 }
 
-// SetEventType sets the "event_type" field.
-func (u *ProviderOrderTokenScoreHistoryUpsert) SetEventType(v string) *ProviderOrderTokenScoreHistoryUpsert {
-	u.Set(providerordertokenscorehistory.FieldEventType, v)
-	return u
-}
-
-// UpdateEventType sets the "event_type" field to the value that was provided on create.
-func (u *ProviderOrderTokenScoreHistoryUpsert) UpdateEventType() *ProviderOrderTokenScoreHistoryUpsert {
-	u.SetExcluded(providerordertokenscorehistory.FieldEventType)
-	return u
-}
-
-// SetDelta sets the "delta" field.
-func (u *ProviderOrderTokenScoreHistoryUpsert) SetDelta(v decimal.Decimal) *ProviderOrderTokenScoreHistoryUpsert {
-	u.Set(providerordertokenscorehistory.FieldDelta, v)
-	return u
-}
-
-// UpdateDelta sets the "delta" field to the value that was provided on create.
-func (u *ProviderOrderTokenScoreHistoryUpsert) UpdateDelta() *ProviderOrderTokenScoreHistoryUpsert {
-	u.SetExcluded(providerordertokenscorehistory.FieldDelta)
-	return u
-}
-
-// AddDelta adds v to the "delta" field.
-func (u *ProviderOrderTokenScoreHistoryUpsert) AddDelta(v decimal.Decimal) *ProviderOrderTokenScoreHistoryUpsert {
-	u.Add(providerordertokenscorehistory.FieldDelta, v)
-	return u
-}
-
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -376,6 +358,12 @@ func (u *ProviderOrderTokenScoreHistoryUpsertOne) UpdateNewValues() *ProviderOrd
 		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(providerordertokenscorehistory.FieldCreatedAt)
+		}
+		if _, exists := u.create.mutation.EventType(); exists {
+			s.SetIgnore(providerordertokenscorehistory.FieldEventType)
+		}
+		if _, exists := u.create.mutation.Delta(); exists {
+			s.SetIgnore(providerordertokenscorehistory.FieldDelta)
 		}
 	}))
 	return u
@@ -419,41 +407,6 @@ func (u *ProviderOrderTokenScoreHistoryUpsertOne) SetUpdatedAt(v time.Time) *Pro
 func (u *ProviderOrderTokenScoreHistoryUpsertOne) UpdateUpdatedAt() *ProviderOrderTokenScoreHistoryUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
 		s.UpdateUpdatedAt()
-	})
-}
-
-// SetEventType sets the "event_type" field.
-func (u *ProviderOrderTokenScoreHistoryUpsertOne) SetEventType(v string) *ProviderOrderTokenScoreHistoryUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
-		s.SetEventType(v)
-	})
-}
-
-// UpdateEventType sets the "event_type" field to the value that was provided on create.
-func (u *ProviderOrderTokenScoreHistoryUpsertOne) UpdateEventType() *ProviderOrderTokenScoreHistoryUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
-		s.UpdateEventType()
-	})
-}
-
-// SetDelta sets the "delta" field.
-func (u *ProviderOrderTokenScoreHistoryUpsertOne) SetDelta(v decimal.Decimal) *ProviderOrderTokenScoreHistoryUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
-		s.SetDelta(v)
-	})
-}
-
-// AddDelta adds v to the "delta" field.
-func (u *ProviderOrderTokenScoreHistoryUpsertOne) AddDelta(v decimal.Decimal) *ProviderOrderTokenScoreHistoryUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
-		s.AddDelta(v)
-	})
-}
-
-// UpdateDelta sets the "delta" field to the value that was provided on create.
-func (u *ProviderOrderTokenScoreHistoryUpsertOne) UpdateDelta() *ProviderOrderTokenScoreHistoryUpsertOne {
-	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
-		s.UpdateDelta()
 	})
 }
 
@@ -643,6 +596,12 @@ func (u *ProviderOrderTokenScoreHistoryUpsertBulk) UpdateNewValues() *ProviderOr
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(providerordertokenscorehistory.FieldCreatedAt)
 			}
+			if _, exists := b.mutation.EventType(); exists {
+				s.SetIgnore(providerordertokenscorehistory.FieldEventType)
+			}
+			if _, exists := b.mutation.Delta(); exists {
+				s.SetIgnore(providerordertokenscorehistory.FieldDelta)
+			}
 		}
 	}))
 	return u
@@ -686,41 +645,6 @@ func (u *ProviderOrderTokenScoreHistoryUpsertBulk) SetUpdatedAt(v time.Time) *Pr
 func (u *ProviderOrderTokenScoreHistoryUpsertBulk) UpdateUpdatedAt() *ProviderOrderTokenScoreHistoryUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
 		s.UpdateUpdatedAt()
-	})
-}
-
-// SetEventType sets the "event_type" field.
-func (u *ProviderOrderTokenScoreHistoryUpsertBulk) SetEventType(v string) *ProviderOrderTokenScoreHistoryUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
-		s.SetEventType(v)
-	})
-}
-
-// UpdateEventType sets the "event_type" field to the value that was provided on create.
-func (u *ProviderOrderTokenScoreHistoryUpsertBulk) UpdateEventType() *ProviderOrderTokenScoreHistoryUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
-		s.UpdateEventType()
-	})
-}
-
-// SetDelta sets the "delta" field.
-func (u *ProviderOrderTokenScoreHistoryUpsertBulk) SetDelta(v decimal.Decimal) *ProviderOrderTokenScoreHistoryUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
-		s.SetDelta(v)
-	})
-}
-
-// AddDelta adds v to the "delta" field.
-func (u *ProviderOrderTokenScoreHistoryUpsertBulk) AddDelta(v decimal.Decimal) *ProviderOrderTokenScoreHistoryUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
-		s.AddDelta(v)
-	})
-}
-
-// UpdateDelta sets the "delta" field to the value that was provided on create.
-func (u *ProviderOrderTokenScoreHistoryUpsertBulk) UpdateDelta() *ProviderOrderTokenScoreHistoryUpsertBulk {
-	return u.Update(func(s *ProviderOrderTokenScoreHistoryUpsert) {
-		s.UpdateDelta()
 	})
 }
 

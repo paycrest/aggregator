@@ -2,6 +2,7 @@ package assignment
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
@@ -61,6 +62,12 @@ func (s *Service) GetProviderRate(ctx context.Context, provider *ent.ProviderPro
 		} else if !tokenConfig.Edges.Currency.MarketSellRate.IsZero() {
 			rate = tokenConfig.Edges.Currency.MarketSellRate.Add(tokenConfig.FloatingSellDelta).RoundBank(2)
 		}
+	default:
+		return decimal.Decimal{}, fmt.Errorf("no effective rate for side=%v token=%s: unsupported side", side, tokenSymbol)
+	}
+
+	if rate.IsZero() {
+		return decimal.Decimal{}, fmt.Errorf("no effective rate for side=%v token=%s", side, tokenSymbol)
 	}
 
 	return rate, nil

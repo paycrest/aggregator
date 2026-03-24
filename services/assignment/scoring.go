@@ -121,21 +121,29 @@ func applyScoreForProvider(ctx context.Context, order *ent.PaymentOrder, prov *e
 		return fmt.Errorf("score: resolve pot: %w", err)
 	}
 
-	_, err = storage.Client.ProviderOrderTokenScoreHistory.Create().
+	tx, err := storage.Client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("score: begin tx: %w", err)
+	}
+	_, err = tx.ProviderOrderTokenScoreHistory.Create().
 		SetPaymentOrderID(order.ID).
 		SetProviderOrderTokenID(pot.ID).
 		SetEventType(eventType).
 		SetDelta(delta).
 		Save(ctx)
 	if err != nil {
+		_ = tx.Rollback()
 		if ent.IsConstraintError(err) {
 			return nil
 		}
 		return fmt.Errorf("score: history insert: %w", err)
 	}
-
-	if err := storage.Client.ProviderOrderToken.UpdateOneID(pot.ID).AddScore(delta).Exec(ctx); err != nil {
+	if err := tx.ProviderOrderToken.UpdateOneID(pot.ID).AddScore(delta).Exec(ctx); err != nil {
+		_ = tx.Rollback()
 		return fmt.Errorf("score: update pot: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("score: commit: %w", err)
 	}
 	return nil
 }

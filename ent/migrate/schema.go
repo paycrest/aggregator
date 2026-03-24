@@ -354,6 +354,18 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "providerassignmentrun_payment_order_provider_assignment_runs",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderAssignmentRunsColumns[9]},
+			},
+			{
+				Name:    "providerassignmentrun_provider_order_token_assignment_runs",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderAssignmentRunsColumns[10]},
+			},
+		},
 	}
 	// ProviderBalancesColumns holds the columns for the "provider_balances" table.
 	ProviderBalancesColumns = []*schema.Column{
@@ -527,6 +539,16 @@ var (
 				Name:    "providerordertokenscorehistory_event_type_payment_order_provider_order_token_score_histories",
 				Unique:  true,
 				Columns: []*schema.Column{ProviderOrderTokenScoreHistoriesColumns[3], ProviderOrderTokenScoreHistoriesColumns[5]},
+			},
+			{
+				Name:    "providerordertokenscorehistory_payment_order_provider_order_token_score_histories",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderOrderTokenScoreHistoriesColumns[5]},
+			},
+			{
+				Name:    "providerordertokenscorehistory_provider_order_token_score_histories",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderOrderTokenScoreHistoriesColumns[6]},
 			},
 		},
 	}

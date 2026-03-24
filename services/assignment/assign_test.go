@@ -31,22 +31,29 @@ func TestAssignPaymentOrder_DBOnlyPublicProvider(t *testing.T) {
 	dbConn, err := sql.Open("sqlite3", "file:ent_pq?mode=memory&cache=shared&_fk=1&_busy_timeout=5000")
 	require.NoError(t, err)
 	dbConn.SetMaxOpenConns(2)
-	t.Cleanup(func() { _ = dbConn.Close() })
 
 	drv := entsql.OpenDB(dialect.SQLite, dbConn)
 	client := ent.NewClient(ent.Driver(drv))
-	t.Cleanup(func() { _ = client.Close() })
 
+	origClient, origSQLDB, origRedis := db.Client, db.DB, db.RedisClient
 	db.Client = client
 	db.DB = dbConn
 	require.NoError(t, client.Schema.Create(context.Background()))
 
 	mr, err := miniredis.Run()
 	require.NoError(t, err)
-	t.Cleanup(mr.Close)
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	t.Cleanup(func() { _ = rdb.Close() })
 	db.RedisClient = rdb
+
+	t.Cleanup(func() {
+		_ = rdb.Close()
+		mr.Close()
+		_ = dbConn.Close()
+		_ = client.Close()
+		db.Client = origClient
+		db.DB = origSQLDB
+		db.RedisClient = origRedis
+	})
 
 	ctx := context.Background()
 

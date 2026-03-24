@@ -29,6 +29,10 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 		trigger = AssignmentTriggerInitial
 	}
 	orderConf := config.OrderConfig()
+	maxRetryAttempts := orderConf.ProviderMaxRetryAttempts
+	if maxRetryAttempts < 1 {
+		maxRetryAttempts = 1
+	}
 
 	currentOrder, err := storage.Client.PaymentOrder.Get(ctx, order.ID)
 	if err == nil {
@@ -75,7 +79,7 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 		if order.OrderType == "otc" {
 			shouldSkip = excludeCount > 0
 		} else {
-			shouldSkip = excludeCount >= orderConf.ProviderMaxRetryAttempts
+			shouldSkip = excludeCount >= maxRetryAttempts
 		}
 		if !shouldSkip {
 			if order.OrderType != "otc" && orderConf.ProviderStuckFulfillmentThreshold > 0 {
@@ -224,7 +228,7 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 				continue
 			}
 		} else {
-			if exc >= orderConf.ProviderMaxRetryAttempts {
+			if exc >= maxRetryAttempts {
 				continue
 			}
 		}

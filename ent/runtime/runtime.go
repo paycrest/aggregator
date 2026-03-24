@@ -517,6 +517,8 @@ func init() {
 	// providerordertoken.DefaultScore holds the default value on creation for the score field.
 	providerordertoken.DefaultScore = providerordertokenDescScore.Default.(func() decimal.Decimal)
 	providerordertokenscorehistoryMixin := schema.ProviderOrderTokenScoreHistory{}.Mixin()
+	providerordertokenscorehistoryHooks := schema.ProviderOrderTokenScoreHistory{}.Hooks()
+	providerordertokenscorehistory.Hooks[0] = providerordertokenscorehistoryHooks[0]
 	providerordertokenscorehistoryMixinFields0 := providerordertokenscorehistoryMixin[0].Fields()
 	_ = providerordertokenscorehistoryMixinFields0
 	providerordertokenscorehistoryFields := schema.ProviderOrderTokenScoreHistory{}.Fields()

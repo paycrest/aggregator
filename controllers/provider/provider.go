@@ -2020,7 +2020,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		return
 	}
 
-	if scoreErr := assignment.ApplyProviderScoreChange(ctx, orderID, assignment.ScoreEventFulfilledValidated, decimal.NewFromFloat(assignment.RewardFulfilledValidated)); scoreErr != nil {
+	if scoreErr := assignment.ApplyProviderScoreChange(reqCtx, orderID, assignment.ScoreEventFulfilledValidated, decimal.NewFromFloat(assignment.RewardFulfilledValidated)); scoreErr != nil {
 		logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": scoreErr.Error()}).Warnf("FulfillOrder payin: score reward")
 	}
 
