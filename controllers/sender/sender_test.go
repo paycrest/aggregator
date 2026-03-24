@@ -121,7 +121,7 @@ func setup() error {
 	}
 
 	// Create ProviderOrderToken for rate validation (Redis queue uses 750; NGN/NGN direct match normalizes ValidateRate to 1, matching payload rate "1")
-	providerOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
+	_, err = test.AddProviderOrderTokenToProvider(map[string]interface{}{
 		"provider":             providerProfile,
 		"token_id":             int(tokenId),
 		"currency_id":          currency.ID,
@@ -136,18 +136,6 @@ func setup() error {
 	})
 	if err != nil {
 		return fmt.Errorf("AddProviderOrderTokenToProvider.sender_test: %w", err)
-	}
-
-	// Create ProvisionBucket for bucket-based rate validation
-	// Bucket range accommodates fiat notionally from queue rate (e.g. 100 * 750); initiation uses direct-match rate 1
-	bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
-		"provider_id": providerProfile.ID,
-		"currency_id": currency.ID,
-		"min_amount":  decimal.NewFromFloat(1.0),
-		"max_amount":  decimal.NewFromFloat(100000.0),
-	})
-	if err != nil {
-		return fmt.Errorf("CreateTestProvisionBucket.sender_test: %w", err)
 	}
 
 	_, err = db.Client.ProviderBalances.Update().
@@ -768,19 +756,13 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, providerOrderToken, "Provider order token should be created")
 
-			// Create ProvisionBucket for bucket-based rate validation
-			// Bucket range accommodates fiat notionally from queue rate (e.g. 100 * 750); initiation uses direct-match rate 1
-			bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
-				"provider_id": providerProfile.ID,
-				"currency_id": currency.ID,
-				"min_amount":  decimal.NewFromFloat(1.0),
-				"max_amount":  decimal.NewFromFloat(100000.0),
-			})
-			assert.NoError(t, err)
+			// Redis bucket key min/max (legacy queue shape; no DB provision bucket in Phase 1 tests)
+			testRedisBucketMin := decimal.NewFromFloat(1.0)
+			testRedisBucketMax := decimal.NewFromFloat(100000.0)
 
 			// Populate Redis bucket with provider data for validateBucketRate
 			// In floating-rate tests, approximate current provider rate using fixed_sell_rate for deterministic behavior
-			redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, testRedisBucketMin, testRedisBucketMax)
 			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 				providerProfile.ID,
 				testCtx.token.Symbol,
@@ -955,18 +937,11 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, providerOrderToken, "Provider order token should be created")
 
-			// Create ProvisionBucket for bucket-based rate validation
-			// Bucket range accommodates fiat notionally from queue rate (e.g. 100 * 750); initiation uses direct-match rate 1
-			bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
-				"provider_id": providerProfile.ID,
-				"currency_id": currency.ID,
-				"min_amount":  decimal.NewFromFloat(1.0),
-				"max_amount":  decimal.NewFromFloat(100000.0),
-			})
-			assert.NoError(t, err)
+			testRedisBucketMin := decimal.NewFromFloat(1.0)
+			testRedisBucketMax := decimal.NewFromFloat(100000.0)
 
 			// Populate Redis bucket with provider data for validateBucketRate
-			redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, testRedisBucketMin, testRedisBucketMax)
 			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 				providerProfile.ID,
 				testCtx.token.Symbol,
@@ -1141,18 +1116,11 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, providerOrderToken, "Provider order token should be created")
 
-			// Create ProvisionBucket for bucket-based rate validation
-			// Bucket range accommodates fiat notionally from queue rate (e.g. 100 * 750); initiation uses direct-match rate 1
-			bucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
-				"provider_id": providerProfile.ID,
-				"currency_id": currency.ID,
-				"min_amount":  decimal.NewFromFloat(1.0),
-				"max_amount":  decimal.NewFromFloat(100000.0),
-			})
-			assert.NoError(t, err)
+			testRedisBucketMin := decimal.NewFromFloat(1.0)
+			testRedisBucketMax := decimal.NewFromFloat(100000.0)
 
 			// Populate Redis bucket with provider data for validateBucketRate
-			redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+			redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, testRedisBucketMin, testRedisBucketMax)
 			providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
 				providerProfile.ID,
 				testCtx.token.Symbol,
