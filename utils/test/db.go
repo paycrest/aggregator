@@ -480,6 +480,8 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		"is_partner":      false,
 		"visibility_mode": "public",
 		"is_available":    true,
+		// Schema default is false; rate validation and assignment require active public providers.
+		"is_active": true,
 	}
 
 	// Apply overrides
@@ -495,6 +497,7 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
 		SetUserID(payload["user_id"].(uuid.UUID)).
 		SetVisibilityMode(providerprofile.VisibilityMode(payload["visibility_mode"].(string))).
+		SetIsActive(payload["is_active"].(bool)).
 		Save(context.Background())
 	if err != nil {
 		return nil, err

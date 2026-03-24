@@ -2,6 +2,7 @@ package assignment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -25,6 +26,9 @@ import (
 // AssignPaymentOrderWithTrigger assigns using DB-only candidate ranking
 // (score DESC, 24h volume ASC, last_order_assigned_at ASC NULLS FIRST, id ASC).
 func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types.PaymentOrderFields, trigger string) error {
+	ctx, cancel := context.WithTimeout(ctx, assignPaymentOrderTimeout)
+	defer cancel()
+
 	if trigger == "" {
 		trigger = AssignmentTriggerInitial
 	}
@@ -85,12 +89,25 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 			if order.OrderType != "otc" && orderConf.ProviderStuckFulfillmentThreshold > 0 {
 				stuckCount, errStuck := utils.GetProviderStuckOrderCount(ctx, order.ProviderID)
 				if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
-					// fall through to DB selection
+					logger.WithFields(logger.Fields{
+						"OrderID":    order.ID.String(),
+						"ProviderID": order.ProviderID,
+						"StuckCount": stuckCount,
+						"Threshold":  orderConf.ProviderStuckFulfillmentThreshold,
+					}).Warnf("assign: pre-set provider skipped (stuck threshold); using public selection")
+					exclKey := fmt.Sprintf("order_exclude_list_%s", order.ID)
+					if pushErr := storage.RedisClient.RPush(ctx, exclKey, order.ProviderID).Err(); pushErr != nil {
+						logger.WithFields(logger.Fields{"OrderID": order.ID.String(), "Error": pushErr.Error()}).Warnf("assign: failed to push pre-set provider to exclude list after stuck skip")
+					}
 				} else {
 					if errStuck != nil {
 						logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", errStuck), "OrderID": order.ID.String()}).Errorf("failed to get stuck order count for pre-set provider")
 					}
-					assigned, provider, _ := s.tryUsePreSetProvider(ctx, order)
+					assigned, provider, presetErr := s.tryUsePreSetProvider(ctx, order)
+					if presetErr != nil {
+						s.recordAssignmentRun(ctx, order.ID, trigger, AssignmentRunResultError, strPtr(order.ProviderID), nil, false, nil, nil, presetErr)
+						return fmt.Errorf("assign: pre-set provider: %w", presetErr)
+					}
 					if assigned {
 						s.recordAssignmentRun(ctx, order.ID, trigger, AssignmentRunResultAssigned, strPtr(order.ProviderID), nil, false, nil, nil, nil)
 						return nil
@@ -101,7 +118,11 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 					}
 				}
 			} else {
-				assigned, provider, _ := s.tryUsePreSetProvider(ctx, order)
+				assigned, provider, presetErr := s.tryUsePreSetProvider(ctx, order)
+				if presetErr != nil {
+					s.recordAssignmentRun(ctx, order.ID, trigger, AssignmentRunResultError, strPtr(order.ProviderID), nil, false, nil, nil, presetErr)
+					return fmt.Errorf("assign: pre-set provider: %w", presetErr)
+				}
 				if assigned {
 					s.recordAssignmentRun(ctx, order.ID, trigger, AssignmentRunResultAssigned, strPtr(order.ProviderID), nil, false, nil, nil, nil)
 					return nil
@@ -262,12 +283,24 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 			assignErr = s.sendOrderRequest(ctx, assignOrder)
 		}
 		if assignErr != nil {
+			if errors.Is(assignErr, ErrAssignmentLockHeld) {
+				logger.WithFields(logger.Fields{"OrderID": order.ID.String(), "ProviderID": pid}).Warnf("assign: concurrent assignment for order; stopping candidate loop")
+				s.recordAssignmentRun(ctx, order.ID, trigger, AssignmentRunResultError, &pid, &pot.ID, false, &buySnap, &sellSnap, assignErr)
+				return assignErr
+			}
 			logger.WithFields(logger.Fields{"OrderID": order.ID.String(), "ProviderID": pid, "Error": assignErr.Error()}).Errorf("assign: failed to assign to candidate")
 			continue
 		}
 
 		now := time.Now()
-		_, _ = storage.Client.ProviderOrderToken.UpdateOneID(pot.ID).SetLastOrderAssignedAt(now).Save(ctx)
+		if _, uerr := storage.Client.ProviderOrderToken.UpdateOneID(pot.ID).SetLastOrderAssignedAt(now).Save(ctx); uerr != nil {
+			logger.WithFields(logger.Fields{
+				"OrderID":              order.ID.String(),
+				"ProviderID":           pid,
+				"ProviderOrderTokenID": pot.ID,
+				"Error":                uerr.Error(),
+			}).Warnf("assign: failed to update last_order_assigned_at")
+		}
 
 		s.recordAssignmentRun(ctx, order.ID, trigger, AssignmentRunResultAssigned, &pid, &pot.ID, false, &buySnap, &sellSnap, nil)
 		return nil
@@ -303,12 +336,7 @@ func amountInRangeForOrder(pot *ent.ProviderOrderToken, amount decimal.Decimal, 
 	if isOTC {
 		return !amount.LessThan(pot.MinOrderAmountOtc) && !amount.GreaterThan(pot.MaxOrderAmountOtc)
 	}
-	if amount.GreaterThan(pot.MaxOrderAmount) {
-		if pot.MinOrderAmountOtc.IsZero() || pot.MaxOrderAmountOtc.IsZero() {
-			return false
-		}
-		return !amount.LessThan(pot.MinOrderAmountOtc) && !amount.GreaterThan(pot.MaxOrderAmountOtc)
-	}
+	// Regular orders: only regular min/max; do not admit via OTC bounds (would mismatch assignOtcOrder vs sendOrderRequest).
 	return !amount.LessThan(pot.MinOrderAmount) && !amount.GreaterThan(pot.MaxOrderAmount)
 }
 
@@ -332,9 +360,31 @@ func providerRateForAssignment(pot *ent.ProviderOrderToken, side RateSide, buySn
 	return decimal.Zero
 }
 
+func assignmentMarketRatesMatchFiat(storedBuy, storedSell, fcBuy, fcSell decimal.Decimal) bool {
+	return rateCloseEnoughForAssignment(storedBuy, fcBuy) && rateCloseEnoughForAssignment(storedSell, fcSell)
+}
+
+func rateCloseEnoughForAssignment(a, b decimal.Decimal) bool {
+	if a.IsZero() && b.IsZero() {
+		return true
+	}
+	diff := a.Sub(b).Abs()
+	maxAbs := a.Abs()
+	if b.Abs().GreaterThan(maxAbs) {
+		maxAbs = b.Abs()
+	}
+	if maxAbs.IsZero() {
+		return diff.IsZero()
+	}
+	return diff.Div(maxAbs).LessThan(assignmentMarketRateRelTol)
+}
+
 func (s *Service) ensureAssignmentMarketSnapshot(ctx context.Context, po *ent.PaymentOrder, fc *ent.FiatCurrency) (buy, sell decimal.Decimal, err error) {
 	if po.AssignmentMarketBuyRate != nil && po.AssignmentMarketSellRate != nil {
-		return *po.AssignmentMarketBuyRate, *po.AssignmentMarketSellRate, nil
+		stBuy, stSell := *po.AssignmentMarketBuyRate, *po.AssignmentMarketSellRate
+		if assignmentMarketRatesMatchFiat(stBuy, stSell, fc.MarketBuyRate, fc.MarketSellRate) {
+			return stBuy, stSell, nil
+		}
 	}
 	buy = fc.MarketBuyRate
 	sell = fc.MarketSellRate
@@ -349,25 +399,8 @@ func (s *Service) ensureAssignmentMarketSnapshot(ctx context.Context, po *ent.Pa
 }
 
 func recentFiatVolumeByProvider(ctx context.Context, providerIDs []string) (map[string]decimal.Decimal, error) {
-	out := make(map[string]decimal.Decimal)
-	if len(providerIDs) == 0 {
-		return out, nil
-	}
 	since := time.Now().Add(-RecentVolumeWindow)
-	for _, pid := range providerIDs {
-		var sum float64
-		row := storage.DB.QueryRowContext(ctx, `
-SELECT COALESCE(SUM(amount * rate), 0)
-FROM payment_orders
-WHERE provider_profile_assigned_orders = $1
-  AND status IN ('validated', 'settled')
-  AND updated_at >= $2`, pid, since)
-		if err := row.Scan(&sum); err != nil {
-			return nil, err
-		}
-		out[pid] = decimal.NewFromFloat(sum)
-	}
-	return out, nil
+	return utils.RecentFiatVolumeByProvider(ctx, since, providerIDs)
 }
 
 func (s *Service) recordAssignmentRun(ctx context.Context, orderID uuid.UUID, trigger, result string, provID *string, potID *int, usedFallback bool, buy, sell *decimal.Decimal, runErr error) {

@@ -2,9 +2,12 @@ package assignment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
@@ -21,6 +24,60 @@ import (
 	"github.com/paycrest/aggregator/utils/logger"
 	"github.com/shopspring/decimal"
 )
+
+// ErrAssignmentLockHeld means another goroutine holds the Redis assignment lock for this order.
+var ErrAssignmentLockHeld = errors.New("assignment lock held")
+
+func assignmentLockKey(orderID uuid.UUID) string {
+	return fmt.Sprintf("order_assign_lock_%s", orderID.String())
+}
+
+// acquireOrderAssignmentLock serializes sendOrderRequest / OTC Redis writes per order ID.
+func acquireOrderAssignmentLock(ctx context.Context, orderID uuid.UUID) (release func(), err error) {
+	key := assignmentLockKey(orderID)
+	ok, e := storage.RedisClient.SetNX(ctx, key, "1", orderAssignLockTTL).Result()
+	if e != nil {
+		return nil, fmt.Errorf("redis SetNX: %w", e)
+	}
+	if !ok {
+		return nil, ErrAssignmentLockHeld
+	}
+	return func() {
+		if delErr := storage.RedisClient.Del(ctx, key).Err(); delErr != nil {
+			logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": delErr.Error()}).Warnf("assign: failed to release assignment lock")
+		}
+	}, nil
+}
+
+// resolveOrderRequestRedisConflict handles duplicate / concurrent paths when the assign lock is not free.
+func resolveOrderRequestRedisConflict(ctx context.Context, order types.PaymentOrderFields, orderKey string) error {
+	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
+	if err != nil {
+		return fmt.Errorf("redis Exists: %w", err)
+	}
+	if exists == 0 {
+		return fmt.Errorf("%w: order_request not ready yet", ErrAssignmentLockHeld)
+	}
+	existingProviderID, hErr := storage.RedisClient.HGet(ctx, orderKey, "providerId").Result()
+	if hErr == nil && existingProviderID == order.ProviderID {
+		logger.WithFields(logger.Fields{
+			"OrderID":    order.ID.String(),
+			"ProviderID": order.ProviderID,
+			"OrderKey":   orderKey,
+		}).Errorf("Order request already exists in Redis - skipping duplicate notification")
+		return nil
+	}
+	if hErr == nil && existingProviderID != order.ProviderID {
+		logger.WithFields(logger.Fields{
+			"OrderID":            order.ID.String(),
+			"ProviderID":         order.ProviderID,
+			"ExistingProviderID": existingProviderID,
+			"OrderKey":           orderKey,
+		}).Errorf("Order request exists for different provider - potential race condition")
+		return fmt.Errorf("order request exists for different provider")
+	}
+	return fmt.Errorf("%w: could not read providerId from order_request", ErrAssignmentLockHeld)
+}
 
 // AssignPaymentOrder assigns a payment order to a provider using DB-only selection.
 func (s *Service) AssignPaymentOrder(ctx context.Context, order types.PaymentOrderFields) error {
@@ -344,6 +401,15 @@ func (s *Service) assignOtcOrder(ctx context.Context, order types.PaymentOrderFi
 	}
 
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
+	otcRelease, lockErr := acquireOrderAssignmentLock(ctx, order.ID)
+	if lockErr != nil {
+		if errors.Is(lockErr, ErrAssignmentLockHeld) {
+			return resolveOrderRequestRedisConflict(ctx, order, orderKey)
+		}
+		return lockErr
+	}
+	defer otcRelease()
+
 	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -509,6 +575,15 @@ func (s *Service) sendOrderRequest(ctx context.Context, order types.PaymentOrder
 	amount := order.Amount.Mul(order.Rate).RoundBank(0)
 
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
+
+	release, lockErr := acquireOrderAssignmentLock(ctx, order.ID)
+	if lockErr != nil {
+		if errors.Is(lockErr, ErrAssignmentLockHeld) {
+			return resolveOrderRequestRedisConflict(ctx, order, orderKey)
+		}
+		return lockErr
+	}
+	defer release()
 
 	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
 	if err != nil {

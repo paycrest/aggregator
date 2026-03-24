@@ -1,6 +1,10 @@
 package assignment
 
-import "time"
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 // Provider selection and scoring constants (hardcoded per product; not env-configured).
 
@@ -15,6 +19,15 @@ const (
 
 // RecentVolumeWindow is the lookback for recent_successful_fiat_volume_24h ordering.
 var RecentVolumeWindow = 24 * time.Hour
+
+// assignPaymentOrderTimeout bounds DB/Redis work for one assignment invocation.
+const assignPaymentOrderTimeout = 2 * time.Minute
+
+// orderAssignLockTTL is Redis TTL for order_assign_lock_{orderID} (exclusive assign / sendOrderRequest).
+const orderAssignLockTTL = 5 * time.Minute
+
+// assignmentMarketRateRelTol: refresh persisted assignment market snapshot when fiat rates drift beyond this relative delta.
+var assignmentMarketRateRelTol = decimal.NewFromFloat(0.0005) // 0.05%
 
 // ProviderFaultCancelReasons is the allow-list of cancel reasons that count as provider fault
 // (-1.0). Each entry indicates the provider accepted an order their PSP or account configuration

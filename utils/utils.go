@@ -1192,26 +1192,41 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 // quoteRecentVolumeWindow matches assignment fairness (24h successful fiat volume; hardcoded).
 const quoteRecentVolumeWindow = 24 * time.Hour
 
-func quoteRecentFiatVolumeByProvider(ctx context.Context, providerIDs []string) (map[string]decimal.Decimal, error) {
+// RecentFiatVolumeByProvider returns per-provider SUM(amount*rate) for validated/settled orders
+// with updated_at >= since. Uses the ent client so it works with any dialect (Postgres prod, SQLite tests).
+// When storage.Client is nil, returns zero volume for each id (no error).
+func RecentFiatVolumeByProvider(ctx context.Context, since time.Time, providerIDs []string) (map[string]decimal.Decimal, error) {
 	out := make(map[string]decimal.Decimal)
-	if len(providerIDs) == 0 {
+	for _, pid := range providerIDs {
+		out[pid] = decimal.Zero
+	}
+	if len(providerIDs) == 0 || storage.Client == nil {
 		return out, nil
 	}
-	since := time.Now().Add(-quoteRecentVolumeWindow)
 	for _, pid := range providerIDs {
-		var sum float64
-		row := storage.DB.QueryRowContext(ctx, `
-SELECT COALESCE(SUM(amount * rate), 0)
-FROM payment_orders
-WHERE provider_profile_assigned_orders = $1
-  AND status IN ('validated', 'settled')
-  AND updated_at >= $2`, pid, since)
-		if err := row.Scan(&sum); err != nil {
+		rows, err := storage.Client.PaymentOrder.Query().
+			Where(
+				paymentorder.HasProviderWith(providerprofile.IDEQ(pid)),
+				paymentorder.StatusIn(paymentorder.StatusValidated, paymentorder.StatusSettled),
+				paymentorder.UpdatedAtGTE(since),
+			).
+			Select(paymentorder.FieldAmount, paymentorder.FieldRate).
+			All(ctx)
+		if err != nil {
 			return nil, err
 		}
-		out[pid] = decimal.NewFromFloat(sum)
+		var sum decimal.Decimal
+		for _, po := range rows {
+			sum = sum.Add(po.Amount.Mul(po.Rate))
+		}
+		out[pid] = sum
 	}
 	return out, nil
+}
+
+func quoteRecentFiatVolumeByProvider(ctx context.Context, providerIDs []string) (map[string]decimal.Decimal, error) {
+	since := time.Now().Add(-quoteRecentVolumeWindow)
+	return RecentFiatVolumeByProvider(ctx, since, providerIDs)
 }
 
 func quoteRateForPublicCandidate(pot *ent.ProviderOrderToken, side RateSide, currency *ent.FiatCurrency) decimal.Decimal {

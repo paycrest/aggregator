@@ -383,9 +383,11 @@ func TestAssignment(t *testing.T) {
 
 		require.NoError(t, s.AssignPaymentOrder(ac.ctx, orderFields(order, ac.tok, "")))
 
+		// Drift within assignmentMarketRateRelTol so persisted snapshot stays valid for floating-rate determinism.
+		slight := decimal.NewFromFloat(1500.5)
 		_, err := ac.client.FiatCurrency.UpdateOneID(se.cur.ID).
-			SetMarketBuyRate(decimal.NewFromFloat(9999)).
-			SetMarketSellRate(decimal.NewFromFloat(9999)).
+			SetMarketBuyRate(slight).
+			SetMarketSellRate(slight).
 			Save(ac.ctx)
 		require.NoError(t, err)
 
@@ -401,7 +403,7 @@ func TestAssignment(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, decimal.NewFromFloat(1500).String(),
 			reloaded.AssignmentMarketBuyRate.String(),
-			"snapshot must be reused from first run, not overwritten with new market rate")
+			"snapshot must be reused from first run when fiat market drift is within relative tolerance")
 	})
 
 	t.Run("audit_run_recorded_on_successful_assignment", func(t *testing.T) {
