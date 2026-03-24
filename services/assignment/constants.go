@@ -23,6 +23,9 @@ var RecentVolumeWindow = 24 * time.Hour
 // assignPaymentOrderTimeout bounds DB/Redis work for one assignment invocation.
 const assignPaymentOrderTimeout = 2 * time.Minute
 
+// recordAssignmentRunTimeout bounds audit persistence so it is not cut off by assignPaymentOrderTimeout.
+const recordAssignmentRunTimeout = 10 * time.Second
+
 // orderAssignLockTTL is Redis TTL for order_assign_lock_{orderID} (exclusive assign / sendOrderRequest).
 const orderAssignLockTTL = 5 * time.Minute
 

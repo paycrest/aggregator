@@ -79,6 +79,22 @@ func resolveOrderRequestRedisConflict(ctx context.Context, order types.PaymentOr
 	return fmt.Errorf("%w: could not read providerId from order_request", ErrAssignmentLockHeld)
 }
 
+// resolveConcurrentAssignmentStart handles AcquireNX failure at the start of AssignPaymentOrderWithTrigger
+// when another goroutine already holds the assignment lock or has finished writing order_request.
+func resolveConcurrentAssignmentStart(ctx context.Context, order types.PaymentOrderFields, orderKey string) error {
+	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
+	if err != nil {
+		return fmt.Errorf("redis Exists: %w", err)
+	}
+	if exists > 0 {
+		if order.ProviderID != "" {
+			return resolveOrderRequestRedisConflict(ctx, order, orderKey)
+		}
+		return nil
+	}
+	return fmt.Errorf("%w: assignment in progress for order", ErrAssignmentLockHeld)
+}
+
 // AssignPaymentOrder assigns a payment order to a provider using DB-only selection.
 func (s *Service) AssignPaymentOrder(ctx context.Context, order types.PaymentOrderFields) error {
 	return s.AssignPaymentOrderWithTrigger(ctx, order, AssignmentTriggerInitial)
@@ -86,7 +102,8 @@ func (s *Service) AssignPaymentOrder(ctx context.Context, order types.PaymentOrd
 
 // TryFallbackAssignment attempts to assign the order to the configured fallback provider using only
 // rate and balance checks. Returns a clear error if the fallback provider's rate is outside slippage.
-func (s *Service) TryFallbackAssignment(ctx context.Context, order *ent.PaymentOrder) error {
+// When assignmentLockHeld is true, the caller already holds order_assign_lock_{orderID} (e.g. AssignPaymentOrderWithTrigger).
+func (s *Service) TryFallbackAssignment(ctx context.Context, order *ent.PaymentOrder, assignmentLockHeld bool) error {
 	orderConf := config.OrderConfig()
 	fallbackID := orderConf.FallbackProviderID
 	if fallbackID == "" {
@@ -265,7 +282,7 @@ func (s *Service) TryFallbackAssignment(ctx context.Context, order *ent.PaymentO
 	}
 
 	fields.ProviderID = fallbackID
-	if err := s.sendOrderRequest(ctx, fields); err != nil {
+	if err := s.sendOrderRequest(ctx, fields, assignmentLockHeld); err != nil {
 		return fmt.Errorf("fallback: send order request: %w", err)
 	}
 	if _, setErr := storage.Client.PaymentOrder.UpdateOneID(fields.ID).
@@ -281,7 +298,8 @@ func (s *Service) TryFallbackAssignment(ctx context.Context, order *ent.PaymentO
 
 // tryUsePreSetProvider fetches the provider by order.ProviderID, optionally refreshes the rate,
 // then assigns via OTC or sendOrderRequest. Returns (true, provider, nil) on success.
-func (s *Service) tryUsePreSetProvider(ctx context.Context, order types.PaymentOrderFields) (assigned bool, provider *ent.ProviderProfile, err error) {
+// When assignmentLockHeld is true, order_assign_lock_{orderID} is already held by the caller.
+func (s *Service) tryUsePreSetProvider(ctx context.Context, order types.PaymentOrderFields, assignmentLockHeld bool) (assigned bool, provider *ent.ProviderProfile, err error) {
 	provider, err = storage.Client.ProviderProfile.
 		Query().
 		Where(providerprofile.IDEQ(order.ProviderID)).
@@ -329,12 +347,12 @@ func (s *Service) tryUsePreSetProvider(ctx context.Context, order types.PaymentO
 	}
 
 	if order.OrderType == "otc" {
-		if err := s.assignOtcOrder(ctx, order); err != nil {
+		if err := s.assignOtcOrder(ctx, order, assignmentLockHeld); err != nil {
 			return false, provider, err
 		}
 		return true, provider, nil
 	}
-	err = s.sendOrderRequest(ctx, order)
+	err = s.sendOrderRequest(ctx, order, assignmentLockHeld)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -347,7 +365,8 @@ func (s *Service) tryUsePreSetProvider(ctx context.Context, order types.PaymentO
 }
 
 // assignOtcOrder assigns an OTC order to a provider in DB then creates a Redis key for reassignment.
-func (s *Service) assignOtcOrder(ctx context.Context, order types.PaymentOrderFields) error {
+// When assignmentLockHeld is true, order_assign_lock_{orderID} is already held by the caller.
+func (s *Service) assignOtcOrder(ctx context.Context, order types.PaymentOrderFields, assignmentLockHeld bool) error {
 	orderConf := config.OrderConfig()
 	tx, err := storage.Client.Tx(ctx)
 	if err != nil {
@@ -401,14 +420,16 @@ func (s *Service) assignOtcOrder(ctx context.Context, order types.PaymentOrderFi
 	}
 
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
-	otcRelease, lockErr := acquireOrderAssignmentLock(ctx, order.ID)
-	if lockErr != nil {
-		if errors.Is(lockErr, ErrAssignmentLockHeld) {
-			return resolveOrderRequestRedisConflict(ctx, order, orderKey)
+	if !assignmentLockHeld {
+		otcRelease, lockErr := acquireOrderAssignmentLock(ctx, order.ID)
+		if lockErr != nil {
+			if errors.Is(lockErr, ErrAssignmentLockHeld) {
+				return resolveOrderRequestRedisConflict(ctx, order, orderKey)
+			}
+			return lockErr
 		}
-		return lockErr
+		defer otcRelease()
 	}
-	defer otcRelease()
 
 	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
 	if err != nil {
@@ -562,7 +583,8 @@ func (s *Service) getExcludePsps(ctx context.Context) ([]string, error) {
 }
 
 // sendOrderRequest reserves balance, writes the Redis order_request key, and notifies the provider.
-func (s *Service) sendOrderRequest(ctx context.Context, order types.PaymentOrderFields) error {
+// When assignmentLockHeld is true, order_assign_lock_{orderID} is already held by the caller.
+func (s *Service) sendOrderRequest(ctx context.Context, order types.PaymentOrderFields, assignmentLockHeld bool) error {
 	orderConf := config.OrderConfig()
 	if order.Institution == "" {
 		return fmt.Errorf("sendOrderRequest: order %s has no institution for currency resolution", order.ID.String())
@@ -576,14 +598,16 @@ func (s *Service) sendOrderRequest(ctx context.Context, order types.PaymentOrder
 
 	orderKey := fmt.Sprintf("order_request_%s", order.ID)
 
-	release, lockErr := acquireOrderAssignmentLock(ctx, order.ID)
-	if lockErr != nil {
-		if errors.Is(lockErr, ErrAssignmentLockHeld) {
-			return resolveOrderRequestRedisConflict(ctx, order, orderKey)
+	if !assignmentLockHeld {
+		release, lockErr := acquireOrderAssignmentLock(ctx, order.ID)
+		if lockErr != nil {
+			if errors.Is(lockErr, ErrAssignmentLockHeld) {
+				return resolveOrderRequestRedisConflict(ctx, order, orderKey)
+			}
+			return lockErr
 		}
-		return lockErr
+		defer release()
 	}
-	defer release()
 
 	exists, err := storage.RedisClient.Exists(ctx, orderKey).Result()
 	if err != nil {

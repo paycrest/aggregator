@@ -548,7 +548,7 @@ func RetryStaleUserOperations() error {
 			// Fallback only succeeds when order_request_* key is gone (expired or cleared); TryFallbackAssignment returns error if key exists.
 			// Any failure should proceed with refund
 			if tryFallback {
-				err := pq.TryFallbackAssignment(ctx, order)
+				err := pq.TryFallbackAssignment(ctx, order, false)
 				if err == nil {
 					continue
 				}
