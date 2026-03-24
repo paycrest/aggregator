@@ -33,6 +33,7 @@ import (
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
 	svc "github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/assignment"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/email"
 	explorer "github.com/paycrest/aggregator/services/explorer"
@@ -61,7 +62,7 @@ var orderConf = config.OrderConfig()
 // Controller is the default controller for other endpoints
 type Controller struct {
 	orderService          types.OrderService
-	priorityQueueService  *svc.PriorityQueueService
+	priorityQueueService  *assignment.Service
 	receiveAddressService *svc.ReceiveAddressService
 	kycService            types.KYCProvider
 	slackService          *svc.SlackService
@@ -77,7 +78,7 @@ func NewController() *Controller {
 
 	return &Controller{
 		orderService:          orderSvc.NewOrderEVM(),
-		priorityQueueService:  svc.NewPriorityQueueService(),
+		priorityQueueService:  assignment.New(),
 		receiveAddressService: svc.NewReceiveAddressService(),
 		kycService:            smile.NewSmileIDService(),
 		slackService:          svc.NewSlackService(serverConf.SlackWebhookURL),

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -23,7 +22,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/user"
@@ -53,9 +51,6 @@ func normalizeGatewayID(orderID string) string {
 	}
 	return strings.ToLower(s)
 }
-
-// ErrNoProvisionBucketForAmount is returned when the amount falls in a gap between tier ranges (no bucket contains it).
-var ErrNoProvisionBucketForAmount = errors.New("no provision bucket for this amount")
 
 const (
 	CancellationReasonAML = "AML compliance check failed"
@@ -140,7 +135,7 @@ func ProcessPaymentOrderFromBlockchain(
 	}
 
 	// Validate and prepare payment order data (pass existing order so it can be used if cancellation is needed)
-	paymentOrderFields, _, _, _, _, err := validateAndPreparePaymentOrderData(ctx, network, event, refundOrder, existingOrderWithMessageHash)
+	paymentOrderFields, _, _, _, err := validateAndPreparePaymentOrderData(ctx, network, event, refundOrder, existingOrderWithMessageHash)
 	if err != nil {
 		return err
 	}
@@ -179,11 +174,6 @@ func ProcessPaymentOrderFromBlockchain(
 		// Update sender if provided
 		if paymentOrderFields.Sender != "" {
 			updateBuilder = updateBuilder.SetSender(paymentOrderFields.Sender)
-		}
-
-		// Update provision bucket if available (should always be set for regular orders)
-		if paymentOrderFields.ProvisionBucket != nil {
-			updateBuilder = updateBuilder.SetProvisionBucket(paymentOrderFields.ProvisionBucket)
 		}
 
 		_, err = updateBuilder.Save(ctx)
@@ -269,8 +259,8 @@ func ProcessPaymentOrderFromBlockchain(
 		SetSender(paymentOrderFields.Sender).
 		SetMessageHash(paymentOrderFields.MessageHash).
 		SetMemo(paymentOrderFields.Memo).
-		SetMetadata(paymentOrderFields.Metadata).
-		SetProvisionBucket(paymentOrderFields.ProvisionBucket).
+		SetMetadata(paymentOrderFields.Metadata)
+	orderBuilder = orderBuilder.
 		SetOrderType(paymentorder.OrderType(paymentOrderFields.OrderType)).
 		SetStatus(paymentorder.StatusPending).
 		SetIndexerCreatedAt(time.Now())
@@ -452,16 +442,10 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 			),
 		).
 		WithProvider().
-		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-			pbq.WithCurrency()
-		}).
 		Only(ctx)
 	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil {
 		currency := ""
-		if paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-			currency = paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		}
-		if currency == "" && paymentOrder.Institution != "" {
+		if paymentOrder.Institution != "" {
 			inst, instErr := utils.GetInstitutionByCode(ctx, paymentOrder.Institution, true)
 			if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
 				currency = inst.Edges.FiatCurrency.Code
@@ -618,48 +602,41 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 			),
 		).
 		WithProvider().
-		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-			pbq.WithCurrency()
-		}).
 		Only(ctx)
-	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-		// Only attempt balance operations if we have the required edge data
-		// Create a new balance service instance for this transaction
-		balanceService := balance.New()
+	if err == nil && paymentOrder != nil && paymentOrder.Edges.Provider != nil && paymentOrder.Institution != "" {
+		if inst, instErr := utils.GetInstitutionByCode(ctx, paymentOrder.Institution, true); instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
+			balanceService := balance.New()
+			providerID := paymentOrder.Edges.Provider.ID
+			currency := inst.Edges.FiatCurrency.Code
+			amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
 
-		providerID := paymentOrder.Edges.Provider.ID
-		currency := paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
-		amount := paymentOrder.Amount.Mul(paymentOrder.Rate).RoundBank(0)
-
-		currentBalance, err := balanceService.GetProviderFiatBalance(ctx, providerID, currency)
-		if err == nil && currentBalance != nil {
-			newReservedBalance := currentBalance.ReservedBalance.Sub(amount)
-			if newReservedBalance.LessThan(decimal.Zero) {
-				newReservedBalance = decimal.Zero
-			}
-			newTotalBalance := currentBalance.TotalBalance.Sub(amount)
-			if newTotalBalance.LessThan(decimal.Zero) {
-				newTotalBalance = decimal.Zero
-			}
-			// Ensure available doesn't exceed (total - reserved) after clamping
-			maxAvailable := newTotalBalance.Sub(newReservedBalance)
-			newAvailableBalance := currentBalance.AvailableBalance
-			if newAvailableBalance.GreaterThan(maxAvailable) {
-				newAvailableBalance = maxAvailable
-			}
-			if newAvailableBalance.LessThan(decimal.Zero) {
-				newAvailableBalance = decimal.Zero
-			}
-			err = balanceService.UpdateProviderFiatBalance(ctx, providerID, currency, newAvailableBalance, newTotalBalance, newReservedBalance)
-			if err != nil {
-				logger.WithFields(logger.Fields{
-					"Error":      fmt.Sprintf("%v", err),
-					"OrderID":    event.OrderId,
-					"ProviderID": providerID,
-					"Currency":   currency,
-					"Amount":     amount.String(),
-				}).Errorf("failed to update provider balance for settled order")
-				// Don't return error here as the order status is already updated
+			currentBalance, balErr := balanceService.GetProviderFiatBalance(ctx, providerID, currency)
+			if balErr == nil && currentBalance != nil {
+				newReservedBalance := currentBalance.ReservedBalance.Sub(amount)
+				if newReservedBalance.LessThan(decimal.Zero) {
+					newReservedBalance = decimal.Zero
+				}
+				newTotalBalance := currentBalance.TotalBalance.Sub(amount)
+				if newTotalBalance.LessThan(decimal.Zero) {
+					newTotalBalance = decimal.Zero
+				}
+				maxAvailable := newTotalBalance.Sub(newReservedBalance)
+				newAvailableBalance := currentBalance.AvailableBalance
+				if newAvailableBalance.GreaterThan(maxAvailable) {
+					newAvailableBalance = maxAvailable
+				}
+				if newAvailableBalance.LessThan(decimal.Zero) {
+					newAvailableBalance = decimal.Zero
+				}
+				if upErr := balanceService.UpdateProviderFiatBalance(ctx, providerID, currency, newAvailableBalance, newTotalBalance, newReservedBalance); upErr != nil {
+					logger.WithFields(logger.Fields{
+						"Error":      fmt.Sprintf("%v", upErr),
+						"OrderID":    event.OrderId,
+						"ProviderID": providerID,
+						"Currency":   currency,
+						"Amount":     amount.String(),
+					}).Errorf("failed to update provider balance for settled order")
+				}
 			}
 		}
 	}
@@ -812,63 +789,6 @@ func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event 
 	return nil
 }
 
-// GetProvisionBucket gets a provision bucket for the given amount and currency.
-func GetProvisionBucket(ctx context.Context, amount decimal.Decimal, currency *ent.FiatCurrency) (*ent.ProvisionBucket, bool, error) {
-	provisionBucket, err := db.Client.ProvisionBucket.
-		Query().
-		Where(
-			provisionbucket.MaxAmountGTE(amount),
-			provisionbucket.MinAmountLTE(amount),
-			provisionbucket.HasCurrencyWith(
-				fiatcurrency.IDEQ(currency.ID),
-			),
-		).
-		WithCurrency().
-		Order(ent.Asc(provisionbucket.FieldID)).
-		First(ctx)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			// No bucket contains this amount: distinguish below min, above max, or gap between tiers
-			minBucket, minErr := db.Client.ProvisionBucket.
-				Query().
-				Where(
-					provisionbucket.HasCurrencyWith(
-						fiatcurrency.IDEQ(currency.ID),
-					),
-				).
-				Order(ent.Asc(provisionbucket.FieldMinAmount)).
-				First(ctx)
-			if minErr != nil {
-				return nil, false, fmt.Errorf("failed to fetch minimum bucket: %w", minErr)
-			}
-			if amount.LessThan(minBucket.MinAmount) {
-				return nil, true, nil
-			}
-			maxBucket, maxErr := db.Client.ProvisionBucket.
-				Query().
-				Where(
-					provisionbucket.HasCurrencyWith(
-						fiatcurrency.IDEQ(currency.ID),
-					),
-				).
-				Order(ent.Desc(provisionbucket.FieldMaxAmount)).
-				First(ctx)
-			if maxErr != nil {
-				return nil, false, fmt.Errorf("failed to fetch maximum bucket: %w", maxErr)
-			}
-			if amount.GreaterThan(maxBucket.MaxAmount) {
-				// Above highest tier: return nil bucket, no error; caller will cancel with "Amount is larger than the maximum bucket"
-				return nil, false, nil
-			}
-			// Amount is within [minBucket.MinAmount, maxBucket.MaxAmount] but no bucket contains it (gap between tiers)
-			return nil, false, ErrNoProvisionBucketForAmount
-		}
-		return nil, false, fmt.Errorf("failed to fetch provision bucket: %w", err)
-	}
-
-	return provisionBucket, false, nil
-}
-
 // HandleCancellation handles the cancellation of a payment order.
 func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrder, paymentOrderFields *types.PaymentOrderFields, cancellationReason string, refundOrder func(context.Context, *ent.Network, string) error) error {
 	// paymentOrderFields and createdPaymentOrder are mutually exclusive
@@ -903,11 +823,6 @@ func HandleCancellation(ctx context.Context, createdPaymentOrder *ent.PaymentOrd
 			SetCancellationCount(cancellationCount).
 			SetCancellationReasons([]string{cancellationReason}).
 			SetStatus(paymentorder.StatusCancelled)
-
-		// Only set ProvisionBucket if it's not nil
-		if paymentOrderFields.ProvisionBucket != nil {
-			orderBuilder = orderBuilder.SetProvisionBucket(paymentOrderFields.ProvisionBucket)
-		}
 
 		// Set provider if ProviderID exists
 		if paymentOrderFields.ProviderID != "" {
@@ -1258,29 +1173,7 @@ func processPaymentOrderPostCreation(
 		}
 	}
 
-	// Fill empty provision bucket so AssignPaymentOrder can run (same as stale_ops nil-bucket resolution)
-	if paymentOrderFields.ProvisionBucket == nil {
-		institution, instErr := utils.GetInstitutionByCode(ctx, paymentOrder.Institution, true)
-		if instErr == nil && institution != nil && institution.Edges.FiatCurrency != nil {
-			fiatAmount := paymentOrder.Amount.Mul(paymentOrder.Rate)
-			bucket, bErr := db.Client.ProvisionBucket.
-				Query().
-				Where(
-					provisionbucket.MaxAmountGTE(fiatAmount),
-					provisionbucket.MinAmountLTE(fiatAmount),
-					provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(institution.Edges.FiatCurrency.ID)),
-				).
-				WithCurrency().
-				First(ctx)
-			if bErr == nil && bucket != nil {
-				if _, upErr := db.Client.PaymentOrder.UpdateOneID(paymentOrder.ID).SetProvisionBucket(bucket).Save(ctx); upErr == nil {
-					paymentOrderFields.ProvisionBucket = bucket
-				}
-			}
-		}
-	}
-
-	// Assign when we have a bucket, or when order is private; private orders don't require buckets.
+	// DB-only assignment: institution + token are sufficient (no provision bucket).
 	isPrivate := false
 	if paymentOrderFields.ProviderID != "" {
 		provider, pErr := db.Client.ProviderProfile.Query().Where(providerprofile.IDEQ(paymentOrderFields.ProviderID)).Only(ctx)
@@ -1289,26 +1182,20 @@ func processPaymentOrderPostCreation(
 		}
 	}
 	paymentOrderFields.ID = paymentOrder.ID
-	if paymentOrderFields.ProvisionBucket != nil || isPrivate {
-		// Run assignment in a goroutine with its own 60s timeout so one slow order doesn't
-		// consume the indexing task's context and cancel other work.
+	if (paymentOrderFields.Institution != "" && paymentOrderFields.Token != nil) || isPrivate {
 		fieldsCopy := *paymentOrderFields
 		go func() {
 			assignCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
 			_ = assignPaymentOrder(assignCtx, fieldsCopy)
 		}()
-	} else if paymentOrderFields.ProvisionBucket == nil {
-		logger.WithFields(logger.Fields{
-			"OrderID": paymentOrder.ID.String(),
-		}).Errorf("processPaymentOrderPostCreation: could not resolve provision bucket for order; skipping provider assignment")
 	}
 
 	return nil
 }
 
 // validateAndPreparePaymentOrderData validates the blockchain event data and prepares payment order fields.
-// Returns the prepared fields, token, institution, currency, provision bucket, and any error.
+// Returns the prepared fields, token, institution, currency, and any error.
 // existingOrder is an optional existing payment order that should be used for cancellation instead of creating a new one.
 func validateAndPreparePaymentOrderData(
 	ctx context.Context,
@@ -1316,7 +1203,7 @@ func validateAndPreparePaymentOrderData(
 	event *types.OrderCreatedEvent,
 	refundOrder func(context.Context, *ent.Network, string) error,
 	existingOrder *ent.PaymentOrder,
-) (*types.PaymentOrderFields, *ent.Token, *ent.Institution, *ent.FiatCurrency, *ent.ProvisionBucket, error) {
+) (*types.PaymentOrderFields, *ent.Token, *ent.Institution, *ent.FiatCurrency, error) {
 	// Get token from db
 	token, err := db.Client.Token.
 		Query().
@@ -1340,16 +1227,16 @@ func validateAndPreparePaymentOrderData(
 			}).Errorf("token lookup failed and refund failed")
 			refundErr := refundOrder(ctx, network, event.OrderId)
 			if refundErr != nil {
-				return nil, nil, nil, nil, nil, fmt.Errorf("token lookup failed and refund failed: %w", refundErr)
+				return nil, nil, nil, nil, fmt.Errorf("token lookup failed and refund failed: %w", refundErr)
 			}
 		}
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 
 	// Get order recipient from message hash
 	recipient, err := cryptoUtils.GetOrderRecipientFromMessageHash(event.MessageHash)
 	if err != nil {
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, fmt.Sprintf("Message hash decryption failed %v", err), refundOrder, existingOrder)
+		return nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, nil, fmt.Sprintf("Message hash decryption failed %v", err), refundOrder, existingOrder)
 	}
 
 	if recipient.Metadata != nil {
@@ -1379,7 +1266,7 @@ func validateAndPreparePaymentOrderData(
 	// Get institution
 	institution, err := utils.GetInstitutionByCode(ctx, recipient.Institution, true)
 	if err != nil {
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Institution lookup failed", refundOrder, existingOrder)
+		return nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Institution lookup failed", refundOrder, existingOrder)
 	}
 
 	// Get currency
@@ -1391,30 +1278,12 @@ func validateAndPreparePaymentOrderData(
 		).
 		Only(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Currency lookup failed", refundOrder, existingOrder)
+		return nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, "Currency lookup failed", refundOrder, existingOrder)
 	}
 
 	// Adjust amounts for token decimals
 	event.Amount = event.Amount.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
 	event.ProtocolFee = event.ProtocolFee.Div(decimal.NewFromInt(10).Pow(decimal.NewFromInt(int64(token.Decimals))))
-
-	// Get provision bucket
-	var provisionBucket *ent.ProvisionBucket
-	var isLessThanMin bool
-	provisionBucket, isLessThanMin, err = GetProvisionBucket(ctx, event.Amount.Mul(event.Rate), currency)
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":    fmt.Sprintf("%v", err),
-			"Amount":   event.Amount,
-			"Currency": currency,
-		}).Errorf("failed to fetch provision bucket when creating payment order")
-
-		cancellationReason := "Provision bucket lookup failed"
-		if errors.Is(err, ErrNoProvisionBucketForAmount) {
-			cancellationReason = "No provision bucket for this amount"
-		}
-		return nil, nil, nil, nil, nil, createBasicPaymentOrderAndCancel(ctx, event, network, token, recipient, cancellationReason, refundOrder, existingOrder)
-	}
 
 	// Normalize mobile money account identifier (same as sender API path)
 	accountIdentifier := recipient.AccountIdentifier
@@ -1441,16 +1310,7 @@ func validateAndPreparePaymentOrderData(
 		Memo:              recipient.Memo,
 		MessageHash:       event.MessageHash,
 		Metadata:          recipient.Metadata,
-		ProvisionBucket:   provisionBucket,
 		OrderType:         "regular",
-	}
-
-	if isLessThanMin {
-		err := HandleCancellation(ctx, existingOrder, nil, "Amount is less than the minimum bucket", refundOrder)
-		if err != nil {
-			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
-		}
-		return nil, nil, nil, nil, nil, nil
 	}
 
 	// Validate rate
@@ -1467,17 +1327,17 @@ func validateAndPreparePaymentOrderData(
 	if rateResult.Rate == decimal.NewFromInt(1) && paymentOrderFields.Rate != decimal.NewFromInt(1) {
 		err := HandleCancellation(ctx, nil, paymentOrderFields, "Rate validation failed", refundOrder)
 		if err != nil {
-			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
+			return nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
 		}
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 
 	if rateErr != nil {
 		err := HandleCancellation(ctx, nil, paymentOrderFields, fmt.Sprintf("Rate validation failed: %s", rateErr.Error()), refundOrder)
 		if err != nil {
-			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
+			return nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
 		}
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 
 	// Check if event rate is within 0.1% tolerance of validated rate
@@ -1487,9 +1347,9 @@ func validateAndPreparePaymentOrderData(
 	if rateDiff.GreaterThan(tolerance) {
 		err := HandleCancellation(ctx, nil, paymentOrderFields, "Rate validation failed", refundOrder)
 		if err != nil {
-			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
+			return nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
 		}
-		return nil, nil, nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 
 	// Use order type from ValidateRate result
@@ -1500,10 +1360,8 @@ func validateAndPreparePaymentOrderData(
 		paymentOrderFields.ProviderID = rateResult.ProviderID
 	}
 
-	// Handle private order checks
-	isPrivate := false
 	if paymentOrderFields.ProviderID != "" {
-		orderToken, err := db.Client.ProviderOrderToken.
+		_, err := db.Client.ProviderOrderToken.
 			Query().
 			Where(
 				providerordertoken.NetworkEQ(token.Edges.Network.Identifier),
@@ -1532,27 +1390,15 @@ func validateAndPreparePaymentOrderData(
 				// 4. Provider does not support the currency
 				// 5. Provider have not configured a settlement address for the network
 				_ = HandleCancellation(ctx, nil, paymentOrderFields, "Provider not available", refundOrder)
-				return nil, nil, nil, nil, nil, nil
+				return nil, nil, nil, nil, nil
 			} else {
-				return nil, nil, nil, nil, nil, fmt.Errorf("%s - failed to fetch provider: %w", paymentOrderFields.GatewayID, err)
+				return nil, nil, nil, nil, fmt.Errorf("%s - failed to fetch provider: %w", paymentOrderFields.GatewayID, err)
 			}
 		}
 
-		// Check if provider is private - private orders don't require provision buckets
-		if orderToken != nil && orderToken.Edges.Provider != nil && orderToken.Edges.Provider.VisibilityMode == providerprofile.VisibilityModePrivate {
-			isPrivate = true
-		}
 	}
 
-	if provisionBucket == nil && !isPrivate {
-		err := HandleCancellation(ctx, nil, paymentOrderFields, "Amount is larger than the maximum bucket", refundOrder)
-		if err != nil {
-			return nil, nil, nil, nil, nil, fmt.Errorf("failed to handle cancellation: %w", err)
-		}
-		return nil, nil, nil, nil, nil, nil
-	}
-
-	return paymentOrderFields, token, institution, currency, provisionBucket, nil
+	return paymentOrderFields, token, institution, currency, nil
 }
 
 // createBasicPaymentOrderAndCancel creates a basic payment order and cancels it with the given reason.

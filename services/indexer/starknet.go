@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/paycrest/aggregator/ent"
-	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/assignment"
 	"github.com/paycrest/aggregator/services/common"
 	explorer "github.com/paycrest/aggregator/services/explorer"
 	"github.com/paycrest/aggregator/services/order"
@@ -20,30 +20,26 @@ import (
 
 // IndexerStarknet performs blockchain to database extract, transform, load (ETL) operations for Starknet
 type IndexerStarknet struct {
-	priorityQueue  *services.PriorityQueueService
+	priorityQueue  *assignment.Service
 	order          types.OrderService
 	voyagerService *explorer.VoyagerService
 }
 
 // NewIndexerStarknet creates a new instance of IndexerStarknet
 func NewIndexerStarknet() (types.Indexer, error) {
-	// Create RPC client for order service (write operations)
 	client, err := starknetService.NewClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create starknet client: %w", err)
 	}
 	orderService := order.NewOrderStarknet(client)
 
-	// Create Voyager service for read operations (with RPC fallback)
 	voyagerService, err := explorer.NewVoyagerService()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Voyager service: %w", err)
 	}
 
-	priorityQueue := services.NewPriorityQueueService()
-
 	return &IndexerStarknet{
-		priorityQueue:  priorityQueue,
+		priorityQueue:  assignment.New(),
 		order:          orderService,
 		voyagerService: voyagerService,
 	}, nil

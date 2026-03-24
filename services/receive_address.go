@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/services/starknet"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
@@ -61,7 +62,7 @@ func (s *ReceiveAddressService) CreateEVMAddress(ctx context.Context, walletServ
 // CreateTronAddress generates and saves a new Tron address
 func (s *ReceiveAddressService) CreateTronAddress(ctx context.Context) (string, []byte, error) {
 	var nodeUrl tronEnums.Node
-	if serverConf.Environment == "production" {
+	if config.ServerConfig().Environment == "production" {
 		nodeUrl = tronEnums.MAIN_NODE
 	} else {
 		nodeUrl = tronEnums.SHASTA_NODE

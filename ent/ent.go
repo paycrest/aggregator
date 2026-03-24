@@ -22,9 +22,11 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/ent/providerassignmentrun"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -95,29 +97,31 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			apikey.Table:                      apikey.ValidColumn,
-			beneficialowner.Table:             beneficialowner.ValidColumn,
-			fiatcurrency.Table:                fiatcurrency.ValidColumn,
-			identityverificationrequest.Table: identityverificationrequest.ValidColumn,
-			institution.Table:                 institution.ValidColumn,
-			kybprofile.Table:                  kybprofile.ValidColumn,
-			network.Table:                     network.ValidColumn,
-			paymentorder.Table:                paymentorder.ValidColumn,
-			paymentorderfulfillment.Table:     paymentorderfulfillment.ValidColumn,
-			paymentwebhook.Table:              paymentwebhook.ValidColumn,
-			providerbalances.Table:            providerbalances.ValidColumn,
-			providerfiataccount.Table:         providerfiataccount.ValidColumn,
-			providerordertoken.Table:          providerordertoken.ValidColumn,
-			providerprofile.Table:             providerprofile.ValidColumn,
-			providerrating.Table:              providerrating.ValidColumn,
-			provisionbucket.Table:             provisionbucket.ValidColumn,
-			senderordertoken.Table:            senderordertoken.ValidColumn,
-			senderprofile.Table:               senderprofile.ValidColumn,
-			token.Table:                       token.ValidColumn,
-			transactionlog.Table:              transactionlog.ValidColumn,
-			user.Table:                        user.ValidColumn,
-			verificationtoken.Table:           verificationtoken.ValidColumn,
-			webhookretryattempt.Table:         webhookretryattempt.ValidColumn,
+			apikey.Table:                         apikey.ValidColumn,
+			beneficialowner.Table:                beneficialowner.ValidColumn,
+			fiatcurrency.Table:                   fiatcurrency.ValidColumn,
+			identityverificationrequest.Table:    identityverificationrequest.ValidColumn,
+			institution.Table:                    institution.ValidColumn,
+			kybprofile.Table:                     kybprofile.ValidColumn,
+			network.Table:                        network.ValidColumn,
+			paymentorder.Table:                   paymentorder.ValidColumn,
+			paymentorderfulfillment.Table:        paymentorderfulfillment.ValidColumn,
+			paymentwebhook.Table:                 paymentwebhook.ValidColumn,
+			providerassignmentrun.Table:          providerassignmentrun.ValidColumn,
+			providerbalances.Table:               providerbalances.ValidColumn,
+			providerfiataccount.Table:            providerfiataccount.ValidColumn,
+			providerordertoken.Table:             providerordertoken.ValidColumn,
+			providerordertokenscorehistory.Table: providerordertokenscorehistory.ValidColumn,
+			providerprofile.Table:                providerprofile.ValidColumn,
+			providerrating.Table:                 providerrating.ValidColumn,
+			provisionbucket.Table:                provisionbucket.ValidColumn,
+			senderordertoken.Table:               senderordertoken.ValidColumn,
+			senderprofile.Table:                  senderprofile.ValidColumn,
+			token.Table:                          token.ValidColumn,
+			transactionlog.Table:                 transactionlog.ValidColumn,
+			user.Table:                           user.ValidColumn,
+			verificationtoken.Table:              verificationtoken.ValidColumn,
+			webhookretryattempt.Table:            webhookretryattempt.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

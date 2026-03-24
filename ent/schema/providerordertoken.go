@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -48,6 +49,10 @@ func (ProviderOrderToken) Fields() []ent.Field {
 		field.String("settlement_address").Optional(),
 		field.String("payout_address").Optional(),
 		field.String("network"),
+		field.Float("score").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Time("last_order_assigned_at").Optional().Nillable(),
 	}
 }
 
@@ -66,6 +71,10 @@ func (ProviderOrderToken) Edges() []ent.Edge {
 			Ref("provider_order_tokens").
 			Required().
 			Unique(),
+		edge.To("score_histories", ProviderOrderTokenScoreHistory.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("assignment_runs", ProviderAssignmentRun.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

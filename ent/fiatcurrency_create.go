@@ -17,7 +17,6 @@ import (
 	"github.com/paycrest/aggregator/ent/institution"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/shopspring/decimal"
 )
 
@@ -164,21 +163,6 @@ func (_c *FiatCurrencyCreate) AddProviderBalances(v ...*ProviderBalances) *FiatC
 		ids[i] = v[i].ID
 	}
 	return _c.AddProviderBalanceIDs(ids...)
-}
-
-// AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
-func (_c *FiatCurrencyCreate) AddProvisionBucketIDs(ids ...int) *FiatCurrencyCreate {
-	_c.mutation.AddProvisionBucketIDs(ids...)
-	return _c
-}
-
-// AddProvisionBuckets adds the "provision_buckets" edges to the ProvisionBucket entity.
-func (_c *FiatCurrencyCreate) AddProvisionBuckets(v ...*ProvisionBucket) *FiatCurrencyCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddProvisionBucketIDs(ids...)
 }
 
 // AddInstitutionIDs adds the "institutions" edge to the Institution entity by IDs.
@@ -379,22 +363,6 @@ func (_c *FiatCurrencyCreate) createSpec() (*FiatCurrency, *sqlgraph.CreateSpec)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   fiatcurrency.ProvisionBucketsTable,
-			Columns: []string{fiatcurrency.ProvisionBucketsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -966,84 +967,9 @@ func IsBase64(s string) bool {
 	return false
 }
 
-// GetTokenRateFromQueue gets the rate of a token from the priority queue for the given side (buy/sell).
-// Bucket keys are side-suffixed: bucket_{currency}_{min}_{max}_{side}. Scanning without side would mix buy and sell rates.
-func GetTokenRateFromQueue(tokenSymbol string, orderAmount decimal.Decimal, fiatCurrency string, marketRate decimal.Decimal, side RateSide) (decimal.Decimal, error) {
-	ctx := context.Background()
-
-	// Scan for side-specific bucket keys: bucket_{currency}_{min}_{max}_{side}
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+fiatCurrency+"_*_*_"+string(side), 100).Result()
-	if err != nil {
-		return decimal.Decimal{}, err
-	}
-
-	rateResponse := marketRate
-	highestMaxAmount := decimal.NewFromInt(0)
-
-	// Scan through the buckets to find a suitable rate
-	for _, key := range keys {
-		bd, err := parseBucketKey(key)
-		if err != nil {
-			continue
-		}
-		minAmount, maxAmount := bd.MinAmount, bd.MaxAmount
-
-		for index := 0; ; index++ {
-			// Get the topmost provider in the priority queue of the bucket
-			providerData, err := storage.RedisClient.LIndex(ctx, key, int64(index)).Result()
-			if err != nil {
-				break
-			}
-			parts := strings.Split(providerData, ":")
-			if len(parts) != 6 {
-				logger.WithFields(logger.Fields{
-					"Error":        fmt.Sprintf("%v", err),
-					"ProviderData": providerData,
-					"Token":        tokenSymbol,
-					"Currency":     fiatCurrency,
-					"MinAmount":    minAmount,
-					"MaxAmount":    maxAmount,
-				}).Errorf("GetTokenRate.InvalidProviderData: %v", providerData)
-				continue
-			}
-
-			// Skip entry if token doesn't match
-			if parts[1] != tokenSymbol {
-				continue
-			}
-
-			// Skip entry if order amount is not within provider's min and max order amount
-			minOrderAmount, err := decimal.NewFromString(parts[4])
-			if err != nil {
-				continue
-			}
-
-			maxOrderAmount, err := decimal.NewFromString(parts[5])
-			if err != nil {
-				continue
-			}
-
-			if orderAmount.LessThan(minOrderAmount) || orderAmount.GreaterThan(maxOrderAmount) {
-				continue
-			}
-
-			// Get fiat equivalent of the token amount
-			rate, _ := decimal.NewFromString(parts[3])
-			fiatAmount := orderAmount.Mul(rate)
-
-			// Check if fiat amount is within the bucket range and set the rate
-			if fiatAmount.GreaterThanOrEqual(minAmount) && fiatAmount.LessThanOrEqual(maxAmount) {
-				rateResponse = rate
-				break
-			} else if maxAmount.GreaterThan(highestMaxAmount) {
-				// Get the highest max amount
-				highestMaxAmount = maxAmount
-				rateResponse = rate
-			}
-		}
-	}
-
-	return rateResponse, nil
+// GetTokenRateFromQueue is deprecated: Redis provision-bucket queues were removed. Callers should use marketRate / ValidateRate instead.
+func GetTokenRateFromQueue(_ string, _ decimal.Decimal, _ string, marketRate decimal.Decimal, _ RateSide) (decimal.Decimal, error) {
+	return marketRate, nil
 }
 
 // GetInstitutionByCode returns the institution for a given institution code
@@ -1113,7 +1039,7 @@ func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurre
 	if providerID != "" {
 		result, err = validateProviderRate(ctx, token, currency, amount, providerID, networkFilter, side)
 	} else {
-		result, err = validateBucketRate(ctx, token, currency, amount, networkFilter, side)
+		result, err = validatePublicQuoteRate(ctx, token, currency, amount, networkFilter, side)
 	}
 
 	if err != nil {
@@ -1121,7 +1047,6 @@ func ValidateRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurre
 	}
 
 	// For direct currency matches, rate is always 1:1
-	// Both Redis queues and DB store rate 1 for direct matches (e.g., CNGN->NGN in NGN bucket)
 	// We explicitly return 1.0 here for clarity and to ensure consistency
 	if isDirectMatch {
 		result.Rate = decimal.NewFromInt(1)
@@ -1176,26 +1101,20 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 		return RateValidationResult{}, fmt.Errorf("amount must be at least %s for this provider", providerOrderToken.MinOrderAmount)
 	}
 
-	// Get rate first (needed for fiat conversion and OTC validation)
+	// Rate from DB (fixed or floating vs live fiat market); quotes do not use Redis bucket queues.
 	var rateResponse decimal.Decimal
-	redisRate, found := getProviderRateFromRedis(ctx, providerID, token.Symbol, currency.Code, amount, networkFilter, side)
-	if found {
-		rateResponse = redisRate
-	} else {
-		// Fallback to database rate if Redis rate not found
-		switch side {
-		case RateSideBuy:
-			if !providerOrderToken.FixedBuyRate.IsZero() {
-				rateResponse = providerOrderToken.FixedBuyRate
-			} else if !providerOrderToken.FloatingBuyDelta.IsZero() && !currency.MarketBuyRate.IsZero() {
-				rateResponse = currency.MarketBuyRate.Add(providerOrderToken.FloatingBuyDelta).RoundBank(2)
-			}
-		case RateSideSell:
-			if !providerOrderToken.FixedSellRate.IsZero() {
-				rateResponse = providerOrderToken.FixedSellRate
-			} else if !providerOrderToken.FloatingSellDelta.IsZero() && !currency.MarketSellRate.IsZero() {
-				rateResponse = currency.MarketSellRate.Add(providerOrderToken.FloatingSellDelta).RoundBank(2)
-			}
+	switch side {
+	case RateSideBuy:
+		if !providerOrderToken.FixedBuyRate.IsZero() {
+			rateResponse = providerOrderToken.FixedBuyRate
+		} else if !providerOrderToken.FloatingBuyDelta.IsZero() && !currency.MarketBuyRate.IsZero() {
+			rateResponse = currency.MarketBuyRate.Add(providerOrderToken.FloatingBuyDelta).RoundBank(2)
+		}
+	case RateSideSell:
+		if !providerOrderToken.FixedSellRate.IsZero() {
+			rateResponse = providerOrderToken.FixedSellRate
+		} else if !providerOrderToken.FloatingSellDelta.IsZero() && !currency.MarketSellRate.IsZero() {
+			rateResponse = currency.MarketSellRate.Add(providerOrderToken.FloatingSellDelta).RoundBank(2)
 		}
 	}
 
@@ -1270,245 +1189,230 @@ func validateProviderRate(ctx context.Context, token *ent.Token, currency *ent.F
 	}, nil
 }
 
-// getProviderRateFromRedis retrieves the provider's current rate from Redis queue.
-func getProviderRateFromRedis(ctx context.Context, providerID, tokenSymbol, currencyCode string, amount decimal.Decimal, networkFilter string, side RateSide) (decimal.Decimal, bool) {
-	// Get redis keys for provision buckets for this currency and side
-	// Scan for side-specific bucket keys: bucket_{currency}_{min}_{max}_{side}
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currencyCode+"_*_*_"+string(side), 100).Result()
-	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":      fmt.Sprintf("%v", err),
-			"ProviderID": providerID,
-			"Token":      tokenSymbol,
-			"Currency":   currencyCode,
-		}).Debugf("Failed to scan Redis buckets for provider rate")
-		return decimal.Zero, false
+// quoteRecentVolumeWindow matches assignment fairness (24h successful fiat volume; hardcoded).
+const quoteRecentVolumeWindow = 24 * time.Hour
+
+func quoteRecentFiatVolumeByProvider(ctx context.Context, providerIDs []string) (map[string]decimal.Decimal, error) {
+	out := make(map[string]decimal.Decimal)
+	if len(providerIDs) == 0 {
+		return out, nil
 	}
-
-	// Scan through the buckets to find the provider's rate
-	for _, key := range keys {
-		_, err := parseBucketKey(key)
-		if err != nil {
-			continue
+	since := time.Now().Add(-quoteRecentVolumeWindow)
+	for _, pid := range providerIDs {
+		var sum float64
+		row := storage.DB.QueryRowContext(ctx, `
+SELECT COALESCE(SUM(amount * rate), 0)
+FROM payment_orders
+WHERE provider_profile_assigned_orders = $1
+  AND status IN ('validated', 'settled')
+  AND updated_at >= $2`, pid, since)
+		if err := row.Scan(&sum); err != nil {
+			return nil, err
 		}
-
-		// Get all providers in this bucket
-		providers, err := storage.RedisClient.LRange(ctx, key, 0, -1).Result()
-		if err != nil {
-			continue
-		}
-
-		// Look for the specific provider
-		for _, providerData := range providers {
-			parts := strings.Split(providerData, ":")
-			if len(parts) != 6 {
-				continue
-			}
-
-			// Skip entry if network filter is set and does not match
-			if networkFilter != "" && parts[2] != networkFilter {
-				continue
-			}
-
-			// Check if this is the provider we're looking for
-			if parts[0] == providerID && parts[1] == tokenSymbol {
-				// Parse the rate
-				rate, err := decimal.NewFromString(parts[3])
-				if err != nil {
-					continue
-				}
-
-				// Parse min/max order amounts
-				minOrderAmount, err := decimal.NewFromString(parts[4])
-				if err != nil {
-					continue
-				}
-
-				maxOrderAmount, err := decimal.NewFromString(parts[5])
-				if err != nil {
-					continue
-				}
-
-				// Check if amount is within provider's limits
-				if amount.GreaterThanOrEqual(minOrderAmount) && amount.LessThanOrEqual(maxOrderAmount) {
-					return rate, true
-				}
-			}
-		}
+		out[pid] = decimal.NewFromFloat(sum)
 	}
-
-	return decimal.Zero, false
+	return out, nil
 }
 
-// validateBucketRate handles bucket-based rate validation
-func validateBucketRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string, side RateSide) (RateValidationResult, error) {
-	// Get redis keys for provision buckets for the specific side
-	// Scan for side-specific bucket keys: bucket_{currency}_{min}_{max}_{side}
-	keys, _, err := storage.RedisClient.Scan(ctx, uint64(0), "bucket_"+currency.Code+"_*_*_"+string(side), 100).Result()
+func quoteRateForPublicCandidate(pot *ent.ProviderOrderToken, side RateSide, currency *ent.FiatCurrency) decimal.Decimal {
+	switch side {
+	case RateSideBuy:
+		if !pot.FixedBuyRate.IsZero() {
+			return pot.FixedBuyRate
+		}
+		if !currency.MarketBuyRate.IsZero() {
+			return currency.MarketBuyRate.Add(pot.FloatingBuyDelta).RoundBank(2)
+		}
+	case RateSideSell:
+		if !pot.FixedSellRate.IsZero() {
+			return pot.FixedSellRate
+		}
+		if !currency.MarketSellRate.IsZero() {
+			return currency.MarketSellRate.Add(pot.FloatingSellDelta).RoundBank(2)
+		}
+	}
+	return decimal.Zero
+}
+
+func amountInRangeForPublicQuote(pot *ent.ProviderOrderToken, amount decimal.Decimal, isOTC bool) bool {
+	if isOTC {
+		return !amount.LessThan(pot.MinOrderAmountOtc) && !amount.GreaterThan(pot.MaxOrderAmountOtc)
+	}
+	if amount.GreaterThan(pot.MaxOrderAmount) {
+		if pot.MinOrderAmountOtc.IsZero() || pot.MaxOrderAmountOtc.IsZero() {
+			return false
+		}
+		return !amount.LessThan(pot.MinOrderAmountOtc) && !amount.GreaterThan(pot.MaxOrderAmountOtc)
+	}
+	return !amount.LessThan(pot.MinOrderAmount) && !amount.GreaterThan(pot.MaxOrderAmount)
+}
+
+func tryFallbackPublicQuote(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string, side RateSide, bestRate decimal.Decimal, anySkippedDueToStuck bool, currencyForStuck string) (RateValidationResult, error) {
+	if fallbackID := config.OrderConfig().FallbackProviderID; fallbackID != "" {
+		fallbackResult, fallbackErr := validateProviderRate(ctx, token, currency, amount, fallbackID, networkIdentifier, side)
+		if fallbackErr == nil {
+			if bestRate.GreaterThan(decimal.Zero) {
+				return RateValidationResult{
+					Rate:       bestRate,
+					ProviderID: fallbackResult.ProviderID,
+					OrderType:  fallbackResult.OrderType,
+				}, nil
+			}
+			return fallbackResult, nil
+		}
+		var errStuck *types.ErrNoProviderDueToStuck
+		if errors.As(fallbackErr, &errStuck) {
+			return RateValidationResult{}, fallbackErr
+		}
+	}
+	if anySkippedDueToStuck && currencyForStuck != "" {
+		return RateValidationResult{}, &types.ErrNoProviderDueToStuck{CurrencyCode: currencyForStuck}
+	}
+	logger.WithFields(logger.Fields{
+		"Token":         token.Symbol,
+		"Currency":      currency.Code,
+		"Amount":        amount,
+		"NetworkFilter": networkIdentifier,
+		"BestRate":      bestRate,
+	}).Warnf("ValidateRate.NoSuitableProvider: no provider found for the given parameters")
+	networkMsg := networkIdentifier
+	if networkMsg == "" {
+		networkMsg = "any network"
+	}
+	from, to := token.Symbol, currency.Code
+	if side == RateSideBuy {
+		from, to = currency.Code, token.Symbol
+	}
+	return RateValidationResult{}, fmt.Errorf("no provider available for %s to %s conversion with amount %s on %s",
+		from, to, amount, networkMsg)
+}
+
+// validatePublicQuoteRate walks public ProviderOrderToken rows using DB ordering for quotes:
+// score DESC, recent 24h successful fiat volume ASC, id ASC (no last_order_assigned — stable vs assignment rotation).
+func validatePublicQuoteRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string, side RateSide) (RateValidationResult, error) {
+	orderConf := config.OrderConfig()
+	q := storage.Client.ProviderOrderToken.Query().
+		Where(
+			providerordertoken.HasCurrencyWith(fiatcurrency.IDEQ(currency.ID)),
+			providerordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+			providerordertoken.SettlementAddressNEQ(""),
+			providerordertoken.HasProviderWith(
+				providerprofile.IsActive(true),
+				providerprofile.VisibilityModeEQ(providerprofile.VisibilityModePublic),
+			),
+		)
+	if networkIdentifier != "" {
+		q = q.Where(providerordertoken.NetworkEQ(networkIdentifier))
+	}
+	if orderConf.FallbackProviderID != "" {
+		q = q.Where(providerordertoken.HasProviderWith(providerprofile.IDNEQ(orderConf.FallbackProviderID)))
+	}
+	pots, err := q.WithProvider().All(ctx)
 	if err != nil {
-		logger.WithFields(logger.Fields{
-			"Error":    fmt.Sprintf("%v", err),
-			"Currency": currency.Code,
-			"Network":  networkIdentifier,
-		}).Errorf("Failed to scan Redis buckets for bucket rate")
+		logger.WithFields(logger.Fields{"Error": err.Error()}).Errorf("ValidateRate: candidate query failed")
 		return RateValidationResult{}, fmt.Errorf("internal server error")
 	}
+	if len(pots) == 0 {
+		return tryFallbackPublicQuote(ctx, token, currency, amount, networkIdentifier, side, decimal.Zero, false, "")
+	}
 
-	// Track the best available rate and reason for logging
+	provSeen := make(map[string]struct{})
+	var provIDs []string
+	for _, pot := range pots {
+		pid := pot.Edges.Provider.ID
+		if _, ok := provSeen[pid]; ok {
+			continue
+		}
+		provSeen[pid] = struct{}{}
+		provIDs = append(provIDs, pid)
+	}
+	volMap, volErr := quoteRecentFiatVolumeByProvider(ctx, provIDs)
+	if volErr != nil {
+		logger.WithFields(logger.Fields{"Error": volErr.Error()}).Warnf("ValidateRate: recent volume query failed; using zero volume")
+		volMap = map[string]decimal.Decimal{}
+	}
+	slices.SortStableFunc(pots, func(a, b *ent.ProviderOrderToken) int {
+		if c := b.Score.Cmp(a.Score); c != 0 {
+			return c
+		}
+		va := volMap[a.Edges.Provider.ID]
+		vb := volMap[b.Edges.Provider.ID]
+		if c := va.Cmp(vb); c != 0 {
+			return c
+		}
+		if a.ID < b.ID {
+			return -1
+		}
+		if a.ID > b.ID {
+			return 1
+		}
+		return 0
+	})
+
 	var bestRate decimal.Decimal
-	var foundExactMatch bool
-	var selectedProviderID string
-	var selectedOrderType paymentorder.OrderType
-	var anySkippedDueToStuck bool
-	var currencyForStuck string
+	var consideredStuck, skippedStuck int
 
-	// Scan through the buckets to find a matching rate
-	for _, key := range keys {
-		bucketData, err := parseBucketKey(key)
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Key":   key,
-				"Error": err,
-			}).Errorf("ValidateRate.InvalidBucketKey: failed to parse bucket key")
+	for _, pot := range pots {
+		ot := DetermineOrderType(pot, amount)
+		isOTC := ot == paymentorder.OrderTypeOtc
+		if !amountInRangeForPublicQuote(pot, amount, isOTC) {
 			continue
 		}
-
-		// Get all providers in this bucket to find the first suitable one (priority queue order)
-		providers, err := storage.RedisClient.LRange(ctx, key, 0, -1).Result()
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"Key":   key,
-				"Error": err,
-			}).Errorf("ValidateRate.FailedToGetProviders: failed to get providers from bucket")
+		if amount.LessThan(pot.MinOrderAmount) {
 			continue
 		}
-
-		// Find the first provider at the top of the queue that matches our criteria
-		result := findSuitableProviderRate(ctx, providers, token, networkIdentifier, amount, bucketData, side)
-		if result.Found {
-			foundExactMatch = true
-			bestRate = result.Rate
-			selectedProviderID = result.ProviderID
-			selectedOrderType = result.OrderType
-			break // Found exact match, no need to continue
+		rate := quoteRateForPublicCandidate(pot, side, currency)
+		if rate.IsZero() {
+			continue
 		}
-		if result.AllSkippedDueToStuck && result.CurrencyCode != "" {
-			anySkippedDueToStuck = true
-			currencyForStuck = result.CurrencyCode
+		if rate.GreaterThan(bestRate) {
+			bestRate = rate
 		}
-
-		// Track the best available rate for logging purposes
-		if result.Rate.GreaterThan(bestRate) {
-			bestRate = result.Rate
-		}
-	}
-
-	// If no exact match found, try fallback provider (if configured) even though it's not on the bucket queue
-	if !foundExactMatch {
-		if fallbackID := config.OrderConfig().FallbackProviderID; fallbackID != "" {
-			fallbackResult, fallbackErr := validateProviderRate(ctx, token, currency, amount, fallbackID, networkIdentifier, side)
-			if fallbackErr == nil {
-				// Quote the queue's best rate when amount was below/above queue providers' min/max but fallback accepts it
-				if bestRate.GreaterThan(decimal.Zero) {
-					return RateValidationResult{
-						Rate:       bestRate,
-						ProviderID: fallbackResult.ProviderID,
-						OrderType:  fallbackResult.OrderType,
-					}, nil
-				}
-				return fallbackResult, nil
-			}
-			var errStuck *types.ErrNoProviderDueToStuck
-			if errors.As(fallbackErr, &errStuck) {
-				return RateValidationResult{}, fallbackErr
-			}
-		}
-		if anySkippedDueToStuck && currencyForStuck != "" {
-			return RateValidationResult{}, &types.ErrNoProviderDueToStuck{CurrencyCode: currencyForStuck}
-		}
-		logger.WithFields(logger.Fields{
-			"Token":         token.Symbol,
-			"Currency":      currency.Code,
-			"Amount":        amount,
-			"NetworkFilter": networkIdentifier,
-			"BestRate":      bestRate,
-		}).Warnf("ValidateRate.NoSuitableProvider: no provider found for the given parameters")
-
-		// Provide more specific error message (buy = fiat to crypto, sell = crypto to fiat)
-		networkMsg := networkIdentifier
-		if networkMsg == "" {
-			networkMsg = "any network"
-		}
-		from, to := token.Symbol, currency.Code
+		pid := pot.Edges.Provider.ID
+		var balErr error
 		if side == RateSideBuy {
-			from, to = currency.Code, token.Symbol
+			_, balErr = storage.Client.ProviderBalances.Query().
+				Where(
+					providerbalances.HasProviderWith(providerprofile.IDEQ(pid)),
+					providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
+					providerbalances.AvailableBalanceGT(amount),
+					providerbalances.IsAvailableEQ(true),
+				).
+				Only(ctx)
+		} else {
+			fiatAmt := amount.Mul(rate)
+			_, balErr = storage.Client.ProviderBalances.Query().
+				Where(
+					providerbalances.HasProviderWith(providerprofile.IDEQ(pid)),
+					providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+					providerbalances.AvailableBalanceGT(fiatAmt),
+					providerbalances.IsAvailableEQ(true),
+				).
+				Only(ctx)
 		}
-		return RateValidationResult{}, fmt.Errorf("no provider available for %s to %s conversion with amount %s on %s",
-			from, to, amount, networkMsg)
+		if balErr != nil {
+			if ent.IsNotFound(balErr) {
+				continue
+			}
+			return RateValidationResult{}, fmt.Errorf("internal server error")
+		}
+		if ot == paymentorder.OrderTypeRegular && orderConf.ProviderStuckFulfillmentThreshold > 0 {
+			consideredStuck++
+			stuckCount, errStuck := GetProviderStuckOrderCount(ctx, pid)
+			if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
+				skippedStuck++
+				continue
+			}
+		}
+		return RateValidationResult{Rate: rate, ProviderID: pid, OrderType: ot}, nil
 	}
 
-	return RateValidationResult{
-		Rate:       bestRate,
-		ProviderID: selectedProviderID,
-		OrderType:  selectedOrderType,
-	}, nil
-}
-
-// parseBucketKey parses and validates bucket key format
-type BucketData struct {
-	Currency  string
-	MinAmount decimal.Decimal
-	MaxAmount decimal.Decimal
-}
-
-func parseBucketKey(key string) (*BucketData, error) {
-	// Expected format: "bucket_{currency}_{minAmount}_{maxAmount}_{side}"
-	parts := strings.Split(key, "_")
-	if len(parts) != 4 && len(parts) != 5 {
-		return nil, fmt.Errorf("invalid bucket key format: expected 4 or 5 parts, got %d", len(parts))
+	anySkippedDueToStuck := consideredStuck > 0 && skippedStuck == consideredStuck
+	currencyForStuck := ""
+	if anySkippedDueToStuck {
+		currencyForStuck = currency.Code
 	}
-
-	if parts[0] != "bucket" {
-		return nil, fmt.Errorf("invalid bucket key prefix: expected 'bucket', got '%s'", parts[0])
-	}
-
-	currency := parts[1]
-	if currency == "" {
-		return nil, fmt.Errorf("empty currency in bucket key")
-	}
-
-	minAmount, err := decimal.NewFromString(parts[2])
-	if err != nil {
-		return nil, fmt.Errorf("invalid min amount '%s': %v", parts[2], err)
-	}
-
-	maxAmount, err := decimal.NewFromString(parts[3])
-	if err != nil {
-		return nil, fmt.Errorf("invalid max amount '%s': %v", parts[3], err)
-	}
-
-	if minAmount.GreaterThanOrEqual(maxAmount) {
-		return nil, fmt.Errorf("min amount (%s) must be less than max amount (%s)", minAmount, maxAmount)
-	}
-
-	// If there's a 5th part, it should be "buy" or "sell" (side), but we ignore it for parsing
-	// as the side is already known from the key pattern
-
-	return &BucketData{
-		Currency:  currency,
-		MinAmount: minAmount,
-		MaxAmount: maxAmount,
-	}, nil
-}
-
-// ProviderRateResult contains the result of finding a suitable provider rate
-type ProviderRateResult struct {
-	Rate                 decimal.Decimal
-	ProviderID           string
-	OrderType            paymentorder.OrderType
-	Found                bool
-	AllSkippedDueToStuck bool   // true when no match because every considered provider was skipped due to stuck threshold
-	CurrencyCode         string // set when AllSkippedDueToStuck is true, for 503 response
+	return tryFallbackPublicQuote(ctx, token, currency, amount, networkIdentifier, side, bestRate, anySkippedDueToStuck, currencyForStuck)
 }
 
 // GetProviderStuckOrderCount returns the number of stuck orders for a provider (status=fulfilled, pending fulfillment, updated_at <= now - OrderRefundTimeout, regular only).
@@ -1534,285 +1438,6 @@ func GetProviderStuckOrderCount(ctx context.Context, providerID string) (int, er
 		return 0, err
 	}
 	return count, nil
-}
-
-// findSuitableProviderRate finds the first suitable provider rate from the provider list
-// Returns the rate, provider ID, order type, and a boolean indicating if an exact match was found
-// An exact match means: amount within limits, within bucket range, and provider has sufficient balance.
-// For onramp (RateSideBuy) balance is token; for offramp (RateSideSell) balance is fiat.
-func findSuitableProviderRate(ctx context.Context, providers []string, token *ent.Token, networkIdentifier string, tokenAmount decimal.Decimal, bucketData *BucketData, side RateSide) ProviderRateResult {
-	tokenSymbol := token.Symbol
-	var bestRate decimal.Decimal
-	var foundExactMatch bool
-	var considered, skippedDueToStuck int
-	orderConf := config.OrderConfig()
-
-	// Track reasons for debugging when no match is found
-	var skipReasons []string
-
-	for _, providerData := range providers {
-		parts := strings.Split(providerData, ":")
-		if len(parts) != 6 {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Token":        tokenSymbol,
-				"Currency":     bucketData.Currency,
-				"MinAmount":    bucketData.MinAmount,
-				"MaxAmount":    bucketData.MaxAmount,
-			}).Errorf("ValidateRate.InvalidProviderData: provider data format is invalid")
-			continue
-		}
-
-		// Skip entry if token doesn't match
-		if parts[1] != tokenSymbol {
-			continue
-		}
-
-		// Skip entry if network doesn't match (network is in the queue payload)
-		if networkIdentifier != "" && parts[2] != networkIdentifier {
-			continue
-		}
-
-		// Fetch provider order token for OTC limits check
-		var providerOrderToken *ent.ProviderOrderToken
-		if networkIdentifier != "" {
-			// Network filter provided - fetch with network constraint
-			potQuery := storage.Client.ProviderOrderToken.
-				Query().
-				Where(
-					providerordertoken.HasProviderWith(
-						providerprofile.IDEQ(parts[0]),
-						providerprofile.HasProviderBalancesWith(
-							providerbalances.IsAvailableEQ(true),
-						),
-					),
-					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
-					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-					providerordertoken.NetworkEQ(networkIdentifier),
-					providerordertoken.SettlementAddressNEQ(""),
-				)
-			if side == RateSideBuy {
-				potQuery = potQuery.Where(
-					providerordertoken.HasProviderWith(
-						providerprofile.HasProviderBalancesWith(
-							providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
-							providerbalances.IsAvailableEQ(true),
-						),
-					),
-				)
-			} else {
-				potQuery = potQuery.Where(
-					providerordertoken.HasProviderWith(
-						providerprofile.HasProviderBalancesWith(
-							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-							providerbalances.IsAvailableEQ(true),
-						),
-					),
-				)
-			}
-			pot, err := potQuery.Only(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					continue
-				}
-				logger.WithFields(logger.Fields{
-					"ProviderData": providerData,
-					"Error":        err,
-				}).Errorf("ValidateRate.InvalidProviderData: failed to fetch provider configuration")
-				continue
-			}
-			providerOrderToken = pot
-		} else {
-			// No network filter - fetch first matching entry
-			potQuery := storage.Client.ProviderOrderToken.
-				Query().
-				Where(
-					providerordertoken.HasProviderWith(
-						providerprofile.IDEQ(parts[0]),
-						providerprofile.HasProviderBalancesWith(
-							providerbalances.IsAvailableEQ(true),
-						),
-					),
-					providerordertoken.HasTokenWith(tokenEnt.SymbolEQ(parts[1])),
-					providerordertoken.HasCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-					providerordertoken.SettlementAddressNEQ(""),
-				)
-			if side == RateSideBuy {
-				potQuery = potQuery.Where(
-					providerordertoken.HasProviderWith(
-						providerprofile.HasProviderBalancesWith(
-							providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
-							providerbalances.IsAvailableEQ(true),
-						),
-					),
-				)
-			} else {
-				potQuery = potQuery.Where(
-					providerordertoken.HasProviderWith(
-						providerprofile.HasProviderBalancesWith(
-							providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-							providerbalances.IsAvailableEQ(true),
-						),
-					),
-				)
-			}
-			pot, err := potQuery.First(ctx)
-			if err != nil {
-				if ent.IsNotFound(err) {
-					continue
-				}
-				logger.WithFields(logger.Fields{
-					"ProviderData": providerData,
-					"Error":        err,
-				}).Errorf("ValidateRate.InvalidProviderData: failed to fetch provider configuration")
-				continue
-			}
-			providerOrderToken = pot
-		}
-
-		// Parse provider order amounts
-		minOrderAmount, err := decimal.NewFromString(parts[4])
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-			}).Errorf("ValidateRate.InvalidMinOrderAmount: failed to parse min order amount")
-			continue
-		}
-
-		maxOrderAmount, err := decimal.NewFromString(parts[5])
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-			}).Errorf("ValidateRate.InvalidMaxOrderAmount: failed to parse max order amount")
-			continue
-		}
-
-		// Parse rate early so we can track best queue rate even when skipping due to min/max
-		rate, err := decimal.NewFromString(parts[3])
-		if err != nil {
-			logger.WithFields(logger.Fields{
-				"ProviderData": providerData,
-				"Error":        err,
-				"Value":        parts[3],
-			}).Errorf("ValidateRate.InvalidRate: failed to parse rate")
-			continue
-		}
-		if rate.GreaterThan(bestRate) {
-			bestRate = rate
-		}
-
-		// Check if order amount is within provider's regular min/max limits
-		// If not, check OTC limits as fallback
-		if tokenAmount.LessThan(minOrderAmount) {
-			// Amount below regular min - skip
-			skipReasons = append(skipReasons, fmt.Sprintf("amount %s below min %s", tokenAmount, minOrderAmount))
-			continue
-		} else if tokenAmount.GreaterThan(maxOrderAmount) {
-			// Amount exceeds regular max - check OTC limits using already fetched providerOrderToken
-			// Check if token amount is within OTC limits
-			if providerOrderToken.MinOrderAmountOtc.IsZero() || providerOrderToken.MaxOrderAmountOtc.IsZero() {
-				// OTC limits not configured - skip
-				skipReasons = append(skipReasons, fmt.Sprintf("amount %s exceeds max %s, OTC limits not configured", tokenAmount, maxOrderAmount))
-				continue
-			}
-
-			if tokenAmount.LessThan(providerOrderToken.MinOrderAmountOtc) || tokenAmount.GreaterThan(providerOrderToken.MaxOrderAmountOtc) {
-				// Amount outside OTC limits - skip
-				skipReasons = append(skipReasons, fmt.Sprintf("amount %s outside OTC range [%s, %s]", tokenAmount, providerOrderToken.MinOrderAmountOtc, providerOrderToken.MaxOrderAmountOtc))
-				continue
-			}
-
-			// Amount is within OTC limits - proceed to rate parsing
-		}
-
-		providerID := parts[0]
-
-		// Calculate fiat equivalent of the token amount
-		fiatAmount := tokenAmount.Mul(rate)
-
-		// Check if fiat amount is within the bucket range
-		if fiatAmount.GreaterThanOrEqual(bucketData.MinAmount) && fiatAmount.LessThanOrEqual(bucketData.MaxAmount) {
-			// Onramp: check token balance; offramp: check fiat balance
-			if side == RateSideBuy {
-				_, err = storage.Client.ProviderBalances.Query().
-					Where(
-						providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
-						providerbalances.HasTokenWith(tokenEnt.IDEQ(token.ID)),
-						providerbalances.AvailableBalanceGT(tokenAmount),
-						providerbalances.IsAvailableEQ(true),
-					).
-					Only(ctx)
-			} else {
-				_, err = storage.Client.ProviderBalances.Query().
-					Where(
-						providerbalances.HasProviderWith(providerprofile.IDEQ(providerID)),
-						providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(bucketData.Currency)),
-						providerbalances.AvailableBalanceGT(fiatAmount),
-						providerbalances.IsAvailableEQ(true),
-					).
-					Only(ctx)
-			}
-			if err != nil {
-				if ent.IsNotFound(err) {
-					if side == RateSideBuy {
-						skipReasons = append(skipReasons, fmt.Sprintf("provider %s has insufficient %s balance (need %s)", providerID, tokenSymbol, tokenAmount))
-					} else {
-						skipReasons = append(skipReasons, fmt.Sprintf("provider %s has insufficient balance (need %s %s)", providerID, fiatAmount, bucketData.Currency))
-					}
-					continue
-				}
-				return ProviderRateResult{Found: false}
-			}
-
-			considered++
-			if orderConf.ProviderStuckFulfillmentThreshold > 0 {
-				stuckCount, errStuck := GetProviderStuckOrderCount(ctx, providerID)
-				if errStuck == nil && stuckCount >= orderConf.ProviderStuckFulfillmentThreshold {
-					skippedDueToStuck++
-					continue
-				}
-			}
-
-			// Determine order type for this provider
-			orderType := DetermineOrderType(providerOrderToken, tokenAmount)
-
-			// Provider has balance and amount is within bucket range - exact match
-			return ProviderRateResult{
-				Rate:       rate,
-				ProviderID: providerID,
-				OrderType:  orderType,
-				Found:      true,
-			}
-		}
-
-		// Amount is outside bucket range - skip this provider
-		skipReasons = append(skipReasons, fmt.Sprintf("fiat amount %s outside bucket range [%s, %s]", fiatAmount, bucketData.MinAmount, bucketData.MaxAmount))
-		continue
-	}
-
-	// Return the best rate we found (even if no exact match) for logging purposes
-	// Log skip reasons for debugging if no match was found
-	if !foundExactMatch && len(skipReasons) > 0 {
-		maxReasons := 5
-		if len(skipReasons) < maxReasons {
-			maxReasons = len(skipReasons)
-		}
-		logger.WithFields(logger.Fields{
-			"Token":       tokenSymbol,
-			"Amount":      tokenAmount,
-			"SkipReasons": skipReasons[:maxReasons], // Log first 5 reasons
-		}).Debugf("ValidateRate.NoSuitableProvider: providers skipped due to limits/balance")
-	}
-
-	allSkippedDueToStuck := considered > 0 && skippedDueToStuck == considered
-	return ProviderRateResult{
-		Rate:                 bestRate,
-		Found:                foundExactMatch,
-		AllSkippedDueToStuck: allSkippedDueToStuck,
-		CurrencyCode:         bucketData.Currency,
-	}
 }
 
 // NormalizeMobileMoneyAccountIdentifier ensures the account identifier has a country dial code

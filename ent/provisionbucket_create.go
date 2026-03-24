@@ -12,9 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/paymentorder"
-	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/shopspring/decimal"
 )
@@ -53,45 +50,18 @@ func (_c *ProvisionBucketCreate) SetNillableCreatedAt(v *time.Time) *ProvisionBu
 	return _c
 }
 
-// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (_c *ProvisionBucketCreate) SetCurrencyID(id uuid.UUID) *ProvisionBucketCreate {
-	_c.mutation.SetCurrencyID(id)
+// SetFiatCurrencyID sets the "fiat_currency_id" field.
+func (_c *ProvisionBucketCreate) SetFiatCurrencyID(v uuid.UUID) *ProvisionBucketCreate {
+	_c.mutation.SetFiatCurrencyID(v)
 	return _c
 }
 
-// SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (_c *ProvisionBucketCreate) SetCurrency(v *FiatCurrency) *ProvisionBucketCreate {
-	return _c.SetCurrencyID(v.ID)
-}
-
-// AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (_c *ProvisionBucketCreate) AddPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketCreate {
-	_c.mutation.AddPaymentOrderIDs(ids...)
-	return _c
-}
-
-// AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (_c *ProvisionBucketCreate) AddPaymentOrders(v ...*PaymentOrder) *ProvisionBucketCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
+// SetNillableFiatCurrencyID sets the "fiat_currency_id" field if the given value is not nil.
+func (_c *ProvisionBucketCreate) SetNillableFiatCurrencyID(v *uuid.UUID) *ProvisionBucketCreate {
+	if v != nil {
+		_c.SetFiatCurrencyID(*v)
 	}
-	return _c.AddPaymentOrderIDs(ids...)
-}
-
-// AddProviderProfileIDs adds the "provider_profiles" edge to the ProviderProfile entity by IDs.
-func (_c *ProvisionBucketCreate) AddProviderProfileIDs(ids ...string) *ProvisionBucketCreate {
-	_c.mutation.AddProviderProfileIDs(ids...)
 	return _c
-}
-
-// AddProviderProfiles adds the "provider_profiles" edges to the ProviderProfile entity.
-func (_c *ProvisionBucketCreate) AddProviderProfiles(v ...*ProviderProfile) *ProvisionBucketCreate {
-	ids := make([]string, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddProviderProfileIDs(ids...)
 }
 
 // Mutation returns the ProvisionBucketMutation object of the builder.
@@ -146,9 +116,6 @@ func (_c *ProvisionBucketCreate) check() error {
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ProvisionBucket.created_at"`)}
 	}
-	if len(_c.mutation.CurrencyIDs()) == 0 {
-		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required edge "ProvisionBucket.currency"`)}
-	}
 	return nil
 }
 
@@ -188,54 +155,9 @@ func (_c *ProvisionBucketCreate) createSpec() (*ProvisionBucket, *sqlgraph.Creat
 		_spec.SetField(provisionbucket.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if nodes := _c.mutation.CurrencyIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   provisionbucket.CurrencyTable,
-			Columns: []string{provisionbucket.CurrencyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.fiat_currency_provision_buckets = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   provisionbucket.PaymentOrdersTable,
-			Columns: []string{provisionbucket.PaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.ProviderProfilesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   provisionbucket.ProviderProfilesTable,
-			Columns: provisionbucket.ProviderProfilesPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
+	if value, ok := _c.mutation.FiatCurrencyID(); ok {
+		_spec.SetField(provisionbucket.FieldFiatCurrencyID, field.TypeUUID, value)
+		_node.FiatCurrencyID = &value
 	}
 	return _node, _spec
 }
@@ -325,6 +247,24 @@ func (u *ProvisionBucketUpsert) AddMaxAmount(v decimal.Decimal) *ProvisionBucket
 	return u
 }
 
+// SetFiatCurrencyID sets the "fiat_currency_id" field.
+func (u *ProvisionBucketUpsert) SetFiatCurrencyID(v uuid.UUID) *ProvisionBucketUpsert {
+	u.Set(provisionbucket.FieldFiatCurrencyID, v)
+	return u
+}
+
+// UpdateFiatCurrencyID sets the "fiat_currency_id" field to the value that was provided on create.
+func (u *ProvisionBucketUpsert) UpdateFiatCurrencyID() *ProvisionBucketUpsert {
+	u.SetExcluded(provisionbucket.FieldFiatCurrencyID)
+	return u
+}
+
+// ClearFiatCurrencyID clears the value of the "fiat_currency_id" field.
+func (u *ProvisionBucketUpsert) ClearFiatCurrencyID() *ProvisionBucketUpsert {
+	u.SetNull(provisionbucket.FieldFiatCurrencyID)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -409,6 +349,27 @@ func (u *ProvisionBucketUpsertOne) AddMaxAmount(v decimal.Decimal) *ProvisionBuc
 func (u *ProvisionBucketUpsertOne) UpdateMaxAmount() *ProvisionBucketUpsertOne {
 	return u.Update(func(s *ProvisionBucketUpsert) {
 		s.UpdateMaxAmount()
+	})
+}
+
+// SetFiatCurrencyID sets the "fiat_currency_id" field.
+func (u *ProvisionBucketUpsertOne) SetFiatCurrencyID(v uuid.UUID) *ProvisionBucketUpsertOne {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.SetFiatCurrencyID(v)
+	})
+}
+
+// UpdateFiatCurrencyID sets the "fiat_currency_id" field to the value that was provided on create.
+func (u *ProvisionBucketUpsertOne) UpdateFiatCurrencyID() *ProvisionBucketUpsertOne {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.UpdateFiatCurrencyID()
+	})
+}
+
+// ClearFiatCurrencyID clears the value of the "fiat_currency_id" field.
+func (u *ProvisionBucketUpsertOne) ClearFiatCurrencyID() *ProvisionBucketUpsertOne {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.ClearFiatCurrencyID()
 	})
 }
 
@@ -662,6 +623,27 @@ func (u *ProvisionBucketUpsertBulk) AddMaxAmount(v decimal.Decimal) *ProvisionBu
 func (u *ProvisionBucketUpsertBulk) UpdateMaxAmount() *ProvisionBucketUpsertBulk {
 	return u.Update(func(s *ProvisionBucketUpsert) {
 		s.UpdateMaxAmount()
+	})
+}
+
+// SetFiatCurrencyID sets the "fiat_currency_id" field.
+func (u *ProvisionBucketUpsertBulk) SetFiatCurrencyID(v uuid.UUID) *ProvisionBucketUpsertBulk {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.SetFiatCurrencyID(v)
+	})
+}
+
+// UpdateFiatCurrencyID sets the "fiat_currency_id" field to the value that was provided on create.
+func (u *ProvisionBucketUpsertBulk) UpdateFiatCurrencyID() *ProvisionBucketUpsertBulk {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.UpdateFiatCurrencyID()
+	})
+}
+
+// ClearFiatCurrencyID clears the value of the "fiat_currency_id" field.
+func (u *ProvisionBucketUpsertBulk) ClearFiatCurrencyID() *ProvisionBucketUpsertBulk {
+	return u.Update(func(s *ProvisionBucketUpsert) {
+		s.ClearFiatCurrencyID()
 	})
 }
 

@@ -15,12 +15,26 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/webhookretryattempt"
+	"github.com/paycrest/aggregator/services/assignment"
 	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
+	"github.com/shopspring/decimal"
 )
+
+func applyWebhookValidationFailedScore(ctx context.Context, orderID uuid.UUID) {
+	if err := assignment.ApplyProviderScoreChange(ctx, orderID, assignment.ScoreEventValidationFailed, decimal.NewFromFloat(assignment.PenaltyValidationFailed)); err != nil {
+		logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": err.Error()}).Warnf("fulfillment sync: validation failed score")
+	}
+}
+
+func applyWebhookValidatedRewardScore(ctx context.Context, orderID uuid.UUID) {
+	if err := assignment.ApplyProviderScoreChange(ctx, orderID, assignment.ScoreEventFulfilledValidated, decimal.NewFromFloat(assignment.RewardFulfilledValidated)); err != nil {
+		logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": err.Error()}).Warnf("fulfillment sync: validated reward score")
+	}
+}
 
 const txStatusFiveMinError = "Failed to get transaction status after 5 minutes"
 const txStatusRetryWindow = 5 * time.Minute
@@ -119,9 +133,6 @@ func SyncPaymentOrderFulfillments() {
 			pq.WithAPIKey()
 		}).
 		WithFulfillments().
-		WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
-			pb.WithCurrency()
-		}).
 		All(ctx)
 	if err != nil {
 		return
@@ -139,9 +150,6 @@ func SyncPaymentOrderFulfillments() {
 				pq.WithAPIKey()
 			}).
 			WithFulfillments().
-			WithProvisionBucket(func(pb *ent.ProvisionBucketQuery) {
-				pb.WithCurrency()
-			}).
 			Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
@@ -180,26 +188,19 @@ func SyncPaymentOrderFulfillments() {
 				continue
 			}
 
-			if order.Edges.ProvisionBucket == nil {
+			fiatCode, ierr := orderInstitutionFiatCode(ctx, order)
+			if ierr != nil {
 				logger.WithFields(logger.Fields{
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: ProvisionBucket is nil",
-				}).Errorf("SyncPaymentOrderFulfillments.MissingProvisionBucket")
-				continue
-			}
-			if order.Edges.ProvisionBucket.Edges.Currency == nil {
-				logger.WithFields(logger.Fields{
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: ProvisionBucket Currency is nil",
-				}).Errorf("SyncPaymentOrderFulfillments.MissingCurrency")
+					"Error":      ierr.Error(),
+				}).Errorf("SyncPaymentOrderFulfillments.MissingInstitutionCurrency")
 				continue
 			}
 
 			payload := map[string]interface{}{
 				"reference": getTxStatusReferenceForVA(order),
-				"currency":  order.Edges.ProvisionBucket.Edges.Currency.Code,
+				"currency":  fiatCode,
 			}
 			data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 			if err != nil {
@@ -263,6 +264,7 @@ func SyncPaymentOrderFulfillments() {
 						logger.WithFields(logger.Fields{"OrderID": order.ID.String(), "Error": relErr}).Errorf("SyncPaymentOrderFulfillments: release balance on payin failed")
 					}
 				}
+				applyWebhookValidationFailedScore(ctx, order.ID)
 			} else if status == "success" {
 				_, err = storage.Client.PaymentOrderFulfillment.
 					Create().
@@ -324,22 +326,16 @@ func SyncPaymentOrderFulfillments() {
 						"OrderID":     order.ID,
 					}).Errorf("SyncPaymentOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 				}
+				applyWebhookValidatedRewardScore(ctx, order.ID)
 			}
 		} else {
-			if order.Edges.ProvisionBucket == nil {
+			fiatCode, ierr := orderInstitutionFiatCode(ctx, order)
+			if ierr != nil {
 				logger.WithFields(logger.Fields{
 					"OrderID":    order.ID.String(),
 					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: ProvisionBucket is nil",
-				}).Errorf("SyncPaymentOrderFulfillments.MissingProvisionBucket")
-				continue
-			}
-			if order.Edges.ProvisionBucket.Edges.Currency == nil {
-				logger.WithFields(logger.Fields{
-					"OrderID":    order.ID.String(),
-					"ProviderID": order.Edges.Provider.ID,
-					"Reason":     "internal: ProvisionBucket Currency is nil",
-				}).Errorf("SyncPaymentOrderFulfillments.MissingCurrency")
+					"Error":      ierr.Error(),
+				}).Errorf("SyncPaymentOrderFulfillments.MissingInstitutionCurrency")
 				continue
 			}
 
@@ -347,7 +343,7 @@ func SyncPaymentOrderFulfillments() {
 				if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusPending {
 					payload := map[string]interface{}{
 						"reference": getTxStatusReferenceForVA(order),
-						"currency":  order.Edges.ProvisionBucket.Edges.Currency.Code,
+						"currency":  fiatCode,
 						"psp":       fulfillment.Psp,
 						"txId":      fulfillment.TxID,
 					}
@@ -374,6 +370,8 @@ func SyncPaymentOrderFulfillments() {
 									"OrderID":       order.ID.String(),
 									"FulfillmentID": fulfillment.ID,
 								}).Errorf("Failed to mark fulfillment as failed after 5 minutes")
+							} else {
+								applyWebhookValidationFailedScore(ctx, order.ID)
 							}
 							continue
 						}
@@ -424,6 +422,7 @@ func SyncPaymentOrderFulfillments() {
 								logger.WithFields(logger.Fields{"OrderID": order.ID.String(), "Error": relErr}).Errorf("SyncPaymentOrderFulfillments: release balance on payin failed (pending→failed)")
 							}
 						}
+						applyWebhookValidationFailedScore(ctx, order.ID)
 					} else if status == "success" {
 						_, err = storage.Client.PaymentOrderFulfillment.
 							UpdateOneID(fulfillment.ID).
@@ -487,13 +486,14 @@ func SyncPaymentOrderFulfillments() {
 								"OrderID":     order.ID,
 							}).Errorf("SyncPaymentOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 						}
+						applyWebhookValidatedRewardScore(ctx, order.ID)
 					}
 
 				} else if fulfillment.ValidationStatus == paymentorderfulfillment.ValidationStatusFailed &&
 					shouldRetryTxStatusFiveMinFailure(fulfillment) {
 					payload := map[string]interface{}{
 						"orderId":  order.ID.String(),
-						"currency": order.Edges.ProvisionBucket.Edges.Currency.Code,
+						"currency": fiatCode,
 						"psp":      fulfillment.Psp,
 						"txId":     fulfillment.TxID,
 					}
@@ -520,6 +520,7 @@ func SyncPaymentOrderFulfillments() {
 								Save(ctx)
 						}
 						_, _ = order.Update().SetStatus(paymentorder.StatusFulfilled).Save(ctx)
+						applyWebhookValidationFailedScore(ctx, order.ID)
 					} else if status == "success" {
 						_, err = storage.Client.PaymentOrderFulfillment.
 							UpdateOneID(fulfillment.ID).
@@ -542,6 +543,7 @@ func SyncPaymentOrderFulfillments() {
 									SetStatus(paymentorder.StatusValidated).
 									Save(ctx)
 								_ = utils.SendPaymentOrderWebhook(ctx, order)
+								applyWebhookValidatedRewardScore(ctx, order.ID)
 							}
 						}
 					}
@@ -608,6 +610,7 @@ func SyncPaymentOrderFulfillments() {
 							"OrderID":     order.ID,
 						}).Errorf("SyncPaymentOrderFulfillments.UpdatePaymentOrderValidated.webhook")
 					}
+					applyWebhookValidatedRewardScore(ctx, order.ID)
 				}
 			}
 		}
@@ -757,11 +760,13 @@ func RetryFailedWebhookNotifications() error {
 
 // syncRefundingOrder calls the provider /tx_status for an onramp order in Refunding and updates order/fulfillment to refunded/failed/pending.
 func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
-	if order.Edges.ProvisionBucket == nil || order.Edges.ProvisionBucket.Edges.Currency == nil {
+	fiatCode, ierr := orderInstitutionFiatCode(ctx, order)
+	if ierr != nil {
 		logger.WithFields(logger.Fields{
 			"OrderID":    order.ID.String(),
 			"ProviderID": order.Edges.Provider.ID,
-		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: missing ProvisionBucket or Currency")
+			"Error":      ierr.Error(),
+		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: institution currency")
 		return
 	}
 
@@ -777,7 +782,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 
 	payload := map[string]interface{}{
 		"reference": refundReference,
-		"currency":  order.Edges.ProvisionBucket.Edges.Currency.Code,
+		"currency":  fiatCode,
 	}
 	data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 	if err != nil {
@@ -876,6 +881,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 					"Error":      err,
 				}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: set Fulfilled after refund failed")
 			}
+			applyWebhookValidationFailedScore(ctx, order.ID)
 			return
 		}
 
@@ -952,6 +958,10 @@ func callRequestAuthorization(ctx context.Context, order *ent.PaymentOrder, psp,
 
 // callTxRefundAndStore calls POST /tx_refund via CallProviderWithHMAC; on 200 stores refundReference in order metadata and returns it.
 func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder) (refundReference string, err error) {
+	fiatCode, ierr := orderInstitutionFiatCode(ctx, order)
+	if ierr != nil {
+		return "", ierr
+	}
 	fiatAmount := order.Amount.Add(order.SenderFee).Mul(order.Rate).RoundBank(0).String()
 	refundAccount := map[string]interface{}{
 		"accountIdentifier": order.AccountIdentifier,
@@ -965,7 +975,7 @@ func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder) (refundR
 	}
 	body := map[string]interface{}{
 		"orderId":       order.ID.String(),
-		"currency":      order.Edges.ProvisionBucket.Edges.Currency.Code,
+		"currency":      fiatCode,
 		"amount":        fiatAmount,
 		"refundAccount": refundAccount,
 	}
@@ -1005,4 +1015,18 @@ func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder) (refundR
 		return refundReference, err
 	}
 	return refundReference, nil
+}
+
+func orderInstitutionFiatCode(ctx context.Context, order *ent.PaymentOrder) (string, error) {
+	if order.Institution == "" {
+		return "", fmt.Errorf("order has no institution")
+	}
+	inst, err := utils.GetInstitutionByCode(ctx, order.Institution, true)
+	if err != nil {
+		return "", fmt.Errorf("institution fiat currency: %w", err)
+	}
+	if inst == nil || inst.Edges.FiatCurrency == nil {
+		return "", fmt.Errorf("institution or fiat currency not found")
+	}
+	return inst.Edges.FiatCurrency.Code, nil
 }

@@ -21,7 +21,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/user"
 )
 
@@ -35,7 +34,6 @@ type ProviderProfileQuery struct {
 	withUser             *UserQuery
 	withAPIKey           *APIKeyQuery
 	withProviderBalances *ProviderBalancesQuery
-	withProvisionBuckets *ProvisionBucketQuery
 	withOrderTokens      *ProviderOrderTokenQuery
 	withProviderRating   *ProviderRatingQuery
 	withAssignedOrders   *PaymentOrderQuery
@@ -136,28 +134,6 @@ func (_q *ProviderProfileQuery) QueryProviderBalances() *ProviderBalancesQuery {
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
 			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderBalancesTable, providerprofile.ProviderBalancesColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryProvisionBuckets chains the current query on the "provision_buckets" edge.
-func (_q *ProviderProfileQuery) QueryProvisionBuckets() *ProvisionBucketQuery {
-	query := (&ProvisionBucketClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, selector),
-			sqlgraph.To(provisionbucket.Table, provisionbucket.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, providerprofile.ProvisionBucketsTable, providerprofile.ProvisionBucketsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -448,7 +424,6 @@ func (_q *ProviderProfileQuery) Clone() *ProviderProfileQuery {
 		withUser:             _q.withUser.Clone(),
 		withAPIKey:           _q.withAPIKey.Clone(),
 		withProviderBalances: _q.withProviderBalances.Clone(),
-		withProvisionBuckets: _q.withProvisionBuckets.Clone(),
 		withOrderTokens:      _q.withOrderTokens.Clone(),
 		withProviderRating:   _q.withProviderRating.Clone(),
 		withAssignedOrders:   _q.withAssignedOrders.Clone(),
@@ -489,17 +464,6 @@ func (_q *ProviderProfileQuery) WithProviderBalances(opts ...func(*ProviderBalan
 		opt(query)
 	}
 	_q.withProviderBalances = query
-	return _q
-}
-
-// WithProvisionBuckets tells the query-builder to eager-load the nodes that are connected to
-// the "provision_buckets" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *ProviderProfileQuery) WithProvisionBuckets(opts ...func(*ProvisionBucketQuery)) *ProviderProfileQuery {
-	query := (&ProvisionBucketClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withProvisionBuckets = query
 	return _q
 }
 
@@ -626,11 +590,10 @@ func (_q *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 		nodes       = []*ProviderProfile{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [8]bool{
+		loadedTypes = [7]bool{
 			_q.withUser != nil,
 			_q.withAPIKey != nil,
 			_q.withProviderBalances != nil,
-			_q.withProvisionBuckets != nil,
 			_q.withOrderTokens != nil,
 			_q.withProviderRating != nil,
 			_q.withAssignedOrders != nil,
@@ -678,15 +641,6 @@ func (_q *ProviderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) 
 			func(n *ProviderProfile) { n.Edges.ProviderBalances = []*ProviderBalances{} },
 			func(n *ProviderProfile, e *ProviderBalances) {
 				n.Edges.ProviderBalances = append(n.Edges.ProviderBalances, e)
-			}); err != nil {
-			return nil, err
-		}
-	}
-	if query := _q.withProvisionBuckets; query != nil {
-		if err := _q.loadProvisionBuckets(ctx, query, nodes,
-			func(n *ProviderProfile) { n.Edges.ProvisionBuckets = []*ProvisionBucket{} },
-			func(n *ProviderProfile, e *ProvisionBucket) {
-				n.Edges.ProvisionBuckets = append(n.Edges.ProvisionBuckets, e)
 			}); err != nil {
 			return nil, err
 		}
@@ -811,67 +765,6 @@ func (_q *ProviderProfileQuery) loadProviderBalances(ctx context.Context, query 
 			return fmt.Errorf(`unexpected referenced foreign-key "provider_profile_provider_balances" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
-	}
-	return nil
-}
-func (_q *ProviderProfileQuery) loadProvisionBuckets(ctx context.Context, query *ProvisionBucketQuery, nodes []*ProviderProfile, init func(*ProviderProfile), assign func(*ProviderProfile, *ProvisionBucket)) error {
-	edgeIDs := make([]driver.Value, len(nodes))
-	byID := make(map[string]*ProviderProfile)
-	nids := make(map[int]map[*ProviderProfile]struct{})
-	for i, node := range nodes {
-		edgeIDs[i] = node.ID
-		byID[node.ID] = node
-		if init != nil {
-			init(node)
-		}
-	}
-	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(providerprofile.ProvisionBucketsTable)
-		s.Join(joinT).On(s.C(provisionbucket.FieldID), joinT.C(providerprofile.ProvisionBucketsPrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(providerprofile.ProvisionBucketsPrimaryKey[1]), edgeIDs...))
-		columns := s.SelectedColumns()
-		s.Select(joinT.C(providerprofile.ProvisionBucketsPrimaryKey[1]))
-		s.AppendSelect(columns...)
-		s.SetDistinct(false)
-	})
-	if err := query.prepareQuery(ctx); err != nil {
-		return err
-	}
-	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
-		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-			assign := spec.Assign
-			values := spec.ScanValues
-			spec.ScanValues = func(columns []string) ([]any, error) {
-				values, err := values(columns[1:])
-				if err != nil {
-					return nil, err
-				}
-				return append([]any{new(sql.NullString)}, values...), nil
-			}
-			spec.Assign = func(columns []string, values []any) error {
-				outValue := values[0].(*sql.NullString).String
-				inValue := int(values[1].(*sql.NullInt64).Int64)
-				if nids[inValue] == nil {
-					nids[inValue] = map[*ProviderProfile]struct{}{byID[outValue]: {}}
-					return assign(columns[1:], values[1:])
-				}
-				nids[inValue][byID[outValue]] = struct{}{}
-				return nil
-			}
-		})
-	})
-	neighbors, err := withInterceptors[[]*ProvisionBucket](ctx, query, qr, query.inters)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected "provision_buckets" node returned %v`, n.ID)
-		}
-		for kn := range nodes {
-			assign(kn, n)
-		}
 	}
 	return nil
 }

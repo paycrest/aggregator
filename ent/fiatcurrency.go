@@ -49,15 +49,13 @@ type FiatCurrency struct {
 type FiatCurrencyEdges struct {
 	// ProviderBalances holds the value of the provider_balances edge.
 	ProviderBalances []*ProviderBalances `json:"provider_balances,omitempty"`
-	// ProvisionBuckets holds the value of the provision_buckets edge.
-	ProvisionBuckets []*ProvisionBucket `json:"provision_buckets,omitempty"`
 	// Institutions holds the value of the institutions edge.
 	Institutions []*Institution `json:"institutions,omitempty"`
 	// ProviderOrderTokens holds the value of the provider_order_tokens edge.
 	ProviderOrderTokens []*ProviderOrderToken `json:"provider_order_tokens,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [3]bool
 }
 
 // ProviderBalancesOrErr returns the ProviderBalances value or an error if the edge
@@ -69,19 +67,10 @@ func (e FiatCurrencyEdges) ProviderBalancesOrErr() ([]*ProviderBalances, error) 
 	return nil, &NotLoadedError{edge: "provider_balances"}
 }
 
-// ProvisionBucketsOrErr returns the ProvisionBuckets value or an error if the edge
-// was not loaded in eager-loading.
-func (e FiatCurrencyEdges) ProvisionBucketsOrErr() ([]*ProvisionBucket, error) {
-	if e.loadedTypes[1] {
-		return e.ProvisionBuckets, nil
-	}
-	return nil, &NotLoadedError{edge: "provision_buckets"}
-}
-
 // InstitutionsOrErr returns the Institutions value or an error if the edge
 // was not loaded in eager-loading.
 func (e FiatCurrencyEdges) InstitutionsOrErr() ([]*Institution, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[1] {
 		return e.Institutions, nil
 	}
 	return nil, &NotLoadedError{edge: "institutions"}
@@ -90,7 +79,7 @@ func (e FiatCurrencyEdges) InstitutionsOrErr() ([]*Institution, error) {
 // ProviderOrderTokensOrErr returns the ProviderOrderTokens value or an error if the edge
 // was not loaded in eager-loading.
 func (e FiatCurrencyEdges) ProviderOrderTokensOrErr() ([]*ProviderOrderToken, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[2] {
 		return e.ProviderOrderTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "provider_order_tokens"}
@@ -210,11 +199,6 @@ func (_m *FiatCurrency) Value(name string) (ent.Value, error) {
 // QueryProviderBalances queries the "provider_balances" edge of the FiatCurrency entity.
 func (_m *FiatCurrency) QueryProviderBalances() *ProviderBalancesQuery {
 	return NewFiatCurrencyClient(_m.config).QueryProviderBalances(_m)
-}
-
-// QueryProvisionBuckets queries the "provision_buckets" edge of the FiatCurrency entity.
-func (_m *FiatCurrency) QueryProvisionBuckets() *ProvisionBucketQuery {
-	return NewFiatCurrencyClient(_m.config).QueryProvisionBuckets(_m)
 }
 
 // QueryInstitutions queries the "institutions" edge of the FiatCurrency entity.

@@ -434,7 +434,6 @@ type PaymentOrderFields struct {
 	ProviderID        string
 	Memo              string
 	Metadata          map[string]interface{}
-	ProvisionBucket   *ent.ProvisionBucket
 	UpdatedAt         time.Time
 	CreatedAt         time.Time
 }

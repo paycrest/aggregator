@@ -12,7 +12,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/ent"
-	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/assignment"
 	"github.com/paycrest/aggregator/services/common"
 	"github.com/paycrest/aggregator/services/contracts"
 	"github.com/paycrest/aggregator/services/order"
@@ -23,18 +23,15 @@ import (
 
 // IndexerTron performs blockchain to database extract, transform, load (ETL) operations.
 type IndexerTron struct {
-	priorityQueue *services.PriorityQueueService
+	priorityQueue *assignment.Service
 	order         types.OrderService
 }
 
 // NewIndexerTron creates a new instance of IndexerTron.
 func NewIndexerTron() types.Indexer {
-	priorityQueue := services.NewPriorityQueueService()
-	orderService := order.NewOrderTron()
-
 	return &IndexerTron{
-		priorityQueue: priorityQueue,
-		order:         orderService,
+		priorityQueue: assignment.New(),
+		order:         order.NewOrderTron(),
 	}
 }
 

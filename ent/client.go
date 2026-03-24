@@ -26,9 +26,11 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/ent/providerassignmentrun"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -66,12 +68,16 @@ type Client struct {
 	PaymentOrderFulfillment *PaymentOrderFulfillmentClient
 	// PaymentWebhook is the client for interacting with the PaymentWebhook builders.
 	PaymentWebhook *PaymentWebhookClient
+	// ProviderAssignmentRun is the client for interacting with the ProviderAssignmentRun builders.
+	ProviderAssignmentRun *ProviderAssignmentRunClient
 	// ProviderBalances is the client for interacting with the ProviderBalances builders.
 	ProviderBalances *ProviderBalancesClient
 	// ProviderFiatAccount is the client for interacting with the ProviderFiatAccount builders.
 	ProviderFiatAccount *ProviderFiatAccountClient
 	// ProviderOrderToken is the client for interacting with the ProviderOrderToken builders.
 	ProviderOrderToken *ProviderOrderTokenClient
+	// ProviderOrderTokenScoreHistory is the client for interacting with the ProviderOrderTokenScoreHistory builders.
+	ProviderOrderTokenScoreHistory *ProviderOrderTokenScoreHistoryClient
 	// ProviderProfile is the client for interacting with the ProviderProfile builders.
 	ProviderProfile *ProviderProfileClient
 	// ProviderRating is the client for interacting with the ProviderRating builders.
@@ -113,9 +119,11 @@ func (c *Client) init() {
 	c.PaymentOrder = NewPaymentOrderClient(c.config)
 	c.PaymentOrderFulfillment = NewPaymentOrderFulfillmentClient(c.config)
 	c.PaymentWebhook = NewPaymentWebhookClient(c.config)
+	c.ProviderAssignmentRun = NewProviderAssignmentRunClient(c.config)
 	c.ProviderBalances = NewProviderBalancesClient(c.config)
 	c.ProviderFiatAccount = NewProviderFiatAccountClient(c.config)
 	c.ProviderOrderToken = NewProviderOrderTokenClient(c.config)
+	c.ProviderOrderTokenScoreHistory = NewProviderOrderTokenScoreHistoryClient(c.config)
 	c.ProviderProfile = NewProviderProfileClient(c.config)
 	c.ProviderRating = NewProviderRatingClient(c.config)
 	c.ProvisionBucket = NewProvisionBucketClient(c.config)
@@ -216,31 +224,33 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                         ctx,
-		config:                      cfg,
-		APIKey:                      NewAPIKeyClient(cfg),
-		BeneficialOwner:             NewBeneficialOwnerClient(cfg),
-		FiatCurrency:                NewFiatCurrencyClient(cfg),
-		IdentityVerificationRequest: NewIdentityVerificationRequestClient(cfg),
-		Institution:                 NewInstitutionClient(cfg),
-		KYBProfile:                  NewKYBProfileClient(cfg),
-		Network:                     NewNetworkClient(cfg),
-		PaymentOrder:                NewPaymentOrderClient(cfg),
-		PaymentOrderFulfillment:     NewPaymentOrderFulfillmentClient(cfg),
-		PaymentWebhook:              NewPaymentWebhookClient(cfg),
-		ProviderBalances:            NewProviderBalancesClient(cfg),
-		ProviderFiatAccount:         NewProviderFiatAccountClient(cfg),
-		ProviderOrderToken:          NewProviderOrderTokenClient(cfg),
-		ProviderProfile:             NewProviderProfileClient(cfg),
-		ProviderRating:              NewProviderRatingClient(cfg),
-		ProvisionBucket:             NewProvisionBucketClient(cfg),
-		SenderOrderToken:            NewSenderOrderTokenClient(cfg),
-		SenderProfile:               NewSenderProfileClient(cfg),
-		Token:                       NewTokenClient(cfg),
-		TransactionLog:              NewTransactionLogClient(cfg),
-		User:                        NewUserClient(cfg),
-		VerificationToken:           NewVerificationTokenClient(cfg),
-		WebhookRetryAttempt:         NewWebhookRetryAttemptClient(cfg),
+		ctx:                            ctx,
+		config:                         cfg,
+		APIKey:                         NewAPIKeyClient(cfg),
+		BeneficialOwner:                NewBeneficialOwnerClient(cfg),
+		FiatCurrency:                   NewFiatCurrencyClient(cfg),
+		IdentityVerificationRequest:    NewIdentityVerificationRequestClient(cfg),
+		Institution:                    NewInstitutionClient(cfg),
+		KYBProfile:                     NewKYBProfileClient(cfg),
+		Network:                        NewNetworkClient(cfg),
+		PaymentOrder:                   NewPaymentOrderClient(cfg),
+		PaymentOrderFulfillment:        NewPaymentOrderFulfillmentClient(cfg),
+		PaymentWebhook:                 NewPaymentWebhookClient(cfg),
+		ProviderAssignmentRun:          NewProviderAssignmentRunClient(cfg),
+		ProviderBalances:               NewProviderBalancesClient(cfg),
+		ProviderFiatAccount:            NewProviderFiatAccountClient(cfg),
+		ProviderOrderToken:             NewProviderOrderTokenClient(cfg),
+		ProviderOrderTokenScoreHistory: NewProviderOrderTokenScoreHistoryClient(cfg),
+		ProviderProfile:                NewProviderProfileClient(cfg),
+		ProviderRating:                 NewProviderRatingClient(cfg),
+		ProvisionBucket:                NewProvisionBucketClient(cfg),
+		SenderOrderToken:               NewSenderOrderTokenClient(cfg),
+		SenderProfile:                  NewSenderProfileClient(cfg),
+		Token:                          NewTokenClient(cfg),
+		TransactionLog:                 NewTransactionLogClient(cfg),
+		User:                           NewUserClient(cfg),
+		VerificationToken:              NewVerificationTokenClient(cfg),
+		WebhookRetryAttempt:            NewWebhookRetryAttemptClient(cfg),
 	}, nil
 }
 
@@ -258,31 +268,33 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                         ctx,
-		config:                      cfg,
-		APIKey:                      NewAPIKeyClient(cfg),
-		BeneficialOwner:             NewBeneficialOwnerClient(cfg),
-		FiatCurrency:                NewFiatCurrencyClient(cfg),
-		IdentityVerificationRequest: NewIdentityVerificationRequestClient(cfg),
-		Institution:                 NewInstitutionClient(cfg),
-		KYBProfile:                  NewKYBProfileClient(cfg),
-		Network:                     NewNetworkClient(cfg),
-		PaymentOrder:                NewPaymentOrderClient(cfg),
-		PaymentOrderFulfillment:     NewPaymentOrderFulfillmentClient(cfg),
-		PaymentWebhook:              NewPaymentWebhookClient(cfg),
-		ProviderBalances:            NewProviderBalancesClient(cfg),
-		ProviderFiatAccount:         NewProviderFiatAccountClient(cfg),
-		ProviderOrderToken:          NewProviderOrderTokenClient(cfg),
-		ProviderProfile:             NewProviderProfileClient(cfg),
-		ProviderRating:              NewProviderRatingClient(cfg),
-		ProvisionBucket:             NewProvisionBucketClient(cfg),
-		SenderOrderToken:            NewSenderOrderTokenClient(cfg),
-		SenderProfile:               NewSenderProfileClient(cfg),
-		Token:                       NewTokenClient(cfg),
-		TransactionLog:              NewTransactionLogClient(cfg),
-		User:                        NewUserClient(cfg),
-		VerificationToken:           NewVerificationTokenClient(cfg),
-		WebhookRetryAttempt:         NewWebhookRetryAttemptClient(cfg),
+		ctx:                            ctx,
+		config:                         cfg,
+		APIKey:                         NewAPIKeyClient(cfg),
+		BeneficialOwner:                NewBeneficialOwnerClient(cfg),
+		FiatCurrency:                   NewFiatCurrencyClient(cfg),
+		IdentityVerificationRequest:    NewIdentityVerificationRequestClient(cfg),
+		Institution:                    NewInstitutionClient(cfg),
+		KYBProfile:                     NewKYBProfileClient(cfg),
+		Network:                        NewNetworkClient(cfg),
+		PaymentOrder:                   NewPaymentOrderClient(cfg),
+		PaymentOrderFulfillment:        NewPaymentOrderFulfillmentClient(cfg),
+		PaymentWebhook:                 NewPaymentWebhookClient(cfg),
+		ProviderAssignmentRun:          NewProviderAssignmentRunClient(cfg),
+		ProviderBalances:               NewProviderBalancesClient(cfg),
+		ProviderFiatAccount:            NewProviderFiatAccountClient(cfg),
+		ProviderOrderToken:             NewProviderOrderTokenClient(cfg),
+		ProviderOrderTokenScoreHistory: NewProviderOrderTokenScoreHistoryClient(cfg),
+		ProviderProfile:                NewProviderProfileClient(cfg),
+		ProviderRating:                 NewProviderRatingClient(cfg),
+		ProvisionBucket:                NewProvisionBucketClient(cfg),
+		SenderOrderToken:               NewSenderOrderTokenClient(cfg),
+		SenderProfile:                  NewSenderProfileClient(cfg),
+		Token:                          NewTokenClient(cfg),
+		TransactionLog:                 NewTransactionLogClient(cfg),
+		User:                           NewUserClient(cfg),
+		VerificationToken:              NewVerificationTokenClient(cfg),
+		WebhookRetryAttempt:            NewWebhookRetryAttemptClient(cfg),
 	}, nil
 }
 
@@ -314,10 +326,11 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
 		c.Institution, c.KYBProfile, c.Network, c.PaymentOrder,
-		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderBalances,
-		c.ProviderFiatAccount, c.ProviderOrderToken, c.ProviderProfile,
-		c.ProviderRating, c.ProvisionBucket, c.SenderOrderToken, c.SenderProfile,
-		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderAssignmentRun,
+		c.ProviderBalances, c.ProviderFiatAccount, c.ProviderOrderToken,
+		c.ProviderOrderTokenScoreHistory, c.ProviderProfile, c.ProviderRating,
+		c.ProvisionBucket, c.SenderOrderToken, c.SenderProfile, c.Token,
+		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Use(hooks...)
 	}
@@ -329,10 +342,11 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.APIKey, c.BeneficialOwner, c.FiatCurrency, c.IdentityVerificationRequest,
 		c.Institution, c.KYBProfile, c.Network, c.PaymentOrder,
-		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderBalances,
-		c.ProviderFiatAccount, c.ProviderOrderToken, c.ProviderProfile,
-		c.ProviderRating, c.ProvisionBucket, c.SenderOrderToken, c.SenderProfile,
-		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderAssignmentRun,
+		c.ProviderBalances, c.ProviderFiatAccount, c.ProviderOrderToken,
+		c.ProviderOrderTokenScoreHistory, c.ProviderProfile, c.ProviderRating,
+		c.ProvisionBucket, c.SenderOrderToken, c.SenderProfile, c.Token,
+		c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -361,12 +375,16 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.PaymentOrderFulfillment.mutate(ctx, m)
 	case *PaymentWebhookMutation:
 		return c.PaymentWebhook.mutate(ctx, m)
+	case *ProviderAssignmentRunMutation:
+		return c.ProviderAssignmentRun.mutate(ctx, m)
 	case *ProviderBalancesMutation:
 		return c.ProviderBalances.mutate(ctx, m)
 	case *ProviderFiatAccountMutation:
 		return c.ProviderFiatAccount.mutate(ctx, m)
 	case *ProviderOrderTokenMutation:
 		return c.ProviderOrderToken.mutate(ctx, m)
+	case *ProviderOrderTokenScoreHistoryMutation:
+		return c.ProviderOrderTokenScoreHistory.mutate(ctx, m)
 	case *ProviderProfileMutation:
 		return c.ProviderProfile.mutate(ctx, m)
 	case *ProviderRatingMutation:
@@ -839,22 +857,6 @@ func (c *FiatCurrencyClient) QueryProviderBalances(_m *FiatCurrency) *ProviderBa
 			sqlgraph.From(fiatcurrency.Table, fiatcurrency.FieldID, id),
 			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProviderBalancesTable, fiatcurrency.ProviderBalancesColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryProvisionBuckets queries the provision_buckets edge of a FiatCurrency.
-func (c *FiatCurrencyClient) QueryProvisionBuckets(_m *FiatCurrency) *ProvisionBucketQuery {
-	query := (&ProvisionBucketClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(fiatcurrency.Table, fiatcurrency.FieldID, id),
-			sqlgraph.To(provisionbucket.Table, provisionbucket.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, fiatcurrency.ProvisionBucketsTable, fiatcurrency.ProvisionBucketsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1703,22 +1705,6 @@ func (c *PaymentOrderClient) QueryProvider(_m *PaymentOrder) *ProviderProfileQue
 	return query
 }
 
-// QueryProvisionBucket queries the provision_bucket edge of a PaymentOrder.
-func (c *PaymentOrderClient) QueryProvisionBucket(_m *PaymentOrder) *ProvisionBucketQuery {
-	query := (&ProvisionBucketClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
-			sqlgraph.To(provisionbucket.Table, provisionbucket.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.ProvisionBucketTable, paymentorder.ProvisionBucketColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryFulfillments queries the fulfillments edge of a PaymentOrder.
 func (c *PaymentOrderClient) QueryFulfillments(_m *PaymentOrder) *PaymentOrderFulfillmentQuery {
 	query := (&PaymentOrderFulfillmentClient{config: c.config}).Query()
@@ -1744,6 +1730,38 @@ func (c *PaymentOrderClient) QueryTransactions(_m *PaymentOrder) *TransactionLog
 			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
 			sqlgraph.To(transactionlog.Table, transactionlog.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, paymentorder.TransactionsTable, paymentorder.TransactionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProviderAssignmentRuns queries the provider_assignment_runs edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryProviderAssignmentRuns(_m *PaymentOrder) *ProviderAssignmentRunQuery {
+	query := (&ProviderAssignmentRunClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(providerassignmentrun.Table, providerassignmentrun.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, paymentorder.ProviderAssignmentRunsTable, paymentorder.ProviderAssignmentRunsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProviderOrderTokenScoreHistories queries the provider_order_token_score_histories edge of a PaymentOrder.
+func (c *PaymentOrderClient) QueryProviderOrderTokenScoreHistories(_m *PaymentOrder) *ProviderOrderTokenScoreHistoryQuery {
+	query := (&ProviderOrderTokenScoreHistoryClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, id),
+			sqlgraph.To(providerordertokenscorehistory.Table, providerordertokenscorehistory.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, paymentorder.ProviderOrderTokenScoreHistoriesTable, paymentorder.ProviderOrderTokenScoreHistoriesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -2087,6 +2105,171 @@ func (c *PaymentWebhookClient) mutate(ctx context.Context, m *PaymentWebhookMuta
 		return (&PaymentWebhookDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown PaymentWebhook mutation op: %q", m.Op())
+	}
+}
+
+// ProviderAssignmentRunClient is a client for the ProviderAssignmentRun schema.
+type ProviderAssignmentRunClient struct {
+	config
+}
+
+// NewProviderAssignmentRunClient returns a client for the ProviderAssignmentRun from the given config.
+func NewProviderAssignmentRunClient(c config) *ProviderAssignmentRunClient {
+	return &ProviderAssignmentRunClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `providerassignmentrun.Hooks(f(g(h())))`.
+func (c *ProviderAssignmentRunClient) Use(hooks ...Hook) {
+	c.hooks.ProviderAssignmentRun = append(c.hooks.ProviderAssignmentRun, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `providerassignmentrun.Intercept(f(g(h())))`.
+func (c *ProviderAssignmentRunClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ProviderAssignmentRun = append(c.inters.ProviderAssignmentRun, interceptors...)
+}
+
+// Create returns a builder for creating a ProviderAssignmentRun entity.
+func (c *ProviderAssignmentRunClient) Create() *ProviderAssignmentRunCreate {
+	mutation := newProviderAssignmentRunMutation(c.config, OpCreate)
+	return &ProviderAssignmentRunCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ProviderAssignmentRun entities.
+func (c *ProviderAssignmentRunClient) CreateBulk(builders ...*ProviderAssignmentRunCreate) *ProviderAssignmentRunCreateBulk {
+	return &ProviderAssignmentRunCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ProviderAssignmentRunClient) MapCreateBulk(slice any, setFunc func(*ProviderAssignmentRunCreate, int)) *ProviderAssignmentRunCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ProviderAssignmentRunCreateBulk{err: fmt.Errorf("calling to ProviderAssignmentRunClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ProviderAssignmentRunCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ProviderAssignmentRunCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ProviderAssignmentRun.
+func (c *ProviderAssignmentRunClient) Update() *ProviderAssignmentRunUpdate {
+	mutation := newProviderAssignmentRunMutation(c.config, OpUpdate)
+	return &ProviderAssignmentRunUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ProviderAssignmentRunClient) UpdateOne(_m *ProviderAssignmentRun) *ProviderAssignmentRunUpdateOne {
+	mutation := newProviderAssignmentRunMutation(c.config, OpUpdateOne, withProviderAssignmentRun(_m))
+	return &ProviderAssignmentRunUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ProviderAssignmentRunClient) UpdateOneID(id uuid.UUID) *ProviderAssignmentRunUpdateOne {
+	mutation := newProviderAssignmentRunMutation(c.config, OpUpdateOne, withProviderAssignmentRunID(id))
+	return &ProviderAssignmentRunUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ProviderAssignmentRun.
+func (c *ProviderAssignmentRunClient) Delete() *ProviderAssignmentRunDelete {
+	mutation := newProviderAssignmentRunMutation(c.config, OpDelete)
+	return &ProviderAssignmentRunDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ProviderAssignmentRunClient) DeleteOne(_m *ProviderAssignmentRun) *ProviderAssignmentRunDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ProviderAssignmentRunClient) DeleteOneID(id uuid.UUID) *ProviderAssignmentRunDeleteOne {
+	builder := c.Delete().Where(providerassignmentrun.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ProviderAssignmentRunDeleteOne{builder}
+}
+
+// Query returns a query builder for ProviderAssignmentRun.
+func (c *ProviderAssignmentRunClient) Query() *ProviderAssignmentRunQuery {
+	return &ProviderAssignmentRunQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeProviderAssignmentRun},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ProviderAssignmentRun entity by its id.
+func (c *ProviderAssignmentRunClient) Get(ctx context.Context, id uuid.UUID) (*ProviderAssignmentRun, error) {
+	return c.Query().Where(providerassignmentrun.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ProviderAssignmentRunClient) GetX(ctx context.Context, id uuid.UUID) *ProviderAssignmentRun {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPaymentOrder queries the payment_order edge of a ProviderAssignmentRun.
+func (c *ProviderAssignmentRunClient) QueryPaymentOrder(_m *ProviderAssignmentRun) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerassignmentrun.Table, providerassignmentrun.FieldID, id),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerassignmentrun.PaymentOrderTable, providerassignmentrun.PaymentOrderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProviderOrderToken queries the provider_order_token edge of a ProviderAssignmentRun.
+func (c *ProviderAssignmentRunClient) QueryProviderOrderToken(_m *ProviderAssignmentRun) *ProviderOrderTokenQuery {
+	query := (&ProviderOrderTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerassignmentrun.Table, providerassignmentrun.FieldID, id),
+			sqlgraph.To(providerordertoken.Table, providerordertoken.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerassignmentrun.ProviderOrderTokenTable, providerassignmentrun.ProviderOrderTokenColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ProviderAssignmentRunClient) Hooks() []Hook {
+	return c.hooks.ProviderAssignmentRun
+}
+
+// Interceptors returns the client interceptors.
+func (c *ProviderAssignmentRunClient) Interceptors() []Interceptor {
+	return c.inters.ProviderAssignmentRun
+}
+
+func (c *ProviderAssignmentRunClient) mutate(ctx context.Context, m *ProviderAssignmentRunMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ProviderAssignmentRunCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ProviderAssignmentRunUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ProviderAssignmentRunUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ProviderAssignmentRunDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ProviderAssignmentRun mutation op: %q", m.Op())
 	}
 }
 
@@ -2576,6 +2759,38 @@ func (c *ProviderOrderTokenClient) QueryCurrency(_m *ProviderOrderToken) *FiatCu
 	return query
 }
 
+// QueryScoreHistories queries the score_histories edge of a ProviderOrderToken.
+func (c *ProviderOrderTokenClient) QueryScoreHistories(_m *ProviderOrderToken) *ProviderOrderTokenScoreHistoryQuery {
+	query := (&ProviderOrderTokenScoreHistoryClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerordertoken.Table, providerordertoken.FieldID, id),
+			sqlgraph.To(providerordertokenscorehistory.Table, providerordertokenscorehistory.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerordertoken.ScoreHistoriesTable, providerordertoken.ScoreHistoriesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAssignmentRuns queries the assignment_runs edge of a ProviderOrderToken.
+func (c *ProviderOrderTokenClient) QueryAssignmentRuns(_m *ProviderOrderToken) *ProviderAssignmentRunQuery {
+	query := (&ProviderAssignmentRunClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerordertoken.Table, providerordertoken.FieldID, id),
+			sqlgraph.To(providerassignmentrun.Table, providerassignmentrun.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerordertoken.AssignmentRunsTable, providerordertoken.AssignmentRunsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ProviderOrderTokenClient) Hooks() []Hook {
 	return c.hooks.ProviderOrderToken
@@ -2598,6 +2813,171 @@ func (c *ProviderOrderTokenClient) mutate(ctx context.Context, m *ProviderOrderT
 		return (&ProviderOrderTokenDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ProviderOrderToken mutation op: %q", m.Op())
+	}
+}
+
+// ProviderOrderTokenScoreHistoryClient is a client for the ProviderOrderTokenScoreHistory schema.
+type ProviderOrderTokenScoreHistoryClient struct {
+	config
+}
+
+// NewProviderOrderTokenScoreHistoryClient returns a client for the ProviderOrderTokenScoreHistory from the given config.
+func NewProviderOrderTokenScoreHistoryClient(c config) *ProviderOrderTokenScoreHistoryClient {
+	return &ProviderOrderTokenScoreHistoryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `providerordertokenscorehistory.Hooks(f(g(h())))`.
+func (c *ProviderOrderTokenScoreHistoryClient) Use(hooks ...Hook) {
+	c.hooks.ProviderOrderTokenScoreHistory = append(c.hooks.ProviderOrderTokenScoreHistory, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `providerordertokenscorehistory.Intercept(f(g(h())))`.
+func (c *ProviderOrderTokenScoreHistoryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ProviderOrderTokenScoreHistory = append(c.inters.ProviderOrderTokenScoreHistory, interceptors...)
+}
+
+// Create returns a builder for creating a ProviderOrderTokenScoreHistory entity.
+func (c *ProviderOrderTokenScoreHistoryClient) Create() *ProviderOrderTokenScoreHistoryCreate {
+	mutation := newProviderOrderTokenScoreHistoryMutation(c.config, OpCreate)
+	return &ProviderOrderTokenScoreHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ProviderOrderTokenScoreHistory entities.
+func (c *ProviderOrderTokenScoreHistoryClient) CreateBulk(builders ...*ProviderOrderTokenScoreHistoryCreate) *ProviderOrderTokenScoreHistoryCreateBulk {
+	return &ProviderOrderTokenScoreHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ProviderOrderTokenScoreHistoryClient) MapCreateBulk(slice any, setFunc func(*ProviderOrderTokenScoreHistoryCreate, int)) *ProviderOrderTokenScoreHistoryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ProviderOrderTokenScoreHistoryCreateBulk{err: fmt.Errorf("calling to ProviderOrderTokenScoreHistoryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ProviderOrderTokenScoreHistoryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ProviderOrderTokenScoreHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ProviderOrderTokenScoreHistory.
+func (c *ProviderOrderTokenScoreHistoryClient) Update() *ProviderOrderTokenScoreHistoryUpdate {
+	mutation := newProviderOrderTokenScoreHistoryMutation(c.config, OpUpdate)
+	return &ProviderOrderTokenScoreHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ProviderOrderTokenScoreHistoryClient) UpdateOne(_m *ProviderOrderTokenScoreHistory) *ProviderOrderTokenScoreHistoryUpdateOne {
+	mutation := newProviderOrderTokenScoreHistoryMutation(c.config, OpUpdateOne, withProviderOrderTokenScoreHistory(_m))
+	return &ProviderOrderTokenScoreHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ProviderOrderTokenScoreHistoryClient) UpdateOneID(id uuid.UUID) *ProviderOrderTokenScoreHistoryUpdateOne {
+	mutation := newProviderOrderTokenScoreHistoryMutation(c.config, OpUpdateOne, withProviderOrderTokenScoreHistoryID(id))
+	return &ProviderOrderTokenScoreHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ProviderOrderTokenScoreHistory.
+func (c *ProviderOrderTokenScoreHistoryClient) Delete() *ProviderOrderTokenScoreHistoryDelete {
+	mutation := newProviderOrderTokenScoreHistoryMutation(c.config, OpDelete)
+	return &ProviderOrderTokenScoreHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ProviderOrderTokenScoreHistoryClient) DeleteOne(_m *ProviderOrderTokenScoreHistory) *ProviderOrderTokenScoreHistoryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ProviderOrderTokenScoreHistoryClient) DeleteOneID(id uuid.UUID) *ProviderOrderTokenScoreHistoryDeleteOne {
+	builder := c.Delete().Where(providerordertokenscorehistory.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ProviderOrderTokenScoreHistoryDeleteOne{builder}
+}
+
+// Query returns a query builder for ProviderOrderTokenScoreHistory.
+func (c *ProviderOrderTokenScoreHistoryClient) Query() *ProviderOrderTokenScoreHistoryQuery {
+	return &ProviderOrderTokenScoreHistoryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeProviderOrderTokenScoreHistory},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ProviderOrderTokenScoreHistory entity by its id.
+func (c *ProviderOrderTokenScoreHistoryClient) Get(ctx context.Context, id uuid.UUID) (*ProviderOrderTokenScoreHistory, error) {
+	return c.Query().Where(providerordertokenscorehistory.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ProviderOrderTokenScoreHistoryClient) GetX(ctx context.Context, id uuid.UUID) *ProviderOrderTokenScoreHistory {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryPaymentOrder queries the payment_order edge of a ProviderOrderTokenScoreHistory.
+func (c *ProviderOrderTokenScoreHistoryClient) QueryPaymentOrder(_m *ProviderOrderTokenScoreHistory) *PaymentOrderQuery {
+	query := (&PaymentOrderClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerordertokenscorehistory.Table, providerordertokenscorehistory.FieldID, id),
+			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerordertokenscorehistory.PaymentOrderTable, providerordertokenscorehistory.PaymentOrderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProviderOrderToken queries the provider_order_token edge of a ProviderOrderTokenScoreHistory.
+func (c *ProviderOrderTokenScoreHistoryClient) QueryProviderOrderToken(_m *ProviderOrderTokenScoreHistory) *ProviderOrderTokenQuery {
+	query := (&ProviderOrderTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerordertokenscorehistory.Table, providerordertokenscorehistory.FieldID, id),
+			sqlgraph.To(providerordertoken.Table, providerordertoken.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerordertokenscorehistory.ProviderOrderTokenTable, providerordertokenscorehistory.ProviderOrderTokenColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ProviderOrderTokenScoreHistoryClient) Hooks() []Hook {
+	return c.hooks.ProviderOrderTokenScoreHistory
+}
+
+// Interceptors returns the client interceptors.
+func (c *ProviderOrderTokenScoreHistoryClient) Interceptors() []Interceptor {
+	return c.inters.ProviderOrderTokenScoreHistory
+}
+
+func (c *ProviderOrderTokenScoreHistoryClient) mutate(ctx context.Context, m *ProviderOrderTokenScoreHistoryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ProviderOrderTokenScoreHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ProviderOrderTokenScoreHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ProviderOrderTokenScoreHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ProviderOrderTokenScoreHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ProviderOrderTokenScoreHistory mutation op: %q", m.Op())
 	}
 }
 
@@ -2750,22 +3130,6 @@ func (c *ProviderProfileClient) QueryProviderBalances(_m *ProviderProfile) *Prov
 			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, id),
 			sqlgraph.To(providerbalances.Table, providerbalances.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, providerprofile.ProviderBalancesTable, providerprofile.ProviderBalancesColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryProvisionBuckets queries the provision_buckets edge of a ProviderProfile.
-func (c *ProviderProfileClient) QueryProvisionBuckets(_m *ProviderProfile) *ProvisionBucketQuery {
-	query := (&ProvisionBucketClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(providerprofile.Table, providerprofile.FieldID, id),
-			sqlgraph.To(provisionbucket.Table, provisionbucket.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, providerprofile.ProvisionBucketsTable, providerprofile.ProvisionBucketsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3117,54 +3481,6 @@ func (c *ProvisionBucketClient) GetX(ctx context.Context, id int) *ProvisionBuck
 		panic(err)
 	}
 	return obj
-}
-
-// QueryCurrency queries the currency edge of a ProvisionBucket.
-func (c *ProvisionBucketClient) QueryCurrency(_m *ProvisionBucket) *FiatCurrencyQuery {
-	query := (&FiatCurrencyClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(provisionbucket.Table, provisionbucket.FieldID, id),
-			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, provisionbucket.CurrencyTable, provisionbucket.CurrencyColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryPaymentOrders queries the payment_orders edge of a ProvisionBucket.
-func (c *ProvisionBucketClient) QueryPaymentOrders(_m *ProvisionBucket) *PaymentOrderQuery {
-	query := (&PaymentOrderClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(provisionbucket.Table, provisionbucket.FieldID, id),
-			sqlgraph.To(paymentorder.Table, paymentorder.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, provisionbucket.PaymentOrdersTable, provisionbucket.PaymentOrdersColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryProviderProfiles queries the provider_profiles edge of a ProvisionBucket.
-func (c *ProvisionBucketClient) QueryProviderProfiles(_m *ProvisionBucket) *ProviderProfileQuery {
-	query := (&ProviderProfileClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(provisionbucket.Table, provisionbucket.FieldID, id),
-			sqlgraph.To(providerprofile.Table, providerprofile.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, provisionbucket.ProviderProfilesTable, provisionbucket.ProviderProfilesPrimaryKey...),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
 }
 
 // Hooks returns the client hooks.
@@ -4402,14 +4718,16 @@ type (
 	hooks struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, Network, PaymentOrder, PaymentOrderFulfillment, PaymentWebhook,
-		ProviderBalances, ProviderFiatAccount, ProviderOrderToken, ProviderProfile,
+		ProviderAssignmentRun, ProviderBalances, ProviderFiatAccount,
+		ProviderOrderToken, ProviderOrderTokenScoreHistory, ProviderProfile,
 		ProviderRating, ProvisionBucket, SenderOrderToken, SenderProfile, Token,
 		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Hook
 	}
 	inters struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, Network, PaymentOrder, PaymentOrderFulfillment, PaymentWebhook,
-		ProviderBalances, ProviderFiatAccount, ProviderOrderToken, ProviderProfile,
+		ProviderAssignmentRun, ProviderBalances, ProviderFiatAccount,
+		ProviderOrderToken, ProviderOrderTokenScoreHistory, ProviderProfile,
 		ProviderRating, ProvisionBucket, SenderOrderToken, SenderProfile, Token,
 		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Interceptor
 	}

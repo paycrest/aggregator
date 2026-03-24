@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/predicate"
 	"github.com/shopspring/decimal"
 )
@@ -69,6 +69,11 @@ func MaxAmount(v decimal.Decimal) predicate.ProvisionBucket {
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.ProvisionBucket {
 	return predicate.ProvisionBucket(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// FiatCurrencyID applies equality check predicate on the "fiat_currency_id" field. It's identical to FiatCurrencyIDEQ.
+func FiatCurrencyID(v uuid.UUID) predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldEQ(FieldFiatCurrencyID, v))
 }
 
 // MinAmountEQ applies the EQ predicate on the "min_amount" field.
@@ -191,73 +196,54 @@ func CreatedAtLTE(v time.Time) predicate.ProvisionBucket {
 	return predicate.ProvisionBucket(sql.FieldLTE(FieldCreatedAt, v))
 }
 
-// HasCurrency applies the HasEdge predicate on the "currency" edge.
-func HasCurrency() predicate.ProvisionBucket {
-	return predicate.ProvisionBucket(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, CurrencyTable, CurrencyColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
+// FiatCurrencyIDEQ applies the EQ predicate on the "fiat_currency_id" field.
+func FiatCurrencyIDEQ(v uuid.UUID) predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldEQ(FieldFiatCurrencyID, v))
 }
 
-// HasCurrencyWith applies the HasEdge predicate on the "currency" edge with a given conditions (other predicates).
-func HasCurrencyWith(preds ...predicate.FiatCurrency) predicate.ProvisionBucket {
-	return predicate.ProvisionBucket(func(s *sql.Selector) {
-		step := newCurrencyStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
+// FiatCurrencyIDNEQ applies the NEQ predicate on the "fiat_currency_id" field.
+func FiatCurrencyIDNEQ(v uuid.UUID) predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldNEQ(FieldFiatCurrencyID, v))
 }
 
-// HasPaymentOrders applies the HasEdge predicate on the "payment_orders" edge.
-func HasPaymentOrders() predicate.ProvisionBucket {
-	return predicate.ProvisionBucket(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, PaymentOrdersTable, PaymentOrdersColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
+// FiatCurrencyIDIn applies the In predicate on the "fiat_currency_id" field.
+func FiatCurrencyIDIn(vs ...uuid.UUID) predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldIn(FieldFiatCurrencyID, vs...))
 }
 
-// HasPaymentOrdersWith applies the HasEdge predicate on the "payment_orders" edge with a given conditions (other predicates).
-func HasPaymentOrdersWith(preds ...predicate.PaymentOrder) predicate.ProvisionBucket {
-	return predicate.ProvisionBucket(func(s *sql.Selector) {
-		step := newPaymentOrdersStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
+// FiatCurrencyIDNotIn applies the NotIn predicate on the "fiat_currency_id" field.
+func FiatCurrencyIDNotIn(vs ...uuid.UUID) predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldNotIn(FieldFiatCurrencyID, vs...))
 }
 
-// HasProviderProfiles applies the HasEdge predicate on the "provider_profiles" edge.
-func HasProviderProfiles() predicate.ProvisionBucket {
-	return predicate.ProvisionBucket(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, ProviderProfilesTable, ProviderProfilesPrimaryKey...),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
+// FiatCurrencyIDGT applies the GT predicate on the "fiat_currency_id" field.
+func FiatCurrencyIDGT(v uuid.UUID) predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldGT(FieldFiatCurrencyID, v))
 }
 
-// HasProviderProfilesWith applies the HasEdge predicate on the "provider_profiles" edge with a given conditions (other predicates).
-func HasProviderProfilesWith(preds ...predicate.ProviderProfile) predicate.ProvisionBucket {
-	return predicate.ProvisionBucket(func(s *sql.Selector) {
-		step := newProviderProfilesStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
+// FiatCurrencyIDGTE applies the GTE predicate on the "fiat_currency_id" field.
+func FiatCurrencyIDGTE(v uuid.UUID) predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldGTE(FieldFiatCurrencyID, v))
+}
+
+// FiatCurrencyIDLT applies the LT predicate on the "fiat_currency_id" field.
+func FiatCurrencyIDLT(v uuid.UUID) predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldLT(FieldFiatCurrencyID, v))
+}
+
+// FiatCurrencyIDLTE applies the LTE predicate on the "fiat_currency_id" field.
+func FiatCurrencyIDLTE(v uuid.UUID) predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldLTE(FieldFiatCurrencyID, v))
+}
+
+// FiatCurrencyIDIsNil applies the IsNil predicate on the "fiat_currency_id" field.
+func FiatCurrencyIDIsNil() predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldIsNull(FieldFiatCurrencyID))
+}
+
+// FiatCurrencyIDNotNil applies the NotNil predicate on the "fiat_currency_id" field.
+func FiatCurrencyIDNotNil() predicate.ProvisionBucket {
+	return predicate.ProvisionBucket(sql.FieldNotNull(FieldFiatCurrencyID))
 }
 
 // And groups predicates with the AND operator between them.

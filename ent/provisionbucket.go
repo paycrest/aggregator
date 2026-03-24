@@ -10,7 +10,6 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/shopspring/decimal"
 )
@@ -26,53 +25,9 @@ type ProvisionBucket struct {
 	MaxAmount decimal.Decimal `json:"max_amount,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the ProvisionBucketQuery when eager-loading is set.
-	Edges                           ProvisionBucketEdges `json:"edges"`
-	fiat_currency_provision_buckets *uuid.UUID
-	selectValues                    sql.SelectValues
-}
-
-// ProvisionBucketEdges holds the relations/edges for other nodes in the graph.
-type ProvisionBucketEdges struct {
-	// Currency holds the value of the currency edge.
-	Currency *FiatCurrency `json:"currency,omitempty"`
-	// PaymentOrders holds the value of the payment_orders edge.
-	PaymentOrders []*PaymentOrder `json:"payment_orders,omitempty"`
-	// ProviderProfiles holds the value of the provider_profiles edge.
-	ProviderProfiles []*ProviderProfile `json:"provider_profiles,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
-}
-
-// CurrencyOrErr returns the Currency value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e ProvisionBucketEdges) CurrencyOrErr() (*FiatCurrency, error) {
-	if e.Currency != nil {
-		return e.Currency, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: fiatcurrency.Label}
-	}
-	return nil, &NotLoadedError{edge: "currency"}
-}
-
-// PaymentOrdersOrErr returns the PaymentOrders value or an error if the edge
-// was not loaded in eager-loading.
-func (e ProvisionBucketEdges) PaymentOrdersOrErr() ([]*PaymentOrder, error) {
-	if e.loadedTypes[1] {
-		return e.PaymentOrders, nil
-	}
-	return nil, &NotLoadedError{edge: "payment_orders"}
-}
-
-// ProviderProfilesOrErr returns the ProviderProfiles value or an error if the edge
-// was not loaded in eager-loading.
-func (e ProvisionBucketEdges) ProviderProfilesOrErr() ([]*ProviderProfile, error) {
-	if e.loadedTypes[2] {
-		return e.ProviderProfiles, nil
-	}
-	return nil, &NotLoadedError{edge: "provider_profiles"}
+	// FiatCurrencyID holds the value of the "fiat_currency_id" field.
+	FiatCurrencyID *uuid.UUID `json:"fiat_currency_id,omitempty"`
+	selectValues   sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -80,14 +35,14 @@ func (*ProvisionBucket) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case provisionbucket.FieldFiatCurrencyID:
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case provisionbucket.FieldMinAmount, provisionbucket.FieldMaxAmount:
 			values[i] = new(decimal.Decimal)
 		case provisionbucket.FieldID:
 			values[i] = new(sql.NullInt64)
 		case provisionbucket.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case provisionbucket.ForeignKeys[0]: // fiat_currency_provision_buckets
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -127,12 +82,12 @@ func (_m *ProvisionBucket) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
-		case provisionbucket.ForeignKeys[0]:
+		case provisionbucket.FieldFiatCurrencyID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field fiat_currency_provision_buckets", values[i])
+				return fmt.Errorf("unexpected type %T for field fiat_currency_id", values[i])
 			} else if value.Valid {
-				_m.fiat_currency_provision_buckets = new(uuid.UUID)
-				*_m.fiat_currency_provision_buckets = *value.S.(*uuid.UUID)
+				_m.FiatCurrencyID = new(uuid.UUID)
+				*_m.FiatCurrencyID = *value.S.(*uuid.UUID)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -145,21 +100,6 @@ func (_m *ProvisionBucket) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *ProvisionBucket) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
-}
-
-// QueryCurrency queries the "currency" edge of the ProvisionBucket entity.
-func (_m *ProvisionBucket) QueryCurrency() *FiatCurrencyQuery {
-	return NewProvisionBucketClient(_m.config).QueryCurrency(_m)
-}
-
-// QueryPaymentOrders queries the "payment_orders" edge of the ProvisionBucket entity.
-func (_m *ProvisionBucket) QueryPaymentOrders() *PaymentOrderQuery {
-	return NewProvisionBucketClient(_m.config).QueryPaymentOrders(_m)
-}
-
-// QueryProviderProfiles queries the "provider_profiles" edge of the ProvisionBucket entity.
-func (_m *ProvisionBucket) QueryProviderProfiles() *ProviderProfileQuery {
-	return NewProvisionBucketClient(_m.config).QueryProviderProfiles(_m)
 }
 
 // Update returns a builder for updating this ProvisionBucket.
@@ -193,6 +133,11 @@ func (_m *ProvisionBucket) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := _m.FiatCurrencyID; v != nil {
+		builder.WriteString("fiat_currency_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

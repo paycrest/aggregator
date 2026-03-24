@@ -394,29 +394,6 @@ func HasProviderBalancesWith(preds ...predicate.ProviderBalances) predicate.Prov
 	})
 }
 
-// HasProvisionBuckets applies the HasEdge predicate on the "provision_buckets" edge.
-func HasProvisionBuckets() predicate.ProviderProfile {
-	return predicate.ProviderProfile(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, ProvisionBucketsTable, ProvisionBucketsPrimaryKey...),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasProvisionBucketsWith applies the HasEdge predicate on the "provision_buckets" edge with a given conditions (other predicates).
-func HasProvisionBucketsWith(preds ...predicate.ProvisionBucket) predicate.ProviderProfile {
-	return predicate.ProviderProfile(func(s *sql.Selector) {
-		step := newProvisionBucketsStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasOrderTokens applies the HasEdge predicate on the "order_tokens" edge.
 func HasOrderTokens() predicate.ProviderProfile {
 	return predicate.ProviderProfile(func(s *sql.Selector) {

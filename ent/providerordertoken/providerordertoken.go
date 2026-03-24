@@ -7,6 +7,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -42,12 +43,20 @@ const (
 	FieldPayoutAddress = "payout_address"
 	// FieldNetwork holds the string denoting the network field in the database.
 	FieldNetwork = "network"
+	// FieldScore holds the string denoting the score field in the database.
+	FieldScore = "score"
+	// FieldLastOrderAssignedAt holds the string denoting the last_order_assigned_at field in the database.
+	FieldLastOrderAssignedAt = "last_order_assigned_at"
 	// EdgeProvider holds the string denoting the provider edge name in mutations.
 	EdgeProvider = "provider"
 	// EdgeToken holds the string denoting the token edge name in mutations.
 	EdgeToken = "token"
 	// EdgeCurrency holds the string denoting the currency edge name in mutations.
 	EdgeCurrency = "currency"
+	// EdgeScoreHistories holds the string denoting the score_histories edge name in mutations.
+	EdgeScoreHistories = "score_histories"
+	// EdgeAssignmentRuns holds the string denoting the assignment_runs edge name in mutations.
+	EdgeAssignmentRuns = "assignment_runs"
 	// Table holds the table name of the providerordertoken in the database.
 	Table = "provider_order_tokens"
 	// ProviderTable is the table that holds the provider relation/edge.
@@ -71,6 +80,20 @@ const (
 	CurrencyInverseTable = "fiat_currencies"
 	// CurrencyColumn is the table column denoting the currency relation/edge.
 	CurrencyColumn = "fiat_currency_provider_order_tokens"
+	// ScoreHistoriesTable is the table that holds the score_histories relation/edge.
+	ScoreHistoriesTable = "provider_order_token_score_histories"
+	// ScoreHistoriesInverseTable is the table name for the ProviderOrderTokenScoreHistory entity.
+	// It exists in this package in order to avoid circular dependency with the "providerordertokenscorehistory" package.
+	ScoreHistoriesInverseTable = "provider_order_token_score_histories"
+	// ScoreHistoriesColumn is the table column denoting the score_histories relation/edge.
+	ScoreHistoriesColumn = "provider_order_token_score_histories"
+	// AssignmentRunsTable is the table that holds the assignment_runs relation/edge.
+	AssignmentRunsTable = "provider_assignment_runs"
+	// AssignmentRunsInverseTable is the table name for the ProviderAssignmentRun entity.
+	// It exists in this package in order to avoid circular dependency with the "providerassignmentrun" package.
+	AssignmentRunsInverseTable = "provider_assignment_runs"
+	// AssignmentRunsColumn is the table column denoting the assignment_runs relation/edge.
+	AssignmentRunsColumn = "provider_order_token_assignment_runs"
 )
 
 // Columns holds all SQL columns for providerordertoken fields.
@@ -90,6 +113,8 @@ var Columns = []string{
 	FieldSettlementAddress,
 	FieldPayoutAddress,
 	FieldNetwork,
+	FieldScore,
+	FieldLastOrderAssignedAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "provider_order_tokens"
@@ -122,6 +147,8 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
+	// DefaultScore holds the default value on creation for the "score" field.
+	DefaultScore func() decimal.Decimal
 )
 
 // OrderOption defines the ordering options for the ProviderOrderToken queries.
@@ -202,6 +229,16 @@ func ByNetwork(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNetwork, opts...).ToFunc()
 }
 
+// ByScore orders the results by the score field.
+func ByScore(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldScore, opts...).ToFunc()
+}
+
+// ByLastOrderAssignedAt orders the results by the last_order_assigned_at field.
+func ByLastOrderAssignedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastOrderAssignedAt, opts...).ToFunc()
+}
+
 // ByProviderField orders the results by provider field.
 func ByProviderField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -220,6 +257,34 @@ func ByTokenField(field string, opts ...sql.OrderTermOption) OrderOption {
 func ByCurrencyField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newCurrencyStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByScoreHistoriesCount orders the results by score_histories count.
+func ByScoreHistoriesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newScoreHistoriesStep(), opts...)
+	}
+}
+
+// ByScoreHistories orders the results by score_histories terms.
+func ByScoreHistories(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newScoreHistoriesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByAssignmentRunsCount orders the results by assignment_runs count.
+func ByAssignmentRunsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAssignmentRunsStep(), opts...)
+	}
+}
+
+// ByAssignmentRuns orders the results by assignment_runs terms.
+func ByAssignmentRuns(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAssignmentRunsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newProviderStep() *sqlgraph.Step {
@@ -241,5 +306,19 @@ func newCurrencyStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CurrencyInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, CurrencyTable, CurrencyColumn),
+	)
+}
+func newScoreHistoriesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ScoreHistoriesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ScoreHistoriesTable, ScoreHistoriesColumn),
+	)
+}
+func newAssignmentRunsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AssignmentRunsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AssignmentRunsTable, AssignmentRunsColumn),
 	)
 }

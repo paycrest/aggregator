@@ -218,9 +218,11 @@ var (
 		{Name: "direction", Type: field.TypeEnum, Enums: []string{"offramp", "onramp"}, Default: "offramp"},
 		{Name: "order_type", Type: field.TypeEnum, Enums: []string{"otc", "regular"}, Default: "regular"},
 		{Name: "fallback_tried_at", Type: field.TypeTime, Nullable: true},
+		{Name: "assignment_market_buy_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "assignment_market_sell_rate", Type: field.TypeFloat64, Nullable: true},
+		{Name: "provision_bucket_payment_orders", Type: field.TypeInt, Nullable: true},
 		{Name: "api_key_payment_orders", Type: field.TypeUUID, Nullable: true},
 		{Name: "provider_profile_assigned_orders", Type: field.TypeString, Nullable: true},
-		{Name: "provision_bucket_payment_orders", Type: field.TypeInt, Nullable: true},
 		{Name: "sender_profile_payment_orders", Type: field.TypeUUID, Nullable: true},
 		{Name: "token_payment_orders", Type: field.TypeInt},
 	}
@@ -232,31 +234,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_api_keys_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[38]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[41]},
 				RefColumns: []*schema.Column{APIKeysColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_provider_profiles_assigned_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[39]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[42]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
-				Symbol:     "payment_orders_provision_buckets_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[40]},
-				RefColumns: []*schema.Column{ProvisionBucketsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
 				Symbol:     "payment_orders_sender_profiles_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[41]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[43]},
 				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "payment_orders_tokens_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[42]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[44]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -265,7 +261,7 @@ var (
 			{
 				Name:    "paymentorder_gateway_id_rate_tx_hash_block_number_institution_account_identifier_account_name_memo_direction_refund_or_recipient_address_token_payment_orders",
 				Unique:  true,
-				Columns: []*schema.Column{PaymentOrdersColumns[17], PaymentOrdersColumns[4], PaymentOrdersColumns[14], PaymentOrdersColumns[15], PaymentOrdersColumns[25], PaymentOrdersColumns[26], PaymentOrdersColumns[27], PaymentOrdersColumns[33], PaymentOrdersColumns[35], PaymentOrdersColumns[19], PaymentOrdersColumns[42]},
+				Columns: []*schema.Column{PaymentOrdersColumns[17], PaymentOrdersColumns[4], PaymentOrdersColumns[14], PaymentOrdersColumns[15], PaymentOrdersColumns[25], PaymentOrdersColumns[26], PaymentOrdersColumns[27], PaymentOrdersColumns[33], PaymentOrdersColumns[35], PaymentOrdersColumns[19], PaymentOrdersColumns[44]},
 			},
 		},
 	}
@@ -322,6 +318,40 @@ var (
 				Columns:    []*schema.Column{PaymentWebhooksColumns[7]},
 				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
 				OnDelete:   schema.SetNull,
+			},
+		},
+	}
+	// ProviderAssignmentRunsColumns holds the columns for the "provider_assignment_runs" table.
+	ProviderAssignmentRunsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "assigned_provider_id", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "attempted_at", Type: field.TypeTime},
+		{Name: "trigger", Type: field.TypeString, Size: 64},
+		{Name: "result", Type: field.TypeString, Size: 32},
+		{Name: "used_fallback", Type: field.TypeBool, Default: false},
+		{Name: "market_buy_rate_snapshot", Type: field.TypeFloat64, Nullable: true},
+		{Name: "market_sell_rate_snapshot", Type: field.TypeFloat64, Nullable: true},
+		{Name: "error_message", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "payment_order_provider_assignment_runs", Type: field.TypeUUID},
+		{Name: "provider_order_token_assignment_runs", Type: field.TypeInt, Nullable: true},
+	}
+	// ProviderAssignmentRunsTable holds the schema information for the "provider_assignment_runs" table.
+	ProviderAssignmentRunsTable = &schema.Table{
+		Name:       "provider_assignment_runs",
+		Columns:    ProviderAssignmentRunsColumns,
+		PrimaryKey: []*schema.Column{ProviderAssignmentRunsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "provider_assignment_runs_payment_orders_provider_assignment_runs",
+				Columns:    []*schema.Column{ProviderAssignmentRunsColumns[9]},
+				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "provider_assignment_runs_provider_order_tokens_assignment_runs",
+				Columns:    []*schema.Column{ProviderAssignmentRunsColumns[10]},
+				RefColumns: []*schema.Column{ProviderOrderTokensColumns[0]},
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -424,6 +454,8 @@ var (
 		{Name: "settlement_address", Type: field.TypeString, Nullable: true},
 		{Name: "payout_address", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString},
+		{Name: "score", Type: field.TypeFloat64},
+		{Name: "last_order_assigned_at", Type: field.TypeTime, Nullable: true},
 		{Name: "fiat_currency_provider_order_tokens", Type: field.TypeUUID},
 		{Name: "provider_profile_order_tokens", Type: field.TypeString},
 		{Name: "token_provider_order_tokens", Type: field.TypeInt},
@@ -436,19 +468,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_order_tokens_fiat_currencies_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[15]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[17]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_provider_profiles_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[16]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[18]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_tokens_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[17]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[19]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -457,7 +489,44 @@ var (
 			{
 				Name:    "providerordertoken_network_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderOrderTokensColumns[14], ProviderOrderTokensColumns[16], ProviderOrderTokensColumns[17], ProviderOrderTokensColumns[15]},
+				Columns: []*schema.Column{ProviderOrderTokensColumns[14], ProviderOrderTokensColumns[18], ProviderOrderTokensColumns[19], ProviderOrderTokensColumns[17]},
+			},
+		},
+	}
+	// ProviderOrderTokenScoreHistoriesColumns holds the columns for the "provider_order_token_score_histories" table.
+	ProviderOrderTokenScoreHistoriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "event_type", Type: field.TypeString, Size: 64},
+		{Name: "delta", Type: field.TypeFloat64},
+		{Name: "payment_order_provider_order_token_score_histories", Type: field.TypeUUID},
+		{Name: "provider_order_token_score_histories", Type: field.TypeInt},
+	}
+	// ProviderOrderTokenScoreHistoriesTable holds the schema information for the "provider_order_token_score_histories" table.
+	ProviderOrderTokenScoreHistoriesTable = &schema.Table{
+		Name:       "provider_order_token_score_histories",
+		Columns:    ProviderOrderTokenScoreHistoriesColumns,
+		PrimaryKey: []*schema.Column{ProviderOrderTokenScoreHistoriesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "provider_order_token_score_histories_payment_orders_provider_order_token_score_histories",
+				Columns:    []*schema.Column{ProviderOrderTokenScoreHistoriesColumns[5]},
+				RefColumns: []*schema.Column{PaymentOrdersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "provider_order_token_score_histories_provider_order_tokens_score_histories",
+				Columns:    []*schema.Column{ProviderOrderTokenScoreHistoriesColumns[6]},
+				RefColumns: []*schema.Column{ProviderOrderTokensColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "providerordertokenscorehistory_event_type_payment_order_provider_order_token_score_histories",
+				Unique:  true,
+				Columns: []*schema.Column{ProviderOrderTokenScoreHistoriesColumns[3], ProviderOrderTokenScoreHistoriesColumns[5]},
 			},
 		},
 	}
@@ -514,21 +583,13 @@ var (
 		{Name: "min_amount", Type: field.TypeFloat64},
 		{Name: "max_amount", Type: field.TypeFloat64},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "fiat_currency_provision_buckets", Type: field.TypeUUID},
+		{Name: "fiat_currency_provision_buckets", Type: field.TypeUUID, Nullable: true},
 	}
 	// ProvisionBucketsTable holds the schema information for the "provision_buckets" table.
 	ProvisionBucketsTable = &schema.Table{
 		Name:       "provision_buckets",
 		Columns:    ProvisionBucketsColumns,
 		PrimaryKey: []*schema.Column{ProvisionBucketsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "provision_buckets_fiat_currencies_provision_buckets",
-				Columns:    []*schema.Column{ProvisionBucketsColumns[4]},
-				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
 	}
 	// SenderOrderTokensColumns holds the columns for the "sender_order_tokens" table.
 	SenderOrderTokensColumns = []*schema.Column{
@@ -715,31 +776,6 @@ var (
 		Columns:    WebhookRetryAttemptsColumns,
 		PrimaryKey: []*schema.Column{WebhookRetryAttemptsColumns[0]},
 	}
-	// ProvisionBucketProviderProfilesColumns holds the columns for the "provision_bucket_provider_profiles" table.
-	ProvisionBucketProviderProfilesColumns = []*schema.Column{
-		{Name: "provision_bucket_id", Type: field.TypeInt},
-		{Name: "provider_profile_id", Type: field.TypeString},
-	}
-	// ProvisionBucketProviderProfilesTable holds the schema information for the "provision_bucket_provider_profiles" table.
-	ProvisionBucketProviderProfilesTable = &schema.Table{
-		Name:       "provision_bucket_provider_profiles",
-		Columns:    ProvisionBucketProviderProfilesColumns,
-		PrimaryKey: []*schema.Column{ProvisionBucketProviderProfilesColumns[0], ProvisionBucketProviderProfilesColumns[1]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "provision_bucket_provider_profiles_provision_bucket_id",
-				Columns:    []*schema.Column{ProvisionBucketProviderProfilesColumns[0]},
-				RefColumns: []*schema.Column{ProvisionBucketsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "provision_bucket_provider_profiles_provider_profile_id",
-				Columns:    []*schema.Column{ProvisionBucketProviderProfilesColumns[1]},
-				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		APIKeysTable,
@@ -752,9 +788,11 @@ var (
 		PaymentOrdersTable,
 		PaymentOrderFulfillmentsTable,
 		PaymentWebhooksTable,
+		ProviderAssignmentRunsTable,
 		ProviderBalancesTable,
 		ProviderFiatAccountsTable,
 		ProviderOrderTokensTable,
+		ProviderOrderTokenScoreHistoriesTable,
 		ProviderProfilesTable,
 		ProviderRatingsTable,
 		ProvisionBucketsTable,
@@ -765,7 +803,6 @@ var (
 		UsersTable,
 		VerificationTokensTable,
 		WebhookRetryAttemptsTable,
-		ProvisionBucketProviderProfilesTable,
 	}
 )
 
@@ -777,12 +814,13 @@ func init() {
 	KybProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	PaymentOrdersTable.ForeignKeys[0].RefTable = APIKeysTable
 	PaymentOrdersTable.ForeignKeys[1].RefTable = ProviderProfilesTable
-	PaymentOrdersTable.ForeignKeys[2].RefTable = ProvisionBucketsTable
-	PaymentOrdersTable.ForeignKeys[3].RefTable = SenderProfilesTable
-	PaymentOrdersTable.ForeignKeys[4].RefTable = TokensTable
+	PaymentOrdersTable.ForeignKeys[2].RefTable = SenderProfilesTable
+	PaymentOrdersTable.ForeignKeys[3].RefTable = TokensTable
 	PaymentOrderFulfillmentsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	PaymentWebhooksTable.ForeignKeys[0].RefTable = NetworksTable
 	PaymentWebhooksTable.ForeignKeys[1].RefTable = PaymentOrdersTable
+	ProviderAssignmentRunsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
+	ProviderAssignmentRunsTable.ForeignKeys[1].RefTable = ProviderOrderTokensTable
 	ProviderBalancesTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderBalancesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderBalancesTable.ForeignKeys[2].RefTable = TokensTable
@@ -790,15 +828,14 @@ func init() {
 	ProviderOrderTokensTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	ProviderOrderTokensTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 	ProviderOrderTokensTable.ForeignKeys[2].RefTable = TokensTable
+	ProviderOrderTokenScoreHistoriesTable.ForeignKeys[0].RefTable = PaymentOrdersTable
+	ProviderOrderTokenScoreHistoriesTable.ForeignKeys[1].RefTable = ProviderOrderTokensTable
 	ProviderProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	ProviderRatingsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
-	ProvisionBucketsTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
 	SenderOrderTokensTable.ForeignKeys[0].RefTable = SenderProfilesTable
 	SenderOrderTokensTable.ForeignKeys[1].RefTable = TokensTable
 	SenderProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	TokensTable.ForeignKeys[0].RefTable = NetworksTable
 	TransactionLogsTable.ForeignKeys[0].RefTable = PaymentOrdersTable
 	VerificationTokensTable.ForeignKeys[0].RefTable = UsersTable
-	ProvisionBucketProviderProfilesTable.ForeignKeys[0].RefTable = ProvisionBucketsTable
-	ProvisionBucketProviderProfilesTable.ForeignKeys[1].RefTable = ProviderProfilesTable
 }

@@ -37,8 +37,6 @@ const (
 	FieldIsEnabled = "is_enabled"
 	// EdgeProviderBalances holds the string denoting the provider_balances edge name in mutations.
 	EdgeProviderBalances = "provider_balances"
-	// EdgeProvisionBuckets holds the string denoting the provision_buckets edge name in mutations.
-	EdgeProvisionBuckets = "provision_buckets"
 	// EdgeInstitutions holds the string denoting the institutions edge name in mutations.
 	EdgeInstitutions = "institutions"
 	// EdgeProviderOrderTokens holds the string denoting the provider_order_tokens edge name in mutations.
@@ -52,13 +50,6 @@ const (
 	ProviderBalancesInverseTable = "provider_balances"
 	// ProviderBalancesColumn is the table column denoting the provider_balances relation/edge.
 	ProviderBalancesColumn = "fiat_currency_provider_balances"
-	// ProvisionBucketsTable is the table that holds the provision_buckets relation/edge.
-	ProvisionBucketsTable = "provision_buckets"
-	// ProvisionBucketsInverseTable is the table name for the ProvisionBucket entity.
-	// It exists in this package in order to avoid circular dependency with the "provisionbucket" package.
-	ProvisionBucketsInverseTable = "provision_buckets"
-	// ProvisionBucketsColumn is the table column denoting the provision_buckets relation/edge.
-	ProvisionBucketsColumn = "fiat_currency_provision_buckets"
 	// InstitutionsTable is the table that holds the institutions relation/edge.
 	InstitutionsTable = "institutions"
 	// InstitutionsInverseTable is the table name for the Institution entity.
@@ -187,20 +178,6 @@ func ByProviderBalances(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption 
 	}
 }
 
-// ByProvisionBucketsCount orders the results by provision_buckets count.
-func ByProvisionBucketsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProvisionBucketsStep(), opts...)
-	}
-}
-
-// ByProvisionBuckets orders the results by provision_buckets terms.
-func ByProvisionBuckets(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProvisionBucketsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByInstitutionsCount orders the results by institutions count.
 func ByInstitutionsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -233,13 +210,6 @@ func newProviderBalancesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProviderBalancesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ProviderBalancesTable, ProviderBalancesColumn),
-	)
-}
-func newProvisionBucketsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProvisionBucketsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProvisionBucketsTable, ProvisionBucketsColumn),
 	)
 }
 func newInstitutionsStep() *sqlgraph.Step {

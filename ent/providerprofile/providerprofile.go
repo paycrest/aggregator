@@ -33,8 +33,6 @@ const (
 	EdgeAPIKey = "api_key"
 	// EdgeProviderBalances holds the string denoting the provider_balances edge name in mutations.
 	EdgeProviderBalances = "provider_balances"
-	// EdgeProvisionBuckets holds the string denoting the provision_buckets edge name in mutations.
-	EdgeProvisionBuckets = "provision_buckets"
 	// EdgeOrderTokens holds the string denoting the order_tokens edge name in mutations.
 	EdgeOrderTokens = "order_tokens"
 	// EdgeProviderRating holds the string denoting the provider_rating edge name in mutations.
@@ -66,11 +64,6 @@ const (
 	ProviderBalancesInverseTable = "provider_balances"
 	// ProviderBalancesColumn is the table column denoting the provider_balances relation/edge.
 	ProviderBalancesColumn = "provider_profile_provider_balances"
-	// ProvisionBucketsTable is the table that holds the provision_buckets relation/edge. The primary key declared below.
-	ProvisionBucketsTable = "provision_bucket_provider_profiles"
-	// ProvisionBucketsInverseTable is the table name for the ProvisionBucket entity.
-	// It exists in this package in order to avoid circular dependency with the "provisionbucket" package.
-	ProvisionBucketsInverseTable = "provision_buckets"
 	// OrderTokensTable is the table that holds the order_tokens relation/edge.
 	OrderTokensTable = "provider_order_tokens"
 	// OrderTokensInverseTable is the table name for the ProviderOrderToken entity.
@@ -117,12 +110,6 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"user_provider_profile",
 }
-
-var (
-	// ProvisionBucketsPrimaryKey and ProvisionBucketsColumn2 are the table columns denoting the
-	// primary key for the provision_buckets relation (M2M).
-	ProvisionBucketsPrimaryKey = []string{"provision_bucket_id", "provider_profile_id"}
-)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -270,20 +257,6 @@ func ByProviderBalances(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption 
 	}
 }
 
-// ByProvisionBucketsCount orders the results by provision_buckets count.
-func ByProvisionBucketsCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProvisionBucketsStep(), opts...)
-	}
-}
-
-// ByProvisionBuckets orders the results by provision_buckets terms.
-func ByProvisionBuckets(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProvisionBucketsStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByOrderTokensCount orders the results by order_tokens count.
 func ByOrderTokensCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -351,13 +324,6 @@ func newProviderBalancesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProviderBalancesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ProviderBalancesTable, ProviderBalancesColumn),
-	)
-}
-func newProvisionBucketsStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProvisionBucketsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, true, ProvisionBucketsTable, ProvisionBucketsPrimaryKey...),
 	)
 }
 func newOrderTokensStep() *sqlgraph.Step {

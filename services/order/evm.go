@@ -13,6 +13,7 @@ import (
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/assignment"
 	"github.com/paycrest/aggregator/services/contracts"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/shopspring/decimal"
@@ -32,17 +33,15 @@ import (
 
 // OrderEVM provides functionality related to onchain interactions for payment orders
 type OrderEVM struct {
-	priorityQueue *services.PriorityQueueService
+	priorityQueue *assignment.Service
 	engineService *services.EngineService
 	nativeService *services.NativeService
 }
 
 // NewOrderEVM creates a new instance of OrderEVM.
 func NewOrderEVM() types.OrderService {
-	priorityQueue := services.NewPriorityQueueService()
-
 	return &OrderEVM{
-		priorityQueue: priorityQueue,
+		priorityQueue: assignment.New(),
 		engineService: services.NewEngineService(),
 		nativeService: services.NewNativeService(),
 	}

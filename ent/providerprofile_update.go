@@ -20,7 +20,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 )
 
 // ProviderProfileUpdate is the builder for updating ProviderProfile entities.
@@ -158,21 +157,6 @@ func (_u *ProviderProfileUpdate) AddProviderBalances(v ...*ProviderBalances) *Pr
 	return _u.AddProviderBalanceIDs(ids...)
 }
 
-// AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
-func (_u *ProviderProfileUpdate) AddProvisionBucketIDs(ids ...int) *ProviderProfileUpdate {
-	_u.mutation.AddProvisionBucketIDs(ids...)
-	return _u
-}
-
-// AddProvisionBuckets adds the "provision_buckets" edges to the ProvisionBucket entity.
-func (_u *ProviderProfileUpdate) AddProvisionBuckets(v ...*ProvisionBucket) *ProviderProfileUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddProvisionBucketIDs(ids...)
-}
-
 // AddOrderTokenIDs adds the "order_tokens" edge to the ProviderOrderToken entity by IDs.
 func (_u *ProviderProfileUpdate) AddOrderTokenIDs(ids ...int) *ProviderProfileUpdate {
 	_u.mutation.AddOrderTokenIDs(ids...)
@@ -267,27 +251,6 @@ func (_u *ProviderProfileUpdate) RemoveProviderBalances(v ...*ProviderBalances) 
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveProviderBalanceIDs(ids...)
-}
-
-// ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
-func (_u *ProviderProfileUpdate) ClearProvisionBuckets() *ProviderProfileUpdate {
-	_u.mutation.ClearProvisionBuckets()
-	return _u
-}
-
-// RemoveProvisionBucketIDs removes the "provision_buckets" edge to ProvisionBucket entities by IDs.
-func (_u *ProviderProfileUpdate) RemoveProvisionBucketIDs(ids ...int) *ProviderProfileUpdate {
-	_u.mutation.RemoveProvisionBucketIDs(ids...)
-	return _u
-}
-
-// RemoveProvisionBuckets removes "provision_buckets" edges to ProvisionBucket entities.
-func (_u *ProviderProfileUpdate) RemoveProvisionBuckets(v ...*ProvisionBucket) *ProviderProfileUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveProvisionBucketIDs(ids...)
 }
 
 // ClearOrderTokens clears all "order_tokens" edges to the ProviderOrderToken entity.
@@ -521,51 +484,6 @@ func (_u *ProviderProfileUpdate) sqlSave(ctx context.Context) (_node int, err er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ProvisionBucketsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.ProvisionBucketsTable,
-			Columns: providerprofile.ProvisionBucketsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedProvisionBucketsIDs(); len(nodes) > 0 && !_u.mutation.ProvisionBucketsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.ProvisionBucketsTable,
-			Columns: providerprofile.ProvisionBucketsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.ProvisionBucketsTable,
-			Columns: providerprofile.ProvisionBucketsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -879,21 +797,6 @@ func (_u *ProviderProfileUpdateOne) AddProviderBalances(v ...*ProviderBalances) 
 	return _u.AddProviderBalanceIDs(ids...)
 }
 
-// AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
-func (_u *ProviderProfileUpdateOne) AddProvisionBucketIDs(ids ...int) *ProviderProfileUpdateOne {
-	_u.mutation.AddProvisionBucketIDs(ids...)
-	return _u
-}
-
-// AddProvisionBuckets adds the "provision_buckets" edges to the ProvisionBucket entity.
-func (_u *ProviderProfileUpdateOne) AddProvisionBuckets(v ...*ProvisionBucket) *ProviderProfileUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddProvisionBucketIDs(ids...)
-}
-
 // AddOrderTokenIDs adds the "order_tokens" edge to the ProviderOrderToken entity by IDs.
 func (_u *ProviderProfileUpdateOne) AddOrderTokenIDs(ids ...int) *ProviderProfileUpdateOne {
 	_u.mutation.AddOrderTokenIDs(ids...)
@@ -988,27 +891,6 @@ func (_u *ProviderProfileUpdateOne) RemoveProviderBalances(v ...*ProviderBalance
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveProviderBalanceIDs(ids...)
-}
-
-// ClearProvisionBuckets clears all "provision_buckets" edges to the ProvisionBucket entity.
-func (_u *ProviderProfileUpdateOne) ClearProvisionBuckets() *ProviderProfileUpdateOne {
-	_u.mutation.ClearProvisionBuckets()
-	return _u
-}
-
-// RemoveProvisionBucketIDs removes the "provision_buckets" edge to ProvisionBucket entities by IDs.
-func (_u *ProviderProfileUpdateOne) RemoveProvisionBucketIDs(ids ...int) *ProviderProfileUpdateOne {
-	_u.mutation.RemoveProvisionBucketIDs(ids...)
-	return _u
-}
-
-// RemoveProvisionBuckets removes "provision_buckets" edges to ProvisionBucket entities.
-func (_u *ProviderProfileUpdateOne) RemoveProvisionBuckets(v ...*ProvisionBucket) *ProviderProfileUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveProvisionBucketIDs(ids...)
 }
 
 // ClearOrderTokens clears all "order_tokens" edges to the ProviderOrderToken entity.
@@ -1272,51 +1154,6 @@ func (_u *ProviderProfileUpdateOne) sqlSave(ctx context.Context) (_node *Provide
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ProvisionBucketsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.ProvisionBucketsTable,
-			Columns: providerprofile.ProvisionBucketsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedProvisionBucketsIDs(); len(nodes) > 0 && !_u.mutation.ProvisionBucketsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.ProvisionBucketsTable,
-			Columns: providerprofile.ProvisionBucketsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.ProvisionBucketsTable,
-			Columns: providerprofile.ProvisionBucketsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

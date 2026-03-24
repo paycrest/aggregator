@@ -122,6 +122,20 @@ func (PaymentOrder) Fields() []ent.Field {
 		// Fallback assignment: set when order was assigned via fallback provider (DB-level idempotency).
 		field.Time("fallback_tried_at").
 			Optional(),
+		// Persisted assignment market snapshot (floating-rate determinism across retries).
+		field.Float("assignment_market_buy_rate").
+			GoType(decimal.Decimal{}).
+			Optional().
+			Nillable(),
+		field.Float("assignment_market_sell_rate").
+			GoType(decimal.Decimal{}).
+			Optional().
+			Nillable(),
+		// Legacy bucket FK (no Ent edge in Phase 1; column retained until Phase 2 table drop).
+		field.Int("legacy_provision_bucket_id").
+			Optional().
+			Nillable().
+			StorageKey("provision_bucket_payment_orders"),
 	}
 }
 
@@ -140,12 +154,13 @@ func (PaymentOrder) Edges() []ent.Edge {
 		edge.From("provider", ProviderProfile.Type).
 			Ref("assigned_orders").
 			Unique(),
-		edge.From("provision_bucket", ProvisionBucket.Type).
-			Ref("payment_orders").
-			Unique(),
 		edge.To("fulfillments", PaymentOrderFulfillment.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("transactions", TransactionLog.Type),
+		edge.To("provider_assignment_runs", ProviderAssignmentRun.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("provider_order_token_score_histories", ProviderOrderTokenScoreHistory.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 
