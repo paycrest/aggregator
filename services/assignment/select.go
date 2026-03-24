@@ -173,11 +173,12 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 	}
 	fiatCurrency := inst.Edges.FiatCurrency
 
-	if workOrder.Token == nil || workOrder.Token.Edges.Network == nil {
+	orderNet := resolveOrderNetwork(workOrder)
+	if workOrder.Token == nil || orderNet == nil {
 		s.recordAssignmentRun(ctx, workOrder.ID, trigger, AssignmentRunResultError, nil, nil, false, nil, nil, fmt.Errorf("order token/network not loaded from DB"))
 		return fmt.Errorf("assign: token/network required on payment order")
 	}
-	networkID := workOrder.Token.Edges.Network.Identifier
+	networkID := orderNet.Identifier
 
 	buySnap, sellSnap, err := s.ensureAssignmentMarketSnapshot(ctx, orderEnt, fiatCurrency)
 	if err != nil {
@@ -248,6 +249,15 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 		volMap = map[string]decimal.Decimal{}
 	}
 
+	var stuckCountByProvider map[string]int
+	if !isOTC && orderConf.ProviderStuckFulfillmentThreshold > 0 && len(provIDs) > 0 {
+		stuckCountByProvider, err = utils.StuckOrderCountsByProviderIDs(ctx, provIDs)
+		if err != nil {
+			logger.WithFields(logger.Fields{"Error": err.Error()}).Warnf("assign: stuck-order count query failed; treating stuck count as zero")
+			stuckCountByProvider = map[string]int{}
+		}
+	}
+
 	slices.SortStableFunc(candidates, func(a, b *ent.ProviderOrderToken) int {
 		if c := b.Score.Cmp(a.Score); c != 0 {
 			return c
@@ -285,8 +295,8 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 			}
 		}
 		if !isOTC && orderConf.ProviderStuckFulfillmentThreshold > 0 {
-			stuck, se := utils.GetProviderStuckOrderCount(ctx, pid)
-			if se == nil && stuck >= orderConf.ProviderStuckFulfillmentThreshold {
+			stuck := stuckCountByProvider[pid]
+			if stuck >= orderConf.ProviderStuckFulfillmentThreshold {
 				continue
 			}
 		}
@@ -349,6 +359,18 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 
 func strPtr(s string) *string { return &s }
 
+// resolveOrderNetwork returns the network for assignment using PaymentOrderFields.Network when set,
+// otherwise Token.Edges.Network (kept in sync by paymentOrderFieldsFromEnt).
+func resolveOrderNetwork(f types.PaymentOrderFields) *ent.Network {
+	if f.Network != nil {
+		return f.Network
+	}
+	if f.Token != nil {
+		return f.Token.Edges.Network
+	}
+	return nil
+}
+
 // paymentOrderFieldsFromEnt builds assignment input from the persisted order and loaded edges (token+network+provider).
 func paymentOrderFieldsFromEnt(po *ent.PaymentOrder) (types.PaymentOrderFields, error) {
 	if po.Edges.Token == nil {
@@ -383,6 +405,12 @@ func paymentOrderFieldsFromEnt(po *ent.PaymentOrder) (types.PaymentOrderFields, 
 	}
 	if po.Edges.Provider != nil {
 		fields.ProviderID = po.Edges.Provider.ID
+	}
+	// Keep top-level Network and Token.Edges.Network aligned for downstream checks and future loaders.
+	if fields.Network != nil && fields.Token != nil && fields.Token.Edges.Network == nil {
+		fields.Token.Edges.Network = fields.Network
+	} else if fields.Token != nil && fields.Token.Edges.Network != nil && fields.Network == nil {
+		fields.Network = fields.Token.Edges.Network
 	}
 	return fields, nil
 }

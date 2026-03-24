@@ -1430,29 +1430,52 @@ func validatePublicQuoteRate(ctx context.Context, token *ent.Token, currency *en
 	return tryFallbackPublicQuote(ctx, token, currency, amount, networkIdentifier, side, bestRate, anySkippedDueToStuck, currencyForStuck)
 }
 
-// GetProviderStuckOrderCount returns the number of stuck orders for a provider (status=fulfilled, pending fulfillment, updated_at <= now - OrderRefundTimeout, regular only).
-// Used by both services/priority_queue and rate validation in this package.
-func GetProviderStuckOrderCount(ctx context.Context, providerID string) (int, error) {
+// StuckOrderCountsByProviderIDs returns stuck-order counts per provider (same criteria as GetProviderStuckOrderCount).
+// Providers with no matching rows are omitted; callers should treat missing IDs as count 0.
+func StuckOrderCountsByProviderIDs(ctx context.Context, providerIDs []string) (map[string]int, error) {
+	out := make(map[string]int)
 	orderConf := config.OrderConfig()
-	if orderConf.ProviderStuckFulfillmentThreshold <= 0 {
-		return 0, nil
+	if orderConf.ProviderStuckFulfillmentThreshold <= 0 || len(providerIDs) == 0 {
+		return out, nil
 	}
 	cutoff := time.Now().Add(-orderConf.OrderRefundTimeout)
-	count, err := storage.Client.PaymentOrder.Query().
+	var rows []struct {
+		ProviderID string `json:"provider_profile_assigned_orders"`
+		Count      int    `json:"count"`
+	}
+	err := storage.Client.PaymentOrder.Query().
 		Where(
 			paymentorder.StatusEQ(paymentorder.StatusFulfilled),
 			paymentorder.OrderTypeEQ(paymentorder.OrderTypeRegular),
 			paymentorder.UpdatedAtLTE(cutoff),
-			paymentorder.HasProviderWith(providerprofile.IDEQ(providerID)),
+			paymentorder.HasProviderWith(providerprofile.IDIn(providerIDs...)),
 			paymentorder.HasFulfillmentsWith(
 				paymentorderfulfillment.ValidationStatusEQ(paymentorderfulfillment.ValidationStatusPending),
 			),
 		).
-		Count(ctx)
+		GroupBy(paymentorder.ProviderColumn).
+		Aggregate(ent.Count()).
+		Scan(ctx, &rows)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		out[r.ProviderID] = r.Count
+	}
+	return out, nil
+}
+
+// GetProviderStuckOrderCount returns the number of stuck orders for a provider (status=fulfilled, pending fulfillment, updated_at <= now - OrderRefundTimeout, regular only).
+// Used by both services/priority_queue and rate validation in this package.
+func GetProviderStuckOrderCount(ctx context.Context, providerID string) (int, error) {
+	if providerID == "" {
+		return 0, nil
+	}
+	m, err := StuckOrderCountsByProviderIDs(ctx, []string{providerID})
 	if err != nil {
 		return 0, err
 	}
-	return count, nil
+	return m[providerID], nil
 }
 
 // NormalizeMobileMoneyAccountIdentifier ensures the account identifier has a country dial code
