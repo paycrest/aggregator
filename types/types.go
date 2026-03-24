@@ -135,6 +135,15 @@ type OrderRefundedEvent struct {
 	OrderId     string
 }
 
+// FeeSplitEvent is used for LocalTransferFeeSplit and FxTransferFeeSplit (same shape; FX omits provider on-chain — use zero).
+// Amounts are raw chain subunits (uint256) until normalized in the order layer.
+type FeeSplitEvent struct {
+	OrderId          string
+	SenderAmount     decimal.Decimal
+	ProviderAmount   decimal.Decimal
+	AggregatorAmount decimal.Decimal
+}
+
 // OrderService provides an interface for the OrderService
 type OrderService interface {
 	CreateOrder(ctx context.Context, orderID uuid.UUID) error
@@ -706,9 +715,9 @@ type V2CryptoDestination struct {
 
 // V2CryptoDestinationOnrampResponse is the onramp v2 API response shape for destination.
 type V2CryptoDestinationOnrampResponse struct {
-	Type       string                         `json:"type"`
-	Currency   string                         `json:"currency"`
-	ProviderID string                         `json:"providerId,omitempty"`
+	Type       string                          `json:"type"`
+	Currency   string                          `json:"currency"`
+	ProviderID string                          `json:"providerId,omitempty"`
 	Recipient  V2CryptoRecipientOnrampResponse `json:"recipient"`
 }
 
@@ -833,18 +842,18 @@ type V2FiatProviderAccount struct {
 // V2PaymentOrderResponse is the response type for v2 payment order creation
 // ProviderAccount, Source, and Destination are polymorphic (any) to support both offramp and onramp flows
 type V2PaymentOrderResponse struct {
-	ID                uuid.UUID `json:"id"`
-	Status            string    `json:"status"`
-	Timestamp         time.Time `json:"timestamp"`
-	Amount            string    `json:"amount"` // Crypto amount (token units) - consistent for both flows
-	Rate              string    `json:"rate,omitempty"`
-	SenderFee         string    `json:"senderFee"` // Crypto amount (token units) - consistent for both flows
-	SenderFeePercent  string    `json:"senderFeePercent"`
-	TransactionFee    string    `json:"transactionFee"`
-	Reference         string    `json:"reference"`
-	ProviderAccount   any       `json:"providerAccount"` // V2CryptoProviderAccount for offramp, V2FiatProviderAccount for onramp
-	Source            any       `json:"source"`           // V2CryptoSource for offramp, V2FiatSource for onramp
-	Destination       any       `json:"destination"`     // V2FiatDestination for offramp, V2CryptoDestinationOnrampResponse for onramp
+	ID               uuid.UUID `json:"id"`
+	Status           string    `json:"status"`
+	Timestamp        time.Time `json:"timestamp"`
+	Amount           string    `json:"amount"` // Crypto amount (token units) - consistent for both flows
+	Rate             string    `json:"rate,omitempty"`
+	SenderFee        string    `json:"senderFee"` // Crypto amount (token units) - consistent for both flows
+	SenderFeePercent string    `json:"senderFeePercent"`
+	TransactionFee   string    `json:"transactionFee"`
+	Reference        string    `json:"reference"`
+	ProviderAccount  any       `json:"providerAccount"` // V2CryptoProviderAccount for offramp, V2FiatProviderAccount for onramp
+	Source           any       `json:"source"`          // V2CryptoSource for offramp, V2FiatSource for onramp
+	Destination      any       `json:"destination"`     // V2FiatDestination for offramp, V2CryptoDestinationOnrampResponse for onramp
 }
 
 // V2PaymentOrderGetResponse is the v2 response for GET payment order (single or list item). Aligned with v2 API schema.
@@ -1136,11 +1145,12 @@ type IndexTransactionResponse struct {
 
 // EventCounts represents the count of different event types found during indexing
 type EventCounts struct {
-	Transfer      int `json:"Transfer"`
-	OrderCreated  int `json:"OrderCreated"`
-	SettleOut     int `json:"SettleOut"` // SettleOut (offramp); Starknet OrderSettled is mapped here
-	SettleIn      int `json:"SettleIn"`  // SettleIn (onramp)
-	OrderRefunded int `json:"OrderRefunded"`
+	Transfer         int `json:"Transfer"`
+	OrderCreated     int `json:"OrderCreated"`
+	SettleOut        int `json:"SettleOut"` // SettleOut (offramp); Starknet OrderSettled is mapped here
+	SettleIn         int `json:"SettleIn"`  // SettleIn (onramp)
+	OrderRefunded    int `json:"OrderRefunded"`
+	TransferFeeSplit int `json:"TransferFeeSplit"`
 }
 
 // ThirdwebWebhookPayload represents the structure of thirdweb insight webhook payload

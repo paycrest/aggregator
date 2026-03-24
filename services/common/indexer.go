@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
+	networkent "github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/storage"
@@ -526,4 +527,56 @@ func GetProviderAddressFromOrder(ctx context.Context, order *ent.PaymentOrder) (
 	}
 
 	return providerOrderToken.SettlementAddress, nil
+}
+
+// ProcessTransferFeeEvents updates sender_fee and protocol_fee from indexed fee-split events (local or FX).
+// orderIdToEvent maps normalized gateway id to the event (caller resolves duplicate gateway ids; last wins).
+// ProviderAmount is present on local splits only; it is not persisted (no column). FX events use zero provider.
+func ProcessTransferFeeEvents(ctx context.Context, network *ent.Network, orderIds []string, orderIdToEvent map[string]*types.FeeSplitEvent) error {
+	if len(orderIds) == 0 || len(orderIdToEvent) == 0 {
+		return nil
+	}
+
+	lockOrders, err := storage.Client.PaymentOrder.Query().
+		Where(
+			paymentorder.GatewayIDIn(orderIds...),
+			paymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("ProcessTransferFeeEvents.fetchOrders: %w", err)
+	}
+
+	var wg sync.WaitGroup
+	for _, lockOrder := range lockOrders {
+		if lockOrder.GatewayID == "" {
+			continue
+		}
+		gatewayID := NormalizeGatewayID(lockOrder.GatewayID)
+		ev, ok := orderIdToEvent[gatewayID]
+		if !ok || ev == nil || lockOrder.Edges.Token == nil {
+			continue
+		}
+		wg.Add(1)
+		go func(paymentOrder *ent.PaymentOrder, orderGatewayID string, senderAmount, aggregatorAmount decimal.Decimal) {
+			defer wg.Done()
+			err := UpdatePaymentOrderTransferFees(ctx, paymentOrder, senderAmount, aggregatorAmount)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":     fmt.Sprintf("%v", err),
+					"GatewayID": orderGatewayID,
+					"Network":   network.Identifier,
+				}).Errorf("Failed to update onramp fee split when indexing for %s", network.Identifier)
+			}
+		}(lockOrder, gatewayID, ev.SenderAmount, ev.AggregatorAmount)
+	}
+	wg.Wait()
+	return nil
 }
