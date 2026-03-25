@@ -545,6 +545,7 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 		destination = &types.V2CryptoDestinationOnrampResponse{
 			Type:       "crypto",
 			Currency:   tokenSymbol,
+			Network:    networkID,
 			ProviderID: providerID,
 			Recipient:  types.V2CryptoRecipientOnrampResponse{Address: paymentOrder.RefundOrRecipientAddress},
 		}
@@ -613,6 +614,7 @@ func BuildV2PaymentOrderGetResponse(
 	resp := &types.V2PaymentOrderGetResponse{
 		ID:                  paymentOrder.ID,
 		Status:              string(paymentOrder.Status),
+		OrderType:           string(paymentOrder.OrderType),
 		Direction:           string(paymentOrder.Direction),
 		CreatedAt:           paymentOrder.CreatedAt,
 		UpdatedAt:           paymentOrder.UpdatedAt,

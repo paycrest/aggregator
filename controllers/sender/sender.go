@@ -1344,6 +1344,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	response := &types.V2PaymentOrderResponse{
 		ID:               paymentOrder.ID,
 		Status:           string(paymentOrder.Status),
+		OrderType:        string(paymentOrder.OrderType),
 		Timestamp:        paymentOrder.CreatedAt,
 		Amount:           cryptoAmount.String(),
 		SenderFee:        senderFee.String(),
@@ -2046,6 +2047,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	destOnrampResp := types.V2CryptoDestinationOnrampResponse{
 		Type:       destination.Type,
 		Currency:   destination.Currency,
+		Network:    token.Edges.Network.Identifier,
 		ProviderID: destination.ProviderID,
 		Recipient:  types.V2CryptoRecipientOnrampResponse{Address: destination.Recipient.Address},
 	}
@@ -2053,6 +2055,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	response := &types.V2PaymentOrderResponse{
 		ID:               paymentOrder.ID,
 		Status:           string(paymentOrder.Status),
+		OrderType:        string(paymentOrder.OrderType),
 		Timestamp:        paymentOrder.CreatedAt,
 		Amount:           cryptoAmountOut.String(),
 		SenderFee:        senderFeeCrypto.String(),
@@ -2254,7 +2257,7 @@ func (ctrl *SenderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", resp)
 }
 
-// GetPaymentOrdersV2 returns a list of payment orders in v2 API schema (no search/export; list only).
+// GetPaymentOrdersV2 returns a list of payment orders in v2 API schema, with optional search and CSV export (same query params as v1).
 func (ctrl *SenderController) GetPaymentOrdersV2(ctx *gin.Context) {
 	senderCtx, ok := ctx.Get("sender")
 	if !ok {
@@ -2262,6 +2265,36 @@ func (ctrl *SenderController) GetPaymentOrdersV2(ctx *gin.Context) {
 		return
 	}
 	sender := senderCtx.(*ent.SenderProfile)
+
+	export := ctx.Query("export")
+	isExport := export == "csv" || export == "true"
+	fromDateStr := ctx.Query("from")
+	toDateStr := ctx.Query("to")
+
+	searchParam := ctx.Query("search")
+	searchText := strings.TrimSpace(searchParam)
+	hasSearchParam := ctx.Request.URL.Query().Has("search")
+	isSearch := searchText != ""
+
+	if hasSearchParam && !isSearch {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Search query is required", nil)
+		return
+	}
+
+	if isExport {
+		if fromDateStr == "" || toDateStr == "" {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Both 'from' and 'to' date parameters are required for export", nil)
+			return
+		}
+		ctrl.handleExportPaymentOrders(ctx, sender)
+		return
+	}
+
+	if isSearch {
+		ctrl.handleSearchPaymentOrdersV2(ctx, sender, searchText)
+		return
+	}
+
 	ctrl.handleListPaymentOrdersV2(ctx, sender)
 }
 
@@ -2309,6 +2342,73 @@ func (ctrl *SenderController) handleListPaymentOrdersV2(ctx *gin.Context, sender
 	u.APIResponse(ctx, http.StatusOK, "success", "Payment orders retrieved successfully", types.V2PaymentOrderListResponse{
 		Page:         page,
 		PageSize:     pageSize,
+		TotalRecords: count,
+		Orders:       orders,
+	})
+}
+
+// handleSearchPaymentOrdersV2 runs the same text search as v1 but returns v2 order objects.
+func (ctrl *SenderController) handleSearchPaymentOrdersV2(ctx *gin.Context, sender *ent.SenderProfile, searchText string) {
+	reqCtx := ctx.Request.Context()
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+	)
+
+	var searchPredicates []predicate.PaymentOrder
+	if searchUUID, err := uuid.Parse(searchText); err == nil {
+		searchPredicates = append(searchPredicates, paymentorder.IDEQ(searchUUID))
+	}
+	searchPredicates = append(searchPredicates,
+		paymentorder.ReceiveAddressContainsFold(searchText),
+		paymentorder.FromAddressContainsFold(searchText),
+		paymentorder.RefundOrRecipientAddressContainsFold(searchText),
+		paymentorder.Or(
+			paymentorder.AccountIdentifierContainsFold(searchText),
+			paymentorder.AccountNameContainsFold(searchText),
+			paymentorder.MemoContainsFold(searchText),
+			paymentorder.InstitutionContainsFold(searchText),
+		),
+	)
+	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.Or(searchPredicates...))
+
+	count, err := paymentOrderQuery.Count(reqCtx)
+	if err != nil {
+		logger.Errorf("Failed to count payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	maxSearchResults := 10000
+	if count > maxSearchResults {
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			fmt.Sprintf("Search returned too many results (%d). Maximum allowed is %d. Please use a more specific search term.",
+				count, maxSearchResults), nil)
+		return
+	}
+
+	paymentOrders, err := paymentOrderQuery.
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+		WithTransactions().
+		Limit(maxSearchResults).
+		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
+		All(reqCtx)
+	if err != nil {
+		logger.Errorf("Failed to fetch payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	orders, err := ctrl.buildV2PaymentOrderGetResponses(ctx, paymentOrders)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Payment orders found successfully", types.V2PaymentOrderListResponse{
+		Page:         1,
+		PageSize:     len(orders),
 		TotalRecords: count,
 		Orders:       orders,
 	})

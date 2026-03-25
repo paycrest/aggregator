@@ -708,6 +708,7 @@ type V2CryptoDestination struct {
 type V2CryptoDestinationOnrampResponse struct {
 	Type       string                         `json:"type"`
 	Currency   string                         `json:"currency"`
+	Network    string                         `json:"network"` // token settlement network (e.g. base)
 	ProviderID string                         `json:"providerId,omitempty"`
 	Recipient  V2CryptoRecipientOnrampResponse `json:"recipient"`
 }
@@ -835,6 +836,7 @@ type V2FiatProviderAccount struct {
 type V2PaymentOrderResponse struct {
 	ID                uuid.UUID `json:"id"`
 	Status            string    `json:"status"`
+	OrderType         string    `json:"orderType"` // "regular" | "otc"
 	Timestamp         time.Time `json:"timestamp"`
 	Amount            string    `json:"amount"` // Crypto amount (token units) - consistent for both flows
 	Rate              string    `json:"rate,omitempty"`
@@ -851,6 +853,7 @@ type V2PaymentOrderResponse struct {
 type V2PaymentOrderGetResponse struct {
 	ID                  uuid.UUID        `json:"id"`
 	Status              string           `json:"status"`
+	OrderType           string           `json:"orderType"` // "regular" | "otc"
 	Direction           string           `json:"direction"` // "offramp" or "onramp"
 	CreatedAt           time.Time        `json:"createdAt"`
 	UpdatedAt           time.Time        `json:"updatedAt"`

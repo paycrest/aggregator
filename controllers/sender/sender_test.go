@@ -404,6 +404,8 @@ func TestSender(t *testing.T) {
 	v2.Use(middleware.DynamicAuthMiddleware)
 	v2.Use(middleware.OnlySenderMiddleware)
 	v2.POST("orders", ctrl.InitiatePaymentOrderV2)
+	v2.GET("orders/:id", ctrl.GetPaymentOrderByIDV2)
+	v2.GET("orders", ctrl.GetPaymentOrdersV2)
 
 	var paymentOrderUUID uuid.UUID
 
@@ -2332,5 +2334,119 @@ func TestSender(t *testing.T) {
 			assert.NotEmpty(t, providerAccount["receiveAddress"])
 			assert.NotEmpty(t, providerAccount["validUntil"])
 		})
+	})
+
+	t.Run("GetPaymentOrdersV2", func(t *testing.T) {
+		t.Run("fetch default list includes orderType", func(t *testing.T) {
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "GET", "/v2/sender/orders", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment orders retrieved successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok)
+			assert.NotEmpty(t, orders)
+			first, ok := orders[0].(map[string]interface{})
+			assert.True(t, ok)
+			assert.NotEmpty(t, first["orderType"])
+		})
+
+		t.Run("supports search on v2 list", func(t *testing.T) {
+			var payload = map[string]interface{}{
+				"search":    "1234567890",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment orders found successfully", response.Message)
+		})
+
+		t.Run("supports export on v2 list", func(t *testing.T) {
+			today := time.Now().Format("2006-01-02")
+			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+			var payload = map[string]interface{}{
+				"from":      today,
+				"to":        tomorrow,
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			assert.Equal(t, "text/csv", res.Header().Get("Content-Type"))
+		})
+	})
+
+	t.Run("GetPaymentOrderByIDV2", func(t *testing.T) {
+		// Create explicit onramp order and verify destination.network in v2 response.
+		onrampOrder, err := db.Client.PaymentOrder.
+			Create().
+			SetSenderProfile(testCtx.user).
+			SetAmount(decimal.NewFromFloat(55)).
+			SetAmountInUsd(decimal.NewFromFloat(55)).
+			SetAmountPaid(decimal.Zero).
+			SetAmountReturned(decimal.Zero).
+			SetPercentSettled(decimal.Zero).
+			SetNetworkFee(testCtx.token.Edges.Network.Fee).
+			SetSenderFee(decimal.NewFromFloat(1)).
+			SetToken(testCtx.token).
+			SetRate(decimal.NewFromFloat(1)).
+			SetFeePercent(decimal.Zero).
+			SetFeeAddress("0x1234567890123456789012345678901234567890").
+			SetRefundOrRecipientAddress("0x0987654321098765432109876543210987654321").
+			SetDirection(paymentorder.DirectionOnramp).
+			SetReference(fmt.Sprintf("v2-onramp-%d", time.Now().UnixNano())).
+			SetOrderType(paymentorder.OrderTypeRegular).
+			SetInstitution("MOMONGPC").
+			SetAccountIdentifier("1234567890").
+			SetAccountName("OK").
+			SetStatus(paymentorder.StatusPending).
+			Save(context.Background())
+		assert.NoError(t, err)
+
+		headers := map[string]string{
+			"API-Key": testCtx.apiKey.ID.String(),
+		}
+		res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders/%s", onrampOrder.ID), nil, headers, router)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, res.Code)
+
+		var response types.Response
+		err = json.Unmarshal(res.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		data, ok := response.Data.(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, "regular", data["orderType"])
+
+		destination, ok := data["destination"].(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, testCtx.networkIdentifier, destination["network"])
 	})
 }
