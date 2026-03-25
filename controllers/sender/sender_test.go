@@ -2337,6 +2337,44 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("GetPaymentOrdersV2", func(t *testing.T) {
+		t.Run("returns 400 when search query is empty", func(t *testing.T) {
+			payload := map[string]interface{}{
+				"search":    "",
+				"timestamp": time.Now().Unix(),
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders?search=&timestamp=%v", payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Search query is required", response.Message)
+		})
+
+		t.Run("returns 400 when export csv missing date range", func(t *testing.T) {
+			payload := map[string]interface{}{
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders?export=csv&timestamp=%v", payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Both 'from' and 'to' date parameters are required for export", response.Message)
+		})
+
 		t.Run("fetch default list includes orderType", func(t *testing.T) {
 			headers := map[string]string{
 				"API-Key": testCtx.apiKey.ID.String(),
