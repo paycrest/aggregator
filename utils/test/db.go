@@ -324,6 +324,23 @@ func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) 
 		}
 	}
 
+	// Optional V2 fixture fields (offramp/onramp, OTC vs regular, reference)
+	if v, ok := payload["order_type"]; ok && v != nil {
+		if s, ok := v.(string); ok && s != "" {
+			orderBuilder = orderBuilder.SetOrderType(paymentorder.OrderType(s))
+		}
+	}
+	if v, ok := payload["direction"]; ok && v != nil {
+		if s, ok := v.(string); ok && s != "" {
+			orderBuilder = orderBuilder.SetDirection(paymentorder.Direction(s))
+		}
+	}
+	if v, ok := payload["reference"]; ok && v != nil {
+		if s, ok := v.(string); ok && s != "" {
+			orderBuilder = orderBuilder.SetReference(s)
+		}
+	}
+
 	order, err := orderBuilder.Save(context.Background())
 	if err != nil {
 		return nil, err

@@ -2362,8 +2362,16 @@ func TestSender(t *testing.T) {
 		})
 
 		t.Run("supports search on v2 list", func(t *testing.T) {
+			uniqueID := fmt.Sprintf("v2-sender-search-%d", time.Now().UnixNano())
+			order, err := test.CreateTestPaymentOrder(testCtx.token, map[string]interface{}{
+				"sender":             testCtx.user,
+				"account_identifier": uniqueID,
+				"order_type":         "otc",
+			})
+			assert.NoError(t, err)
+
 			var payload = map[string]interface{}{
-				"search":    "1234567890",
+				"search":    uniqueID,
 				"timestamp": time.Now().Unix(),
 			}
 
@@ -2380,6 +2388,25 @@ func TestSender(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "Payment orders found successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, len(orders), 1)
+			var matched map[string]interface{}
+			for _, raw := range orders {
+				o, ok := raw.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if idStr, ok := o["id"].(string); ok && idStr == order.ID.String() {
+					matched = o
+					break
+				}
+			}
+			assert.NotNil(t, matched, "expected seeded order in v2 search results")
+			assert.Equal(t, "otc", matched["orderType"])
 		})
 
 		t.Run("supports export on v2 list", func(t *testing.T) {

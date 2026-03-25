@@ -3064,6 +3064,7 @@ func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, prov
 	statusMap := map[string]paymentorder.Status{
 		"pending":    paymentorder.StatusPending,
 		"validated":  paymentorder.StatusValidated,
+		"processing": paymentorder.StatusFulfilling, // backwards-compatible alias (same as v1 list)
 		"fulfilling": paymentorder.StatusFulfilling,
 		"fulfilled":  paymentorder.StatusFulfilled,
 		"cancelled":  paymentorder.StatusCancelled,
@@ -3147,7 +3148,6 @@ func (ctrl *ProviderController) handleSearchPaymentOrdersV2(ctx *gin.Context, pr
 	paymentOrders, err := paymentOrderQuery.
 		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
-		WithTransactions().
 		Limit(maxSearchResults).
 		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
 		All(reqCtx)
