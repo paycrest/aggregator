@@ -12,3 +12,5 @@ CREATE TABLE "sender_fiat_accounts" (
 );
 -- Create index "senderfiataccount_institution_account_identifier_sender_profile_refund_accounts" to table: "sender_fiat_accounts"
 CREATE UNIQUE INDEX "senderfiataccount_institution_account_identifier_sender_profile_refund_accounts" ON "sender_fiat_accounts" ("institution", "account_identifier", "sender_profile_refund_accounts");
+-- Create index "senderfiataccount_sender_profile_refund_accounts" to table: "sender_fiat_accounts" (lookup by sender)
+CREATE INDEX "senderfiataccount_sender_profile_refund_accounts" ON "sender_fiat_accounts" ("sender_profile_refund_accounts");

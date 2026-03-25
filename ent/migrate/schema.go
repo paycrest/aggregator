@@ -559,6 +559,11 @@ var (
 				Unique:  true,
 				Columns: []*schema.Column{SenderFiatAccountsColumns[3], SenderFiatAccountsColumns[4], SenderFiatAccountsColumns[6]},
 			},
+			{
+				Name:    "senderfiataccount_sender_profile_refund_accounts",
+				Unique:  false,
+				Columns: []*schema.Column{SenderFiatAccountsColumns[6]},
+			},
 		},
 	}
 	// SenderOrderTokensColumns holds the columns for the "sender_order_tokens" table.

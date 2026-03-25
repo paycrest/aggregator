@@ -55,5 +55,7 @@ func (SenderFiatAccount) Indexes() []ent.Index {
 		index.Fields("institution", "account_identifier").
 			Edges("sender").
 			Unique(),
+		// List/delete by sender (WHERE sender_profile_refund_accounts = ?).
+		index.Edges("sender"),
 	}
 }
