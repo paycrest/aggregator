@@ -54,6 +54,9 @@ type ProviderRating func(*sql.Selector)
 // ProvisionBucket is the predicate function for provisionbucket builders.
 type ProvisionBucket func(*sql.Selector)
 
+// SenderFiatAccount is the predicate function for senderfiataccount builders.
+type SenderFiatAccount func(*sql.Selector)
+
 // SenderOrderToken is the predicate function for senderordertoken builders.
 type SenderOrderToken func(*sql.Selector)
 

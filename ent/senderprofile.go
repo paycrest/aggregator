@@ -52,9 +52,11 @@ type SenderProfileEdges struct {
 	PaymentOrders []*PaymentOrder `json:"payment_orders,omitempty"`
 	// OrderTokens holds the value of the order_tokens edge.
 	OrderTokens []*SenderOrderToken `json:"order_tokens,omitempty"`
+	// RefundAccounts holds the value of the refund_accounts edge.
+	RefundAccounts []*SenderFiatAccount `json:"refund_accounts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -95,6 +97,15 @@ func (e SenderProfileEdges) OrderTokensOrErr() ([]*SenderOrderToken, error) {
 		return e.OrderTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "order_tokens"}
+}
+
+// RefundAccountsOrErr returns the RefundAccounts value or an error if the edge
+// was not loaded in eager-loading.
+func (e SenderProfileEdges) RefundAccountsOrErr() ([]*SenderFiatAccount, error) {
+	if e.loadedTypes[4] {
+		return e.RefundAccounts, nil
+	}
+	return nil, &NotLoadedError{edge: "refund_accounts"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -217,6 +228,11 @@ func (_m *SenderProfile) QueryPaymentOrders() *PaymentOrderQuery {
 // QueryOrderTokens queries the "order_tokens" edge of the SenderProfile entity.
 func (_m *SenderProfile) QueryOrderTokens() *SenderOrderTokenQuery {
 	return NewSenderProfileClient(_m.config).QueryOrderTokens(_m)
+}
+
+// QueryRefundAccounts queries the "refund_accounts" edge of the SenderProfile entity.
+func (_m *SenderProfile) QueryRefundAccounts() *SenderFiatAccountQuery {
+	return NewSenderProfileClient(_m.config).QueryRefundAccounts(_m)
 }
 
 // Update returns a builder for updating this SenderProfile.

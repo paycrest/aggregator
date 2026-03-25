@@ -29,6 +29,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/senderfiataccount"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -64,6 +65,7 @@ const (
 	TypeProviderProfile             = "ProviderProfile"
 	TypeProviderRating              = "ProviderRating"
 	TypeProvisionBucket             = "ProvisionBucket"
+	TypeSenderFiatAccount           = "SenderFiatAccount"
 	TypeSenderOrderToken            = "SenderOrderToken"
 	TypeSenderProfile               = "SenderProfile"
 	TypeToken                       = "Token"
@@ -17118,6 +17120,621 @@ func (m *ProvisionBucketMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ProvisionBucket edge %s", name)
 }
 
+// SenderFiatAccountMutation represents an operation that mutates the SenderFiatAccount nodes in the graph.
+type SenderFiatAccountMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	created_at         *time.Time
+	updated_at         *time.Time
+	institution        *string
+	account_identifier *string
+	account_name       *string
+	clearedFields      map[string]struct{}
+	sender             *uuid.UUID
+	clearedsender      bool
+	done               bool
+	oldValue           func(context.Context) (*SenderFiatAccount, error)
+	predicates         []predicate.SenderFiatAccount
+}
+
+var _ ent.Mutation = (*SenderFiatAccountMutation)(nil)
+
+// senderfiataccountOption allows management of the mutation configuration using functional options.
+type senderfiataccountOption func(*SenderFiatAccountMutation)
+
+// newSenderFiatAccountMutation creates new mutation for the SenderFiatAccount entity.
+func newSenderFiatAccountMutation(c config, op Op, opts ...senderfiataccountOption) *SenderFiatAccountMutation {
+	m := &SenderFiatAccountMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeSenderFiatAccount,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withSenderFiatAccountID sets the ID field of the mutation.
+func withSenderFiatAccountID(id uuid.UUID) senderfiataccountOption {
+	return func(m *SenderFiatAccountMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *SenderFiatAccount
+		)
+		m.oldValue = func(ctx context.Context) (*SenderFiatAccount, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().SenderFiatAccount.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withSenderFiatAccount sets the old SenderFiatAccount of the mutation.
+func withSenderFiatAccount(node *SenderFiatAccount) senderfiataccountOption {
+	return func(m *SenderFiatAccountMutation) {
+		m.oldValue = func(context.Context) (*SenderFiatAccount, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m SenderFiatAccountMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m SenderFiatAccountMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of SenderFiatAccount entities.
+func (m *SenderFiatAccountMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *SenderFiatAccountMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *SenderFiatAccountMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().SenderFiatAccount.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *SenderFiatAccountMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *SenderFiatAccountMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the SenderFiatAccount entity.
+// If the SenderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderFiatAccountMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *SenderFiatAccountMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *SenderFiatAccountMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *SenderFiatAccountMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the SenderFiatAccount entity.
+// If the SenderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderFiatAccountMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *SenderFiatAccountMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetInstitution sets the "institution" field.
+func (m *SenderFiatAccountMutation) SetInstitution(s string) {
+	m.institution = &s
+}
+
+// Institution returns the value of the "institution" field in the mutation.
+func (m *SenderFiatAccountMutation) Institution() (r string, exists bool) {
+	v := m.institution
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInstitution returns the old "institution" field's value of the SenderFiatAccount entity.
+// If the SenderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderFiatAccountMutation) OldInstitution(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInstitution is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInstitution requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInstitution: %w", err)
+	}
+	return oldValue.Institution, nil
+}
+
+// ResetInstitution resets all changes to the "institution" field.
+func (m *SenderFiatAccountMutation) ResetInstitution() {
+	m.institution = nil
+}
+
+// SetAccountIdentifier sets the "account_identifier" field.
+func (m *SenderFiatAccountMutation) SetAccountIdentifier(s string) {
+	m.account_identifier = &s
+}
+
+// AccountIdentifier returns the value of the "account_identifier" field in the mutation.
+func (m *SenderFiatAccountMutation) AccountIdentifier() (r string, exists bool) {
+	v := m.account_identifier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountIdentifier returns the old "account_identifier" field's value of the SenderFiatAccount entity.
+// If the SenderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderFiatAccountMutation) OldAccountIdentifier(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountIdentifier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountIdentifier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountIdentifier: %w", err)
+	}
+	return oldValue.AccountIdentifier, nil
+}
+
+// ResetAccountIdentifier resets all changes to the "account_identifier" field.
+func (m *SenderFiatAccountMutation) ResetAccountIdentifier() {
+	m.account_identifier = nil
+}
+
+// SetAccountName sets the "account_name" field.
+func (m *SenderFiatAccountMutation) SetAccountName(s string) {
+	m.account_name = &s
+}
+
+// AccountName returns the value of the "account_name" field in the mutation.
+func (m *SenderFiatAccountMutation) AccountName() (r string, exists bool) {
+	v := m.account_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountName returns the old "account_name" field's value of the SenderFiatAccount entity.
+// If the SenderFiatAccount object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SenderFiatAccountMutation) OldAccountName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountName: %w", err)
+	}
+	return oldValue.AccountName, nil
+}
+
+// ResetAccountName resets all changes to the "account_name" field.
+func (m *SenderFiatAccountMutation) ResetAccountName() {
+	m.account_name = nil
+}
+
+// SetSenderID sets the "sender" edge to the SenderProfile entity by id.
+func (m *SenderFiatAccountMutation) SetSenderID(id uuid.UUID) {
+	m.sender = &id
+}
+
+// ClearSender clears the "sender" edge to the SenderProfile entity.
+func (m *SenderFiatAccountMutation) ClearSender() {
+	m.clearedsender = true
+}
+
+// SenderCleared reports if the "sender" edge to the SenderProfile entity was cleared.
+func (m *SenderFiatAccountMutation) SenderCleared() bool {
+	return m.clearedsender
+}
+
+// SenderID returns the "sender" edge ID in the mutation.
+func (m *SenderFiatAccountMutation) SenderID() (id uuid.UUID, exists bool) {
+	if m.sender != nil {
+		return *m.sender, true
+	}
+	return
+}
+
+// SenderIDs returns the "sender" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// SenderID instead. It exists only for internal usage by the builders.
+func (m *SenderFiatAccountMutation) SenderIDs() (ids []uuid.UUID) {
+	if id := m.sender; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetSender resets all changes to the "sender" edge.
+func (m *SenderFiatAccountMutation) ResetSender() {
+	m.sender = nil
+	m.clearedsender = false
+}
+
+// Where appends a list predicates to the SenderFiatAccountMutation builder.
+func (m *SenderFiatAccountMutation) Where(ps ...predicate.SenderFiatAccount) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the SenderFiatAccountMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *SenderFiatAccountMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.SenderFiatAccount, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *SenderFiatAccountMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *SenderFiatAccountMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (SenderFiatAccount).
+func (m *SenderFiatAccountMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *SenderFiatAccountMutation) Fields() []string {
+	fields := make([]string, 0, 5)
+	if m.created_at != nil {
+		fields = append(fields, senderfiataccount.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, senderfiataccount.FieldUpdatedAt)
+	}
+	if m.institution != nil {
+		fields = append(fields, senderfiataccount.FieldInstitution)
+	}
+	if m.account_identifier != nil {
+		fields = append(fields, senderfiataccount.FieldAccountIdentifier)
+	}
+	if m.account_name != nil {
+		fields = append(fields, senderfiataccount.FieldAccountName)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *SenderFiatAccountMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case senderfiataccount.FieldCreatedAt:
+		return m.CreatedAt()
+	case senderfiataccount.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case senderfiataccount.FieldInstitution:
+		return m.Institution()
+	case senderfiataccount.FieldAccountIdentifier:
+		return m.AccountIdentifier()
+	case senderfiataccount.FieldAccountName:
+		return m.AccountName()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *SenderFiatAccountMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case senderfiataccount.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case senderfiataccount.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case senderfiataccount.FieldInstitution:
+		return m.OldInstitution(ctx)
+	case senderfiataccount.FieldAccountIdentifier:
+		return m.OldAccountIdentifier(ctx)
+	case senderfiataccount.FieldAccountName:
+		return m.OldAccountName(ctx)
+	}
+	return nil, fmt.Errorf("unknown SenderFiatAccount field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SenderFiatAccountMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case senderfiataccount.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case senderfiataccount.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case senderfiataccount.FieldInstitution:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInstitution(v)
+		return nil
+	case senderfiataccount.FieldAccountIdentifier:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountIdentifier(v)
+		return nil
+	case senderfiataccount.FieldAccountName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountName(v)
+		return nil
+	}
+	return fmt.Errorf("unknown SenderFiatAccount field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *SenderFiatAccountMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *SenderFiatAccountMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SenderFiatAccountMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown SenderFiatAccount numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *SenderFiatAccountMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *SenderFiatAccountMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *SenderFiatAccountMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown SenderFiatAccount nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *SenderFiatAccountMutation) ResetField(name string) error {
+	switch name {
+	case senderfiataccount.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case senderfiataccount.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case senderfiataccount.FieldInstitution:
+		m.ResetInstitution()
+		return nil
+	case senderfiataccount.FieldAccountIdentifier:
+		m.ResetAccountIdentifier()
+		return nil
+	case senderfiataccount.FieldAccountName:
+		m.ResetAccountName()
+		return nil
+	}
+	return fmt.Errorf("unknown SenderFiatAccount field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *SenderFiatAccountMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.sender != nil {
+		edges = append(edges, senderfiataccount.EdgeSender)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *SenderFiatAccountMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case senderfiataccount.EdgeSender:
+		if id := m.sender; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *SenderFiatAccountMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *SenderFiatAccountMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *SenderFiatAccountMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedsender {
+		edges = append(edges, senderfiataccount.EdgeSender)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *SenderFiatAccountMutation) EdgeCleared(name string) bool {
+	switch name {
+	case senderfiataccount.EdgeSender:
+		return m.clearedsender
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *SenderFiatAccountMutation) ClearEdge(name string) error {
+	switch name {
+	case senderfiataccount.EdgeSender:
+		m.ClearSender()
+		return nil
+	}
+	return fmt.Errorf("unknown SenderFiatAccount unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *SenderFiatAccountMutation) ResetEdge(name string) error {
+	switch name {
+	case senderfiataccount.EdgeSender:
+		m.ResetSender()
+		return nil
+	}
+	return fmt.Errorf("unknown SenderFiatAccount edge %s", name)
+}
+
 // SenderOrderTokenMutation represents an operation that mutates the SenderOrderToken nodes in the graph.
 type SenderOrderTokenMutation struct {
 	config
@@ -17934,6 +18551,9 @@ type SenderProfileMutation struct {
 	order_tokens           map[int]struct{}
 	removedorder_tokens    map[int]struct{}
 	clearedorder_tokens    bool
+	refund_accounts        map[uuid.UUID]struct{}
+	removedrefund_accounts map[uuid.UUID]struct{}
+	clearedrefund_accounts bool
 	done                   bool
 	oldValue               func(context.Context) (*SenderProfile, error)
 	predicates             []predicate.SenderProfile
@@ -18535,6 +19155,60 @@ func (m *SenderProfileMutation) ResetOrderTokens() {
 	m.removedorder_tokens = nil
 }
 
+// AddRefundAccountIDs adds the "refund_accounts" edge to the SenderFiatAccount entity by ids.
+func (m *SenderProfileMutation) AddRefundAccountIDs(ids ...uuid.UUID) {
+	if m.refund_accounts == nil {
+		m.refund_accounts = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.refund_accounts[ids[i]] = struct{}{}
+	}
+}
+
+// ClearRefundAccounts clears the "refund_accounts" edge to the SenderFiatAccount entity.
+func (m *SenderProfileMutation) ClearRefundAccounts() {
+	m.clearedrefund_accounts = true
+}
+
+// RefundAccountsCleared reports if the "refund_accounts" edge to the SenderFiatAccount entity was cleared.
+func (m *SenderProfileMutation) RefundAccountsCleared() bool {
+	return m.clearedrefund_accounts
+}
+
+// RemoveRefundAccountIDs removes the "refund_accounts" edge to the SenderFiatAccount entity by IDs.
+func (m *SenderProfileMutation) RemoveRefundAccountIDs(ids ...uuid.UUID) {
+	if m.removedrefund_accounts == nil {
+		m.removedrefund_accounts = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.refund_accounts, ids[i])
+		m.removedrefund_accounts[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRefundAccounts returns the removed IDs of the "refund_accounts" edge to the SenderFiatAccount entity.
+func (m *SenderProfileMutation) RemovedRefundAccountsIDs() (ids []uuid.UUID) {
+	for id := range m.removedrefund_accounts {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// RefundAccountsIDs returns the "refund_accounts" edge IDs in the mutation.
+func (m *SenderProfileMutation) RefundAccountsIDs() (ids []uuid.UUID) {
+	for id := range m.refund_accounts {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetRefundAccounts resets all changes to the "refund_accounts" edge.
+func (m *SenderProfileMutation) ResetRefundAccounts() {
+	m.refund_accounts = nil
+	m.clearedrefund_accounts = false
+	m.removedrefund_accounts = nil
+}
+
 // Where appends a list predicates to the SenderProfileMutation builder.
 func (m *SenderProfileMutation) Where(ps ...predicate.SenderProfile) {
 	m.predicates = append(m.predicates, ps...)
@@ -18791,7 +19465,7 @@ func (m *SenderProfileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *SenderProfileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.user != nil {
 		edges = append(edges, senderprofile.EdgeUser)
 	}
@@ -18803,6 +19477,9 @@ func (m *SenderProfileMutation) AddedEdges() []string {
 	}
 	if m.order_tokens != nil {
 		edges = append(edges, senderprofile.EdgeOrderTokens)
+	}
+	if m.refund_accounts != nil {
+		edges = append(edges, senderprofile.EdgeRefundAccounts)
 	}
 	return edges
 }
@@ -18831,18 +19508,27 @@ func (m *SenderProfileMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case senderprofile.EdgeRefundAccounts:
+		ids := make([]ent.Value, 0, len(m.refund_accounts))
+		for id := range m.refund_accounts {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *SenderProfileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedpayment_orders != nil {
 		edges = append(edges, senderprofile.EdgePaymentOrders)
 	}
 	if m.removedorder_tokens != nil {
 		edges = append(edges, senderprofile.EdgeOrderTokens)
+	}
+	if m.removedrefund_accounts != nil {
+		edges = append(edges, senderprofile.EdgeRefundAccounts)
 	}
 	return edges
 }
@@ -18863,13 +19549,19 @@ func (m *SenderProfileMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case senderprofile.EdgeRefundAccounts:
+		ids := make([]ent.Value, 0, len(m.removedrefund_accounts))
+		for id := range m.removedrefund_accounts {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *SenderProfileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.cleareduser {
 		edges = append(edges, senderprofile.EdgeUser)
 	}
@@ -18881,6 +19573,9 @@ func (m *SenderProfileMutation) ClearedEdges() []string {
 	}
 	if m.clearedorder_tokens {
 		edges = append(edges, senderprofile.EdgeOrderTokens)
+	}
+	if m.clearedrefund_accounts {
+		edges = append(edges, senderprofile.EdgeRefundAccounts)
 	}
 	return edges
 }
@@ -18897,6 +19592,8 @@ func (m *SenderProfileMutation) EdgeCleared(name string) bool {
 		return m.clearedpayment_orders
 	case senderprofile.EdgeOrderTokens:
 		return m.clearedorder_tokens
+	case senderprofile.EdgeRefundAccounts:
+		return m.clearedrefund_accounts
 	}
 	return false
 }
@@ -18930,6 +19627,9 @@ func (m *SenderProfileMutation) ResetEdge(name string) error {
 		return nil
 	case senderprofile.EdgeOrderTokens:
 		m.ResetOrderTokens()
+		return nil
+	case senderprofile.EdgeRefundAccounts:
+		m.ResetRefundAccounts()
 		return nil
 	}
 	return fmt.Errorf("unknown SenderProfile edge %s", name)

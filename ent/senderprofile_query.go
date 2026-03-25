@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/senderfiataccount"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/user"
@@ -24,15 +25,16 @@ import (
 // SenderProfileQuery is the builder for querying SenderProfile entities.
 type SenderProfileQuery struct {
 	config
-	ctx               *QueryContext
-	order             []senderprofile.OrderOption
-	inters            []Interceptor
-	predicates        []predicate.SenderProfile
-	withUser          *UserQuery
-	withAPIKey        *APIKeyQuery
-	withPaymentOrders *PaymentOrderQuery
-	withOrderTokens   *SenderOrderTokenQuery
-	withFKs           bool
+	ctx                *QueryContext
+	order              []senderprofile.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.SenderProfile
+	withUser           *UserQuery
+	withAPIKey         *APIKeyQuery
+	withPaymentOrders  *PaymentOrderQuery
+	withOrderTokens    *SenderOrderTokenQuery
+	withRefundAccounts *SenderFiatAccountQuery
+	withFKs            bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -150,6 +152,28 @@ func (_q *SenderProfileQuery) QueryOrderTokens() *SenderOrderTokenQuery {
 			sqlgraph.From(senderprofile.Table, senderprofile.FieldID, selector),
 			sqlgraph.To(senderordertoken.Table, senderordertoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.OrderTokensTable, senderprofile.OrderTokensColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryRefundAccounts chains the current query on the "refund_accounts" edge.
+func (_q *SenderProfileQuery) QueryRefundAccounts() *SenderFiatAccountQuery {
+	query := (&SenderFiatAccountClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(senderprofile.Table, senderprofile.FieldID, selector),
+			sqlgraph.To(senderfiataccount.Table, senderfiataccount.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.RefundAccountsTable, senderprofile.RefundAccountsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -344,15 +368,16 @@ func (_q *SenderProfileQuery) Clone() *SenderProfileQuery {
 		return nil
 	}
 	return &SenderProfileQuery{
-		config:            _q.config,
-		ctx:               _q.ctx.Clone(),
-		order:             append([]senderprofile.OrderOption{}, _q.order...),
-		inters:            append([]Interceptor{}, _q.inters...),
-		predicates:        append([]predicate.SenderProfile{}, _q.predicates...),
-		withUser:          _q.withUser.Clone(),
-		withAPIKey:        _q.withAPIKey.Clone(),
-		withPaymentOrders: _q.withPaymentOrders.Clone(),
-		withOrderTokens:   _q.withOrderTokens.Clone(),
+		config:             _q.config,
+		ctx:                _q.ctx.Clone(),
+		order:              append([]senderprofile.OrderOption{}, _q.order...),
+		inters:             append([]Interceptor{}, _q.inters...),
+		predicates:         append([]predicate.SenderProfile{}, _q.predicates...),
+		withUser:           _q.withUser.Clone(),
+		withAPIKey:         _q.withAPIKey.Clone(),
+		withPaymentOrders:  _q.withPaymentOrders.Clone(),
+		withOrderTokens:    _q.withOrderTokens.Clone(),
+		withRefundAccounts: _q.withRefundAccounts.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -400,6 +425,17 @@ func (_q *SenderProfileQuery) WithOrderTokens(opts ...func(*SenderOrderTokenQuer
 		opt(query)
 	}
 	_q.withOrderTokens = query
+	return _q
+}
+
+// WithRefundAccounts tells the query-builder to eager-load the nodes that are connected to
+// the "refund_accounts" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *SenderProfileQuery) WithRefundAccounts(opts ...func(*SenderFiatAccountQuery)) *SenderProfileQuery {
+	query := (&SenderFiatAccountClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withRefundAccounts = query
 	return _q
 }
 
@@ -482,11 +518,12 @@ func (_q *SenderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		nodes       = []*SenderProfile{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withUser != nil,
 			_q.withAPIKey != nil,
 			_q.withPaymentOrders != nil,
 			_q.withOrderTokens != nil,
+			_q.withRefundAccounts != nil,
 		}
 	)
 	if _q.withUser != nil {
@@ -536,6 +573,15 @@ func (_q *SenderProfileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 		if err := _q.loadOrderTokens(ctx, query, nodes,
 			func(n *SenderProfile) { n.Edges.OrderTokens = []*SenderOrderToken{} },
 			func(n *SenderProfile, e *SenderOrderToken) { n.Edges.OrderTokens = append(n.Edges.OrderTokens, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withRefundAccounts; query != nil {
+		if err := _q.loadRefundAccounts(ctx, query, nodes,
+			func(n *SenderProfile) { n.Edges.RefundAccounts = []*SenderFiatAccount{} },
+			func(n *SenderProfile, e *SenderFiatAccount) {
+				n.Edges.RefundAccounts = append(n.Edges.RefundAccounts, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -659,6 +705,37 @@ func (_q *SenderProfileQuery) loadOrderTokens(ctx context.Context, query *Sender
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "sender_profile_order_tokens" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *SenderProfileQuery) loadRefundAccounts(ctx context.Context, query *SenderFiatAccountQuery, nodes []*SenderProfile, init func(*SenderProfile), assign func(*SenderProfile, *SenderFiatAccount)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*SenderProfile)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.SenderFiatAccount(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(senderprofile.RefundAccountsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.sender_profile_refund_accounts
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "sender_profile_refund_accounts" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "sender_profile_refund_accounts" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

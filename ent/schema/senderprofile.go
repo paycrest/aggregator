@@ -51,5 +51,7 @@ func (SenderProfile) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.SetNull)),
 		edge.To("order_tokens", SenderOrderToken.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("refund_accounts", SenderFiatAccount.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

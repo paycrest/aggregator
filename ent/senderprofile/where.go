@@ -463,6 +463,29 @@ func HasOrderTokensWith(preds ...predicate.SenderOrderToken) predicate.SenderPro
 	})
 }
 
+// HasRefundAccounts applies the HasEdge predicate on the "refund_accounts" edge.
+func HasRefundAccounts() predicate.SenderProfile {
+	return predicate.SenderProfile(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, RefundAccountsTable, RefundAccountsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRefundAccountsWith applies the HasEdge predicate on the "refund_accounts" edge with a given conditions (other predicates).
+func HasRefundAccountsWith(preds ...predicate.SenderFiatAccount) predicate.SenderProfile {
+	return predicate.SenderProfile(func(s *sql.Selector) {
+		step := newRefundAccountsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.SenderProfile) predicate.SenderProfile {
 	return predicate.SenderProfile(sql.AndPredicates(predicates...))

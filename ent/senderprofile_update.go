@@ -16,6 +16,7 @@ import (
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/senderfiataccount"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 )
@@ -188,6 +189,21 @@ func (_u *SenderProfileUpdate) AddOrderTokens(v ...*SenderOrderToken) *SenderPro
 	return _u.AddOrderTokenIDs(ids...)
 }
 
+// AddRefundAccountIDs adds the "refund_accounts" edge to the SenderFiatAccount entity by IDs.
+func (_u *SenderProfileUpdate) AddRefundAccountIDs(ids ...uuid.UUID) *SenderProfileUpdate {
+	_u.mutation.AddRefundAccountIDs(ids...)
+	return _u
+}
+
+// AddRefundAccounts adds the "refund_accounts" edges to the SenderFiatAccount entity.
+func (_u *SenderProfileUpdate) AddRefundAccounts(v ...*SenderFiatAccount) *SenderProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddRefundAccountIDs(ids...)
+}
+
 // Mutation returns the SenderProfileMutation object of the builder.
 func (_u *SenderProfileUpdate) Mutation() *SenderProfileMutation {
 	return _u.mutation
@@ -239,6 +255,27 @@ func (_u *SenderProfileUpdate) RemoveOrderTokens(v ...*SenderOrderToken) *Sender
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOrderTokenIDs(ids...)
+}
+
+// ClearRefundAccounts clears all "refund_accounts" edges to the SenderFiatAccount entity.
+func (_u *SenderProfileUpdate) ClearRefundAccounts() *SenderProfileUpdate {
+	_u.mutation.ClearRefundAccounts()
+	return _u
+}
+
+// RemoveRefundAccountIDs removes the "refund_accounts" edge to SenderFiatAccount entities by IDs.
+func (_u *SenderProfileUpdate) RemoveRefundAccountIDs(ids ...uuid.UUID) *SenderProfileUpdate {
+	_u.mutation.RemoveRefundAccountIDs(ids...)
+	return _u
+}
+
+// RemoveRefundAccounts removes "refund_accounts" edges to SenderFiatAccount entities.
+func (_u *SenderProfileUpdate) RemoveRefundAccounts(v ...*SenderFiatAccount) *SenderProfileUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveRefundAccountIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -451,6 +488,51 @@ func (_u *SenderProfileUpdate) sqlSave(ctx context.Context) (_node int, err erro
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.RefundAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   senderprofile.RefundAccountsTable,
+			Columns: []string{senderprofile.RefundAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(senderfiataccount.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedRefundAccountsIDs(); len(nodes) > 0 && !_u.mutation.RefundAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   senderprofile.RefundAccountsTable,
+			Columns: []string{senderprofile.RefundAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(senderfiataccount.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RefundAccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   senderprofile.RefundAccountsTable,
+			Columns: []string{senderprofile.RefundAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(senderfiataccount.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{senderprofile.Label}
@@ -626,6 +708,21 @@ func (_u *SenderProfileUpdateOne) AddOrderTokens(v ...*SenderOrderToken) *Sender
 	return _u.AddOrderTokenIDs(ids...)
 }
 
+// AddRefundAccountIDs adds the "refund_accounts" edge to the SenderFiatAccount entity by IDs.
+func (_u *SenderProfileUpdateOne) AddRefundAccountIDs(ids ...uuid.UUID) *SenderProfileUpdateOne {
+	_u.mutation.AddRefundAccountIDs(ids...)
+	return _u
+}
+
+// AddRefundAccounts adds the "refund_accounts" edges to the SenderFiatAccount entity.
+func (_u *SenderProfileUpdateOne) AddRefundAccounts(v ...*SenderFiatAccount) *SenderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddRefundAccountIDs(ids...)
+}
+
 // Mutation returns the SenderProfileMutation object of the builder.
 func (_u *SenderProfileUpdateOne) Mutation() *SenderProfileMutation {
 	return _u.mutation
@@ -677,6 +774,27 @@ func (_u *SenderProfileUpdateOne) RemoveOrderTokens(v ...*SenderOrderToken) *Sen
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveOrderTokenIDs(ids...)
+}
+
+// ClearRefundAccounts clears all "refund_accounts" edges to the SenderFiatAccount entity.
+func (_u *SenderProfileUpdateOne) ClearRefundAccounts() *SenderProfileUpdateOne {
+	_u.mutation.ClearRefundAccounts()
+	return _u
+}
+
+// RemoveRefundAccountIDs removes the "refund_accounts" edge to SenderFiatAccount entities by IDs.
+func (_u *SenderProfileUpdateOne) RemoveRefundAccountIDs(ids ...uuid.UUID) *SenderProfileUpdateOne {
+	_u.mutation.RemoveRefundAccountIDs(ids...)
+	return _u
+}
+
+// RemoveRefundAccounts removes "refund_accounts" edges to SenderFiatAccount entities.
+func (_u *SenderProfileUpdateOne) RemoveRefundAccounts(v ...*SenderFiatAccount) *SenderProfileUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveRefundAccountIDs(ids...)
 }
 
 // Where appends a list predicates to the SenderProfileUpdate builder.
@@ -912,6 +1030,51 @@ func (_u *SenderProfileUpdateOne) sqlSave(ctx context.Context) (_node *SenderPro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.RefundAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   senderprofile.RefundAccountsTable,
+			Columns: []string{senderprofile.RefundAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(senderfiataccount.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedRefundAccountsIDs(); len(nodes) > 0 && !_u.mutation.RefundAccountsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   senderprofile.RefundAccountsTable,
+			Columns: []string{senderprofile.RefundAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(senderfiataccount.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RefundAccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   senderprofile.RefundAccountsTable,
+			Columns: []string{senderprofile.RefundAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(senderfiataccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

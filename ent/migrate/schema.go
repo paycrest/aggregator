@@ -530,6 +530,37 @@ var (
 			},
 		},
 	}
+	// SenderFiatAccountsColumns holds the columns for the "sender_fiat_accounts" table.
+	SenderFiatAccountsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "institution", Type: field.TypeString, Size: 100},
+		{Name: "account_identifier", Type: field.TypeString, Size: 200},
+		{Name: "account_name", Type: field.TypeString, Size: 200},
+		{Name: "sender_profile_refund_accounts", Type: field.TypeUUID},
+	}
+	// SenderFiatAccountsTable holds the schema information for the "sender_fiat_accounts" table.
+	SenderFiatAccountsTable = &schema.Table{
+		Name:       "sender_fiat_accounts",
+		Columns:    SenderFiatAccountsColumns,
+		PrimaryKey: []*schema.Column{SenderFiatAccountsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "sender_fiat_accounts_sender_profiles_refund_accounts",
+				Columns:    []*schema.Column{SenderFiatAccountsColumns[6]},
+				RefColumns: []*schema.Column{SenderProfilesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "senderfiataccount_institution_account_identifier_sender_profile_refund_accounts",
+				Unique:  true,
+				Columns: []*schema.Column{SenderFiatAccountsColumns[3], SenderFiatAccountsColumns[4], SenderFiatAccountsColumns[6]},
+			},
+		},
+	}
 	// SenderOrderTokensColumns holds the columns for the "sender_order_tokens" table.
 	SenderOrderTokensColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -758,6 +789,7 @@ var (
 		ProviderProfilesTable,
 		ProviderRatingsTable,
 		ProvisionBucketsTable,
+		SenderFiatAccountsTable,
 		SenderOrderTokensTable,
 		SenderProfilesTable,
 		TokensTable,
@@ -793,6 +825,7 @@ func init() {
 	ProviderProfilesTable.ForeignKeys[0].RefTable = UsersTable
 	ProviderRatingsTable.ForeignKeys[0].RefTable = ProviderProfilesTable
 	ProvisionBucketsTable.ForeignKeys[0].RefTable = FiatCurrenciesTable
+	SenderFiatAccountsTable.ForeignKeys[0].RefTable = SenderProfilesTable
 	SenderOrderTokensTable.ForeignKeys[0].RefTable = SenderProfilesTable
 	SenderOrderTokensTable.ForeignKeys[1].RefTable = TokensTable
 	SenderProfilesTable.ForeignKeys[0].RefTable = UsersTable

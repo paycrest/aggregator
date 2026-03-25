@@ -24,6 +24,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/senderfiataccount"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenDB "github.com/paycrest/aggregator/ent/token"
@@ -481,6 +482,82 @@ func TestProfile(t *testing.T) {
 				Only(context.Background())
 			assert.NoError(t, err)
 			assert.True(t, senderOrderToken.MaxFeeCap.IsZero(), "MaxFeeCap should be zero (no cap)")
+		})
+
+		t.Run("with fiat refund accounts", func(t *testing.T) {
+			ctx := context.Background()
+			inst, err := db.Client.Institution.Create().
+				SetCode("SENDERREFUND1").
+				SetName("Sender Refund Test Bank").
+				SetType("bank").
+				Save(ctx)
+			assert.NoError(t, err)
+
+			testUser, err := test.CreateTestUser(map[string]interface{}{
+				"scope": "sender",
+				"email": "senderrefund@test.com",
+			})
+			assert.NoError(t, err)
+
+			sender, err := test.CreateTestSenderProfile(map[string]interface{}{
+				"domain_whitelist": []string{"example.com"},
+				"user_id":          testUser.ID,
+			})
+			assert.NoError(t, err)
+
+			apiKeyService := services.NewAPIKeyService()
+			_, _, err = apiKeyService.GenerateAPIKey(
+				context.Background(),
+				nil,
+				sender,
+				nil,
+			)
+			assert.NoError(t, err)
+
+			accessToken, _ := token.GenerateAccessJWT(testUser.ID.String(), "sender")
+			headers := map[string]string{"Authorization": "Bearer " + accessToken}
+
+			payload := types.SenderProfilePayload{
+				FiatAccounts: []types.FiatAccountPayload{
+					{
+						AccountIdentifier: "1234567890",
+						AccountName:       "Refund Holder",
+						Institution:       inst.Code,
+					},
+				},
+			}
+			res, err := test.PerformRequest(t, "PATCH", "/settings/sender", payload, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			count, err := db.Client.SenderFiatAccount.Query().
+				Where(senderfiataccount.HasSenderWith(senderprofile.IDEQ(sender.ID))).
+				Count(ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, 1, count)
+
+			res, err = test.PerformRequest(t, "GET", "/settings/sender", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			var getResp struct {
+				Data    types.SenderProfileResponse `json:"data"`
+				Message string                      `json:"message"`
+			}
+			err = json.Unmarshal(res.Body.Bytes(), &getResp)
+			assert.NoError(t, err)
+			assert.Len(t, getResp.Data.FiatAccounts, 1)
+			assert.Equal(t, "Refund Holder", getResp.Data.FiatAccounts[0].AccountName)
+			assert.Equal(t, inst.Code, getResp.Data.FiatAccounts[0].Institution)
+
+			payloadClear := types.SenderProfilePayload{FiatAccounts: []types.FiatAccountPayload{}}
+			res, err = test.PerformRequest(t, "PATCH", "/settings/sender", payloadClear, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			count, err = db.Client.SenderFiatAccount.Query().
+				Where(senderfiataccount.HasSenderWith(senderprofile.IDEQ(sender.ID))).
+				Count(ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, 0, count)
 		})
 
 	})

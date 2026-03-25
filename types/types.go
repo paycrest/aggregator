@@ -302,6 +302,9 @@ type SenderProfilePayload struct {
 	WebhookVersion  string                    `json:"webhookVersion" binding:"omitempty,oneof=1 2"`
 	DomainWhitelist []string                  `json:"domainWhitelist"`
 	Tokens          []SenderOrderTokenPayload `json:"tokens"`
+	// FiatAccounts are onramp refund bank accounts (same shape as provider payout accounts).
+	// When non-nil, the list replaces the stored set: omit to leave refund accounts unchanged.
+	FiatAccounts []FiatAccountPayload `json:"fiatAccounts"`
 }
 
 // ProviderOrderTokenPayload defines the provider setting for a token
@@ -387,6 +390,7 @@ type SenderProfileResponse struct {
 	WebhookVersion        string                     `json:"webhookVersion"`
 	DomainWhitelist       []string                   `json:"domainWhitelist"`
 	Tokens                []SenderOrderTokenResponse `json:"tokens"`
+	FiatAccounts          []FiatAccountResponse      `json:"fiatAccounts"`
 	APIKey                APIKeyResponse             `json:"apiKey"`
 	ProviderID            string                     `json:"providerId"`
 	ProviderCurrencies    []string                   `json:"providerCurrencies"`

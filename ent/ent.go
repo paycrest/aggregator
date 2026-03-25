@@ -28,6 +28,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/senderfiataccount"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -111,6 +112,7 @@ func checkColumn(t, c string) error {
 			providerprofile.Table:             providerprofile.ValidColumn,
 			providerrating.Table:              providerrating.ValidColumn,
 			provisionbucket.Table:             provisionbucket.ValidColumn,
+			senderfiataccount.Table:           senderfiataccount.ValidColumn,
 			senderordertoken.Table:            senderordertoken.ValidColumn,
 			senderprofile.Table:               senderprofile.ValidColumn,
 			token.Table:                       token.ValidColumn,

@@ -44,6 +44,8 @@ type Tx struct {
 	ProviderRating *ProviderRatingClient
 	// ProvisionBucket is the client for interacting with the ProvisionBucket builders.
 	ProvisionBucket *ProvisionBucketClient
+	// SenderFiatAccount is the client for interacting with the SenderFiatAccount builders.
+	SenderFiatAccount *SenderFiatAccountClient
 	// SenderOrderToken is the client for interacting with the SenderOrderToken builders.
 	SenderOrderToken *SenderOrderTokenClient
 	// SenderProfile is the client for interacting with the SenderProfile builders.
@@ -205,6 +207,7 @@ func (tx *Tx) init() {
 	tx.ProviderProfile = NewProviderProfileClient(tx.config)
 	tx.ProviderRating = NewProviderRatingClient(tx.config)
 	tx.ProvisionBucket = NewProvisionBucketClient(tx.config)
+	tx.SenderFiatAccount = NewSenderFiatAccountClient(tx.config)
 	tx.SenderOrderToken = NewSenderOrderTokenClient(tx.config)
 	tx.SenderProfile = NewSenderProfileClient(tx.config)
 	tx.Token = NewTokenClient(tx.config)

@@ -32,6 +32,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/senderfiataccount"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -78,6 +79,8 @@ type Client struct {
 	ProviderRating *ProviderRatingClient
 	// ProvisionBucket is the client for interacting with the ProvisionBucket builders.
 	ProvisionBucket *ProvisionBucketClient
+	// SenderFiatAccount is the client for interacting with the SenderFiatAccount builders.
+	SenderFiatAccount *SenderFiatAccountClient
 	// SenderOrderToken is the client for interacting with the SenderOrderToken builders.
 	SenderOrderToken *SenderOrderTokenClient
 	// SenderProfile is the client for interacting with the SenderProfile builders.
@@ -119,6 +122,7 @@ func (c *Client) init() {
 	c.ProviderProfile = NewProviderProfileClient(c.config)
 	c.ProviderRating = NewProviderRatingClient(c.config)
 	c.ProvisionBucket = NewProvisionBucketClient(c.config)
+	c.SenderFiatAccount = NewSenderFiatAccountClient(c.config)
 	c.SenderOrderToken = NewSenderOrderTokenClient(c.config)
 	c.SenderProfile = NewSenderProfileClient(c.config)
 	c.Token = NewTokenClient(c.config)
@@ -234,6 +238,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ProviderProfile:             NewProviderProfileClient(cfg),
 		ProviderRating:              NewProviderRatingClient(cfg),
 		ProvisionBucket:             NewProvisionBucketClient(cfg),
+		SenderFiatAccount:           NewSenderFiatAccountClient(cfg),
 		SenderOrderToken:            NewSenderOrderTokenClient(cfg),
 		SenderProfile:               NewSenderProfileClient(cfg),
 		Token:                       NewTokenClient(cfg),
@@ -276,6 +281,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ProviderProfile:             NewProviderProfileClient(cfg),
 		ProviderRating:              NewProviderRatingClient(cfg),
 		ProvisionBucket:             NewProvisionBucketClient(cfg),
+		SenderFiatAccount:           NewSenderFiatAccountClient(cfg),
 		SenderOrderToken:            NewSenderOrderTokenClient(cfg),
 		SenderProfile:               NewSenderProfileClient(cfg),
 		Token:                       NewTokenClient(cfg),
@@ -316,8 +322,9 @@ func (c *Client) Use(hooks ...Hook) {
 		c.Institution, c.KYBProfile, c.Network, c.PaymentOrder,
 		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderBalances,
 		c.ProviderFiatAccount, c.ProviderOrderToken, c.ProviderProfile,
-		c.ProviderRating, c.ProvisionBucket, c.SenderOrderToken, c.SenderProfile,
-		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.ProviderRating, c.ProvisionBucket, c.SenderFiatAccount, c.SenderOrderToken,
+		c.SenderProfile, c.Token, c.TransactionLog, c.User, c.VerificationToken,
+		c.WebhookRetryAttempt,
 	} {
 		n.Use(hooks...)
 	}
@@ -331,8 +338,9 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.Institution, c.KYBProfile, c.Network, c.PaymentOrder,
 		c.PaymentOrderFulfillment, c.PaymentWebhook, c.ProviderBalances,
 		c.ProviderFiatAccount, c.ProviderOrderToken, c.ProviderProfile,
-		c.ProviderRating, c.ProvisionBucket, c.SenderOrderToken, c.SenderProfile,
-		c.Token, c.TransactionLog, c.User, c.VerificationToken, c.WebhookRetryAttempt,
+		c.ProviderRating, c.ProvisionBucket, c.SenderFiatAccount, c.SenderOrderToken,
+		c.SenderProfile, c.Token, c.TransactionLog, c.User, c.VerificationToken,
+		c.WebhookRetryAttempt,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -373,6 +381,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ProviderRating.mutate(ctx, m)
 	case *ProvisionBucketMutation:
 		return c.ProvisionBucket.mutate(ctx, m)
+	case *SenderFiatAccountMutation:
+		return c.SenderFiatAccount.mutate(ctx, m)
 	case *SenderOrderTokenMutation:
 		return c.SenderOrderToken.mutate(ctx, m)
 	case *SenderProfileMutation:
@@ -3192,6 +3202,155 @@ func (c *ProvisionBucketClient) mutate(ctx context.Context, m *ProvisionBucketMu
 	}
 }
 
+// SenderFiatAccountClient is a client for the SenderFiatAccount schema.
+type SenderFiatAccountClient struct {
+	config
+}
+
+// NewSenderFiatAccountClient returns a client for the SenderFiatAccount from the given config.
+func NewSenderFiatAccountClient(c config) *SenderFiatAccountClient {
+	return &SenderFiatAccountClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `senderfiataccount.Hooks(f(g(h())))`.
+func (c *SenderFiatAccountClient) Use(hooks ...Hook) {
+	c.hooks.SenderFiatAccount = append(c.hooks.SenderFiatAccount, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `senderfiataccount.Intercept(f(g(h())))`.
+func (c *SenderFiatAccountClient) Intercept(interceptors ...Interceptor) {
+	c.inters.SenderFiatAccount = append(c.inters.SenderFiatAccount, interceptors...)
+}
+
+// Create returns a builder for creating a SenderFiatAccount entity.
+func (c *SenderFiatAccountClient) Create() *SenderFiatAccountCreate {
+	mutation := newSenderFiatAccountMutation(c.config, OpCreate)
+	return &SenderFiatAccountCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of SenderFiatAccount entities.
+func (c *SenderFiatAccountClient) CreateBulk(builders ...*SenderFiatAccountCreate) *SenderFiatAccountCreateBulk {
+	return &SenderFiatAccountCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *SenderFiatAccountClient) MapCreateBulk(slice any, setFunc func(*SenderFiatAccountCreate, int)) *SenderFiatAccountCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &SenderFiatAccountCreateBulk{err: fmt.Errorf("calling to SenderFiatAccountClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*SenderFiatAccountCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &SenderFiatAccountCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for SenderFiatAccount.
+func (c *SenderFiatAccountClient) Update() *SenderFiatAccountUpdate {
+	mutation := newSenderFiatAccountMutation(c.config, OpUpdate)
+	return &SenderFiatAccountUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *SenderFiatAccountClient) UpdateOne(_m *SenderFiatAccount) *SenderFiatAccountUpdateOne {
+	mutation := newSenderFiatAccountMutation(c.config, OpUpdateOne, withSenderFiatAccount(_m))
+	return &SenderFiatAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *SenderFiatAccountClient) UpdateOneID(id uuid.UUID) *SenderFiatAccountUpdateOne {
+	mutation := newSenderFiatAccountMutation(c.config, OpUpdateOne, withSenderFiatAccountID(id))
+	return &SenderFiatAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for SenderFiatAccount.
+func (c *SenderFiatAccountClient) Delete() *SenderFiatAccountDelete {
+	mutation := newSenderFiatAccountMutation(c.config, OpDelete)
+	return &SenderFiatAccountDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *SenderFiatAccountClient) DeleteOne(_m *SenderFiatAccount) *SenderFiatAccountDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *SenderFiatAccountClient) DeleteOneID(id uuid.UUID) *SenderFiatAccountDeleteOne {
+	builder := c.Delete().Where(senderfiataccount.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &SenderFiatAccountDeleteOne{builder}
+}
+
+// Query returns a query builder for SenderFiatAccount.
+func (c *SenderFiatAccountClient) Query() *SenderFiatAccountQuery {
+	return &SenderFiatAccountQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeSenderFiatAccount},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a SenderFiatAccount entity by its id.
+func (c *SenderFiatAccountClient) Get(ctx context.Context, id uuid.UUID) (*SenderFiatAccount, error) {
+	return c.Query().Where(senderfiataccount.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *SenderFiatAccountClient) GetX(ctx context.Context, id uuid.UUID) *SenderFiatAccount {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QuerySender queries the sender edge of a SenderFiatAccount.
+func (c *SenderFiatAccountClient) QuerySender(_m *SenderFiatAccount) *SenderProfileQuery {
+	query := (&SenderProfileClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(senderfiataccount.Table, senderfiataccount.FieldID, id),
+			sqlgraph.To(senderprofile.Table, senderprofile.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, senderfiataccount.SenderTable, senderfiataccount.SenderColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *SenderFiatAccountClient) Hooks() []Hook {
+	return c.hooks.SenderFiatAccount
+}
+
+// Interceptors returns the client interceptors.
+func (c *SenderFiatAccountClient) Interceptors() []Interceptor {
+	return c.inters.SenderFiatAccount
+}
+
+func (c *SenderFiatAccountClient) mutate(ctx context.Context, m *SenderFiatAccountMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&SenderFiatAccountCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&SenderFiatAccountUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&SenderFiatAccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&SenderFiatAccountDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown SenderFiatAccount mutation op: %q", m.Op())
+	}
+}
+
 // SenderOrderTokenClient is a client for the SenderOrderToken schema.
 type SenderOrderTokenClient struct {
 	config
@@ -3522,6 +3681,22 @@ func (c *SenderProfileClient) QueryOrderTokens(_m *SenderProfile) *SenderOrderTo
 			sqlgraph.From(senderprofile.Table, senderprofile.FieldID, id),
 			sqlgraph.To(senderordertoken.Table, senderordertoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.OrderTokensTable, senderprofile.OrderTokensColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRefundAccounts queries the refund_accounts edge of a SenderProfile.
+func (c *SenderProfileClient) QueryRefundAccounts(_m *SenderProfile) *SenderFiatAccountQuery {
+	query := (&SenderFiatAccountClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(senderprofile.Table, senderprofile.FieldID, id),
+			sqlgraph.To(senderfiataccount.Table, senderfiataccount.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, senderprofile.RefundAccountsTable, senderprofile.RefundAccountsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -4403,14 +4578,16 @@ type (
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, Network, PaymentOrder, PaymentOrderFulfillment, PaymentWebhook,
 		ProviderBalances, ProviderFiatAccount, ProviderOrderToken, ProviderProfile,
-		ProviderRating, ProvisionBucket, SenderOrderToken, SenderProfile, Token,
-		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Hook
+		ProviderRating, ProvisionBucket, SenderFiatAccount, SenderOrderToken,
+		SenderProfile, Token, TransactionLog, User, VerificationToken,
+		WebhookRetryAttempt []ent.Hook
 	}
 	inters struct {
 		APIKey, BeneficialOwner, FiatCurrency, IdentityVerificationRequest, Institution,
 		KYBProfile, Network, PaymentOrder, PaymentOrderFulfillment, PaymentWebhook,
 		ProviderBalances, ProviderFiatAccount, ProviderOrderToken, ProviderProfile,
-		ProviderRating, ProvisionBucket, SenderOrderToken, SenderProfile, Token,
-		TransactionLog, User, VerificationToken, WebhookRetryAttempt []ent.Interceptor
+		ProviderRating, ProvisionBucket, SenderFiatAccount, SenderOrderToken,
+		SenderProfile, Token, TransactionLog, User, VerificationToken,
+		WebhookRetryAttempt []ent.Interceptor
 	}
 )

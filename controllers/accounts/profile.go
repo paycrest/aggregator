@@ -17,6 +17,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
+	"github.com/paycrest/aggregator/ent/senderfiataccount"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -81,6 +82,74 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 		return
 	}
 	sender := senderCtx.(*ent.SenderProfile)
+
+	type senderFiatAccountOp struct {
+		Payload         types.FiatAccountPayload
+		IsUpdate        bool
+		ExistingAccount *ent.SenderFiatAccount
+	}
+	var senderFiatOps []senderFiatAccountOp
+	var fiatValidationErrors []types.ErrorData
+
+	if payload.FiatAccounts != nil {
+		for _, fiatPayload := range payload.FiatAccounts {
+			institutionExists, err := storage.Client.Institution.
+				Query().
+				Where(institution.CodeEQ(fiatPayload.Institution)).
+				Exist(reqCtx)
+			if err != nil {
+				logger.WithFields(logger.Fields{
+					"Error":       fmt.Sprintf("%v", err),
+					"Institution": fiatPayload.Institution,
+				}).Errorf("Failed to validate institution for sender refund account")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+			if !institutionExists {
+				fiatValidationErrors = append(fiatValidationErrors, types.ErrorData{
+					Field:   "FiatAccounts",
+					Message: fmt.Sprintf("Institution %s is not supported", fiatPayload.Institution),
+				})
+				continue
+			}
+
+			existingAccount, err := storage.Client.SenderFiatAccount.
+				Query().
+				Where(
+					senderfiataccount.AccountIdentifierEQ(fiatPayload.AccountIdentifier),
+					senderfiataccount.InstitutionEQ(fiatPayload.Institution),
+					senderfiataccount.HasSenderWith(senderprofile.IDEQ(sender.ID)),
+				).
+				Only(reqCtx)
+
+			isUpdate := err == nil
+			if err != nil && !ent.IsNotFound(err) {
+				logger.WithFields(logger.Fields{
+					"Error":       fmt.Sprintf("%v", err),
+					"Institution": fiatPayload.Institution,
+				}).Errorf("Failed to check for existing sender refund account")
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+
+			senderFiatOps = append(senderFiatOps, senderFiatAccountOp{
+				Payload:         fiatPayload,
+				IsUpdate:        isUpdate,
+				ExistingAccount: existingAccount,
+			})
+		}
+
+		if len(fiatValidationErrors) > 0 {
+			var mainMessage string
+			if len(fiatValidationErrors) == 1 {
+				mainMessage = fiatValidationErrors[0].Message
+			} else {
+				mainMessage = fmt.Sprintf("Validation failed: %d errors found", len(fiatValidationErrors))
+			}
+			u.APIResponse(ctx, http.StatusBadRequest, "error", mainMessage, fiatValidationErrors)
+			return
+		}
+	}
 
 	// save or update SenderOrderToken
 	tx, err := storage.Client.Tx(reqCtx)
@@ -227,6 +296,77 @@ func (ctrl *ProfileController) UpdateSenderProfile(ctx *gin.Context) {
 			update.SetIsActive(true)
 		} else if !hasConfiguredToken && sender.IsActive {
 			update.SetIsActive(false)
+		}
+	}
+
+	for _, op := range senderFiatOps {
+		if op.IsUpdate {
+			_, err := tx.SenderFiatAccount.
+				UpdateOneID(op.ExistingAccount.ID).
+				SetAccountIdentifier(op.Payload.AccountIdentifier).
+				SetAccountName(op.Payload.AccountName).
+				SetInstitution(op.Payload.Institution).
+				Save(reqCtx)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		} else {
+			_, err := tx.SenderFiatAccount.
+				Create().
+				SetAccountIdentifier(op.Payload.AccountIdentifier).
+				SetAccountName(op.Payload.AccountName).
+				SetInstitution(op.Payload.Institution).
+				SetSenderID(sender.ID).
+				Save(reqCtx)
+			if err != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
+		}
+	}
+
+	if payload.FiatAccounts != nil {
+		type fiatAccountKey struct {
+			Institution       string
+			AccountIdentifier string
+		}
+		keptKeys := make(map[fiatAccountKey]struct{}, len(payload.FiatAccounts))
+		for _, p := range payload.FiatAccounts {
+			if p.Institution == "" || p.AccountIdentifier == "" {
+				continue
+			}
+			keptKeys[fiatAccountKey{
+				Institution:       p.Institution,
+				AccountIdentifier: p.AccountIdentifier,
+			}] = struct{}{}
+		}
+		existingFiatAccounts, err := tx.SenderFiatAccount.
+			Query().
+			Where(senderfiataccount.HasSenderWith(senderprofile.IDEQ(sender.ID))).
+			All(reqCtx)
+		if err != nil {
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+			return
+		}
+		var idsToDelete []uuid.UUID
+		for _, acc := range existingFiatAccounts {
+			key := fiatAccountKey{
+				Institution:       acc.Institution,
+				AccountIdentifier: acc.AccountIdentifier,
+			}
+			if _, kept := keptKeys[key]; !kept {
+				idsToDelete = append(idsToDelete, acc.ID)
+			}
+		}
+		if len(idsToDelete) > 0 {
+			if _, err := tx.SenderFiatAccount.
+				Delete().
+				Where(senderfiataccount.IDIn(idsToDelete...)).
+				Exec(reqCtx); err != nil {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
+				return
+			}
 		}
 	}
 
@@ -986,6 +1126,30 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		tokensPayload[i] = payload
 	}
 
+	refundAccounts, err := storage.Client.SenderFiatAccount.
+		Query().
+		Where(senderfiataccount.HasSenderWith(senderprofile.IDEQ(sender.ID))).
+		All(reqCtx)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"Error":    fmt.Sprintf("%v", err),
+			"SenderID": sender.ID,
+		}).Errorf("Failed to fetch sender refund accounts")
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to retrieve profile", nil)
+		return
+	}
+	fiatAccountsPayload := make([]types.FiatAccountResponse, len(refundAccounts))
+	for i, acc := range refundAccounts {
+		fiatAccountsPayload[i] = types.FiatAccountResponse{
+			ID:                acc.ID,
+			AccountIdentifier: acc.AccountIdentifier,
+			AccountName:       acc.AccountName,
+			Institution:       acc.Institution,
+			CreatedAt:         acc.CreatedAt,
+			UpdatedAt:         acc.UpdatedAt,
+		}
+	}
+
 	// Fetch KYB profile to get rejection comment if available
 	var kybRejectionComment *string
 	kybProfile, err := storage.Client.KYBProfile.
@@ -1010,6 +1174,7 @@ func (ctrl *ProfileController) GetSenderProfile(ctx *gin.Context) {
 		WebhookVersion:        webhookVersion,
 		DomainWhitelist:       sender.DomainWhitelist,
 		Tokens:                tokensPayload,
+		FiatAccounts:          fiatAccountsPayload,
 		APIKey:                *apiKey,
 		IsActive:              sender.IsActive,
 		KYBVerificationStatus: user.KybVerificationStatus,

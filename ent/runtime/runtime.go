@@ -23,6 +23,7 @@ import (
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/schema"
+	"github.com/paycrest/aggregator/ent/senderfiataccount"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -525,6 +526,79 @@ func init() {
 	provisionbucketDescCreatedAt := provisionbucketFields[2].Descriptor()
 	// provisionbucket.DefaultCreatedAt holds the default value on creation for the created_at field.
 	provisionbucket.DefaultCreatedAt = provisionbucketDescCreatedAt.Default.(func() time.Time)
+	senderfiataccountMixin := schema.SenderFiatAccount{}.Mixin()
+	senderfiataccountMixinFields0 := senderfiataccountMixin[0].Fields()
+	_ = senderfiataccountMixinFields0
+	senderfiataccountFields := schema.SenderFiatAccount{}.Fields()
+	_ = senderfiataccountFields
+	// senderfiataccountDescCreatedAt is the schema descriptor for created_at field.
+	senderfiataccountDescCreatedAt := senderfiataccountMixinFields0[0].Descriptor()
+	// senderfiataccount.DefaultCreatedAt holds the default value on creation for the created_at field.
+	senderfiataccount.DefaultCreatedAt = senderfiataccountDescCreatedAt.Default.(func() time.Time)
+	// senderfiataccountDescUpdatedAt is the schema descriptor for updated_at field.
+	senderfiataccountDescUpdatedAt := senderfiataccountMixinFields0[1].Descriptor()
+	// senderfiataccount.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	senderfiataccount.DefaultUpdatedAt = senderfiataccountDescUpdatedAt.Default.(func() time.Time)
+	// senderfiataccount.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	senderfiataccount.UpdateDefaultUpdatedAt = senderfiataccountDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// senderfiataccountDescInstitution is the schema descriptor for institution field.
+	senderfiataccountDescInstitution := senderfiataccountFields[1].Descriptor()
+	// senderfiataccount.InstitutionValidator is a validator for the "institution" field. It is called by the builders before save.
+	senderfiataccount.InstitutionValidator = func() func(string) error {
+		validators := senderfiataccountDescInstitution.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(institution string) error {
+			for _, fn := range fns {
+				if err := fn(institution); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// senderfiataccountDescAccountIdentifier is the schema descriptor for account_identifier field.
+	senderfiataccountDescAccountIdentifier := senderfiataccountFields[2].Descriptor()
+	// senderfiataccount.AccountIdentifierValidator is a validator for the "account_identifier" field. It is called by the builders before save.
+	senderfiataccount.AccountIdentifierValidator = func() func(string) error {
+		validators := senderfiataccountDescAccountIdentifier.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(account_identifier string) error {
+			for _, fn := range fns {
+				if err := fn(account_identifier); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// senderfiataccountDescAccountName is the schema descriptor for account_name field.
+	senderfiataccountDescAccountName := senderfiataccountFields[3].Descriptor()
+	// senderfiataccount.AccountNameValidator is a validator for the "account_name" field. It is called by the builders before save.
+	senderfiataccount.AccountNameValidator = func() func(string) error {
+		validators := senderfiataccountDescAccountName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(account_name string) error {
+			for _, fn := range fns {
+				if err := fn(account_name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// senderfiataccountDescID is the schema descriptor for id field.
+	senderfiataccountDescID := senderfiataccountFields[0].Descriptor()
+	// senderfiataccount.DefaultID holds the default value on creation for the id field.
+	senderfiataccount.DefaultID = senderfiataccountDescID.Default.(func() uuid.UUID)
 	senderordertokenMixin := schema.SenderOrderToken{}.Mixin()
 	senderordertokenMixinFields0 := senderordertokenMixin[0].Fields()
 	_ = senderordertokenMixinFields0
@@ -705,6 +779,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.5"                                         // Version of ent codegen.
-	Sum     = "h1:Rj2WOYJtCkWyFo6a+5wB3EfBRP0rnx1fMk6gGA0UUe4=" // Sum of ent codegen.
+	Version = "v0.14.6"                                         // Version of ent codegen.
+	Sum     = "h1:/f2696BpwuWAEEG6PVGWflg6+Inrpq4pRWuNlWz/Skk=" // Sum of ent codegen.
 )

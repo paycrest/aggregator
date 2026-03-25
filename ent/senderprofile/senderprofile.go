@@ -37,6 +37,8 @@ const (
 	EdgePaymentOrders = "payment_orders"
 	// EdgeOrderTokens holds the string denoting the order_tokens edge name in mutations.
 	EdgeOrderTokens = "order_tokens"
+	// EdgeRefundAccounts holds the string denoting the refund_accounts edge name in mutations.
+	EdgeRefundAccounts = "refund_accounts"
 	// Table holds the table name of the senderprofile in the database.
 	Table = "sender_profiles"
 	// UserTable is the table that holds the user relation/edge.
@@ -67,6 +69,13 @@ const (
 	OrderTokensInverseTable = "sender_order_tokens"
 	// OrderTokensColumn is the table column denoting the order_tokens relation/edge.
 	OrderTokensColumn = "sender_profile_order_tokens"
+	// RefundAccountsTable is the table that holds the refund_accounts relation/edge.
+	RefundAccountsTable = "sender_fiat_accounts"
+	// RefundAccountsInverseTable is the table name for the SenderFiatAccount entity.
+	// It exists in this package in order to avoid circular dependency with the "senderfiataccount" package.
+	RefundAccountsInverseTable = "sender_fiat_accounts"
+	// RefundAccountsColumn is the table column denoting the refund_accounts relation/edge.
+	RefundAccountsColumn = "sender_profile_refund_accounts"
 )
 
 // Columns holds all SQL columns for senderprofile fields.
@@ -198,6 +207,20 @@ func ByOrderTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newOrderTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByRefundAccountsCount orders the results by refund_accounts count.
+func ByRefundAccountsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newRefundAccountsStep(), opts...)
+	}
+}
+
+// ByRefundAccounts orders the results by refund_accounts terms.
+func ByRefundAccounts(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newRefundAccountsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newUserStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -224,5 +247,12 @@ func newOrderTokensStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(OrderTokensInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, OrderTokensTable, OrderTokensColumn),
+	)
+}
+func newRefundAccountsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(RefundAccountsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, RefundAccountsTable, RefundAccountsColumn),
 	)
 }

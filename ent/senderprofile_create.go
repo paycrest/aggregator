@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/apikey"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/senderfiataccount"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/user"
@@ -190,6 +191,21 @@ func (_c *SenderProfileCreate) AddOrderTokens(v ...*SenderOrderToken) *SenderPro
 		ids[i] = v[i].ID
 	}
 	return _c.AddOrderTokenIDs(ids...)
+}
+
+// AddRefundAccountIDs adds the "refund_accounts" edge to the SenderFiatAccount entity by IDs.
+func (_c *SenderProfileCreate) AddRefundAccountIDs(ids ...uuid.UUID) *SenderProfileCreate {
+	_c.mutation.AddRefundAccountIDs(ids...)
+	return _c
+}
+
+// AddRefundAccounts adds the "refund_accounts" edges to the SenderFiatAccount entity.
+func (_c *SenderProfileCreate) AddRefundAccounts(v ...*SenderFiatAccount) *SenderProfileCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddRefundAccountIDs(ids...)
 }
 
 // Mutation returns the SenderProfileMutation object of the builder.
@@ -392,6 +408,22 @@ func (_c *SenderProfileCreate) createSpec() (*SenderProfile, *sqlgraph.CreateSpe
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(senderordertoken.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.RefundAccountsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   senderprofile.RefundAccountsTable,
+			Columns: []string{senderprofile.RefundAccountsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(senderfiataccount.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
