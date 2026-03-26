@@ -26,9 +26,11 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/routers/middleware"
 	"github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
@@ -760,6 +762,19 @@ func TestSender(t *testing.T) {
 			assert.True(t, ok)
 			orderID, err := uuid.Parse(idStr)
 			assert.NoError(t, err)
+
+			// InitiatePaymentOrder rounds amount to token decimals: tear down this PaymentOrder (orderID) so
+			// sibling GetStats subtests keep stable totalOrders counts for testCtx.user.
+			t.Cleanup(func() {
+				ctx := context.Background()
+				_, _ = db.Client.PaymentWebhook.Delete().Where(paymentwebhook.HasPaymentOrderWith(paymentorder.IDEQ(orderID))).Exec(ctx)
+				if _, delErr := db.Client.TransactionLog.Delete().Where(transactionlog.HasPaymentOrderWith(paymentorder.IDEQ(orderID))).Exec(ctx); delErr != nil {
+					t.Logf("InitiatePaymentOrder rounds amount to token decimals: cleanup TransactionLog orderID=%s: %v", orderID, delErr)
+				}
+				if delErr := db.Client.PaymentOrder.DeleteOneID(orderID).Exec(ctx); delErr != nil {
+					t.Logf("InitiatePaymentOrder rounds amount to token decimals: cleanup db.Client.PaymentOrder.DeleteOneID orderID=%s: %v", orderID, delErr)
+				}
+			})
 
 			po, err := db.Client.PaymentOrder.
 				Query().
@@ -1698,7 +1713,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 12, int(totalOrders)) // 9 from setup + 2 from InitiatePaymentOrder (valid amount + decimal rounding) + 1 from EIP7702_authorization
+			assert.Equal(t, 11, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder (valid amount) + 1 from EIP7702_authorization; rounding test cleans up its order
 
 			// Assert the totalOrderVolume value
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
@@ -1777,7 +1792,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 13, int(totalOrders)) // 9 from setup + 2 from InitiatePaymentOrder + 1 from EIP7702_authorization + 1 settled order
+			assert.Equal(t, 12, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 from EIP7702_authorization + 1 settled order; rounding test cleans up its order
 
 			// Assert the totalOrderVolume value (100 NGN / 950 market rate ≈ 0.105 USD)
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
