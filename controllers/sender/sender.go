@@ -381,8 +381,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	// amountInUSD is computed after rounding order amount to token decimals (see InitiatePaymentOrder tx block).
-
 	// Use order type from ValidateRate result (already determined based on OTC limits)
 	orderType := rateValidationResult.OrderType
 
