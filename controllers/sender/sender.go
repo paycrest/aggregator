@@ -2047,9 +2047,11 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	destOnrampResp := types.V2CryptoDestinationOnrampResponse{
 		Type:       destination.Type,
 		Currency:   destination.Currency,
-		Network:    token.Edges.Network.Identifier,
 		ProviderID: destination.ProviderID,
-		Recipient:  types.V2CryptoRecipientOnrampResponse{Address: destination.Recipient.Address},
+		Recipient: types.V2CryptoRecipientOnrampResponse{
+			Address: destination.Recipient.Address,
+			Network: destination.Recipient.Network,
+		},
 	}
 	transactionFee := paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee)
 	response := &types.V2PaymentOrderResponse{

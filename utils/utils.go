@@ -545,9 +545,11 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 		destination = &types.V2CryptoDestinationOnrampResponse{
 			Type:       "crypto",
 			Currency:   tokenSymbol,
-			Network:    networkID,
 			ProviderID: providerID,
-			Recipient:  types.V2CryptoRecipientOnrampResponse{Address: paymentOrder.RefundOrRecipientAddress},
+			Recipient: types.V2CryptoRecipientOnrampResponse{
+				Address: paymentOrder.RefundOrRecipientAddress,
+				Network: networkID,
+			},
 		}
 	} else {
 		if paymentOrder.ReceiveAddress != "" {

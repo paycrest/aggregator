@@ -2470,7 +2470,7 @@ func TestSender(t *testing.T) {
 	})
 
 	t.Run("GetPaymentOrderByIDV2", func(t *testing.T) {
-		// Create explicit onramp order and verify destination.network in v2 response.
+		// Create explicit onramp order and verify destination.recipient.network in v2 response.
 		onrampOrder, err := db.Client.PaymentOrder.
 			Create().
 			SetSenderProfile(testCtx.user).
@@ -2512,6 +2512,8 @@ func TestSender(t *testing.T) {
 
 		destination, ok := data["destination"].(map[string]interface{})
 		assert.True(t, ok)
-		assert.Equal(t, testCtx.networkIdentifier, destination["network"])
+		recipient, ok := destination["recipient"].(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, testCtx.networkIdentifier, recipient["network"])
 	})
 }
