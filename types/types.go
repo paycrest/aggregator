@@ -705,16 +705,18 @@ type V2CryptoDestination struct {
 }
 
 // V2CryptoDestinationOnrampResponse is the onramp v2 API response shape for destination.
+// Settlement network lives on recipient only (same as V2CryptoRecipient on create).
 type V2CryptoDestinationOnrampResponse struct {
-	Type       string                         `json:"type"`
-	Currency   string                         `json:"currency"`
-	ProviderID string                         `json:"providerId,omitempty"`
+	Type       string                          `json:"type"`
+	Currency   string                          `json:"currency"`
+	ProviderID string                          `json:"providerId,omitempty"`
 	Recipient  V2CryptoRecipientOnrampResponse `json:"recipient"`
 }
 
 // V2CryptoRecipientOnrampResponse is the onramp v2 API response shape for recipient.
 type V2CryptoRecipientOnrampResponse struct {
 	Address string `json:"address"`
+	Network string `json:"network"`
 }
 
 // V2CryptoRecipient represents the crypto recipient configuration for onramp v2 payment orders
@@ -835,6 +837,7 @@ type V2FiatProviderAccount struct {
 type V2PaymentOrderResponse struct {
 	ID                uuid.UUID `json:"id"`
 	Status            string    `json:"status"`
+	OrderType         string    `json:"orderType"` // "regular" | "otc"
 	Timestamp         time.Time `json:"timestamp"`
 	Amount            string    `json:"amount"` // Crypto amount (token units) - consistent for both flows
 	Rate              string    `json:"rate,omitempty"`
@@ -851,6 +854,7 @@ type V2PaymentOrderResponse struct {
 type V2PaymentOrderGetResponse struct {
 	ID                  uuid.UUID        `json:"id"`
 	Status              string           `json:"status"`
+	OrderType           string           `json:"orderType"` // "regular" | "otc"
 	Direction           string           `json:"direction"` // "offramp" or "onramp"
 	CreatedAt           time.Time        `json:"createdAt"`
 	UpdatedAt           time.Time        `json:"updatedAt"`

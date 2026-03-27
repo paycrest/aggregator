@@ -2978,7 +2978,7 @@ func (ctrl *ProviderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", resp)
 }
 
-// GetPaymentOrdersV2 returns a list of payment orders in v2 API schema (list only; currency required like v1).
+// GetPaymentOrdersV2 returns payment orders in v2 API schema. Paginated list requires currency (same as v1). Search and CSV export use the same query parameters as v1.
 func (ctrl *ProviderController) GetPaymentOrdersV2(ctx *gin.Context) {
 	providerCtx, ok := ctx.Get("provider")
 	if !ok {
@@ -2986,6 +2986,36 @@ func (ctrl *ProviderController) GetPaymentOrdersV2(ctx *gin.Context) {
 		return
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
+
+	export := ctx.Query("export")
+	isExport := export == "csv" || export == "true"
+	fromDateStr := ctx.Query("from")
+	toDateStr := ctx.Query("to")
+
+	searchParam := ctx.Query("search")
+	searchText := strings.TrimSpace(searchParam)
+	hasSearchParam := ctx.Request.URL.Query().Has("search")
+	isSearch := searchText != ""
+
+	if hasSearchParam && !isSearch {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Search query is required", nil)
+		return
+	}
+
+	if isExport {
+		if fromDateStr == "" || toDateStr == "" {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Both 'from' and 'to' date parameters are required for export", nil)
+			return
+		}
+		ctrl.handleExportPaymentOrders(ctx, provider)
+		return
+	}
+
+	if isSearch {
+		ctrl.handleSearchPaymentOrdersV2(ctx, provider, searchText)
+		return
+	}
+
 	ctrl.handleListPaymentOrdersV2(ctx, provider)
 }
 
@@ -3034,6 +3064,7 @@ func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, prov
 	statusMap := map[string]paymentorder.Status{
 		"pending":    paymentorder.StatusPending,
 		"validated":  paymentorder.StatusValidated,
+		"processing": paymentorder.StatusFulfilling, // backwards-compatible alias (same as v1 list)
 		"fulfilling": paymentorder.StatusFulfilling,
 		"fulfilled":  paymentorder.StatusFulfilled,
 		"cancelled":  paymentorder.StatusCancelled,
@@ -3056,7 +3087,6 @@ func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, prov
 	paymentOrders, err := paymentOrderQuery.
 		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
-		WithTransactions().
 		Limit(pageSize).
 		Offset(offset).
 		Order(order).
@@ -3077,6 +3107,65 @@ func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, prov
 	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.V2PaymentOrderListResponse{
 		Page:         page,
 		PageSize:     pageSize,
+		TotalRecords: count,
+		Orders:       orders,
+	})
+}
+
+// handleSearchPaymentOrdersV2 runs the same text search as v1 provider search but returns v2 order objects.
+func (ctrl *ProviderController) handleSearchPaymentOrdersV2(ctx *gin.Context, provider *ent.ProviderProfile, searchText string) {
+	reqCtx := ctx.Request.Context()
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+	)
+
+	var searchPredicates []predicate.PaymentOrder
+	if searchUUID, err := uuid.Parse(searchText); err == nil {
+		searchPredicates = append(searchPredicates, paymentorder.IDEQ(searchUUID))
+	}
+	searchPredicates = append(searchPredicates,
+		paymentorder.AccountIdentifierContainsFold(searchText),
+		paymentorder.AccountNameContainsFold(searchText),
+	)
+	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.Or(searchPredicates...))
+
+	count, err := paymentOrderQuery.Count(reqCtx)
+	if err != nil {
+		logger.Errorf("Failed to count payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	maxSearchResults := 10000
+	if count > maxSearchResults {
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			fmt.Sprintf("Search returned too many results (%d). Maximum allowed is %d. Please use a more specific search term.",
+				count, maxSearchResults), nil)
+		return
+	}
+
+	paymentOrders, err := paymentOrderQuery.
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+		Limit(maxSearchResults).
+		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
+		All(reqCtx)
+	if err != nil {
+		logger.Errorf("Failed to fetch payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	orders, err := ctrl.buildV2ProviderOrderGetResponses(ctx, paymentOrders)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.V2PaymentOrderListResponse{
+		Page:         1,
+		PageSize:     len(orders),
 		TotalRecords: count,
 		Orders:       orders,
 	})
