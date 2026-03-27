@@ -3087,7 +3087,6 @@ func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, prov
 	paymentOrders, err := paymentOrderQuery.
 		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
-		WithTransactions().
 		Limit(pageSize).
 		Offset(offset).
 		Order(order).
