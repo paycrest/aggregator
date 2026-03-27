@@ -546,7 +546,10 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 			Type:       "crypto",
 			Currency:   tokenSymbol,
 			ProviderID: providerID,
-			Recipient:  types.V2CryptoRecipientOnrampResponse{Address: paymentOrder.RefundOrRecipientAddress},
+			Recipient: types.V2CryptoRecipientOnrampResponse{
+				Address: paymentOrder.RefundOrRecipientAddress,
+				Network: networkID,
+			},
 		}
 	} else {
 		if paymentOrder.ReceiveAddress != "" {
@@ -613,6 +616,7 @@ func BuildV2PaymentOrderGetResponse(
 	resp := &types.V2PaymentOrderGetResponse{
 		ID:                  paymentOrder.ID,
 		Status:              string(paymentOrder.Status),
+		OrderType:           string(paymentOrder.OrderType),
 		Direction:           string(paymentOrder.Direction),
 		CreatedAt:           paymentOrder.CreatedAt,
 		UpdatedAt:           paymentOrder.UpdatedAt,
