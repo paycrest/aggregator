@@ -358,7 +358,8 @@ func UpdateReceiveAddressStatus(
 		// Compare the transferred value with the expected order amount + fees
 		fees := paymentOrder.NetworkFee.Add(paymentOrder.SenderFee)
 		orderAmountWithFees := paymentOrder.Amount.Add(fees).Round(int32(paymentOrder.Edges.Token.Decimals))
-		transferMatchesOrderAmount := event.Value.Equal(orderAmountWithFees)
+		transferMatchesOrderAmount := event.Value.Equal(orderAmountWithFees) ||
+			utils.AmountsAlignAt4DecimalPlaces(event.Value, orderAmountWithFees)
 
 		tx, err := db.Client.Tx(ctx)
 		if err != nil {

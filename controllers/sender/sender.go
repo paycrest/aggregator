@@ -71,10 +71,15 @@ func refundOrRecipientForDirection(po *ent.PaymentOrder) string {
 	return ""
 }
 
-// roundCryptoAmount rounds a value to the token's on-chain decimals so stored amounts
-// match chain transfers and indexer comparisons (amount + fees).
+// roundCryptoAmount caps precision to the token's on-chain decimals when the value has
+// more decimal places than that (e.g. rate math). Sender-supplied amounts with fewer
+// places (e.g. 2 dp stablecoin quotes) are left unchanged.
 func roundCryptoAmount(d decimal.Decimal, token *ent.Token) decimal.Decimal {
-	return d.Round(int32(token.Decimals))
+	dec := int32(token.Decimals)
+	if d.Exponent() >= -dec {
+		return d
+	}
+	return d.Round(dec)
 }
 
 // InitiatePaymentOrder controller creates a payment order

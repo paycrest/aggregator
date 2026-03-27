@@ -2424,3 +2424,15 @@ func TestRoundCryptoAmount_AmountMatchesTokenDecimals(t *testing.T) {
 		"order amount must round to token decimals; got %s want %s", rounded, amountAsTransferred)
 	assert.True(t, rounded.Equal(amountFromOrderCreation.Round(6)))
 }
+
+func TestRoundCryptoAmount_PreservesSenderPrecisionBelowTokenDecimals(t *testing.T) {
+	tok := &ent.Token{Decimals: 6}
+
+	twoDP := decimal.RequireFromString("100.50")
+	assert.True(t, roundCryptoAmount(twoDP, tok).Equal(twoDP),
+		"2 dp input should not be widened to 6 dp")
+
+	sixDP := decimal.RequireFromString("1.234567")
+	assert.True(t, roundCryptoAmount(sixDP, tok).Equal(sixDP),
+		"exactly token decimals should be unchanged")
+}

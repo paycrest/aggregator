@@ -129,3 +129,13 @@ func TestNormalizeMobileMoneyAccountIdentifier(t *testing.T) {
 		})
 	}
 }
+
+func TestAmountsAlignAt4DecimalPlaces(t *testing.T) {
+	a := decimal.RequireFromString("5.099999")
+	b := decimal.RequireFromString("5.100000")
+	assert.True(t, AmountsAlignAt4DecimalPlaces(a, b))
+
+	x := decimal.RequireFromString("5.09")
+	y := decimal.RequireFromString("5.10")
+	assert.False(t, AmountsAlignAt4DecimalPlaces(x, y))
+}
