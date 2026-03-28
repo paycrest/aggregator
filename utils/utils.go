@@ -1876,11 +1876,12 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 		return "", fmt.Errorf("failed to fetch institution: %v", err)
 	}
 
-	// Skip account verification for mobile money institutions and for all KES fiat rails
-	if institution.Type == institutionEnt.TypeMobileMoney {
-		return "OK", nil
+	// Provider /verify_account is only wired for Nigeria (NGN). All other fiat currencies skip.
+	fc := institution.Edges.FiatCurrency
+	if fc == nil {
+		return "", fmt.Errorf("no enabled fiat currency for institution %s", institutionCode)
 	}
-	if institution.Edges.FiatCurrency != nil && strings.EqualFold(institution.Edges.FiatCurrency.Code, "KES") {
+	if !strings.EqualFold(fc.Code, "NGN") {
 		return "OK", nil
 	}
 
@@ -1889,7 +1890,7 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 		Query().
 		Where(
 			providerprofile.HasProviderBalancesWith(
-				providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
+				providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(fc.Code)),
 				providerbalances.IsAvailableEQ(true),
 			),
 			providerprofile.HostIdentifierNotNil(),
@@ -1902,7 +1903,7 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 	}
 
 	if len(providers) == 0 {
-		return "", fmt.Errorf("no available providers found for currency %s", institution.Edges.FiatCurrency.Code)
+		return "", fmt.Errorf("no available providers found for currency %s", fc.Code)
 	}
 
 	// Prepare payload for account verification
@@ -1939,7 +1940,7 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 }
 
 // ResolveAccountNameAfterValidation chooses the account name to persist after ValidateAccount.
-// When verification is skipped (e.g. mobile money or KES), ValidateAccount returns "OK". If the client
+// When verification is skipped (e.g. mobile money or any non-NGN fiat), ValidateAccount returns "OK". If the client
 // already supplied a non-empty name other than "OK", that value is kept so downstream providers
 // receive a real beneficiary name. Otherwise behavior is unchanged (verified name wins).
 func ResolveAccountNameAfterValidation(verifiedName, clientName string) string {
