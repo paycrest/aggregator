@@ -230,3 +230,44 @@ func TestUpdateReceiveAddressStatus_DuplicateTxHashIgnored(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, done)
 }
+
+func TestRecalculateDepositSplit_075PercentNoNetworkFee(t *testing.T) {
+	amount, senderFee := recalculateDepositSplit(
+		decimal.RequireFromString("270"),
+		decimal.Zero,
+		decimal.RequireFromString("0.75"),
+		decimal.Zero,
+		18,
+	)
+	sum := amount.Add(senderFee)
+	assert.True(t, sum.Equal(decimal.RequireFromString("270")),
+		"amount+sender_fee must equal deposit when network fee is 0")
+	expectedFee := amount.Mul(decimal.RequireFromString("0.75")).Div(decimal.NewFromInt(100)).Round(4)
+	assert.True(t, senderFee.Equal(expectedFee), "sender_fee must be 0.75%% of principal, same as sender.go")
+}
+
+func TestRecalculateDepositSplit_MaxFeeCap(t *testing.T) {
+	// Large remainder would yield uncapped fee > 1; cap at 1 USDT
+	amount, senderFee := recalculateDepositSplit(
+		decimal.RequireFromString("1000"),
+		decimal.Zero,
+		decimal.RequireFromString("1.0"),
+		decimal.RequireFromString("1"),
+		18,
+	)
+	assert.True(t, senderFee.Equal(decimal.RequireFromString("1")))
+	assert.True(t, amount.Equal(decimal.RequireFromString("999")))
+}
+
+func TestRecalculateDepositSplit_NetworkFeeDeductedFirst(t *testing.T) {
+	amount, senderFee := recalculateDepositSplit(
+		decimal.RequireFromString("100.1"),
+		decimal.RequireFromString("0.1"),
+		decimal.RequireFromString("0.5"),
+		decimal.Zero,
+		18,
+	)
+	assert.True(t, amount.Add(senderFee).Add(decimal.RequireFromString("0.1")).Equal(decimal.RequireFromString("100.1")))
+	expectedFee := amount.Mul(decimal.RequireFromString("0.5")).Div(decimal.NewFromInt(100)).Round(4)
+	assert.True(t, senderFee.Equal(expectedFee))
+}

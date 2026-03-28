@@ -16,6 +16,8 @@ import (
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/senderordertoken"
+	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/services"
@@ -326,6 +328,31 @@ func ProcessRefundedOrders(ctx context.Context, network *ent.Network, orderIds [
 	return nil
 }
 
+// recalculateDepositSplit computes principal (amount) and sender_fee from an actual on-chain
+// deposit so that amount + networkFee + senderFee equals the deposit, using the same rules as
+// sender order creation: sender_fee = feePercent × amount ÷ 100 (4 dp), optional max_fee_cap.
+func recalculateDepositSplit(
+	deposit, networkFee, feePercent, maxFeeCap decimal.Decimal,
+	tokenDecimals int32,
+) (amount, senderFee decimal.Decimal) {
+	nf := networkFee.Round(tokenDecimals)
+	remainder := deposit.Sub(nf).Round(tokenDecimals)
+	if feePercent.IsZero() || feePercent.LessThanOrEqual(decimal.Zero) {
+		return remainder, decimal.Zero
+	}
+	hundred := decimal.NewFromInt(100)
+	onePlus := decimal.NewFromInt(1).Add(feePercent.Div(hundred))
+	principal := remainder.Div(onePlus)
+	calculatedFee := feePercent.Mul(principal).Div(hundred).Round(4)
+	if maxFeeCap.GreaterThan(decimal.Zero) && calculatedFee.GreaterThan(maxFeeCap) {
+		senderFee = maxFeeCap
+	} else {
+		senderFee = calculatedFee
+	}
+	amount = remainder.Sub(senderFee).Round(tokenDecimals)
+	return amount, senderFee
+}
+
 // UpdateReceiveAddressStatus updates the status of a receive address based on a transfer event.
 func UpdateReceiveAddressStatus(
 	ctx context.Context,
@@ -371,9 +398,44 @@ func UpdateReceiveAddressStatus(
 		}
 
 		if !transferMatchesOrderAmount {
-			// Update the order amount will be updated to whatever amount was sent to the receive address
-			newOrderAmount := event.Value.Sub(fees.Round(int32(paymentOrder.Edges.Token.Decimals)))
-			paymentOrderUpdate = paymentOrderUpdate.SetAmount(newOrderAmount.Round(int32(paymentOrder.Edges.Token.Decimals)))
+			decimals := int32(paymentOrder.Edges.Token.Decimals)
+			deposit := event.Value.Round(decimals)
+			nf := paymentOrder.NetworkFee.Round(decimals)
+
+			var newOrderAmount, newSenderFee decimal.Decimal
+			if paymentOrder.FeePercent.IsZero() {
+				// Fixed sender fee (or legacy): keep stored sender_fee; principal absorbs the rest.
+				newSenderFee = paymentOrder.SenderFee
+				newOrderAmount = deposit.Sub(nf).Sub(newSenderFee).Round(decimals)
+			} else {
+				maxCap := decimal.Zero
+				sot, sotErr := tx.SenderOrderToken.Query().
+					Where(
+						senderordertoken.HasSenderWith(
+							senderprofile.HasPaymentOrdersWith(paymentorder.IDEQ(paymentOrder.ID)),
+						),
+						senderordertoken.HasTokenWith(tokenent.IDEQ(paymentOrder.Edges.Token.ID)),
+					).
+					Only(ctx)
+				if sotErr == nil {
+					maxCap = sot.MaxFeeCap
+				} else if !ent.IsNotFound(sotErr) {
+					_ = tx.Rollback()
+					return true, fmt.Errorf("UpdateReceiveAddressStatus.senderOrderToken: %w", sotErr)
+				}
+				newOrderAmount, newSenderFee = recalculateDepositSplit(
+					deposit,
+					nf,
+					paymentOrder.FeePercent,
+					maxCap,
+					decimals,
+				)
+			}
+
+			paymentOrderUpdate = paymentOrderUpdate.
+				SetAmount(newOrderAmount).
+				SetSenderFee(newSenderFee)
+
 			// Update the rate with the current rate if order is older than 30 mins for a P2P order from the sender dashboard
 			if paymentOrder.Memo != "" && strings.HasPrefix(paymentOrder.Memo, "P#P") && paymentOrder.Edges.Provider != nil && paymentOrder.CreatedAt.Before(time.Now().Add(-30*time.Minute)) {
 				providerProfile := paymentOrder.Edges.Provider
