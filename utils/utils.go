@@ -1876,8 +1876,11 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 		return "", fmt.Errorf("failed to fetch institution: %v", err)
 	}
 
-	// Skip account verification for mobile money institutions
+	// Skip account verification for mobile money institutions and for all KES fiat rails
 	if institution.Type == institutionEnt.TypeMobileMoney {
+		return "OK", nil
+	}
+	if institution.Edges.FiatCurrency != nil && strings.EqualFold(institution.Edges.FiatCurrency.Code, "KES") {
 		return "OK", nil
 	}
 
@@ -1933,6 +1936,17 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 	}
 
 	return "", fmt.Errorf("failed to verify account with any provider")
+}
+
+// ResolveAccountNameAfterValidation chooses the account name to persist after ValidateAccount.
+// When verification is skipped (e.g. mobile money or KES), ValidateAccount returns "OK". If the client
+// already supplied a non-empty name other than "OK", that value is kept so downstream providers
+// receive a real beneficiary name. Otherwise behavior is unchanged (verified name wins).
+func ResolveAccountNameAfterValidation(verifiedName, clientName string) string {
+	if strings.EqualFold(verifiedName, "OK") && clientName != "" && !strings.EqualFold(clientName, "OK") {
+		return clientName
+	}
+	return verifiedName
 }
 
 // DetermineOrderType determines the order type based on the order token OTC config and token amount.

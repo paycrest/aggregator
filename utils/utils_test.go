@@ -129,3 +129,22 @@ func TestNormalizeMobileMoneyAccountIdentifier(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveAccountNameAfterValidation(t *testing.T) {
+	tests := []struct {
+		verified, client, want string
+	}{
+		{"OK", "Jane Doe", "Jane Doe"},
+		{"ok", "Jane Doe", "Jane Doe"},
+		{"OK", "OK", "OK"},
+		{"OK", "", "OK"},
+		{"Jane Smith", "Jane Doe", "Jane Smith"},
+		{"Verified Name", "", "Verified Name"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.verified+"_"+tt.client, func(t *testing.T) {
+			got := ResolveAccountNameAfterValidation(tt.verified, tt.client)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

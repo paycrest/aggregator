@@ -360,7 +360,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}
 
 	// Both validations successful
-	payload.Recipient.AccountName = accountResult.accountName
+	payload.Recipient.AccountName = u.ResolveAccountNameAfterValidation(accountResult.accountName, payload.Recipient.AccountName)
 	rateValidationResult := rateResult.rateResult
 	achievableRate := rateValidationResult.Rate
 
@@ -1055,8 +1055,8 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		return
 	}
 
-	// Set account name from validation
-	destination.Recipient.AccountName = accountResult.accountName
+	// Set account name from validation (keep client-supplied real name if verify returned "OK")
+	destination.Recipient.AccountName = u.ResolveAccountNameAfterValidation(accountResult.accountName, destination.Recipient.AccountName)
 
 	amountInUSD := u.CalculatePaymentOrderAmountInUSD(cryptoAmount, token, institutionObj, paymentorder.DirectionOfframp)
 
