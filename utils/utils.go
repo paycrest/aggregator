@@ -207,13 +207,6 @@ func Median(data []decimal.Decimal) decimal.Decimal {
 	return result
 }
 
-// AmountsAlignAt4DecimalPlaces returns true if a and b are equal when rounded to 4 decimal places.
-// Used when comparing chain transfers to stored order totals so sender-side amounts (e.g. fees at 4dp)
-// can match indexed values despite sub-token-dust drift, while still bounded by 4dp precision.
-func AmountsAlignAt4DecimalPlaces(a, b decimal.Decimal) bool {
-	return a.Round(4).Equal(b.Round(4))
-}
-
 // AbsPercentageDeviation returns the absolute percentage deviation between two values
 func AbsPercentageDeviation(trueValue, measuredValue decimal.Decimal) decimal.Decimal {
 	if trueValue.IsZero() {

@@ -54,9 +54,7 @@ func RetryStaleUserOperations() error {
 		defer wg.Done()
 		for _, order := range orders {
 			orderAmountWithFees := order.Amount.Add(order.NetworkFee).Add(order.SenderFee)
-			paidMatchesExpected := order.AmountPaid.GreaterThanOrEqual(orderAmountWithFees) ||
-				utils.AmountsAlignAt4DecimalPlaces(order.AmountPaid, orderAmountWithFees)
-			if paidMatchesExpected {
+			if order.AmountPaid.GreaterThanOrEqual(orderAmountWithFees) {
 				var service types.OrderService
 				if strings.HasPrefix(order.Edges.Token.Edges.Network.Identifier, "tron") {
 					service = orderService.NewOrderTron()
