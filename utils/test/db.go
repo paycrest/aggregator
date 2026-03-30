@@ -324,6 +324,47 @@ func CreateTestPaymentOrder(token *ent.Token, overrides map[string]interface{}) 
 		}
 	}
 
+	// Optional V2 fixture fields (offramp/onramp, OTC vs regular, reference)
+	if v, ok := payload["order_type"]; ok && v != nil {
+		var ot paymentorder.OrderType
+		var set bool
+		switch x := v.(type) {
+		case string:
+			if x != "" {
+				ot, set = paymentorder.OrderType(x), true
+			}
+		case paymentorder.OrderType:
+			if x != "" {
+				ot, set = x, true
+			}
+		}
+		if set {
+			orderBuilder = orderBuilder.SetOrderType(ot)
+		}
+	}
+	if v, ok := payload["direction"]; ok && v != nil {
+		var dir paymentorder.Direction
+		var set bool
+		switch x := v.(type) {
+		case string:
+			if x != "" {
+				dir, set = paymentorder.Direction(x), true
+			}
+		case paymentorder.Direction:
+			if x != "" {
+				dir, set = x, true
+			}
+		}
+		if set {
+			orderBuilder = orderBuilder.SetDirection(dir)
+		}
+	}
+	if v, ok := payload["reference"]; ok && v != nil {
+		if s, ok := v.(string); ok && s != "" {
+			orderBuilder = orderBuilder.SetReference(s)
+		}
+	}
+
 	order, err := orderBuilder.Save(context.Background())
 	if err != nil {
 		return nil, err
@@ -480,13 +521,18 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		"is_partner":      false,
 		"visibility_mode": "public",
 		"is_available":    true,
-		// Schema default is false; rate validation and assignment require active public providers.
+		// NGN account validation (ValidateAccount) requires active public providers with balances
 		"is_active": true,
 	}
 
 	// Apply overrides
 	for key, value := range overrides {
 		payload[key] = value
+	}
+
+	isActive := true
+	if v, ok := payload["is_active"].(bool); ok {
+		isActive = v
 	}
 
 	// Create ProviderProfile
@@ -497,7 +543,7 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
 		SetUserID(payload["user_id"].(uuid.UUID)).
 		SetVisibilityMode(providerprofile.VisibilityMode(payload["visibility_mode"].(string))).
-		SetIsActive(payload["is_active"].(bool)).
+		SetIsActive(isActive).
 		Save(context.Background())
 	if err != nil {
 		return nil, err

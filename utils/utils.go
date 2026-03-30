@@ -547,7 +547,10 @@ func BuildV2OrderSourceDestinationProviderAccount(paymentOrder *ent.PaymentOrder
 			Type:       "crypto",
 			Currency:   tokenSymbol,
 			ProviderID: providerID,
-			Recipient:  types.V2CryptoRecipientOnrampResponse{Address: paymentOrder.RefundOrRecipientAddress},
+			Recipient: types.V2CryptoRecipientOnrampResponse{
+				Address: paymentOrder.RefundOrRecipientAddress,
+				Network: networkID,
+			},
 		}
 	} else {
 		if paymentOrder.ReceiveAddress != "" {
@@ -614,6 +617,7 @@ func BuildV2PaymentOrderGetResponse(
 	resp := &types.V2PaymentOrderGetResponse{
 		ID:                  paymentOrder.ID,
 		Status:              string(paymentOrder.Status),
+		OrderType:           string(paymentOrder.OrderType),
 		Direction:           string(paymentOrder.Direction),
 		CreatedAt:           paymentOrder.CreatedAt,
 		UpdatedAt:           paymentOrder.UpdatedAt,
@@ -1539,8 +1543,12 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 		return "", fmt.Errorf("failed to fetch institution: %v", err)
 	}
 
-	// Skip account verification for mobile money institutions
-	if institution.Type == institutionEnt.TypeMobileMoney {
+	// Provider /verify_account is only wired for Nigeria (NGN). All other fiat currencies skip.
+	fc := institution.Edges.FiatCurrency
+	if fc == nil {
+		return "", fmt.Errorf("no enabled fiat currency for institution %s", institutionCode)
+	}
+	if !strings.EqualFold(fc.Code, "NGN") {
 		return "OK", nil
 	}
 
@@ -1549,7 +1557,7 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 		Query().
 		Where(
 			providerprofile.HasProviderBalancesWith(
-				providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(institution.Edges.FiatCurrency.Code)),
+				providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(fc.Code)),
 				providerbalances.IsAvailableEQ(true),
 			),
 			providerprofile.HostIdentifierNotNil(),
@@ -1562,7 +1570,7 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 	}
 
 	if len(providers) == 0 {
-		return "", fmt.Errorf("no available providers found for currency %s", institution.Edges.FiatCurrency.Code)
+		return "", fmt.Errorf("no available providers found for currency %s", fc.Code)
 	}
 
 	// Prepare payload for account verification
@@ -1596,6 +1604,17 @@ func ValidateAccount(ctx context.Context, institutionCode, accountIdentifier str
 	}
 
 	return "", fmt.Errorf("failed to verify account with any provider")
+}
+
+// ResolveAccountNameAfterValidation chooses the account name to persist after ValidateAccount.
+// When verification is skipped (e.g. mobile money or any non-NGN fiat), ValidateAccount returns "OK". If the client
+// already supplied a non-empty name other than "OK", that value is kept so downstream providers
+// receive a real beneficiary name. Otherwise behavior is unchanged (verified name wins).
+func ResolveAccountNameAfterValidation(verifiedName, clientName string) string {
+	if strings.EqualFold(verifiedName, "OK") && clientName != "" && !strings.EqualFold(clientName, "OK") {
+		return clientName
+	}
+	return verifiedName
 }
 
 // DetermineOrderType determines the order type based on the order token OTC config and token amount.

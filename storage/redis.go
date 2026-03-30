@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 
 	"github.com/paycrest/aggregator/config"
@@ -17,12 +18,20 @@ var (
 func InitializeRedis() error {
 	redisConf := config.RedisConfig()
 
-	// Create a Redis client
-	RedisClient = redis.NewClient(&redis.Options{
+	opts := &redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisConf.Host, redisConf.Port),
+		Username: redisConf.Username,
 		Password: redisConf.Password,
 		DB:       redisConf.DB,
-	})
+	}
+	if redisConf.UseTLS {
+		opts.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			ServerName: redisConf.Host,
+		}
+	}
+
+	RedisClient = redis.NewClient(opts)
 
 	// Ping Redis to check the connection
 	if _, err := RedisClient.Ping(context.Background()).Result(); err != nil {

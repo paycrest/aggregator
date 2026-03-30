@@ -26,9 +26,11 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/routers/middleware"
 	"github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
@@ -149,6 +151,27 @@ func setup() error {
 		Save(context.Background())
 	if err != nil {
 		return fmt.Errorf("UpdateProviderBalances.sender_test: %w", err)
+	}
+
+	// Provider API key required for NGN ValidateAccount -> CallProviderWithHMAC (/verify_account)
+	providerKeySvc := services.NewAPIKeyService()
+	if _, _, err := providerKeySvc.GenerateAPIKey(context.Background(), nil, nil, providerProfile); err != nil {
+		return fmt.Errorf("GenerateAPIKey provider.sender_test: %w", err)
+	}
+
+	// Populate Redis bucket with provider data for validateBucketRate
+	redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, bucket.MinAmount, bucket.MaxAmount)
+	providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
+		providerProfile.ID,
+		token.Symbol,
+		providerOrderToken.Network,
+		providerOrderToken.FixedSellRate.String(),
+		providerOrderToken.MinOrderAmount.String(),
+		providerOrderToken.MaxOrderAmount.String(),
+	)
+	err = db.RedisClient.RPush(context.Background(), redisKey, providerData).Err()
+	if err != nil {
+		return fmt.Errorf("PopulateRedisBucket.sender_test: %w", err)
 	}
 
 	senderProfile, err := test.CreateTestSenderProfile(map[string]interface{}{
@@ -284,6 +307,15 @@ func setup() error {
 
 // setupHTTPMocks sets up httpmock responders for Thirdweb API calls
 func setupHTTPMocks() {
+	// NGN account validation (ValidateAccount) calls provider host + /verify_account
+	httpmock.RegisterResponder("POST", "https://example.com/verify_account",
+		func(r *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, map[string]interface{}{
+				"data": "John Doe",
+			})
+		},
+	)
+
 	httpmock.RegisterResponder("POST", "https://engine.thirdweb.com/v1/accounts",
 		func(r *http.Request) (*http.Response, error) {
 			// Generate unique address for each test to avoid UNIQUE constraint violations
@@ -366,6 +398,8 @@ func TestSender(t *testing.T) {
 	v2.Use(middleware.DynamicAuthMiddleware)
 	v2.Use(middleware.OnlySenderMiddleware)
 	v2.POST("orders", ctrl.InitiatePaymentOrderV2)
+	v2.GET("orders/:id", ctrl.GetPaymentOrderByIDV2)
+	v2.GET("orders", ctrl.GetPaymentOrdersV2)
 
 	var paymentOrderUUID uuid.UUID
 
@@ -669,11 +703,82 @@ func TestSender(t *testing.T) {
 
 			assert.Equal(t, paymentOrder.AccountIdentifier, payload["recipient"].(map[string]interface{})["accountIdentifier"])
 			assert.Equal(t, paymentOrder.Memo, payload["recipient"].(map[string]interface{})["memo"])
-			// For mobile money institutions, ValidateAccount returns "OK"
-			assert.Equal(t, paymentOrder.AccountName, "OK")
+			// NGN: ValidateAccount uses provider /verify_account (see setupHTTPMocks); mock returns "John Doe"
+			assert.Equal(t, "John Doe", paymentOrder.AccountName)
 			assert.Equal(t, paymentOrder.Institution, payload["recipient"].(map[string]interface{})["institution"])
 			assert.Equal(t, data["senderFee"], "5")
 			assert.Equal(t, data["transactionFee"], network.Fee.String())
+		})
+
+		t.Run("InitiatePaymentOrder rounds amount to token decimals", func(t *testing.T) {
+			httpmock.Activate()
+			defer httpmock.DeactivateAndReset()
+			setupHTTPMocks()
+
+			netw, err := db.Client.Network.
+				Query().
+				Where(network.IdentifierEQ(testCtx.networkIdentifier)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			// Production-style: rate math / JSON can carry extra precision; chain transfer is 6 dp (e.g. USDT).
+			highPrecisionAmount := "3.5758984444841766"
+			expectedStored := decimal.RequireFromString("3.575898")
+
+			payload := map[string]interface{}{
+				"amount":  highPrecisionAmount,
+				"token":   testCtx.token.Symbol,
+				"rate":    "1",
+				"network": netw.Identifier,
+				"recipient": map[string]interface{}{
+					"institution":       "MOMONGPC",
+					"accountIdentifier": "1234567890",
+					"accountName":       "John Doe",
+					"memo":              "decimal rounding initiate test",
+				},
+				"reference": fmt.Sprintf("round-decimals-%s", uuid.New().String()[:8]),
+			}
+			headers := map[string]string{"API-Key": testCtx.apiKey.ID.String()}
+
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+			if res.Code != http.StatusCreated {
+				t.Logf("status=%d body=%s", res.Code, res.Body.String())
+			}
+			assert.Equal(t, http.StatusCreated, res.Code, "InitiatePaymentOrder should succeed")
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			idStr, ok := data["id"].(string)
+			assert.True(t, ok)
+			orderID, err := uuid.Parse(idStr)
+			assert.NoError(t, err)
+
+			// InitiatePaymentOrder rounds amount to token decimals: tear down this PaymentOrder (orderID) so
+			// sibling GetStats subtests keep stable totalOrders counts for testCtx.user.
+			t.Cleanup(func() {
+				ctx := context.Background()
+				_, _ = db.Client.PaymentWebhook.Delete().Where(paymentwebhook.HasPaymentOrderWith(paymentorder.IDEQ(orderID))).Exec(ctx)
+				if _, delErr := db.Client.TransactionLog.Delete().Where(transactionlog.HasPaymentOrderWith(paymentorder.IDEQ(orderID))).Exec(ctx); delErr != nil {
+					t.Logf("InitiatePaymentOrder rounds amount to token decimals: cleanup TransactionLog orderID=%s: %v", orderID, delErr)
+				}
+				if delErr := db.Client.PaymentOrder.DeleteOneID(orderID).Exec(ctx); delErr != nil {
+					t.Logf("InitiatePaymentOrder rounds amount to token decimals: cleanup db.Client.PaymentOrder.DeleteOneID orderID=%s: %v", orderID, delErr)
+				}
+			})
+
+			po, err := db.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(orderID)).
+				WithToken().
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.EqualValues(t, testCtx.token.Decimals, po.Edges.Token.Decimals)
+			assert.True(t, po.Amount.Equal(expectedStored),
+				"stored amount must match token decimals; got %s want %s", po.Amount, expectedStored)
 		})
 
 		t.Run("Check Transaction Logs", func(t *testing.T) {
@@ -1582,7 +1687,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 11, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 from EIP7702_authorization
+			assert.Equal(t, 11, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder (valid amount) + 1 from EIP7702_authorization; rounding test cleans up its order
 
 			// Assert the totalOrderVolume value
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
@@ -1661,7 +1766,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 12, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 from EIP7702_authorization + 1 settled order
+			assert.Equal(t, 12, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 from EIP7702_authorization + 1 settled order; rounding test cleans up its order
 
 			// Assert the totalOrderVolume value (100 NGN / 950 market rate ≈ 0.105 USD)
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
@@ -2275,4 +2380,214 @@ func TestSender(t *testing.T) {
 			assert.NotEmpty(t, providerAccount["validUntil"])
 		})
 	})
+
+	t.Run("GetPaymentOrdersV2", func(t *testing.T) {
+		t.Run("returns 400 when search query is empty", func(t *testing.T) {
+			payload := map[string]interface{}{
+				"search":    "",
+				"timestamp": time.Now().Unix(),
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders?search=&timestamp=%v", payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Search query is required", response.Message)
+		})
+
+		t.Run("returns 400 when export csv missing date range", func(t *testing.T) {
+			payload := map[string]interface{}{
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders?export=csv&timestamp=%v", payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Both 'from' and 'to' date parameters are required for export", response.Message)
+		})
+
+		t.Run("fetch default list includes orderType", func(t *testing.T) {
+			headers := map[string]string{
+				"API-Key": testCtx.apiKey.ID.String(),
+			}
+
+			res, err := test.PerformRequest(t, "GET", "/v2/sender/orders", nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment orders retrieved successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok)
+			assert.NotEmpty(t, orders)
+			first, ok := orders[0].(map[string]interface{})
+			assert.True(t, ok)
+			assert.NotEmpty(t, first["orderType"])
+		})
+
+		t.Run("supports search on v2 list", func(t *testing.T) {
+			uniqueID := fmt.Sprintf("v2-sender-search-%d", time.Now().UnixNano())
+			order, err := test.CreateTestPaymentOrder(testCtx.token, map[string]interface{}{
+				"sender":             testCtx.user,
+				"account_identifier": uniqueID,
+				"order_type":         "otc",
+			})
+			assert.NoError(t, err)
+
+			var payload = map[string]interface{}{
+				"search":    uniqueID,
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders?search=%v&timestamp=%v", payload["search"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Payment orders found successfully", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, len(orders), 1)
+			var matched map[string]interface{}
+			for _, raw := range orders {
+				o, ok := raw.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if idStr, ok := o["id"].(string); ok && idStr == order.ID.String() {
+					matched = o
+					break
+				}
+			}
+			assert.NotNil(t, matched, "expected seeded order in v2 search results")
+			assert.Equal(t, "otc", matched["orderType"])
+		})
+
+		t.Run("supports export on v2 list", func(t *testing.T) {
+			today := time.Now().Format("2006-01-02")
+			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+			var payload = map[string]interface{}{
+				"from":      today,
+				"to":        tomorrow,
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", payload["from"], payload["to"], payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			assert.Equal(t, "text/csv", res.Header().Get("Content-Type"))
+		})
+	})
+
+	t.Run("GetPaymentOrderByIDV2", func(t *testing.T) {
+		// Create explicit onramp order and verify destination.recipient.network in v2 response.
+		onrampOrder, err := db.Client.PaymentOrder.
+			Create().
+			SetSenderProfile(testCtx.user).
+			SetAmount(decimal.NewFromFloat(55)).
+			SetAmountInUsd(decimal.NewFromFloat(55)).
+			SetAmountPaid(decimal.Zero).
+			SetAmountReturned(decimal.Zero).
+			SetPercentSettled(decimal.Zero).
+			SetNetworkFee(testCtx.token.Edges.Network.Fee).
+			SetSenderFee(decimal.NewFromFloat(1)).
+			SetToken(testCtx.token).
+			SetRate(decimal.NewFromFloat(1)).
+			SetFeePercent(decimal.Zero).
+			SetFeeAddress("0x1234567890123456789012345678901234567890").
+			SetRefundOrRecipientAddress("0x0987654321098765432109876543210987654321").
+			SetDirection(paymentorder.DirectionOnramp).
+			SetReference(fmt.Sprintf("v2-onramp-%d", time.Now().UnixNano())).
+			SetOrderType(paymentorder.OrderTypeRegular).
+			SetInstitution("MOMONGPC").
+			SetAccountIdentifier("1234567890").
+			SetAccountName("OK").
+			SetStatus(paymentorder.StatusPending).
+			Save(context.Background())
+		assert.NoError(t, err)
+
+		headers := map[string]string{
+			"API-Key": testCtx.apiKey.ID.String(),
+		}
+		res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders/%s", onrampOrder.ID), nil, headers, router)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, res.Code)
+
+		var response types.Response
+		err = json.Unmarshal(res.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		data, ok := response.Data.(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, "regular", data["orderType"])
+
+		destination, ok := data["destination"].(map[string]interface{})
+		assert.True(t, ok)
+		recipient, ok := destination["recipient"].(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, testCtx.networkIdentifier, recipient["network"])
+	})
+}
+
+// TestRoundCryptoAmount_AmountMatchesTokenDecimals guards against the production case
+// where rate math produced 3.5758984444841766 while the on-chain transfer is 3.575898
+// (6 decimals). Stored amount must round to token decimals so amount + fees matches event.Value.
+func TestRoundCryptoAmount_AmountMatchesTokenDecimals(t *testing.T) {
+	// Values from stuck order analysis: DB had full float precision; chain paid 6 dp.
+	amountFromOrderCreation := decimal.RequireFromString("3.5758984444841766")
+	amountAsTransferred := decimal.RequireFromString("3.575898")
+
+	tok := &ent.Token{Decimals: 6}
+
+	rounded := roundCryptoAmount(amountFromOrderCreation, tok)
+
+	assert.True(t, rounded.Equal(amountAsTransferred),
+		"order amount must round to token decimals; got %s want %s", rounded, amountAsTransferred)
+	assert.True(t, rounded.Equal(amountFromOrderCreation.Round(6)))
+}
+
+func TestRoundCryptoAmount_PreservesSenderPrecisionBelowTokenDecimals(t *testing.T) {
+	tok := &ent.Token{Decimals: 6}
+
+	twoDP := decimal.RequireFromString("100.50")
+	assert.True(t, roundCryptoAmount(twoDP, tok).Equal(twoDP),
+		"2 dp input should not be widened to 6 dp")
+
+	sixDP := decimal.RequireFromString("1.234567")
+	assert.True(t, roundCryptoAmount(sixDP, tok).Equal(sixDP),
+		"exactly token decimals should be unchanged")
 }
