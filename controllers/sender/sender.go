@@ -1863,7 +1863,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		senderFeeCrypto = calculatedFee
 		if senderOrderToken.MaxFeeCap.GreaterThan(decimal.Zero) {
 			if calculatedFee.GreaterThan(senderOrderToken.MaxFeeCap) {
-				senderFeeCrypto = senderOrderToken.MaxFeeCap.Round(4)
+				senderFeeCrypto = senderOrderToken.MaxFeeCap
 			}
 		}
 	} else {
@@ -1871,7 +1871,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		senderFeeCrypto = calculatedFee
 		if senderOrderToken.MaxFeeCap.GreaterThan(decimal.Zero) {
 			if calculatedFee.GreaterThan(senderOrderToken.MaxFeeCap) {
-				senderFeeCrypto = senderOrderToken.MaxFeeCap.Round(4)
+				senderFeeCrypto = senderOrderToken.MaxFeeCap
 			}
 		}
 	}
