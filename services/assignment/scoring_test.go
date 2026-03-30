@@ -13,6 +13,7 @@ import (
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
 	userEnt "github.com/paycrest/aggregator/ent/user"
@@ -301,6 +302,99 @@ func TestProviderScoring(t *testing.T) {
 		pot2, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
 		require.NoError(t, err)
 		assert.Equal(t, decimal.NewFromFloat(-1.0).String(), pot2.ScoreOfframp.String())
+	})
+
+	t.Run("offramp_penalty_fans_out_to_all_pots_same_currency", func(t *testing.T) {
+		prov, potA := makeScoringProvider(t, sc, "score_fanout@test.com", "public")
+		tokB, err := sc.client.Token.Create().
+			SetSymbol("SCR2").
+			SetContractAddress("0x2222222222222222222222222222222222222222").
+			SetDecimals(6).
+			SetNetworkID(sc.tok.Edges.Network.ID).
+			SetIsEnabled(true).
+			SetBaseCurrency("NGN").
+			Save(sc.ctx)
+		require.NoError(t, err)
+
+		potB, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
+			"provider":         prov,
+			"currency_id":      sc.currency.ID,
+			"token_id":         tokB.ID,
+			"network":          sc.tok.Edges.Network.Identifier,
+			"fixed_sell_rate":  decimal.NewFromFloat(1500),
+			"max_order_amount": decimal.NewFromFloat(10000),
+			"min_order_amount": decimal.NewFromFloat(1),
+		})
+		require.NoError(t, err)
+
+		order := makeScoringOrder(t, sc, prov)
+
+		err = ApplyProviderScoreChange(sc.ctx, order.ID, ScoreEventValidationFailed, decimal.NewFromFloat(PenaltyValidationFailed))
+		require.NoError(t, err)
+
+		ua, err := sc.client.ProviderOrderToken.Get(sc.ctx, potA.ID)
+		require.NoError(t, err)
+		ub, err := sc.client.ProviderOrderToken.Get(sc.ctx, potB.ID)
+		require.NoError(t, err)
+		assert.Equal(t, decimal.NewFromFloat(PenaltyValidationFailed).String(), ua.ScoreOfframp.String())
+		assert.Equal(t, decimal.NewFromFloat(PenaltyValidationFailed).String(), ub.ScoreOfframp.String())
+		assert.Equal(t, decimal.Zero.String(), ua.ScoreOnramp.String())
+		assert.Equal(t, decimal.Zero.String(), ub.ScoreOnramp.String())
+
+		hCount, err := sc.client.ProviderOrderTokenScoreHistory.Query().
+			Where(providerordertokenscorehistory.HasPaymentOrderWith(paymentorder.IDEQ(order.ID))).
+			Count(sc.ctx)
+		require.NoError(t, err)
+		assert.Equal(t, 1, hCount, "one history row per order+event; fan-out updates POTs only")
+	})
+
+	t.Run("offramp_reward_does_not_fan_out", func(t *testing.T) {
+		prov, potA := makeScoringProvider(t, sc, "score_nofan_reward@test.com", "public")
+		tokB, err := sc.client.Token.Create().
+			SetSymbol("SCR3").
+			SetContractAddress("0x3333333333333333333333333333333333333333").
+			SetDecimals(6).
+			SetNetworkID(sc.tok.Edges.Network.ID).
+			SetIsEnabled(true).
+			SetBaseCurrency("NGN").
+			Save(sc.ctx)
+		require.NoError(t, err)
+
+		_, err = test.AddProviderOrderTokenToProvider(map[string]interface{}{
+			"provider":         prov,
+			"currency_id":      sc.currency.ID,
+			"token_id":         tokB.ID,
+			"network":          sc.tok.Edges.Network.Identifier,
+			"fixed_sell_rate":  decimal.NewFromFloat(1500),
+			"max_order_amount": decimal.NewFromFloat(10000),
+			"min_order_amount": decimal.NewFromFloat(1),
+		})
+		require.NoError(t, err)
+
+		order := makeScoringOrder(t, sc, prov)
+
+		err = ApplyProviderScoreChange(sc.ctx, order.ID, ScoreEventFulfilledValidated, decimal.NewFromFloat(RewardFulfilledValidated))
+		require.NoError(t, err)
+
+		ua, err := sc.client.ProviderOrderToken.Get(sc.ctx, potA.ID)
+		require.NoError(t, err)
+		pots, err := sc.client.ProviderOrderToken.Query().
+			Where(providerordertoken.HasProviderWith(providerprofile.IDEQ(prov.ID))).
+			All(sc.ctx)
+		require.NoError(t, err)
+		require.Len(t, pots, 2)
+		var other *ent.ProviderOrderToken
+		for _, p := range pots {
+			if p.ID != potA.ID {
+				other = p
+				break
+			}
+		}
+		require.NotNil(t, other)
+		ub, err := sc.client.ProviderOrderToken.Get(sc.ctx, other.ID)
+		require.NoError(t, err)
+		assert.Equal(t, decimal.NewFromFloat(RewardFulfilledValidated).String(), ua.ScoreOfframp.String())
+		assert.Equal(t, decimal.Zero.String(), ub.ScoreOfframp.String())
 	})
 
 	t.Run("skips_private_provider", func(t *testing.T) {

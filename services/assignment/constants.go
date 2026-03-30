@@ -62,6 +62,16 @@ const (
 	ScoreEventOrderRequestExpired     = "order_request_expired"
 )
 
+// OfframpPenaltyEventTypes lists penalty event types that fan out score_offramp to every
+// ProviderOrderToken for the same (provider, fiat currency) — PSP/fiat-rail failures are not
+// token-specific. Rewards and onramp events do not fan out.
+var OfframpPenaltyEventTypes = map[string]struct{}{
+	ScoreEventCancelInsufficientFunds: {},
+	ScoreEventCancelProviderFault:     {},
+	ScoreEventValidationFailed:        {},
+	ScoreEventOrderRequestExpired:     {},
+}
+
 // AssignmentRunResult values for ProviderAssignmentRun.result.
 const (
 	AssignmentRunResultAssigned   = "assigned"
