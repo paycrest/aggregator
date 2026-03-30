@@ -151,7 +151,7 @@ func makeAssignProvider(t *testing.T, ac assignCtx, se subEnv, email string, rat
 
 	if score != 0 {
 		_, err = client.ProviderOrderToken.UpdateOneID(pot.ID).
-			SetScore(decimal.NewFromFloat(score)).
+			SetScoreOfframp(decimal.NewFromFloat(score)).
 			Save(ctx)
 		require.NoError(t, err)
 	}
@@ -265,7 +265,7 @@ func TestAssignment(t *testing.T) {
 
 		_, err := ac.client.ProviderOrderToken.UpdateOneID(
 			getProviderPOT(t, ac.ctx, pPoor.ID).ID,
-		).SetScore(decimal.NewFromFloat(10)).Save(ac.ctx)
+		).SetScoreOfframp(decimal.NewFromFloat(10)).Save(ac.ctx)
 		require.NoError(t, err)
 
 		order := makeAssignOrder(t, ac, se, 100, 1500)

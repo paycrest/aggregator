@@ -43,8 +43,10 @@ const (
 	FieldPayoutAddress = "payout_address"
 	// FieldNetwork holds the string denoting the network field in the database.
 	FieldNetwork = "network"
-	// FieldScore holds the string denoting the score field in the database.
-	FieldScore = "score"
+	// FieldScoreOnramp holds the string denoting the score_onramp field in the database.
+	FieldScoreOnramp = "score_onramp"
+	// FieldScoreOfframp holds the string denoting the score_offramp field in the database.
+	FieldScoreOfframp = "score_offramp"
 	// FieldLastOrderAssignedAt holds the string denoting the last_order_assigned_at field in the database.
 	FieldLastOrderAssignedAt = "last_order_assigned_at"
 	// EdgeProvider holds the string denoting the provider edge name in mutations.
@@ -113,7 +115,8 @@ var Columns = []string{
 	FieldSettlementAddress,
 	FieldPayoutAddress,
 	FieldNetwork,
-	FieldScore,
+	FieldScoreOnramp,
+	FieldScoreOfframp,
 	FieldLastOrderAssignedAt,
 }
 
@@ -147,8 +150,10 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
-	// DefaultScore holds the default value on creation for the "score" field.
-	DefaultScore func() decimal.Decimal
+	// DefaultScoreOnramp holds the default value on creation for the "score_onramp" field.
+	DefaultScoreOnramp func() decimal.Decimal
+	// DefaultScoreOfframp holds the default value on creation for the "score_offramp" field.
+	DefaultScoreOfframp func() decimal.Decimal
 )
 
 // OrderOption defines the ordering options for the ProviderOrderToken queries.
@@ -229,9 +234,14 @@ func ByNetwork(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNetwork, opts...).ToFunc()
 }
 
-// ByScore orders the results by the score field.
-func ByScore(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldScore, opts...).ToFunc()
+// ByScoreOnramp orders the results by the score_onramp field.
+func ByScoreOnramp(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldScoreOnramp, opts...).ToFunc()
+}
+
+// ByScoreOfframp orders the results by the score_offramp field.
+func ByScoreOfframp(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldScoreOfframp, opts...).ToFunc()
 }
 
 // ByLastOrderAssignedAt orders the results by the last_order_assigned_at field.

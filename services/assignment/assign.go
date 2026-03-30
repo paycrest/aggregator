@@ -289,10 +289,12 @@ func (s *Service) TryFallbackAssignment(ctx context.Context, order *ent.PaymentO
 		SetFallbackTriedAt(time.Now()).
 		SetOrderPercent(decimal.NewFromInt(100)).
 		Save(ctx); setErr != nil {
-		logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "Error": setErr}).Errorf("[FALLBACK_ASSIGNMENT] failed to set fallback_tried_at on order")
+		logger.WithFields(logger.Fields{
+			"OrderID": fields.ID.String(),
+			"Error":   setErr,
+		}).Errorf("failed to set fallback_tried_at on order")
 		// Non-fatal: order request was sent; persistence can be reconciled later.
 	}
-	logger.WithFields(logger.Fields{"OrderID": fields.ID.String(), "FallbackID": fallbackID}).Infof("[FALLBACK_ASSIGNMENT] successful fallback assignment")
 	return nil
 }
 
@@ -790,13 +792,6 @@ func (s *Service) sendOrderRequest(ctx context.Context, order types.PaymentOrder
 		return err
 	}
 
-	logger.WithFields(logger.Fields{
-		"OrderID":    order.ID.String(),
-		"ProviderID": order.ProviderID,
-		"Currency":   currency,
-		"Amount":     amount.String(),
-	}).Infof("Order processed successfully with balance reserved")
-
 	return nil
 }
 
@@ -805,7 +800,7 @@ func (s *Service) notifyProvider(ctx context.Context, orderRequestData map[strin
 	providerID := orderRequestData["providerId"].(string)
 	delete(orderRequestData, "providerId")
 
-	data, err := utils.CallProviderWithHMAC(ctx, providerID, "POST", "/new_order", orderRequestData)
+	_, err := utils.CallProviderWithHMAC(ctx, providerID, "POST", "/new_order", orderRequestData)
 	if err != nil {
 		logger.WithFields(logger.Fields{
 			"Error":      fmt.Sprintf("%v", err),
@@ -813,11 +808,6 @@ func (s *Service) notifyProvider(ctx context.Context, orderRequestData map[strin
 		}).Errorf("failed to call provider /new_order endpoint")
 		return err
 	}
-
-	logger.WithFields(logger.Fields{
-		"ProviderID": providerID,
-		"Data":       data,
-	}).Infof("successfully called provider /new_order endpoint")
 
 	return nil
 }

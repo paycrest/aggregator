@@ -126,9 +126,14 @@ func Network(v string) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldNetwork, v))
 }
 
-// Score applies equality check predicate on the "score" field. It's identical to ScoreEQ.
-func Score(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldEQ(FieldScore, v))
+// ScoreOnramp applies equality check predicate on the "score_onramp" field. It's identical to ScoreOnrampEQ.
+func ScoreOnramp(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldScoreOnramp, v))
+}
+
+// ScoreOfframp applies equality check predicate on the "score_offramp" field. It's identical to ScoreOfframpEQ.
+func ScoreOfframp(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldScoreOfframp, v))
 }
 
 // LastOrderAssignedAt applies equality check predicate on the "last_order_assigned_at" field. It's identical to LastOrderAssignedAtEQ.
@@ -831,44 +836,84 @@ func NetworkContainsFold(v string) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldContainsFold(FieldNetwork, v))
 }
 
-// ScoreEQ applies the EQ predicate on the "score" field.
-func ScoreEQ(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldEQ(FieldScore, v))
+// ScoreOnrampEQ applies the EQ predicate on the "score_onramp" field.
+func ScoreOnrampEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldScoreOnramp, v))
 }
 
-// ScoreNEQ applies the NEQ predicate on the "score" field.
-func ScoreNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldScore, v))
+// ScoreOnrampNEQ applies the NEQ predicate on the "score_onramp" field.
+func ScoreOnrampNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldScoreOnramp, v))
 }
 
-// ScoreIn applies the In predicate on the "score" field.
-func ScoreIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldIn(FieldScore, vs...))
+// ScoreOnrampIn applies the In predicate on the "score_onramp" field.
+func ScoreOnrampIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldScoreOnramp, vs...))
 }
 
-// ScoreNotIn applies the NotIn predicate on the "score" field.
-func ScoreNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldScore, vs...))
+// ScoreOnrampNotIn applies the NotIn predicate on the "score_onramp" field.
+func ScoreOnrampNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldScoreOnramp, vs...))
 }
 
-// ScoreGT applies the GT predicate on the "score" field.
-func ScoreGT(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldGT(FieldScore, v))
+// ScoreOnrampGT applies the GT predicate on the "score_onramp" field.
+func ScoreOnrampGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldScoreOnramp, v))
 }
 
-// ScoreGTE applies the GTE predicate on the "score" field.
-func ScoreGTE(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldGTE(FieldScore, v))
+// ScoreOnrampGTE applies the GTE predicate on the "score_onramp" field.
+func ScoreOnrampGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldScoreOnramp, v))
 }
 
-// ScoreLT applies the LT predicate on the "score" field.
-func ScoreLT(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldLT(FieldScore, v))
+// ScoreOnrampLT applies the LT predicate on the "score_onramp" field.
+func ScoreOnrampLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldScoreOnramp, v))
 }
 
-// ScoreLTE applies the LTE predicate on the "score" field.
-func ScoreLTE(v decimal.Decimal) predicate.ProviderOrderToken {
-	return predicate.ProviderOrderToken(sql.FieldLTE(FieldScore, v))
+// ScoreOnrampLTE applies the LTE predicate on the "score_onramp" field.
+func ScoreOnrampLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldScoreOnramp, v))
+}
+
+// ScoreOfframpEQ applies the EQ predicate on the "score_offramp" field.
+func ScoreOfframpEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldScoreOfframp, v))
+}
+
+// ScoreOfframpNEQ applies the NEQ predicate on the "score_offramp" field.
+func ScoreOfframpNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldScoreOfframp, v))
+}
+
+// ScoreOfframpIn applies the In predicate on the "score_offramp" field.
+func ScoreOfframpIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldScoreOfframp, vs...))
+}
+
+// ScoreOfframpNotIn applies the NotIn predicate on the "score_offramp" field.
+func ScoreOfframpNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldScoreOfframp, vs...))
+}
+
+// ScoreOfframpGT applies the GT predicate on the "score_offramp" field.
+func ScoreOfframpGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldScoreOfframp, v))
+}
+
+// ScoreOfframpGTE applies the GTE predicate on the "score_offramp" field.
+func ScoreOfframpGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldScoreOfframp, v))
+}
+
+// ScoreOfframpLT applies the LT predicate on the "score_offramp" field.
+func ScoreOfframpLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldScoreOfframp, v))
+}
+
+// ScoreOfframpLTE applies the LTE predicate on the "score_offramp" field.
+func ScoreOfframpLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldScoreOfframp, v))
 }
 
 // LastOrderAssignedAtEQ applies the EQ predicate on the "last_order_assigned_at" field.

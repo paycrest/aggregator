@@ -9,7 +9,7 @@ import (
 // Provider selection and scoring constants (hardcoded per product; not env-configured).
 
 const (
-	// Score deltas (applied via ProviderOrderTokenScoreHistory + score update).
+	// Score deltas (applied via ProviderOrderTokenScoreHistory + score_onramp / score_offramp update).
 	RewardFulfilledValidated       = 1.0
 	PenaltyCancelInsufficientFunds = -1.5
 	PenaltyCancelProviderFault     = -1.0

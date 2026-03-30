@@ -3,7 +3,7 @@ ALTER TABLE "payment_orders" DROP CONSTRAINT "payment_orders_provision_buckets_p
 -- Modify "provision_buckets" table
 ALTER TABLE "provision_buckets" DROP CONSTRAINT "provision_buckets_fiat_currencies_provision_buckets", ALTER COLUMN "fiat_currency_provision_buckets" DROP NOT NULL;
 -- Modify "provider_order_tokens" table
-ALTER TABLE "provider_order_tokens" ADD COLUMN "score" double precision NOT NULL DEFAULT 0.0, ADD COLUMN "last_order_assigned_at" timestamptz NULL;
+ALTER TABLE "provider_order_tokens" ADD COLUMN "score_onramp" double precision NOT NULL DEFAULT 0.0, ADD COLUMN "score_offramp" double precision NOT NULL DEFAULT 0.0, ADD COLUMN "last_order_assigned_at" timestamptz NULL;
 -- Create "provider_assignment_runs" table
 CREATE TABLE "provider_assignment_runs" (
   "id" uuid NOT NULL,

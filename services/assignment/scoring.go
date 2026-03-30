@@ -36,9 +36,9 @@ func IsProviderFaultCancelReason(reason string) bool {
 	return false
 }
 
-// ApplyProviderScoreChange applies delta to the provider_order_token for this order's assigned
-// provider, if score-eligible. Idempotent via unique (payment_order_id, event_type) on
-// provider_order_token_score_histories.
+// ApplyProviderScoreChange applies delta to score_onramp or score_offramp on the provider_order_token
+// for this order's assigned provider (by payment order direction), if score-eligible. Idempotent via
+// unique (payment_order_id, event_type) on provider_order_token_score_histories.
 func ApplyProviderScoreChange(ctx context.Context, orderID uuid.UUID, eventType string, delta decimal.Decimal) error {
 	order, err := storage.Client.PaymentOrder.Query().
 		Where(paymentorder.IDEQ(orderID)).
@@ -138,7 +138,13 @@ func applyScoreForProvider(ctx context.Context, order *ent.PaymentOrder, prov *e
 		}
 		return fmt.Errorf("score: history insert: %w", err)
 	}
-	if err := tx.ProviderOrderToken.UpdateOneID(pot.ID).AddScore(delta).Exec(ctx); err != nil {
+	u := tx.ProviderOrderToken.UpdateOneID(pot.ID)
+	if order.Direction == paymentorder.DirectionOnramp {
+		err = u.AddScoreOnramp(delta).Exec(ctx)
+	} else {
+		err = u.AddScoreOfframp(delta).Exec(ctx)
+	}
+	if err != nil {
 		_ = tx.Rollback()
 		return fmt.Errorf("score: update pot: %w", err)
 	}

@@ -177,16 +177,30 @@ func (_c *ProviderOrderTokenCreate) SetNetwork(v string) *ProviderOrderTokenCrea
 	return _c
 }
 
-// SetScore sets the "score" field.
-func (_c *ProviderOrderTokenCreate) SetScore(v decimal.Decimal) *ProviderOrderTokenCreate {
-	_c.mutation.SetScore(v)
+// SetScoreOnramp sets the "score_onramp" field.
+func (_c *ProviderOrderTokenCreate) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetScoreOnramp(v)
 	return _c
 }
 
-// SetNillableScore sets the "score" field if the given value is not nil.
-func (_c *ProviderOrderTokenCreate) SetNillableScore(v *decimal.Decimal) *ProviderOrderTokenCreate {
+// SetNillableScoreOnramp sets the "score_onramp" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillableScoreOnramp(v *decimal.Decimal) *ProviderOrderTokenCreate {
 	if v != nil {
-		_c.SetScore(*v)
+		_c.SetScoreOnramp(*v)
+	}
+	return _c
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (_c *ProviderOrderTokenCreate) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetScoreOfframp(v)
+	return _c
+}
+
+// SetNillableScoreOfframp sets the "score_offramp" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillableScoreOfframp(v *decimal.Decimal) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetScoreOfframp(*v)
 	}
 	return _c
 }
@@ -311,9 +325,13 @@ func (_c *ProviderOrderTokenCreate) defaults() {
 		v := providerordertoken.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := _c.mutation.Score(); !ok {
-		v := providerordertoken.DefaultScore()
-		_c.mutation.SetScore(v)
+	if _, ok := _c.mutation.ScoreOnramp(); !ok {
+		v := providerordertoken.DefaultScoreOnramp()
+		_c.mutation.SetScoreOnramp(v)
+	}
+	if _, ok := _c.mutation.ScoreOfframp(); !ok {
+		v := providerordertoken.DefaultScoreOfframp()
+		_c.mutation.SetScoreOfframp(v)
 	}
 }
 
@@ -343,8 +361,11 @@ func (_c *ProviderOrderTokenCreate) check() error {
 	if _, ok := _c.mutation.Network(); !ok {
 		return &ValidationError{Name: "network", err: errors.New(`ent: missing required field "ProviderOrderToken.network"`)}
 	}
-	if _, ok := _c.mutation.Score(); !ok {
-		return &ValidationError{Name: "score", err: errors.New(`ent: missing required field "ProviderOrderToken.score"`)}
+	if _, ok := _c.mutation.ScoreOnramp(); !ok {
+		return &ValidationError{Name: "score_onramp", err: errors.New(`ent: missing required field "ProviderOrderToken.score_onramp"`)}
+	}
+	if _, ok := _c.mutation.ScoreOfframp(); !ok {
+		return &ValidationError{Name: "score_offramp", err: errors.New(`ent: missing required field "ProviderOrderToken.score_offramp"`)}
 	}
 	if len(_c.mutation.ProviderIDs()) == 0 {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderOrderToken.provider"`)}
@@ -438,9 +459,13 @@ func (_c *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgraph
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
 		_node.Network = value
 	}
-	if value, ok := _c.mutation.Score(); ok {
-		_spec.SetField(providerordertoken.FieldScore, field.TypeFloat64, value)
-		_node.Score = value
+	if value, ok := _c.mutation.ScoreOnramp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOnramp, field.TypeFloat64, value)
+		_node.ScoreOnramp = value
+	}
+	if value, ok := _c.mutation.ScoreOfframp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOfframp, field.TypeFloat64, value)
+		_node.ScoreOfframp = value
 	}
 	if value, ok := _c.mutation.LastOrderAssignedAt(); ok {
 		_spec.SetField(providerordertoken.FieldLastOrderAssignedAt, field.TypeTime, value)
@@ -827,21 +852,39 @@ func (u *ProviderOrderTokenUpsert) UpdateNetwork() *ProviderOrderTokenUpsert {
 	return u
 }
 
-// SetScore sets the "score" field.
-func (u *ProviderOrderTokenUpsert) SetScore(v decimal.Decimal) *ProviderOrderTokenUpsert {
-	u.Set(providerordertoken.FieldScore, v)
+// SetScoreOnramp sets the "score_onramp" field.
+func (u *ProviderOrderTokenUpsert) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldScoreOnramp, v)
 	return u
 }
 
-// UpdateScore sets the "score" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsert) UpdateScore() *ProviderOrderTokenUpsert {
-	u.SetExcluded(providerordertoken.FieldScore)
+// UpdateScoreOnramp sets the "score_onramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateScoreOnramp() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldScoreOnramp)
 	return u
 }
 
-// AddScore adds v to the "score" field.
-func (u *ProviderOrderTokenUpsert) AddScore(v decimal.Decimal) *ProviderOrderTokenUpsert {
-	u.Add(providerordertoken.FieldScore, v)
+// AddScoreOnramp adds v to the "score_onramp" field.
+func (u *ProviderOrderTokenUpsert) AddScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldScoreOnramp, v)
+	return u
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (u *ProviderOrderTokenUpsert) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldScoreOfframp, v)
+	return u
+}
+
+// UpdateScoreOfframp sets the "score_offramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateScoreOfframp() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldScoreOfframp)
+	return u
+}
+
+// AddScoreOfframp adds v to the "score_offramp" field.
+func (u *ProviderOrderTokenUpsert) AddScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldScoreOfframp, v)
 	return u
 }
 
@@ -1195,24 +1238,45 @@ func (u *ProviderOrderTokenUpsertOne) UpdateNetwork() *ProviderOrderTokenUpsertO
 	})
 }
 
-// SetScore sets the "score" field.
-func (u *ProviderOrderTokenUpsertOne) SetScore(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+// SetScoreOnramp sets the "score_onramp" field.
+func (u *ProviderOrderTokenUpsertOne) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetScore(v)
+		s.SetScoreOnramp(v)
 	})
 }
 
-// AddScore adds v to the "score" field.
-func (u *ProviderOrderTokenUpsertOne) AddScore(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+// AddScoreOnramp adds v to the "score_onramp" field.
+func (u *ProviderOrderTokenUpsertOne) AddScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.AddScore(v)
+		s.AddScoreOnramp(v)
 	})
 }
 
-// UpdateScore sets the "score" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertOne) UpdateScore() *ProviderOrderTokenUpsertOne {
+// UpdateScoreOnramp sets the "score_onramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateScoreOnramp() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateScore()
+		s.UpdateScoreOnramp()
+	})
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (u *ProviderOrderTokenUpsertOne) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetScoreOfframp(v)
+	})
+}
+
+// AddScoreOfframp adds v to the "score_offramp" field.
+func (u *ProviderOrderTokenUpsertOne) AddScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddScoreOfframp(v)
+	})
+}
+
+// UpdateScoreOfframp sets the "score_offramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateScoreOfframp() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateScoreOfframp()
 	})
 }
 
@@ -1735,24 +1799,45 @@ func (u *ProviderOrderTokenUpsertBulk) UpdateNetwork() *ProviderOrderTokenUpsert
 	})
 }
 
-// SetScore sets the "score" field.
-func (u *ProviderOrderTokenUpsertBulk) SetScore(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+// SetScoreOnramp sets the "score_onramp" field.
+func (u *ProviderOrderTokenUpsertBulk) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.SetScore(v)
+		s.SetScoreOnramp(v)
 	})
 }
 
-// AddScore adds v to the "score" field.
-func (u *ProviderOrderTokenUpsertBulk) AddScore(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+// AddScoreOnramp adds v to the "score_onramp" field.
+func (u *ProviderOrderTokenUpsertBulk) AddScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.AddScore(v)
+		s.AddScoreOnramp(v)
 	})
 }
 
-// UpdateScore sets the "score" field to the value that was provided on create.
-func (u *ProviderOrderTokenUpsertBulk) UpdateScore() *ProviderOrderTokenUpsertBulk {
+// UpdateScoreOnramp sets the "score_onramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateScoreOnramp() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
-		s.UpdateScore()
+		s.UpdateScoreOnramp()
+	})
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (u *ProviderOrderTokenUpsertBulk) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetScoreOfframp(v)
+	})
+}
+
+// AddScoreOfframp adds v to the "score_offramp" field.
+func (u *ProviderOrderTokenUpsertBulk) AddScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddScoreOfframp(v)
+	})
+}
+
+// UpdateScoreOfframp sets the "score_offramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateScoreOfframp() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateScoreOfframp()
 	})
 }
 

@@ -512,10 +512,14 @@ func init() {
 	providerordertoken.DefaultUpdatedAt = providerordertokenDescUpdatedAt.Default.(func() time.Time)
 	// providerordertoken.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	providerordertoken.UpdateDefaultUpdatedAt = providerordertokenDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// providerordertokenDescScore is the schema descriptor for score field.
-	providerordertokenDescScore := providerordertokenFields[12].Descriptor()
-	// providerordertoken.DefaultScore holds the default value on creation for the score field.
-	providerordertoken.DefaultScore = providerordertokenDescScore.Default.(func() decimal.Decimal)
+	// providerordertokenDescScoreOnramp is the schema descriptor for score_onramp field.
+	providerordertokenDescScoreOnramp := providerordertokenFields[12].Descriptor()
+	// providerordertoken.DefaultScoreOnramp holds the default value on creation for the score_onramp field.
+	providerordertoken.DefaultScoreOnramp = providerordertokenDescScoreOnramp.Default.(func() decimal.Decimal)
+	// providerordertokenDescScoreOfframp is the schema descriptor for score_offramp field.
+	providerordertokenDescScoreOfframp := providerordertokenFields[13].Descriptor()
+	// providerordertoken.DefaultScoreOfframp holds the default value on creation for the score_offramp field.
+	providerordertoken.DefaultScoreOfframp = providerordertokenDescScoreOfframp.Default.(func() decimal.Decimal)
 	providerordertokenscorehistoryMixin := schema.ProviderOrderTokenScoreHistory{}.Mixin()
 	providerordertokenscorehistoryHooks := schema.ProviderOrderTokenScoreHistory{}.Hooks()
 	providerordertokenscorehistory.Hooks[0] = providerordertokenscorehistoryHooks[0]

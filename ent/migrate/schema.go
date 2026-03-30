@@ -466,7 +466,8 @@ var (
 		{Name: "settlement_address", Type: field.TypeString, Nullable: true},
 		{Name: "payout_address", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString},
-		{Name: "score", Type: field.TypeFloat64},
+		{Name: "score_onramp", Type: field.TypeFloat64},
+		{Name: "score_offramp", Type: field.TypeFloat64},
 		{Name: "last_order_assigned_at", Type: field.TypeTime, Nullable: true},
 		{Name: "fiat_currency_provider_order_tokens", Type: field.TypeUUID},
 		{Name: "provider_profile_order_tokens", Type: field.TypeString},
@@ -480,19 +481,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_order_tokens_fiat_currencies_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[17]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[18]},
 				RefColumns: []*schema.Column{FiatCurrenciesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_provider_profiles_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[18]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[19]},
 				RefColumns: []*schema.Column{ProviderProfilesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "provider_order_tokens_tokens_provider_order_tokens",
-				Columns:    []*schema.Column{ProviderOrderTokensColumns[19]},
+				Columns:    []*schema.Column{ProviderOrderTokensColumns[20]},
 				RefColumns: []*schema.Column{TokensColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -501,7 +502,7 @@ var (
 			{
 				Name:    "providerordertoken_network_provider_profile_order_tokens_token_provider_order_tokens_fiat_currency_provider_order_tokens",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderOrderTokensColumns[14], ProviderOrderTokensColumns[18], ProviderOrderTokensColumns[19], ProviderOrderTokensColumns[17]},
+				Columns: []*schema.Column{ProviderOrderTokensColumns[14], ProviderOrderTokensColumns[19], ProviderOrderTokensColumns[20], ProviderOrderTokensColumns[18]},
 			},
 		},
 	}

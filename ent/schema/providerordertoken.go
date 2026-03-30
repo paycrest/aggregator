@@ -49,7 +49,10 @@ func (ProviderOrderToken) Fields() []ent.Field {
 		field.String("settlement_address").Optional(),
 		field.String("payout_address").Optional(),
 		field.String("network"),
-		field.Float("score").
+		field.Float("score_onramp").
+			GoType(decimal.Decimal{}).
+			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
+		field.Float("score_offramp").
 			GoType(decimal.Decimal{}).
 			DefaultFunc(func() decimal.Decimal { return decimal.Zero }),
 		field.Time("last_order_assigned_at").Optional().Nillable(),

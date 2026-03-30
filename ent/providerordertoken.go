@@ -50,8 +50,10 @@ type ProviderOrderToken struct {
 	PayoutAddress string `json:"payout_address,omitempty"`
 	// Network holds the value of the "network" field.
 	Network string `json:"network,omitempty"`
-	// Score holds the value of the "score" field.
-	Score decimal.Decimal `json:"score,omitempty"`
+	// ScoreOnramp holds the value of the "score_onramp" field.
+	ScoreOnramp decimal.Decimal `json:"score_onramp,omitempty"`
+	// ScoreOfframp holds the value of the "score_offramp" field.
+	ScoreOfframp decimal.Decimal `json:"score_offramp,omitempty"`
 	// LastOrderAssignedAt holds the value of the "last_order_assigned_at" field.
 	LastOrderAssignedAt *time.Time `json:"last_order_assigned_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -136,7 +138,7 @@ func (*ProviderOrderToken) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerordertoken.FieldFixedBuyRate, providerordertoken.FieldFixedSellRate, providerordertoken.FieldFloatingBuyDelta, providerordertoken.FieldFloatingSellDelta, providerordertoken.FieldMaxOrderAmount, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmountOtc, providerordertoken.FieldMinOrderAmountOtc, providerordertoken.FieldRateSlippage, providerordertoken.FieldScore:
+		case providerordertoken.FieldFixedBuyRate, providerordertoken.FieldFixedSellRate, providerordertoken.FieldFloatingBuyDelta, providerordertoken.FieldFloatingSellDelta, providerordertoken.FieldMaxOrderAmount, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmountOtc, providerordertoken.FieldMinOrderAmountOtc, providerordertoken.FieldRateSlippage, providerordertoken.FieldScoreOnramp, providerordertoken.FieldScoreOfframp:
 			values[i] = new(decimal.Decimal)
 		case providerordertoken.FieldID:
 			values[i] = new(sql.NullInt64)
@@ -255,11 +257,17 @@ func (_m *ProviderOrderToken) assignValues(columns []string, values []any) error
 			} else if value.Valid {
 				_m.Network = value.String
 			}
-		case providerordertoken.FieldScore:
+		case providerordertoken.FieldScoreOnramp:
 			if value, ok := values[i].(*decimal.Decimal); !ok {
-				return fmt.Errorf("unexpected type %T for field score", values[i])
+				return fmt.Errorf("unexpected type %T for field score_onramp", values[i])
 			} else if value != nil {
-				_m.Score = *value
+				_m.ScoreOnramp = *value
+			}
+		case providerordertoken.FieldScoreOfframp:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field score_offramp", values[i])
+			} else if value != nil {
+				_m.ScoreOfframp = *value
 			}
 		case providerordertoken.FieldLastOrderAssignedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -392,8 +400,11 @@ func (_m *ProviderOrderToken) String() string {
 	builder.WriteString("network=")
 	builder.WriteString(_m.Network)
 	builder.WriteString(", ")
-	builder.WriteString("score=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Score))
+	builder.WriteString("score_onramp=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ScoreOnramp))
+	builder.WriteString(", ")
+	builder.WriteString("score_offramp=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ScoreOfframp))
 	builder.WriteString(", ")
 	if v := _m.LastOrderAssignedAt; v != nil {
 		builder.WriteString("last_order_assigned_at=")

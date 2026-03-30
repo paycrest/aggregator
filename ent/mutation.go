@@ -14328,8 +14328,10 @@ type ProviderOrderTokenMutation struct {
 	settlement_address      *string
 	payout_address          *string
 	network                 *string
-	score                   *decimal.Decimal
-	addscore                *decimal.Decimal
+	score_onramp            *decimal.Decimal
+	addscore_onramp         *decimal.Decimal
+	score_offramp           *decimal.Decimal
+	addscore_offramp        *decimal.Decimal
 	last_order_assigned_at  *time.Time
 	clearedFields           map[string]struct{}
 	provider                *string
@@ -15213,60 +15215,116 @@ func (m *ProviderOrderTokenMutation) ResetNetwork() {
 	m.network = nil
 }
 
-// SetScore sets the "score" field.
-func (m *ProviderOrderTokenMutation) SetScore(d decimal.Decimal) {
-	m.score = &d
-	m.addscore = nil
+// SetScoreOnramp sets the "score_onramp" field.
+func (m *ProviderOrderTokenMutation) SetScoreOnramp(d decimal.Decimal) {
+	m.score_onramp = &d
+	m.addscore_onramp = nil
 }
 
-// Score returns the value of the "score" field in the mutation.
-func (m *ProviderOrderTokenMutation) Score() (r decimal.Decimal, exists bool) {
-	v := m.score
+// ScoreOnramp returns the value of the "score_onramp" field in the mutation.
+func (m *ProviderOrderTokenMutation) ScoreOnramp() (r decimal.Decimal, exists bool) {
+	v := m.score_onramp
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldScore returns the old "score" field's value of the ProviderOrderToken entity.
+// OldScoreOnramp returns the old "score_onramp" field's value of the ProviderOrderToken entity.
 // If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProviderOrderTokenMutation) OldScore(ctx context.Context) (v decimal.Decimal, err error) {
+func (m *ProviderOrderTokenMutation) OldScoreOnramp(ctx context.Context) (v decimal.Decimal, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldScore is only allowed on UpdateOne operations")
+		return v, errors.New("OldScoreOnramp is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldScore requires an ID field in the mutation")
+		return v, errors.New("OldScoreOnramp requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldScore: %w", err)
+		return v, fmt.Errorf("querying old value for OldScoreOnramp: %w", err)
 	}
-	return oldValue.Score, nil
+	return oldValue.ScoreOnramp, nil
 }
 
-// AddScore adds d to the "score" field.
-func (m *ProviderOrderTokenMutation) AddScore(d decimal.Decimal) {
-	if m.addscore != nil {
-		*m.addscore = m.addscore.Add(d)
+// AddScoreOnramp adds d to the "score_onramp" field.
+func (m *ProviderOrderTokenMutation) AddScoreOnramp(d decimal.Decimal) {
+	if m.addscore_onramp != nil {
+		*m.addscore_onramp = m.addscore_onramp.Add(d)
 	} else {
-		m.addscore = &d
+		m.addscore_onramp = &d
 	}
 }
 
-// AddedScore returns the value that was added to the "score" field in this mutation.
-func (m *ProviderOrderTokenMutation) AddedScore() (r decimal.Decimal, exists bool) {
-	v := m.addscore
+// AddedScoreOnramp returns the value that was added to the "score_onramp" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedScoreOnramp() (r decimal.Decimal, exists bool) {
+	v := m.addscore_onramp
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// ResetScore resets all changes to the "score" field.
-func (m *ProviderOrderTokenMutation) ResetScore() {
-	m.score = nil
-	m.addscore = nil
+// ResetScoreOnramp resets all changes to the "score_onramp" field.
+func (m *ProviderOrderTokenMutation) ResetScoreOnramp() {
+	m.score_onramp = nil
+	m.addscore_onramp = nil
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (m *ProviderOrderTokenMutation) SetScoreOfframp(d decimal.Decimal) {
+	m.score_offramp = &d
+	m.addscore_offramp = nil
+}
+
+// ScoreOfframp returns the value of the "score_offramp" field in the mutation.
+func (m *ProviderOrderTokenMutation) ScoreOfframp() (r decimal.Decimal, exists bool) {
+	v := m.score_offramp
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScoreOfframp returns the old "score_offramp" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldScoreOfframp(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScoreOfframp is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScoreOfframp requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScoreOfframp: %w", err)
+	}
+	return oldValue.ScoreOfframp, nil
+}
+
+// AddScoreOfframp adds d to the "score_offramp" field.
+func (m *ProviderOrderTokenMutation) AddScoreOfframp(d decimal.Decimal) {
+	if m.addscore_offramp != nil {
+		*m.addscore_offramp = m.addscore_offramp.Add(d)
+	} else {
+		m.addscore_offramp = &d
+	}
+}
+
+// AddedScoreOfframp returns the value that was added to the "score_offramp" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedScoreOfframp() (r decimal.Decimal, exists bool) {
+	v := m.addscore_offramp
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetScoreOfframp resets all changes to the "score_offramp" field.
+func (m *ProviderOrderTokenMutation) ResetScoreOfframp() {
+	m.score_offramp = nil
+	m.addscore_offramp = nil
 }
 
 // SetLastOrderAssignedAt sets the "last_order_assigned_at" field.
@@ -15577,7 +15635,7 @@ func (m *ProviderOrderTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderOrderTokenMutation) Fields() []string {
-	fields := make([]string, 0, 16)
+	fields := make([]string, 0, 17)
 	if m.created_at != nil {
 		fields = append(fields, providerordertoken.FieldCreatedAt)
 	}
@@ -15620,8 +15678,11 @@ func (m *ProviderOrderTokenMutation) Fields() []string {
 	if m.network != nil {
 		fields = append(fields, providerordertoken.FieldNetwork)
 	}
-	if m.score != nil {
-		fields = append(fields, providerordertoken.FieldScore)
+	if m.score_onramp != nil {
+		fields = append(fields, providerordertoken.FieldScoreOnramp)
+	}
+	if m.score_offramp != nil {
+		fields = append(fields, providerordertoken.FieldScoreOfframp)
 	}
 	if m.last_order_assigned_at != nil {
 		fields = append(fields, providerordertoken.FieldLastOrderAssignedAt)
@@ -15662,8 +15723,10 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.PayoutAddress()
 	case providerordertoken.FieldNetwork:
 		return m.Network()
-	case providerordertoken.FieldScore:
-		return m.Score()
+	case providerordertoken.FieldScoreOnramp:
+		return m.ScoreOnramp()
+	case providerordertoken.FieldScoreOfframp:
+		return m.ScoreOfframp()
 	case providerordertoken.FieldLastOrderAssignedAt:
 		return m.LastOrderAssignedAt()
 	}
@@ -15703,8 +15766,10 @@ func (m *ProviderOrderTokenMutation) OldField(ctx context.Context, name string) 
 		return m.OldPayoutAddress(ctx)
 	case providerordertoken.FieldNetwork:
 		return m.OldNetwork(ctx)
-	case providerordertoken.FieldScore:
-		return m.OldScore(ctx)
+	case providerordertoken.FieldScoreOnramp:
+		return m.OldScoreOnramp(ctx)
+	case providerordertoken.FieldScoreOfframp:
+		return m.OldScoreOfframp(ctx)
 	case providerordertoken.FieldLastOrderAssignedAt:
 		return m.OldLastOrderAssignedAt(ctx)
 	}
@@ -15814,12 +15879,19 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetNetwork(v)
 		return nil
-	case providerordertoken.FieldScore:
+	case providerordertoken.FieldScoreOnramp:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetScore(v)
+		m.SetScoreOnramp(v)
+		return nil
+	case providerordertoken.FieldScoreOfframp:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScoreOfframp(v)
 		return nil
 	case providerordertoken.FieldLastOrderAssignedAt:
 		v, ok := value.(time.Time)
@@ -15863,8 +15935,11 @@ func (m *ProviderOrderTokenMutation) AddedFields() []string {
 	if m.addrate_slippage != nil {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
 	}
-	if m.addscore != nil {
-		fields = append(fields, providerordertoken.FieldScore)
+	if m.addscore_onramp != nil {
+		fields = append(fields, providerordertoken.FieldScoreOnramp)
+	}
+	if m.addscore_offramp != nil {
+		fields = append(fields, providerordertoken.FieldScoreOfframp)
 	}
 	return fields
 }
@@ -15892,8 +15967,10 @@ func (m *ProviderOrderTokenMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedMinOrderAmountOtc()
 	case providerordertoken.FieldRateSlippage:
 		return m.AddedRateSlippage()
-	case providerordertoken.FieldScore:
-		return m.AddedScore()
+	case providerordertoken.FieldScoreOnramp:
+		return m.AddedScoreOnramp()
+	case providerordertoken.FieldScoreOfframp:
+		return m.AddedScoreOfframp()
 	}
 	return nil, false
 }
@@ -15966,12 +16043,19 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 		}
 		m.AddRateSlippage(v)
 		return nil
-	case providerordertoken.FieldScore:
+	case providerordertoken.FieldScoreOnramp:
 		v, ok := value.(decimal.Decimal)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.AddScore(v)
+		m.AddScoreOnramp(v)
+		return nil
+	case providerordertoken.FieldScoreOfframp:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddScoreOfframp(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken numeric field %s", name)
@@ -16087,8 +16171,11 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 	case providerordertoken.FieldNetwork:
 		m.ResetNetwork()
 		return nil
-	case providerordertoken.FieldScore:
-		m.ResetScore()
+	case providerordertoken.FieldScoreOnramp:
+		m.ResetScoreOnramp()
+		return nil
+	case providerordertoken.FieldScoreOfframp:
+		m.ResetScoreOfframp()
 		return nil
 	case providerordertoken.FieldLastOrderAssignedAt:
 		m.ResetLastOrderAssignedAt()

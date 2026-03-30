@@ -24,7 +24,8 @@ import (
 )
 
 // AssignPaymentOrderWithTrigger assigns using DB-only candidate ranking
-// (score DESC, 24h volume ASC, last_order_assigned_at ASC NULLS FIRST, id ASC).
+// (direction-specific score DESC — score_onramp for onramp, score_offramp for offramp —
+// then 24h volume ASC, last_order_assigned_at ASC NULLS FIRST, id ASC).
 func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types.PaymentOrderFields, trigger string) error {
 	ctx, cancel := context.WithTimeout(ctx, assignPaymentOrderTimeout)
 	defer cancel()
@@ -259,7 +260,7 @@ func (s *Service) AssignPaymentOrderWithTrigger(ctx context.Context, order types
 	}
 
 	slices.SortStableFunc(candidates, func(a, b *ent.ProviderOrderToken) int {
-		if c := b.Score.Cmp(a.Score); c != 0 {
+		if c := cmpAssignmentScore(a, b, orderEnt.Direction); c != 0 {
 			return c
 		}
 		va := volMap[a.Edges.Provider.ID]
@@ -413,6 +414,18 @@ func paymentOrderFieldsFromEnt(po *ent.PaymentOrder) (types.PaymentOrderFields, 
 		fields.Network = fields.Token.Edges.Network
 	}
 	return fields, nil
+}
+
+func scoreForAssignment(pot *ent.ProviderOrderToken, dir paymentorder.Direction) decimal.Decimal {
+	if dir == paymentorder.DirectionOnramp {
+		return pot.ScoreOnramp
+	}
+	return pot.ScoreOfframp
+}
+
+// cmpAssignmentScore orders by higher direction-specific score first (same ordering as b.Score.Cmp(a.Score)).
+func cmpAssignmentScore(a, b *ent.ProviderOrderToken, dir paymentorder.Direction) int {
+	return scoreForAssignment(b, dir).Cmp(scoreForAssignment(a, dir))
 }
 
 func cmpLastAssigned(a, b *ent.ProviderOrderToken) int {

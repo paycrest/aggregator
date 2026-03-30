@@ -308,24 +308,45 @@ func (_u *ProviderOrderTokenUpdate) SetNillableNetwork(v *string) *ProviderOrder
 	return _u
 }
 
-// SetScore sets the "score" field.
-func (_u *ProviderOrderTokenUpdate) SetScore(v decimal.Decimal) *ProviderOrderTokenUpdate {
-	_u.mutation.ResetScore()
-	_u.mutation.SetScore(v)
+// SetScoreOnramp sets the "score_onramp" field.
+func (_u *ProviderOrderTokenUpdate) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetScoreOnramp()
+	_u.mutation.SetScoreOnramp(v)
 	return _u
 }
 
-// SetNillableScore sets the "score" field if the given value is not nil.
-func (_u *ProviderOrderTokenUpdate) SetNillableScore(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+// SetNillableScoreOnramp sets the "score_onramp" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdate) SetNillableScoreOnramp(v *decimal.Decimal) *ProviderOrderTokenUpdate {
 	if v != nil {
-		_u.SetScore(*v)
+		_u.SetScoreOnramp(*v)
 	}
 	return _u
 }
 
-// AddScore adds value to the "score" field.
-func (_u *ProviderOrderTokenUpdate) AddScore(v decimal.Decimal) *ProviderOrderTokenUpdate {
-	_u.mutation.AddScore(v)
+// AddScoreOnramp adds value to the "score_onramp" field.
+func (_u *ProviderOrderTokenUpdate) AddScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddScoreOnramp(v)
+	return _u
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (_u *ProviderOrderTokenUpdate) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetScoreOfframp()
+	_u.mutation.SetScoreOfframp(v)
+	return _u
+}
+
+// SetNillableScoreOfframp sets the "score_offramp" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdate) SetNillableScoreOfframp(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetScoreOfframp(*v)
+	}
+	return _u
+}
+
+// AddScoreOfframp adds value to the "score_offramp" field.
+func (_u *ProviderOrderTokenUpdate) AddScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddScoreOfframp(v)
 	return _u
 }
 
@@ -623,11 +644,17 @@ func (_u *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (_node int, err
 	if value, ok := _u.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Score(); ok {
-		_spec.SetField(providerordertoken.FieldScore, field.TypeFloat64, value)
+	if value, ok := _u.mutation.ScoreOnramp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOnramp, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.AddedScore(); ok {
-		_spec.AddField(providerordertoken.FieldScore, field.TypeFloat64, value)
+	if value, ok := _u.mutation.AddedScoreOnramp(); ok {
+		_spec.AddField(providerordertoken.FieldScoreOnramp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.ScoreOfframp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOfframp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedScoreOfframp(); ok {
+		_spec.AddField(providerordertoken.FieldScoreOfframp, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.LastOrderAssignedAt(); ok {
 		_spec.SetField(providerordertoken.FieldLastOrderAssignedAt, field.TypeTime, value)
@@ -1105,24 +1132,45 @@ func (_u *ProviderOrderTokenUpdateOne) SetNillableNetwork(v *string) *ProviderOr
 	return _u
 }
 
-// SetScore sets the "score" field.
-func (_u *ProviderOrderTokenUpdateOne) SetScore(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	_u.mutation.ResetScore()
-	_u.mutation.SetScore(v)
+// SetScoreOnramp sets the "score_onramp" field.
+func (_u *ProviderOrderTokenUpdateOne) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetScoreOnramp()
+	_u.mutation.SetScoreOnramp(v)
 	return _u
 }
 
-// SetNillableScore sets the "score" field if the given value is not nil.
-func (_u *ProviderOrderTokenUpdateOne) SetNillableScore(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+// SetNillableScoreOnramp sets the "score_onramp" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdateOne) SetNillableScoreOnramp(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
 	if v != nil {
-		_u.SetScore(*v)
+		_u.SetScoreOnramp(*v)
 	}
 	return _u
 }
 
-// AddScore adds value to the "score" field.
-func (_u *ProviderOrderTokenUpdateOne) AddScore(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
-	_u.mutation.AddScore(v)
+// AddScoreOnramp adds value to the "score_onramp" field.
+func (_u *ProviderOrderTokenUpdateOne) AddScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddScoreOnramp(v)
+	return _u
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (_u *ProviderOrderTokenUpdateOne) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetScoreOfframp()
+	_u.mutation.SetScoreOfframp(v)
+	return _u
+}
+
+// SetNillableScoreOfframp sets the "score_offramp" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdateOne) SetNillableScoreOfframp(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetScoreOfframp(*v)
+	}
+	return _u
+}
+
+// AddScoreOfframp adds value to the "score_offramp" field.
+func (_u *ProviderOrderTokenUpdateOne) AddScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddScoreOfframp(v)
 	return _u
 }
 
@@ -1450,11 +1498,17 @@ func (_u *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Prov
 	if value, ok := _u.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Score(); ok {
-		_spec.SetField(providerordertoken.FieldScore, field.TypeFloat64, value)
+	if value, ok := _u.mutation.ScoreOnramp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOnramp, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.AddedScore(); ok {
-		_spec.AddField(providerordertoken.FieldScore, field.TypeFloat64, value)
+	if value, ok := _u.mutation.AddedScoreOnramp(); ok {
+		_spec.AddField(providerordertoken.FieldScoreOnramp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.ScoreOfframp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOfframp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedScoreOfframp(); ok {
+		_spec.AddField(providerordertoken.FieldScoreOfframp, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.LastOrderAssignedAt(); ok {
 		_spec.SetField(providerordertoken.FieldLastOrderAssignedAt, field.TypeTime, value)

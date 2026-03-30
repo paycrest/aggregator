@@ -1306,8 +1306,19 @@ func tryFallbackPublicQuote(ctx context.Context, token *ent.Token, currency *ent
 		from, to, amount, networkMsg)
 }
 
+func cmpPublicQuoteScore(a, b *ent.ProviderOrderToken, side RateSide) int {
+	var sa, sb decimal.Decimal
+	if side == RateSideBuy {
+		sa, sb = a.ScoreOnramp, b.ScoreOnramp
+	} else {
+		sa, sb = a.ScoreOfframp, b.ScoreOfframp
+	}
+	return sb.Cmp(sa)
+}
+
 // validatePublicQuoteRate walks public ProviderOrderToken rows using DB ordering for quotes:
-// score DESC, recent 24h successful fiat volume ASC, id ASC (no last_order_assigned — stable vs assignment rotation).
+// direction-specific score DESC (score_onramp when side is buy, score_offramp when sell),
+// recent 24h successful fiat volume ASC, id ASC (no last_order_assigned — stable vs assignment rotation).
 func validatePublicQuoteRate(ctx context.Context, token *ent.Token, currency *ent.FiatCurrency, amount decimal.Decimal, networkIdentifier string, side RateSide) (RateValidationResult, error) {
 	orderConf := config.OrderConfig()
 	q := storage.Client.ProviderOrderToken.Query().
@@ -1351,7 +1362,7 @@ func validatePublicQuoteRate(ctx context.Context, token *ent.Token, currency *en
 		volMap = map[string]decimal.Decimal{}
 	}
 	slices.SortStableFunc(pots, func(a, b *ent.ProviderOrderToken) int {
-		if c := b.Score.Cmp(a.Score); c != 0 {
+		if c := cmpPublicQuoteScore(a, b, side); c != 0 {
 			return c
 		}
 		va := volMap[a.Edges.Provider.ID]

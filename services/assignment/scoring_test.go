@@ -235,11 +235,39 @@ func TestProviderScoring(t *testing.T) {
 
 		updated, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
 		require.NoError(t, err)
-		assert.Equal(t, decimal.NewFromFloat(1.0).String(), updated.Score.String())
+		assert.Equal(t, decimal.NewFromFloat(1.0).String(), updated.ScoreOfframp.String())
 
 		count, err := sc.client.ProviderOrderTokenScoreHistory.Query().Count(sc.ctx)
 		require.NoError(t, err)
 		assert.Equal(t, 1, count, "one history row should be created")
+	})
+
+	t.Run("onramp_updates_score_onramp_not_offramp", func(t *testing.T) {
+		prov, pot := makeScoringProvider(t, sc, "score_onramp_only@test.com", "public")
+		order, err := sc.client.PaymentOrder.Create().
+			SetAmount(decimal.NewFromFloat(10)).
+			SetAmountInUsd(decimal.NewFromFloat(10)).
+			SetRate(decimal.NewFromFloat(1500)).
+			SetStatus(paymentorder.StatusFulfilled).
+			SetInstitution("ABNGNGLA").
+			SetAccountIdentifier("0000000001").
+			SetAccountName("Scorer Account").
+			SetMemo("scoring test").
+			SetToken(sc.tok).
+			SetGatewayID(uuid.New().String()).
+			SetBlockNumber(1).
+			SetProvider(prov).
+			SetDirection(paymentorder.DirectionOnramp).
+			Save(sc.ctx)
+		require.NoError(t, err)
+
+		err = ApplyProviderScoreChange(sc.ctx, order.ID, ScoreEventFulfilledValidated, decimal.NewFromFloat(RewardFulfilledValidated))
+		require.NoError(t, err)
+
+		updated, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
+		require.NoError(t, err)
+		assert.Equal(t, decimal.NewFromFloat(1.0).String(), updated.ScoreOnramp.String())
+		assert.Equal(t, decimal.Zero.String(), updated.ScoreOfframp.String())
 	})
 
 	t.Run("idempotent_same_event", func(t *testing.T) {
@@ -253,13 +281,13 @@ func TestProviderScoring(t *testing.T) {
 
 		updated1, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
 		require.NoError(t, err)
-		scoreAfterFirst := updated1.Score
+		scoreAfterFirst := updated1.ScoreOfframp
 
 		require.NoError(t, ApplyProviderScoreChange(sc.ctx, order.ID, event, delta))
 
 		updated2, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
 		require.NoError(t, err)
-		assert.Equal(t, scoreAfterFirst.String(), updated2.Score.String(),
+		assert.Equal(t, scoreAfterFirst.String(), updated2.ScoreOfframp.String(),
 			"score must not change on duplicate event")
 	})
 
@@ -272,7 +300,7 @@ func TestProviderScoring(t *testing.T) {
 
 		pot2, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
 		require.NoError(t, err)
-		assert.Equal(t, decimal.NewFromFloat(-1.0).String(), pot2.Score.String())
+		assert.Equal(t, decimal.NewFromFloat(-1.0).String(), pot2.ScoreOfframp.String())
 	})
 
 	t.Run("skips_private_provider", func(t *testing.T) {
@@ -284,8 +312,10 @@ func TestProviderScoring(t *testing.T) {
 
 		unchanged, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
 		require.NoError(t, err)
-		assert.Equal(t, decimal.Zero.String(), unchanged.Score.String(),
-			"private provider score must not change")
+		assert.Equal(t, decimal.Zero.String(), unchanged.ScoreOnramp.String(),
+			"private provider score_onramp must not change")
+		assert.Equal(t, decimal.Zero.String(), unchanged.ScoreOfframp.String(),
+			"private provider score_offramp must not change")
 	})
 
 	t.Run("skips_order_with_no_assigned_provider", func(t *testing.T) {
@@ -325,7 +355,7 @@ func TestProviderScoring(t *testing.T) {
 
 		updated, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
 		require.NoError(t, err)
-		assert.Equal(t, decimal.NewFromFloat(PenaltyCancelInsufficientFunds).String(), updated.Score.String())
+		assert.Equal(t, decimal.NewFromFloat(PenaltyCancelInsufficientFunds).String(), updated.ScoreOfframp.String())
 	})
 
 	t.Run("penalty_provider_fault_cancel", func(t *testing.T) {
@@ -339,7 +369,7 @@ func TestProviderScoring(t *testing.T) {
 
 		updated, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
 		require.NoError(t, err)
-		assert.Equal(t, decimal.NewFromFloat(PenaltyCancelProviderFault).String(), updated.Score.String())
+		assert.Equal(t, decimal.NewFromFloat(PenaltyCancelProviderFault).String(), updated.ScoreOfframp.String())
 	})
 
 	t.Run("apply_for_specific_provider_by_id", func(t *testing.T) {
@@ -353,7 +383,7 @@ func TestProviderScoring(t *testing.T) {
 
 		updated, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
 		require.NoError(t, err)
-		assert.Equal(t, decimal.NewFromFloat(PenaltyOrderRequestExpired).String(), updated.Score.String())
+		assert.Equal(t, decimal.NewFromFloat(PenaltyOrderRequestExpired).String(), updated.ScoreOfframp.String())
 	})
 
 	t.Run("apply_for_specific_provider_idempotent", func(t *testing.T) {
@@ -367,7 +397,7 @@ func TestProviderScoring(t *testing.T) {
 
 		updated, err := sc.client.ProviderOrderToken.Get(sc.ctx, pot.ID)
 		require.NoError(t, err)
-		assert.Equal(t, decimal.NewFromFloat(-0.5).String(), updated.Score.String())
+		assert.Equal(t, decimal.NewFromFloat(-0.5).String(), updated.ScoreOfframp.String())
 	})
 
 	t.Run("skips_empty_provider_id_for_specific_provider", func(t *testing.T) {

@@ -24,9 +24,9 @@ import (
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/network"
 	"github.com/paycrest/aggregator/ent/paymentorder"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
@@ -153,27 +153,6 @@ func setup() error {
 		return fmt.Errorf("UpdateProviderBalances.sender_test: %w", err)
 	}
 
-	// Provider API key required for NGN ValidateAccount -> CallProviderWithHMAC (/verify_account)
-	providerKeySvc := services.NewAPIKeyService()
-	if _, _, err := providerKeySvc.GenerateAPIKey(context.Background(), nil, nil, providerProfile); err != nil {
-		return fmt.Errorf("GenerateAPIKey provider.sender_test: %w", err)
-	}
-
-	// Populate Redis bucket with provider data for validateBucketRate
-	redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, bucket.MinAmount, bucket.MaxAmount)
-	providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
-		providerProfile.ID,
-		token.Symbol,
-		providerOrderToken.Network,
-		providerOrderToken.FixedSellRate.String(),
-		providerOrderToken.MinOrderAmount.String(),
-		providerOrderToken.MaxOrderAmount.String(),
-	)
-	err = db.RedisClient.RPush(context.Background(), redisKey, providerData).Err()
-	if err != nil {
-		return fmt.Errorf("PopulateRedisBucket.sender_test: %w", err)
-	}
-
 	senderProfile, err := test.CreateTestSenderProfile(map[string]interface{}{
 		"user_id":     user.ID,
 		"fee_percent": "5",
@@ -236,17 +215,17 @@ func setup() error {
 	}
 	testCtx.nativeTokenSymbol = "TST7702"
 	nativeProviderOrderToken, err := test.AddProviderOrderTokenToProvider(map[string]interface{}{
-		"provider":              providerProfile,
-		"token_id":              int(nativeTokenID),
-		"currency_id":           currency.ID,
+		"provider":             providerProfile,
+		"token_id":             int(nativeTokenID),
+		"currency_id":          currency.ID,
 		"fixed_buy_rate":       decimal.NewFromFloat(750.0),
 		"fixed_sell_rate":      decimal.NewFromFloat(750.0),
-		"max_order_amount":      decimal.NewFromFloat(10000.0),
-		"min_order_amount":      decimal.NewFromFloat(1.0),
-		"max_order_amount_otc":  decimal.NewFromFloat(10000.0),
-		"min_order_amount_otc":  decimal.NewFromFloat(100.0),
-		"settlement_address":    "0x1234567890123456789012345678901234567890",
-		"network":               testCtx.nativeNetworkIdentifier,
+		"max_order_amount":     decimal.NewFromFloat(10000.0),
+		"min_order_amount":     decimal.NewFromFloat(1.0),
+		"max_order_amount_otc": decimal.NewFromFloat(10000.0),
+		"min_order_amount_otc": decimal.NewFromFloat(100.0),
+		"settlement_address":   "0x1234567890123456789012345678901234567890",
+		"network":              testCtx.nativeNetworkIdentifier,
 	})
 	if err != nil {
 		return fmt.Errorf("AddProviderOrderTokenNative.sender_test: %w", err)
