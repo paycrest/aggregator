@@ -480,11 +480,18 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		"is_partner":      false,
 		"visibility_mode": "public",
 		"is_available":    true,
+		// NGN account validation (ValidateAccount) requires active public providers with balances
+		"is_active": true,
 	}
 
 	// Apply overrides
 	for key, value := range overrides {
 		payload[key] = value
+	}
+
+	isActive := true
+	if v, ok := payload["is_active"].(bool); ok {
+		isActive = v
 	}
 
 	// Create ProviderProfile
@@ -495,6 +502,7 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 		SetProvisionMode(providerprofile.ProvisionMode(payload["provision_mode"].(string))).
 		SetUserID(payload["user_id"].(uuid.UUID)).
 		SetVisibilityMode(providerprofile.VisibilityMode(payload["visibility_mode"].(string))).
+		SetIsActive(isActive).
 		Save(context.Background())
 	if err != nil {
 		return nil, err

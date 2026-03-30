@@ -163,6 +163,12 @@ func setup() error {
 		return fmt.Errorf("UpdateProviderBalances.sender_test: %w", err)
 	}
 
+	// Provider API key required for NGN ValidateAccount -> CallProviderWithHMAC (/verify_account)
+	providerKeySvc := services.NewAPIKeyService()
+	if _, _, err := providerKeySvc.GenerateAPIKey(context.Background(), nil, nil, providerProfile); err != nil {
+		return fmt.Errorf("GenerateAPIKey provider.sender_test: %w", err)
+	}
+
 	// Populate Redis bucket with provider data for validateBucketRate
 	redisKey := fmt.Sprintf("bucket_%s_%s_%s_sell", currency.Code, bucket.MinAmount, bucket.MaxAmount)
 	providerData := fmt.Sprintf("%s:%s:%s:%s:%s:%s",
@@ -322,6 +328,15 @@ func setup() error {
 
 // setupHTTPMocks sets up httpmock responders for Thirdweb API calls
 func setupHTTPMocks() {
+	// NGN account validation (ValidateAccount) calls provider host + /verify_account
+	httpmock.RegisterResponder("POST", "https://example.com/verify_account",
+		func(r *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, map[string]interface{}{
+				"data": "John Doe",
+			})
+		},
+	)
+
 	httpmock.RegisterResponder("POST", "https://engine.thirdweb.com/v1/accounts",
 		func(r *http.Request) (*http.Response, error) {
 			// Generate unique address for each test to avoid UNIQUE constraint violations
@@ -707,8 +722,8 @@ func TestSender(t *testing.T) {
 
 			assert.Equal(t, paymentOrder.AccountIdentifier, payload["recipient"].(map[string]interface{})["accountIdentifier"])
 			assert.Equal(t, paymentOrder.Memo, payload["recipient"].(map[string]interface{})["memo"])
-			// For mobile money institutions, ValidateAccount returns "OK"
-			assert.Equal(t, paymentOrder.AccountName, "OK")
+			// NGN: ValidateAccount uses provider /verify_account (see setupHTTPMocks); mock returns "John Doe"
+			assert.Equal(t, "John Doe", paymentOrder.AccountName)
 			assert.Equal(t, paymentOrder.Institution, payload["recipient"].(map[string]interface{})["institution"])
 			assert.Equal(t, data["senderFee"], "5")
 			assert.Equal(t, data["transactionFee"], network.Fee.String())
