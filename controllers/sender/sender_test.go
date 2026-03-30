@@ -26,9 +26,11 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerprofile"
+	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenEnt "github.com/paycrest/aggregator/ent/token"
+	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/routers/middleware"
 	"github.com/paycrest/aggregator/services"
 	db "github.com/paycrest/aggregator/storage"
@@ -712,6 +714,77 @@ func TestSender(t *testing.T) {
 			assert.Equal(t, paymentOrder.Institution, payload["recipient"].(map[string]interface{})["institution"])
 			assert.Equal(t, data["senderFee"], "5")
 			assert.Equal(t, data["transactionFee"], network.Fee.String())
+		})
+
+		t.Run("InitiatePaymentOrder rounds amount to token decimals", func(t *testing.T) {
+			httpmock.Activate()
+			defer httpmock.DeactivateAndReset()
+			setupHTTPMocks()
+
+			netw, err := db.Client.Network.
+				Query().
+				Where(network.IdentifierEQ(testCtx.networkIdentifier)).
+				Only(context.Background())
+			assert.NoError(t, err)
+
+			// Production-style: rate math / JSON can carry extra precision; chain transfer is 6 dp (e.g. USDT).
+			highPrecisionAmount := "3.5758984444841766"
+			expectedStored := decimal.RequireFromString("3.575898")
+
+			payload := map[string]interface{}{
+				"amount":  highPrecisionAmount,
+				"token":   testCtx.token.Symbol,
+				"rate":    "1",
+				"network": netw.Identifier,
+				"recipient": map[string]interface{}{
+					"institution":       "MOMONGPC",
+					"accountIdentifier": "1234567890",
+					"accountName":       "John Doe",
+					"memo":              "decimal rounding initiate test",
+				},
+				"reference": fmt.Sprintf("round-decimals-%s", uuid.New().String()[:8]),
+			}
+			headers := map[string]string{"API-Key": testCtx.apiKey.ID.String()}
+
+			res, err := test.PerformRequest(t, "POST", "/sender/orders", payload, headers, router)
+			assert.NoError(t, err)
+			if res.Code != http.StatusCreated {
+				t.Logf("status=%d body=%s", res.Code, res.Body.String())
+			}
+			assert.Equal(t, http.StatusCreated, res.Code, "InitiatePaymentOrder should succeed")
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			idStr, ok := data["id"].(string)
+			assert.True(t, ok)
+			orderID, err := uuid.Parse(idStr)
+			assert.NoError(t, err)
+
+			// InitiatePaymentOrder rounds amount to token decimals: tear down this PaymentOrder (orderID) so
+			// sibling GetStats subtests keep stable totalOrders counts for testCtx.user.
+			t.Cleanup(func() {
+				ctx := context.Background()
+				_, _ = db.Client.PaymentWebhook.Delete().Where(paymentwebhook.HasPaymentOrderWith(paymentorder.IDEQ(orderID))).Exec(ctx)
+				if _, delErr := db.Client.TransactionLog.Delete().Where(transactionlog.HasPaymentOrderWith(paymentorder.IDEQ(orderID))).Exec(ctx); delErr != nil {
+					t.Logf("InitiatePaymentOrder rounds amount to token decimals: cleanup TransactionLog orderID=%s: %v", orderID, delErr)
+				}
+				if delErr := db.Client.PaymentOrder.DeleteOneID(orderID).Exec(ctx); delErr != nil {
+					t.Logf("InitiatePaymentOrder rounds amount to token decimals: cleanup db.Client.PaymentOrder.DeleteOneID orderID=%s: %v", orderID, delErr)
+				}
+			})
+
+			po, err := db.Client.PaymentOrder.
+				Query().
+				Where(paymentorder.IDEQ(orderID)).
+				WithToken().
+				Only(context.Background())
+			assert.NoError(t, err)
+			assert.EqualValues(t, testCtx.token.Decimals, po.Edges.Token.Decimals)
+			assert.True(t, po.Amount.Equal(expectedStored),
+				"stored amount must match token decimals; got %s want %s", po.Amount, expectedStored)
 		})
 
 		t.Run("Check Transaction Logs", func(t *testing.T) {
@@ -1640,7 +1713,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 11, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 from EIP7702_authorization
+			assert.Equal(t, 11, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder (valid amount) + 1 from EIP7702_authorization; rounding test cleans up its order
 
 			// Assert the totalOrderVolume value
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
@@ -1719,7 +1792,7 @@ func TestSender(t *testing.T) {
 			// Assert the totalOrders value
 			totalOrders, ok := data["totalOrders"].(float64)
 			assert.True(t, ok, "totalOrders is not of type float64")
-			assert.Equal(t, 12, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 from EIP7702_authorization + 1 settled order
+			assert.Equal(t, 12, int(totalOrders)) // 9 from setup + 1 from InitiatePaymentOrder + 1 from EIP7702_authorization + 1 settled order; rounding test cleans up its order
 
 			// Assert the totalOrderVolume value (100 NGN / 950 market rate ≈ 0.105 USD)
 			totalOrderVolumeStr, ok := data["totalOrderVolume"].(string)
@@ -2333,4 +2406,33 @@ func TestSender(t *testing.T) {
 			assert.NotEmpty(t, providerAccount["validUntil"])
 		})
 	})
+}
+
+// TestRoundCryptoAmount_AmountMatchesTokenDecimals guards against the production case
+// where rate math produced 3.5758984444841766 while the on-chain transfer is 3.575898
+// (6 decimals). Stored amount must round to token decimals so amount + fees matches event.Value.
+func TestRoundCryptoAmount_AmountMatchesTokenDecimals(t *testing.T) {
+	// Values from stuck order analysis: DB had full float precision; chain paid 6 dp.
+	amountFromOrderCreation := decimal.RequireFromString("3.5758984444841766")
+	amountAsTransferred := decimal.RequireFromString("3.575898")
+
+	tok := &ent.Token{Decimals: 6}
+
+	rounded := roundCryptoAmount(amountFromOrderCreation, tok)
+
+	assert.True(t, rounded.Equal(amountAsTransferred),
+		"order amount must round to token decimals; got %s want %s", rounded, amountAsTransferred)
+	assert.True(t, rounded.Equal(amountFromOrderCreation.Round(6)))
+}
+
+func TestRoundCryptoAmount_PreservesSenderPrecisionBelowTokenDecimals(t *testing.T) {
+	tok := &ent.Token{Decimals: 6}
+
+	twoDP := decimal.RequireFromString("100.50")
+	assert.True(t, roundCryptoAmount(twoDP, tok).Equal(twoDP),
+		"2 dp input should not be widened to 6 dp")
+
+	sixDP := decimal.RequireFromString("1.234567")
+	assert.True(t, roundCryptoAmount(sixDP, tok).Equal(sixDP),
+		"exactly token decimals should be unchanged")
 }

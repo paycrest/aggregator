@@ -71,6 +71,17 @@ func refundOrRecipientForDirection(po *ent.PaymentOrder) string {
 	return ""
 }
 
+// roundCryptoAmount caps precision to the token's on-chain decimals when the value has
+// more decimal places than that (e.g. rate math). Sender-supplied amounts with fewer
+// places (e.g. 2 dp stablecoin quotes) are left unchanged.
+func roundCryptoAmount(d decimal.Decimal, token *ent.Token) decimal.Decimal {
+	dec := int32(token.Decimals)
+	if d.Exponent() >= -dec {
+		return d
+	}
+	return d.Round(dec)
+}
+
 // InitiatePaymentOrder controller creates a payment order
 func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	var payload types.NewPaymentOrderPayload
@@ -129,6 +140,15 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			logger.Errorf("Failed to fetch token: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch token", nil)
 		}
+		return
+	}
+
+	orderAmount := roundCryptoAmount(payload.Amount, token)
+	if orderAmount.LessThanOrEqual(decimal.Zero) {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+			Field:   "Amount",
+			Message: "Amount is too small for this token's decimal precision",
+		})
 		return
 	}
 
@@ -328,7 +348,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 	}()
 
 	go func() {
-		rateResult, err := u.ValidateRate(ctx, token, institutionObj.Edges.FiatCurrency, payload.Amount, payload.Recipient.ProviderID, payload.Network, u.RateSideSell)
+		rateResult, err := u.ValidateRate(ctx, token, institutionObj.Edges.FiatCurrency, orderAmount, payload.Recipient.ProviderID, payload.Network, u.RateSideSell)
 		rateChan <- RateResult{rateResult, err}
 	}()
 
@@ -374,8 +394,6 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		})
 		return
 	}
-
-	amountInUSD := u.CalculatePaymentOrderAmountInUSD(payload.Amount, token, institutionObj, paymentorder.DirectionOfframp)
 
 	// Use order type from ValidateRate result (already determined based on OTC limits)
 	orderType := rateValidationResult.OrderType
@@ -498,8 +516,10 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 		return
 	}
 
-	// Calculate fee based on percentage
-	calculatedFee := feePercent.Mul(payload.Amount).Div(decimal.NewFromInt(100)).Round(4)
+	amountInUSD := u.CalculatePaymentOrderAmountInUSD(orderAmount, token, institutionObj, paymentorder.DirectionOfframp)
+
+	// Calculate fee based on percentage (use rounded order amount)
+	calculatedFee := feePercent.Mul(orderAmount).Div(decimal.NewFromInt(100)).Round(4)
 
 	// Apply max fee cap if configured (zero means no cap)
 	senderFee := calculatedFee
@@ -508,14 +528,16 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			senderFee = senderOrderToken.MaxFeeCap
 		}
 	}
+	senderFee = roundCryptoAmount(senderFee, token)
+	networkFee := roundCryptoAmount(token.Edges.Network.Fee, token)
 
 	// Create payment order first, then transaction log (required edge)
 	paymentOrderBuilder := tx.PaymentOrder.
 		Create().
 		SetSenderProfile(sender).
-		SetAmount(payload.Amount).
+		SetAmount(orderAmount).
 		SetAmountInUsd(amountInUSD).
-		SetNetworkFee(token.Edges.Network.Fee).
+		SetNetworkFee(networkFee).
 		SetSenderFee(senderFee).
 		SetToken(token).
 		SetRate(payload.Rate).
@@ -609,7 +631,7 @@ func (ctrl *SenderController) InitiatePaymentOrder(ctx *gin.Context) {
 			ReceiveAddress: receiveAddress,
 			ValidUntil:     receiveAddressExpiry,
 			SenderFee:      senderFee,
-			TransactionFee: token.Edges.Network.Fee,
+			TransactionFee: networkFee,
 			Reference:      paymentOrder.Reference,
 			OrderType:      string(orderType),
 		})
@@ -936,6 +958,14 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 				return
 			}
 			cryptoAmount = amount.Div(providedRate)
+			cryptoAmount = roundCryptoAmount(cryptoAmount, token)
+			if cryptoAmount.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Amount",
+					Message: "Amount is too small for this token's decimal precision",
+				})
+				return
+			}
 			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmount, destination.ProviderID, source.Network, u.RateSideSell)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -956,6 +986,14 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 			}
 			orderRate = providedRate
 			cryptoAmount = amount.Div(orderRate)
+			cryptoAmount = roundCryptoAmount(cryptoAmount, token)
+			if cryptoAmount.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Amount",
+					Message: "Amount is too small for this token's decimal precision",
+				})
+				return
+			}
 		} else {
 			// No rate provided: pick valid system rate and determine crypto that yields user's fiat amount
 			isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
@@ -972,6 +1010,14 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 				orderRate = currency.MarketSellRate
 			}
 			cryptoAmount = amount.Div(orderRate)
+			cryptoAmount = roundCryptoAmount(cryptoAmount, token)
+			if cryptoAmount.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Amount",
+					Message: "Amount is too small for this token's decimal precision",
+				})
+				return
+			}
 			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmount, destination.ProviderID, source.Network, u.RateSideSell)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -983,9 +1029,24 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 			rateValidationResult = rateResult
 			orderRate = rateValidationResult.Rate
 			cryptoAmount = amount.Div(orderRate)
+			cryptoAmount = roundCryptoAmount(cryptoAmount, token)
+			if cryptoAmount.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Amount",
+					Message: "Amount is too small for this token's decimal precision",
+				})
+				return
+			}
 		}
 	case "crypto":
-		cryptoAmount = amount
+		cryptoAmount = roundCryptoAmount(amount, token)
+		if cryptoAmount.LessThanOrEqual(decimal.Zero) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Amount",
+				Message: "Amount is too small for this token's decimal precision",
+			})
+			return
+		}
 		if payload.Rate != "" {
 			// Use provided rate
 			providedRate, err := decimal.NewFromString(payload.Rate)
@@ -1122,6 +1183,9 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		}
 	}
 
+	senderFee = roundCryptoAmount(senderFee, token)
+	networkFee := roundCryptoAmount(token.Edges.Network.Fee, token)
+
 	isLocalTransfer := strings.EqualFold(token.BaseCurrency, currency.Code)
 	if isLocalTransfer && feePercent.IsZero() && senderFee.IsZero() {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1240,7 +1304,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 		SetSenderProfile(sender).
 		SetAmount(cryptoAmount).
 		SetAmountInUsd(amountInUSD).
-		SetNetworkFee(token.Edges.Network.Fee).
+		SetNetworkFee(networkFee).
 		SetSenderFee(senderFee).
 		SetToken(token).
 		SetRate(orderRate).
@@ -1584,6 +1648,14 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 				return
 			}
 			cryptoAmountOut = amount.Div(providedRate)
+			cryptoAmountOut = roundCryptoAmount(cryptoAmountOut, token)
+			if cryptoAmountOut.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Amount",
+					Message: "Amount is too small for this token's decimal precision",
+				})
+				return
+			}
 			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1604,6 +1676,14 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			}
 			orderRate = providedRate
 			cryptoAmountOut = amount.Div(orderRate)
+			cryptoAmountOut = roundCryptoAmount(cryptoAmountOut, token)
+			if cryptoAmountOut.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Amount",
+					Message: "Amount is too small for this token's decimal precision",
+				})
+				return
+			}
 		} else {
 			// No rate provided: pick valid system rate and determine crypto from user's fiat amount
 			isDirectMatch := strings.EqualFold(token.BaseCurrency, currency.Code)
@@ -1620,6 +1700,14 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 				orderRate = currency.MarketBuyRate
 			}
 			cryptoAmountOut = amount.Div(orderRate)
+			cryptoAmountOut = roundCryptoAmount(cryptoAmountOut, token)
+			if cryptoAmountOut.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Amount",
+					Message: "Amount is too small for this token's decimal precision",
+				})
+				return
+			}
 			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1631,9 +1719,24 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			rateValidationResult = rateResult
 			orderRate = rateValidationResult.Rate
 			cryptoAmountOut = amount.Div(orderRate)
+			cryptoAmountOut = roundCryptoAmount(cryptoAmountOut, token)
+			if cryptoAmountOut.LessThanOrEqual(decimal.Zero) {
+				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+					Field:   "Amount",
+					Message: "Amount is too small for this token's decimal precision",
+				})
+				return
+			}
 		}
 	case "crypto":
-		cryptoAmountOut = amount
+		cryptoAmountOut = roundCryptoAmount(amount, token)
+		if cryptoAmountOut.LessThanOrEqual(decimal.Zero) {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
+				Field:   "Amount",
+				Message: "Amount is too small for this token's decimal precision",
+			})
+			return
+		}
 		if payload.Rate != "" {
 			providedRate, err := decimal.NewFromString(payload.Rate)
 			if err != nil {
@@ -1737,7 +1840,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			})
 			return
 		}
-		senderFeeCrypto = fixedFee
+		senderFeeCrypto = fixedFee.Round(4)
 		feePercent = decimal.Zero
 	} else if payload.SenderFeePercent != "" {
 		feePercentValue, err := decimal.NewFromString(payload.SenderFeePercent)
@@ -1772,6 +1875,9 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			}
 		}
 	}
+
+	// senderFeeCrypto stays at 4 dp (Round(4) above); do not round to token decimals — preserves fee semantics vs order amount.
+	networkFee := roundCryptoAmount(token.Edges.Network.Fee, token)
 
 	// Calculate fiat amounts
 	// senderFeeFiat = senderFeeCrypto * buyRate
@@ -1875,7 +1981,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		SetSenderProfile(sender).
 		SetAmount(cryptoAmountOut).
 		SetAmountInUsd(amountInUSD).
-		SetNetworkFee(token.Edges.Network.Fee).
+		SetNetworkFee(networkFee).
 		SetSenderFee(senderFeeCrypto).
 		SetToken(token).
 		SetRate(orderRate).
