@@ -122,6 +122,12 @@ func setup() error {
 		return fmt.Errorf("CreateTestProviderProfile.sender_test: %w", err)
 	}
 
+	// ValidateAccount (NGN) calls CallProviderWithHMAC → provider must have an API key (see utils.CallProviderWithHMAC).
+	apiKeySvc := services.NewAPIKeyService()
+	if _, _, err = apiKeySvc.GenerateAPIKey(context.Background(), nil, nil, providerProfile); err != nil {
+		return fmt.Errorf("GenerateAPIKey provider.sender_test: %w", err)
+	}
+
 	// Create ProviderOrderToken for rate validation (Redis queue uses 750; NGN/NGN direct match normalizes ValidateRate to 1, matching payload rate "1")
 	_, err = test.AddProviderOrderTokenToProvider(map[string]interface{}{
 		"provider":             providerProfile,
