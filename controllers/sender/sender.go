@@ -1566,7 +1566,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		Query().
 		Where(
 			tokenEnt.SymbolEQ(destination.Currency),
-			tokenEnt.HasNetworkWith(network.IdentifierEQ(destination.Network)),
+			tokenEnt.HasNetworkWith(network.IdentifierEQ(destination.Recipient.Network)),
 			tokenEnt.IsEnabledEQ(true),
 		).
 		WithNetwork().
@@ -1585,7 +1585,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 
 	// Validate recipient address format
-	if strings.HasPrefix(destination.Network, "tron") {
+	if strings.HasPrefix(destination.Recipient.Network, "tron") {
 		if !u.IsValidTronAddress(destination.Recipient.Address) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 				Field:   "Destination",
@@ -1593,7 +1593,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			})
 			return
 		}
-	} else if strings.HasPrefix(destination.Network, "starknet") {
+	} else if strings.HasPrefix(destination.Recipient.Network, "starknet") {
 		pattern := `^0x[a-fA-F0-9]{63,64}$`
 		matched, _ := regexp.MatchString(pattern, destination.Recipient.Address)
 		if !matched {
@@ -1611,15 +1611,6 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			})
 			return
 		}
-	}
-
-	// Validate network matches
-	if destination.Recipient.Network != destination.Network {
-		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
-			Field:   "Destination",
-			Message: "Recipient network does not match payment rail",
-		})
-		return
 	}
 
 	// Handle rate logic based on amountIn
@@ -1656,7 +1647,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 				})
 				return
 			}
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
@@ -1708,7 +1699,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 				})
 				return
 			}
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
@@ -1755,7 +1746,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			}
 
 			// Validate rate is achievable (using buy side)
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
@@ -1776,7 +1767,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			orderRate = providedRate
 		} else {
 			// Fetch rate from ValidateRate (buy side)
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
