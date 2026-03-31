@@ -757,10 +757,20 @@ func RetryFailedWebhookNotifications() error {
 
 // syncRefundingOrder calls the provider /tx_status for an onramp order in Refunding and updates order/fulfillment to refunded/failed/pending.
 func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
-	if order.Edges.ProvisionBucket == nil || order.Edges.ProvisionBucket.Edges.Currency == nil {
+	currencyCode := ""
+	if order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
+		currencyCode = order.Edges.ProvisionBucket.Edges.Currency.Code
+	} else if order.Institution != "" {
+		inst, instErr := utils.GetInstitutionByCode(ctx, order.Institution, true)
+		if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
+			currencyCode = inst.Edges.FiatCurrency.Code
+		}
+	}
+	if currencyCode == "" {
 		logger.WithFields(logger.Fields{
-			"OrderID":    order.ID.String(),
-			"ProviderID": order.Edges.Provider.ID,
+			"OrderID":     order.ID.String(),
+			"ProviderID":  order.Edges.Provider.ID,
+			"Institution": order.Institution,
 		}).Errorf("SyncPaymentOrderFulfillments.syncRefundingOrder: missing ProvisionBucket or Currency")
 		return
 	}
@@ -769,7 +779,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 	refundReference := getRefundReferenceFromOrder(order)
 	if refundReference == "" {
 		var err error
-		refundReference, err = callTxRefundAndStore(ctx, order)
+		refundReference, err = callTxRefundAndStore(ctx, order, currencyCode)
 		if err != nil || refundReference == "" {
 			return
 		}
@@ -777,7 +787,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 
 	payload := map[string]interface{}{
 		"reference": refundReference,
-		"currency":  order.Edges.ProvisionBucket.Edges.Currency.Code,
+		"currency":  currencyCode,
 	}
 	data, err := utils.CallProviderWithHMAC(ctx, order.Edges.Provider.ID, "POST", "/tx_status", payload)
 	if err != nil {
@@ -880,7 +890,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 		}
 
 		// On success, refundReference is stored in order metadata; next sync will poll /tx_status with it.
-		if _, err := callTxRefundAndStore(ctx, order); err != nil {
+		if _, err := callTxRefundAndStore(ctx, order, currencyCode); err != nil {
 			return
 		}
 	}
@@ -951,7 +961,8 @@ func callRequestAuthorization(ctx context.Context, order *ent.PaymentOrder, psp,
 }
 
 // callTxRefundAndStore calls POST /tx_refund via CallProviderWithHMAC; on 200 stores refundReference in order metadata and returns it.
-func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder) (refundReference string, err error) {
+// currencyCode must be pre-resolved by the caller (from ProvisionBucket or institution lookup).
+func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder, currencyCode string) (refundReference string, err error) {
 	fiatAmount := order.Amount.Add(order.SenderFee).Mul(order.Rate).RoundBank(0).String()
 	refundAccount := map[string]interface{}{
 		"accountIdentifier": order.AccountIdentifier,
@@ -965,7 +976,7 @@ func callTxRefundAndStore(ctx context.Context, order *ent.PaymentOrder) (refundR
 	}
 	body := map[string]interface{}{
 		"orderId":       order.ID.String(),
-		"currency":      order.Edges.ProvisionBucket.Edges.Currency.Code,
+		"currency":      currencyCode,
 		"amount":        fiatAmount,
 		"refundAccount": refundAccount,
 	}
