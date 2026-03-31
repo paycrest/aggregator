@@ -59,8 +59,18 @@ func RegisterRoutes(route *gin.Engine) {
 	v1.POST("verify-account", ctrl.VerifyAccount)
 	v1.GET("orders/:chain_id/:id", ctrl.GetProviderOrderStatus)
 
+	v2g := route.Group("/v2/")
+	v2g.GET("currencies", ctrl.GetFiatCurrencies)
+	v2g.GET("institutions/:currency_code", ctrl.GetInstitutionsByCurrency)
+	v2g.GET("tokens", ctrl.GetSupportedTokens)
+	v2g.GET("rates/:token/:amount/:fiat", ctrl.GetTokenRate)
+	v2g.GET("pubkey", ctrl.GetAggregatorPublicKey)
+	v2g.POST("verify-account", ctrl.VerifyAccount)
+	v2g.GET("orders/:chain_id/:id", ctrl.GetProviderOrderStatus)
+
 	// Reindex transaction endpoint
 	v1.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
+	v2g.GET("reindex/:network/:tx_hash_or_address", ctrl.IndexTransaction)
 
 	// Etherscan queue monitoring endpoint
 	v1.GET("etherscan/stats", ctrl.GetEtherscanQueueStats)
@@ -146,6 +156,7 @@ func senderRoutes(route *gin.Engine) {
 	v2.POST("orders", senderCtrl.InitiatePaymentOrderV2)
 	v2.GET("orders/:id", senderCtrl.GetPaymentOrderByIDV2)
 	v2.GET("orders", senderCtrl.GetPaymentOrdersV2)
+	v2.GET("stats", senderCtrl.Stats)
 }
 
 func providerRoutes(route *gin.Engine) {
@@ -172,4 +183,12 @@ func providerRoutes(route *gin.Engine) {
 
 	v2Provider.GET("orders", providerCtrl.GetPaymentOrdersV2)
 	v2Provider.GET("orders/:id", providerCtrl.GetPaymentOrderByIDV2)
+	v2Provider.POST("orders/:id/accept", providerCtrl.AcceptOrder)
+	v2Provider.POST("orders/:id/decline", providerCtrl.DeclineOrder)
+	v2Provider.POST("orders/:id/fulfill", providerCtrl.FulfillOrder)
+	v2Provider.POST("orders/:id/cancel", providerCtrl.CancelOrder)
+	v2Provider.POST("balances", providerCtrl.UpdateProviderBalance)
+	v2Provider.GET("rates/:token/:fiat", providerCtrl.GetMarketRate)
+	v2Provider.GET("stats", providerCtrl.Stats)
+	v2Provider.GET("node-info", providerCtrl.NodeInfo)
 }
