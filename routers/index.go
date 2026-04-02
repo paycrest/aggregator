@@ -55,6 +55,7 @@ func RegisterRoutes(route *gin.Engine) {
 	)
 	v1.GET("tokens", ctrl.GetSupportedTokens)
 	v1.GET("rates/:token/:amount/:fiat", ctrl.GetTokenRate)
+	route.GET("/v2/rates/:network/:token/:amount/:fiat", ctrl.V2GetTokenRate)
 	v1.GET("pubkey", ctrl.GetAggregatorPublicKey)
 	v1.POST("verify-account", ctrl.VerifyAccount)
 	v1.GET("orders/:chain_id/:id", ctrl.GetProviderOrderStatus)
@@ -172,4 +173,5 @@ func providerRoutes(route *gin.Engine) {
 
 	v2Provider.GET("orders", providerCtrl.GetPaymentOrdersV2)
 	v2Provider.GET("orders/:id", providerCtrl.GetPaymentOrderByIDV2)
+	v2Provider.GET("rates/:token/:fiat", providerCtrl.GetMarketRate)
 }

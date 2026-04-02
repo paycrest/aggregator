@@ -2540,21 +2540,25 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 
 	var response *types.MarketRateResponse
 	if !strings.EqualFold(tokenObj.BaseCurrency, currency.Code) {
-		// Use sell rate for deviation calculation (offramp perspective)
-		deviation := currency.MarketSellRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
+		buyDeviation := currency.MarketBuyRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
+		sellDeviation := currency.MarketSellRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
 
 		response = &types.MarketRateResponse{
-			MarketBuyRate:  currency.MarketBuyRate,
-			MarketSellRate: currency.MarketSellRate,
-			MinimumRate:    currency.MarketSellRate.Sub(deviation),
-			MaximumRate:    currency.MarketSellRate.Add(deviation),
+			MarketBuyRate:   currency.MarketBuyRate,
+			MarketSellRate:  currency.MarketSellRate,
+			MinimumBuyRate:  currency.MarketBuyRate.Sub(buyDeviation),
+			MaximumBuyRate:  currency.MarketBuyRate.Add(buyDeviation),
+			MinimumSellRate: currency.MarketSellRate.Sub(sellDeviation),
+			MaximumSellRate: currency.MarketSellRate.Add(sellDeviation),
 		}
 	} else {
 		response = &types.MarketRateResponse{
-			MarketBuyRate:  decimal.NewFromInt(1),
-			MarketSellRate: decimal.NewFromInt(1),
-			MinimumRate:    decimal.NewFromInt(1),
-			MaximumRate:    decimal.NewFromInt(1),
+			MarketBuyRate:   decimal.NewFromInt(1),
+			MarketSellRate:  decimal.NewFromInt(1),
+			MinimumBuyRate:  decimal.NewFromInt(1),
+			MaximumBuyRate:  decimal.NewFromInt(1),
+			MinimumSellRate: decimal.NewFromInt(1),
+			MaximumSellRate: decimal.NewFromInt(1),
 		}
 	}
 

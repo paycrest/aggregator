@@ -971,6 +971,11 @@ func TestProvider(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, "Rate fetched successfully", response.Message)
 			assert.Equal(t, "950.0", response.Data.MarketSellRate.StringFixed(1))
+			assert.Equal(t, "950.0", response.Data.MarketBuyRate.StringFixed(1))
+			assert.Equal(t, "949.1", response.Data.MinimumBuyRate.StringFixed(1))
+			assert.Equal(t, "951.0", response.Data.MaximumBuyRate.StringFixed(1))
+			assert.Equal(t, "949.1", response.Data.MinimumSellRate.StringFixed(1))
+			assert.Equal(t, "951.0", response.Data.MaximumSellRate.StringFixed(1))
 		})
 	})
 

@@ -835,19 +835,19 @@ type V2FiatProviderAccount struct {
 // V2PaymentOrderResponse is the response type for v2 payment order creation
 // ProviderAccount, Source, and Destination are polymorphic (any) to support both offramp and onramp flows
 type V2PaymentOrderResponse struct {
-	ID                uuid.UUID `json:"id"`
-	Status            string    `json:"status"`
-	OrderType         string    `json:"orderType"` // "regular" | "otc"
-	Timestamp         time.Time `json:"timestamp"`
-	Amount            string    `json:"amount"` // Crypto amount (token units) - consistent for both flows
-	Rate              string    `json:"rate,omitempty"`
-	SenderFee         string    `json:"senderFee"` // Crypto amount (token units) - consistent for both flows
-	SenderFeePercent  string    `json:"senderFeePercent"`
-	TransactionFee    string    `json:"transactionFee"`
-	Reference         string    `json:"reference"`
-	ProviderAccount   any       `json:"providerAccount"` // V2CryptoProviderAccount for offramp, V2FiatProviderAccount for onramp
-	Source            any       `json:"source"`           // V2CryptoSource for offramp, V2FiatSource for onramp
-	Destination       any       `json:"destination"`     // V2FiatDestination for offramp, V2CryptoDestinationOnrampResponse for onramp
+	ID               uuid.UUID `json:"id"`
+	Status           string    `json:"status"`
+	OrderType        string    `json:"orderType"` // "regular" | "otc"
+	Timestamp        time.Time `json:"timestamp"`
+	Amount           string    `json:"amount"` // Crypto amount (token units) - consistent for both flows
+	Rate             string    `json:"rate,omitempty"`
+	SenderFee        string    `json:"senderFee"` // Crypto amount (token units) - consistent for both flows
+	SenderFeePercent string    `json:"senderFeePercent"`
+	TransactionFee   string    `json:"transactionFee"`
+	Reference        string    `json:"reference"`
+	ProviderAccount  any       `json:"providerAccount"` // V2CryptoProviderAccount for offramp, V2FiatProviderAccount for onramp
+	Source           any       `json:"source"`          // V2CryptoSource for offramp, V2FiatSource for onramp
+	Destination      any       `json:"destination"`     // V2FiatDestination for offramp, V2CryptoDestinationOnrampResponse for onramp
 }
 
 // V2PaymentOrderGetResponse is the v2 response for GET payment order (single or list item). Aligned with v2 API schema.
@@ -909,16 +909,32 @@ type SendEmailResponse struct {
 
 // MarketRateResponse is the response for the market rate endpoint
 type MarketRateResponse struct {
-	MarketBuyRate  decimal.Decimal `json:"marketBuyRate"`
-	MarketSellRate decimal.Decimal `json:"marketSellRate"`
-	MinimumRate    decimal.Decimal `json:"minimumRate"`
-	MaximumRate    decimal.Decimal `json:"maximumRate"`
+	MarketBuyRate   decimal.Decimal `json:"marketBuyRate"`
+	MarketSellRate  decimal.Decimal `json:"marketSellRate"`
+	MinimumBuyRate  decimal.Decimal `json:"minimumBuyRate"`
+	MaximumBuyRate  decimal.Decimal `json:"maximumBuyRate"`
+	MinimumSellRate decimal.Decimal `json:"minimumSellRate"`
+	MaximumSellRate decimal.Decimal `json:"maximumSellRate"`
 }
 
 // RateMetadata contains optional metadata for rate responses
 type RateMetadata struct {
 	OrderType            string `json:"orderType"`            // "regular" or "otc"
 	RefundTimeoutMinutes int    `json:"refundTimeoutMinutes"` // Minutes until automatic refund
+}
+
+// V2RateQuoteSide contains side-specific quote information for v2 rates endpoint
+type V2RateQuoteSide struct {
+	Rate                 string   `json:"rate"`
+	ProviderIDs          []string `json:"providerIds"`
+	OrderType            string   `json:"orderType"`
+	RefundTimeoutMinutes int      `json:"refundTimeoutMinutes"`
+}
+
+// V2RateQuoteResponse is the response payload for the v2 rates endpoint
+type V2RateQuoteResponse struct {
+	Buy  *V2RateQuoteSide `json:"buy,omitempty"`
+	Sell *V2RateQuoteSide `json:"sell,omitempty"`
 }
 
 type ResendTokenPayload struct {
