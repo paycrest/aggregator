@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -33,6 +34,29 @@ import (
 	"github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestComputeSettleInPrincipalSubunit(t *testing.T) {
+	t.Run("local rate keeps net amount", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		got, err := computeSettleInPrincipalSubunit(net, decimal.NewFromInt(100), big.NewInt(0))
+		assert.NoError(t, err)
+		assert.Equal(t, net.String(), got.String())
+	})
+
+	t.Run("fx rate grosses up amount", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		// 5% providerToAggregatorFx => gross should be ceil(1,000,000*100000/95000)=1,052,632
+		got, err := computeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(5000))
+		assert.NoError(t, err)
+		assert.Equal(t, "1052632", got.String())
+	})
+
+	t.Run("fx rejects invalid bps", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		_, err := computeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(100000))
+		assert.Error(t, err)
+	})
+}
 
 var testCtx = struct {
 	user         *ent.User

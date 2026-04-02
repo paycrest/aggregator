@@ -13,9 +13,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	fastshot "github.com/opus-domini/fast-shot"
 	"github.com/paycrest/aggregator/config"
@@ -53,6 +55,39 @@ var cryptoConf = config.CryptoConfig()
 type ProviderController struct {
 	balanceService *balance.Service
 	nativeService  *services.NativeService
+	feeReader      tokenFeeSettingsReader
+}
+
+type tokenFeeSettingsReader interface {
+	GetTokenFeeSettings(ctx context.Context, network *ent.Network, tokenAddress string) (contracts.GatewaySettingManagerTokenFeeSettings, error)
+}
+
+type gatewayTokenFeeSettingsReader struct{}
+
+func (r *gatewayTokenFeeSettingsReader) GetTokenFeeSettings(ctx context.Context, network *ent.Network, tokenAddress string) (contracts.GatewaySettingManagerTokenFeeSettings, error) {
+	if network == nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("network is nil")
+	}
+	if network.RPCEndpoint == "" {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("rpc endpoint not configured")
+	}
+	if network.GatewayContractAddress == "" {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("gateway contract address not configured")
+	}
+	client, err := ethclient.Dial(network.RPCEndpoint)
+	if err != nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("dial rpc: %w", err)
+	}
+	defer client.Close()
+	caller, err := contracts.NewGatewayCaller(ethcommon.HexToAddress(network.GatewayContractAddress), client)
+	if err != nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("gateway caller: %w", err)
+	}
+	settings, err := caller.GetTokenFeeSettings(&bind.CallOpts{Context: ctx}, ethcommon.HexToAddress(tokenAddress))
+	if err != nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("get token fee settings: %w", err)
+	}
+	return settings, nil
 }
 
 // NewProviderController creates a new instance of ProviderController with injected services
@@ -60,6 +95,7 @@ func NewProviderController() *ProviderController {
 	return &ProviderController{
 		balanceService: balance.New(),
 		nativeService:  services.NewNativeService(),
+		feeReader:      &gatewayTokenFeeSettingsReader{},
 	}
 }
 
@@ -972,11 +1008,11 @@ func (ctrl *ProviderController) buildPayinBatchForAccept(ctx *gin.Context, order
 	if err != nil {
 		return nil, fmt.Errorf("gateway order ID: %w", err)
 	}
-	settleInData, err := ctrl.prepareSettleInCallData(ctx.Request.Context(), order, gatewayOrderID)
+	settleInData, principalAmount, err := ctrl.prepareSettleInCallData(ctx.Request.Context(), order, gatewayOrderID)
 	if err != nil {
 		return nil, fmt.Errorf("prepareSettleInCallData: %w", err)
 	}
-	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress)
+	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress, principalAmount)
 	if err != nil {
 		return nil, fmt.Errorf("prepareApproveCallData: %w", err)
 	}
@@ -1899,7 +1935,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 
 	// Prepare settleIn call data
 	// settleIn(_orderId, _token, _amount, _senderFeeRecipient, _senderFee, _recipient, _rate)
-	settleInData, err := ctrl.prepareSettleInCallData(ctx.Request.Context(), orderWithDetails, gatewayOrderID)
+	settleInData, principalAmount, err := ctrl.prepareSettleInCallData(ctx.Request.Context(), orderWithDetails, gatewayOrderID)
 	if err != nil {
 		logger.Errorf("Failed to prepare settleIn call data: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to prepare settlement data", nil)
@@ -1965,7 +2001,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 	}
 	// Execute EIP-7702 transaction (after marker is persisted so retries are idempotent)
 	// Single tx to provider EOA with execute([approve, settleIn], signature) so relayer pays gas and batch runs in provider context.
-	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, providerOrderToken.PayoutAddress, payload.Authorization, settleInData, batchSig); err != nil {
+	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, providerOrderToken.PayoutAddress, payload.Authorization, settleInData, principalAmount, batchSig); err != nil {
 		logger.Errorf("Failed to execute payin settlement: %v", err)
 		// Compensating update: revert order status and remove settlement log so provider can retry
 		txCompensate, txErr := storage.Client.Tx(ctx)
@@ -2063,18 +2099,46 @@ func gatewayOrderIDFromEncode(payoutAddress, aggregatorAddress string, paymentOr
 }
 
 // prepareSettleInCallData prepares the call data for Gateway settleIn method
-func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, order *ent.PaymentOrder, gatewayOrderID string) ([]byte, error) {
+func computeSettleInPrincipalSubunit(netAmount *big.Int, rate decimal.Decimal, providerToAggregatorFx *big.Int) (*big.Int, error) {
+	if netAmount == nil {
+		return nil, fmt.Errorf("net amount is nil")
+	}
+	if netAmount.Sign() < 0 {
+		return nil, fmt.Errorf("net amount cannot be negative")
+	}
+	// Local settlement path: rate 100 means no FX principal gross-up.
+	if rate.Equal(decimal.NewFromInt(100)) {
+		return new(big.Int).Set(netAmount), nil
+	}
+	if providerToAggregatorFx == nil {
+		return nil, fmt.Errorf("providerToAggregatorFx is nil for FX settlement")
+	}
+	maxBPS := big.NewInt(100000)
+	if providerToAggregatorFx.Sign() <= 0 || providerToAggregatorFx.Cmp(maxBPS) >= 0 {
+		return nil, fmt.Errorf("invalid providerToAggregatorFx bps: %s", providerToAggregatorFx.String())
+	}
+	denominator := new(big.Int).Sub(maxBPS, providerToAggregatorFx)
+	numerator := new(big.Int).Mul(netAmount, maxBPS)
+	// ceil(numerator / denominator) => (numerator + denominator - 1) / denominator
+	numerator.Add(numerator, new(big.Int).Sub(denominator, big.NewInt(1)))
+	return new(big.Int).Div(numerator, denominator), nil
+}
+
+func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, order *ent.PaymentOrder, gatewayOrderID string) ([]byte, *big.Int, error) {
 	if order.Edges.SenderProfile == nil {
-		return nil, fmt.Errorf("order has no sender profile")
+		return nil, nil, fmt.Errorf("order has no sender profile")
 	}
 	if order.Edges.Token == nil {
-		return nil, fmt.Errorf("order has no token")
+		return nil, nil, fmt.Errorf("order has no token")
+	}
+	if order.Edges.Token.Edges.Network == nil {
+		return nil, nil, fmt.Errorf("order token has no network")
 	}
 
 	// Use current Gateway contract bindings; plan expects regenerated bindings if ABI changes
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse Gateway ABI: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse Gateway ABI: %w", err)
 	}
 
 	// Get fee address (sender fee recipient)
@@ -2086,18 +2150,29 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, ord
 		).
 		Only(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch sender order token: %w", err)
+		return nil, nil, fmt.Errorf("failed to fetch sender order token: %w", err)
 	}
 
 	// Get recipient address (onramp: crypto destination for settleIn)
 	recipientAddress := order.RefundOrRecipientAddress
 	if recipientAddress == "" {
-		return nil, fmt.Errorf("recipient address not set on order")
+		return nil, nil, fmt.Errorf("recipient address not set on order")
 	}
 
-	// Convert amounts to big.Int
-	amountBig := u.ToSubunit(order.Amount, order.Edges.Token.Decimals)
+	netAmountBig := u.ToSubunit(order.Amount, order.Edges.Token.Decimals)
 	senderFeeBig := u.ToSubunit(order.SenderFee, order.Edges.Token.Decimals)
+	settleInAmountBig := new(big.Int).Set(netAmountBig)
+
+	if !order.Rate.Equal(decimal.NewFromInt(100)) {
+		feeSettings, err := ctrl.feeReader.GetTokenFeeSettings(ctx, order.Edges.Token.Edges.Network, order.Edges.Token.ContractAddress)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get token fee settings: %w", err)
+		}
+		settleInAmountBig, err = computeSettleInPrincipalSubunit(netAmountBig, order.Rate, feeSettings.ProviderToAggregatorFx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("compute settleIn principal: %w", err)
+		}
+	}
 
 	// Convert rate to uint96 (rate is stored as decimal, need to convert to basis points * 100)
 	// Rate format: Gateway expects rate as uint96 where 100 = 1.00 (local transfer)
@@ -2110,7 +2185,7 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, ord
 	// Generate Gateway order ID bytes
 	orderIDBytes, err := hex.DecodeString(strings.TrimPrefix(gatewayOrderID, "0x"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode gateway order ID: %w", err)
+		return nil, nil, fmt.Errorf("failed to decode gateway order ID: %w", err)
 	}
 	var orderIDByte32 [32]byte
 	copy(orderIDByte32[:], orderIDBytes)
@@ -2121,31 +2196,34 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, ord
 		"settleIn",
 		orderIDByte32,
 		ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
-		amountBig,
+		settleInAmountBig,
 		ethcommon.HexToAddress(senderOrderToken.FeeAddress),
 		senderFeeBig,
 		ethcommon.HexToAddress(recipientAddress),
 		rateBig,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to pack settleIn ABI: %w", err)
+		return nil, nil, fmt.Errorf("failed to pack settleIn ABI: %w", err)
 	}
 
-	return data, nil
+	return data, settleInAmountBig, nil
 }
 
 // prepareApproveCallData prepares ERC20 approve(spender, amount) calldata so the gateway can transfer tokens during settleIn.
-func (ctrl *ProviderController) prepareApproveCallData(order *ent.PaymentOrder, gatewayAddress string) ([]byte, error) {
+func (ctrl *ProviderController) prepareApproveCallData(order *ent.PaymentOrder, gatewayAddress string, settleInAmount *big.Int) ([]byte, error) {
 	if order.Edges.Token == nil {
 		return nil, fmt.Errorf("order has no token")
+	}
+	if settleInAmount == nil {
+		return nil, fmt.Errorf("settleIn amount is nil")
 	}
 	erc20ABI, err := abi.JSON(strings.NewReader(contracts.ERC20TokenMetaData.ABI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse ERC20 ABI: %w", err)
 	}
-	amount := order.Amount.Add(order.SenderFee)
-	amountBig := u.ToSubunit(amount, order.Edges.Token.Decimals)
-	calldata, err := erc20ABI.Pack("approve", ethcommon.HexToAddress(gatewayAddress), amountBig)
+	senderFeeBig := u.ToSubunit(order.SenderFee, order.Edges.Token.Decimals)
+	approveAmount := new(big.Int).Add(new(big.Int).Set(settleInAmount), senderFeeBig)
+	calldata, err := erc20ABI.Pack("approve", ethcommon.HexToAddress(gatewayAddress), approveAmount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack approve ABI: %w", err)
 	}
@@ -2155,7 +2233,7 @@ func (ctrl *ProviderController) prepareApproveCallData(order *ent.PaymentOrder, 
 // executePayinSettlement runs payin settlement in one EIP-7702 tx: relayer sends to provider EOA with
 // data = execute([approve, settleIn], signature). When batchSignature is provided (provider-signed), it is used;
 // otherwise empty signature is used (backward compatibility; delegation contract may accept it).
-func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, providerEOA string, authorization *coretypes.SetCodeAuthorization, settleInData []byte, batchSignature []byte) error {
+func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, providerEOA string, authorization *coretypes.SetCodeAuthorization, settleInData []byte, settleInAmount *big.Int, batchSignature []byte) error {
 	network := order.Edges.Token.Edges.Network
 	gatewayAddress := network.GatewayContractAddress
 	if gatewayAddress == "" {
@@ -2183,7 +2261,7 @@ func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *
 		authList = []coretypes.SetCodeAuthorization{*authorization}
 	}
 
-	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress)
+	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress, settleInAmount)
 	if err != nil {
 		return fmt.Errorf("build payin approve calldata: %w", err)
 	}
