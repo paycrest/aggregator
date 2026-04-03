@@ -51,6 +51,8 @@ import (
 var orderConf = config.OrderConfig()
 var cryptoConf = config.CryptoConfig()
 
+const payinSettleInAmountSubunitMetadataKey = "payinSettleInAmountSubunit"
+
 // ProviderController is a controller type for provider endpoints
 type ProviderController struct {
 	balanceService *balance.Service
@@ -74,7 +76,7 @@ func (r *gatewayTokenFeeSettingsReader) GetTokenFeeSettings(ctx context.Context,
 	if network.GatewayContractAddress == "" {
 		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("gateway contract address not configured")
 	}
-	client, err := ethclient.Dial(network.RPCEndpoint)
+	client, err := ethclient.DialContext(ctx, network.RPCEndpoint)
 	if err != nil {
 		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("dial rpc: %w", err)
 	}
@@ -1012,6 +1014,16 @@ func (ctrl *ProviderController) buildPayinBatchForAccept(ctx *gin.Context, order
 	if err != nil {
 		return nil, fmt.Errorf("prepareSettleInCallData: %w", err)
 	}
+	metadata := maps.Clone(order.Metadata)
+	if metadata == nil {
+		metadata = map[string]interface{}{}
+	}
+	metadata[payinSettleInAmountSubunitMetadataKey] = principalAmount.String()
+	if _, err := storage.Client.PaymentOrder.UpdateOneID(order.ID).SetMetadata(metadata).Save(reqCtx); err != nil {
+		return nil, fmt.Errorf("persist settleIn amount snapshot: %w", err)
+	}
+	order.Metadata = metadata
+
 	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress, principalAmount)
 	if err != nil {
 		return nil, fmt.Errorf("prepareApproveCallData: %w", err)
@@ -2124,6 +2136,29 @@ func computeSettleInPrincipalSubunit(netAmount *big.Int, rate decimal.Decimal, p
 	return new(big.Int).Div(numerator, denominator), nil
 }
 
+func settleInAmountSubunitFromMetadata(metadata map[string]interface{}) (*big.Int, bool) {
+	if metadata == nil {
+		return nil, false
+	}
+	raw, ok := metadata[payinSettleInAmountSubunitMetadataKey]
+	if !ok || raw == nil {
+		return nil, false
+	}
+	switch value := raw.(type) {
+	case string:
+		n := new(big.Int)
+		if _, ok := n.SetString(value, 10); ok {
+			return n, true
+		}
+	case fmt.Stringer:
+		n := new(big.Int)
+		if _, ok := n.SetString(value.String(), 10); ok {
+			return n, true
+		}
+	}
+	return nil, false
+}
+
 func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, order *ent.PaymentOrder, gatewayOrderID string) ([]byte, *big.Int, error) {
 	if order.Edges.SenderProfile == nil {
 		return nil, nil, fmt.Errorf("order has no sender profile")
@@ -2161,9 +2196,12 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, ord
 
 	netAmountBig := u.ToSubunit(order.Amount, order.Edges.Token.Decimals)
 	senderFeeBig := u.ToSubunit(order.SenderFee, order.Edges.Token.Decimals)
-	settleInAmountBig := new(big.Int).Set(netAmountBig)
+	settleInAmountBig, hasSnapshot := settleInAmountSubunitFromMetadata(order.Metadata)
+	if !hasSnapshot {
+		settleInAmountBig = new(big.Int).Set(netAmountBig)
+	}
 
-	if !order.Rate.Equal(decimal.NewFromInt(100)) {
+	if !hasSnapshot && !order.Rate.Equal(decimal.NewFromInt(100)) {
 		feeSettings, err := ctrl.feeReader.GetTokenFeeSettings(ctx, order.Edges.Token.Edges.Network, order.Edges.Token.ContractAddress)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get token fee settings: %w", err)

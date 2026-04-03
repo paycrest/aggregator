@@ -58,6 +58,26 @@ func TestComputeSettleInPrincipalSubunit(t *testing.T) {
 	})
 }
 
+func TestSettleInAmountSubunitFromMetadata(t *testing.T) {
+	t.Run("reads valid snapshot", func(t *testing.T) {
+		metadata := map[string]interface{}{
+			payinSettleInAmountSubunitMetadataKey: "1052632",
+		}
+		got, ok := settleInAmountSubunitFromMetadata(metadata)
+		assert.True(t, ok)
+		assert.Equal(t, "1052632", got.String())
+	})
+
+	t.Run("rejects invalid snapshot", func(t *testing.T) {
+		metadata := map[string]interface{}{
+			payinSettleInAmountSubunitMetadataKey: "not-a-number",
+		}
+		got, ok := settleInAmountSubunitFromMetadata(metadata)
+		assert.False(t, ok)
+		assert.Nil(t, got)
+	})
+}
+
 var testCtx = struct {
 	user         *ent.User
 	provider     *ent.ProviderProfile
