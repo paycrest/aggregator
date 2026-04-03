@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -57,6 +58,7 @@ var cryptoConf = config.CryptoConfig()
 var serverConf = config.ServerConfig()
 var identityConf = config.IdentityConfig()
 var orderConf = config.OrderConfig()
+var providerIDPattern = regexp.MustCompile(`^[A-Za-z]{8}$`)
 
 // Controller is the default controller for other endpoints
 type Controller struct {
@@ -264,6 +266,182 @@ func (ctrl *Controller) GetTokenRate(ctx *gin.Context) {
 		Data:     rateResult.Rate,
 		Metadata: metadata, // nil for regular orders, populated for OTC
 	})
+}
+
+func (ctrl *Controller) V2GetTokenRate(ctx *gin.Context) {
+	reqCtx := ctx.Request.Context()
+	networkFilter := strings.ToLower(ctx.Param("network"))
+	tokenSymbol := strings.ToUpper(ctx.Param("token"))
+	fiatCode := strings.ToUpper(ctx.Param("fiat"))
+
+	tokenObj, currency, err := ctrl.getRateTokenAndCurrency(reqCtx, tokenSymbol, fiatCode, networkFilter)
+	if err != nil {
+		ctrl.handleRateLookupError(ctx, err, tokenSymbol, fiatCode, networkFilter)
+		return
+	}
+	if !strings.EqualFold(tokenObj.BaseCurrency, currency.Code) && !strings.EqualFold(tokenObj.BaseCurrency, "USD") {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("%s can only be converted to %s", tokenObj.Symbol, tokenObj.BaseCurrency), nil)
+		return
+	}
+
+	tokenAmount, err := decimal.NewFromString(ctx.Param("amount"))
+	if err != nil {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid amount", nil)
+		return
+	}
+
+	providerID := ctx.Query("provider_id")
+	if providerID != "" && !providerIDPattern.MatchString(providerID) {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid provider_id. Expected 8 alphabetic characters", nil)
+		return
+	}
+
+	side := strings.ToLower(ctx.Query("side"))
+	if side != "" && side != string(u.RateSideBuy) && side != string(u.RateSideSell) {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Invalid side. Expected buy or sell", nil)
+		return
+	}
+
+	response := &types.V2RateQuoteResponse{}
+	if side == "" || side == string(u.RateSideBuy) {
+		rateResult, err := u.ValidateRate(ctx, tokenObj, currency, tokenAmount, providerID, networkFilter, u.RateSideBuy)
+		if err != nil {
+			ctrl.handleRateValidationError(ctx, err, tokenSymbol, networkFilter)
+			return
+		}
+		response.Buy = ctrl.buildV2RateSide(rateResult, providerID)
+	}
+
+	if side == "" || side == string(u.RateSideSell) {
+		rateResult, err := u.ValidateRate(ctx, tokenObj, currency, tokenAmount, providerID, networkFilter, u.RateSideSell)
+		if err != nil {
+			ctrl.handleRateValidationError(ctx, err, tokenSymbol, networkFilter)
+			return
+		}
+		response.Sell = ctrl.buildV2RateSide(rateResult, providerID)
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Rate fetched successfully", response)
+}
+
+func (ctrl *Controller) buildV2RateSide(rateResult u.RateValidationResult, requestedProviderID string) *types.V2RateQuoteSide {
+	refundTimeout := int(orderConf.OrderRefundTimeout.Seconds() / 60)
+	if rateResult.OrderType.String() == "otc" {
+		refundTimeout = int(orderConf.OrderRefundTimeoutOtc.Seconds() / 60)
+	}
+
+	providerIDs := []string{}
+	if requestedProviderID != "" {
+		providerIDs = []string{requestedProviderID}
+	} else if rateResult.ProviderID != "" {
+		providerIDs = []string{rateResult.ProviderID}
+	}
+
+	return &types.V2RateQuoteSide{
+		Rate:                 rateResult.Rate.String(),
+		ProviderIDs:          providerIDs,
+		OrderType:            rateResult.OrderType.String(),
+		RefundTimeoutMinutes: refundTimeout,
+	}
+}
+
+func (ctrl *Controller) getRateTokenAndCurrency(reqCtx context.Context, tokenSymbol, fiatCode, networkFilter string) (*ent.Token, *ent.FiatCurrency, error) {
+	tokenQuery := storage.Client.Token.
+		Query().
+		Where(
+			tokenEnt.SymbolEQ(tokenSymbol),
+			tokenEnt.IsEnabledEQ(true),
+		)
+
+	if networkFilter != "" {
+		tokenQuery = tokenQuery.Where(tokenEnt.HasNetworkWith(
+			networkent.Identifier(strings.ToLower(networkFilter)),
+		))
+	}
+
+	tokenObj, err := tokenQuery.First(reqCtx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	currency, err := storage.Client.FiatCurrency.
+		Query().
+		Where(
+			fiatcurrency.IsEnabledEQ(true),
+			fiatcurrency.CodeEQ(fiatCode),
+		).
+		Only(reqCtx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return tokenObj, currency, nil
+}
+
+func (ctrl *Controller) handleRateValidationError(ctx *gin.Context, err error, tokenSymbol, networkFilter string) {
+	var errStuck *types.ErrNoProviderDueToStuck
+	if errors.As(err, &errStuck) && errStuck.CurrencyCode != "" {
+		msg := fmt.Sprintf("There's a banking/mobile network issue affecting %s providers", errStuck.CurrencyCode)
+		u.APIResponse(ctx, http.StatusServiceUnavailable, "error", msg, nil)
+		return
+	}
+	if strings.Contains(err.Error(), "no provider available") {
+		u.APIResponse(ctx, http.StatusNotFound, "error", err.Error(), nil)
+		return
+	}
+	logger.WithFields(logger.Fields{
+		"Error":   fmt.Sprintf("%v", err),
+		"Token":   tokenSymbol,
+		"Network": networkFilter,
+	}).Errorf("Failed to fetch token rate: %v", err)
+	u.APIResponse(ctx, http.StatusInternalServerError, "error", err.Error(), nil)
+}
+
+func (ctrl *Controller) handleRateLookupError(ctx *gin.Context, err error, tokenSymbol, fiatCode, networkFilter string) {
+	reqCtx := ctx.Request.Context()
+	if ent.IsNotFound(err) {
+		tokenNetworkQuery := storage.Client.Token.Query().Where(
+			tokenEnt.SymbolEQ(tokenSymbol),
+			tokenEnt.IsEnabledEQ(true),
+		)
+		if networkFilter != "" {
+			tokenNetworkQuery = tokenNetworkQuery.Where(tokenEnt.HasNetworkWith(
+				networkent.Identifier(strings.ToLower(networkFilter)),
+			))
+		}
+		if _, tokenErr := tokenNetworkQuery.First(reqCtx); tokenErr != nil {
+			if !ent.IsNotFound(tokenErr) {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch token rate", nil)
+				return
+			}
+			errorMsg := fmt.Sprintf("Token %s is not supported", tokenSymbol)
+			if networkFilter != "" {
+				errorMsg = fmt.Sprintf("Token %s is not supported on network %s", tokenSymbol, networkFilter)
+			}
+			u.APIResponse(ctx, http.StatusBadRequest, "error", errorMsg, nil)
+			return
+		}
+
+		if _, fiatErr := storage.Client.FiatCurrency.Query().
+			Where(
+				fiatcurrency.IsEnabledEQ(true),
+				fiatcurrency.CodeEQ(fiatCode),
+			).Only(reqCtx); fiatErr != nil {
+			if !ent.IsNotFound(fiatErr) {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch token rate", nil)
+				return
+			}
+			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Fiat currency %s is not supported", fiatCode), nil)
+			return
+		}
+	}
+	logger.WithFields(logger.Fields{
+		"Error":   fmt.Sprintf("%v", err),
+		"Token":   tokenSymbol,
+		"Network": networkFilter,
+		"Fiat":    fiatCode,
+	}).Errorf("Failed to fetch token rate: %v", err)
+	u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch token rate", nil)
 }
 
 // GetSupportedTokens controller fetches supported cryptocurrency tokens

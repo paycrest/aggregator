@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/google/uuid"
 	"github.com/jarcoal/httpmock"
 	_ "github.com/mattn/go-sqlite3"
@@ -20,12 +22,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/paycrest/aggregator/ent/beneficialowner"
 	"github.com/paycrest/aggregator/ent/enttest"
+	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/identityverificationrequest"
 	"github.com/paycrest/aggregator/ent/kybprofile"
+	"github.com/paycrest/aggregator/ent/providerbalances"
+	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/user"
+	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils/test"
 	tokenUtils "github.com/paycrest/aggregator/utils/token"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -109,12 +116,12 @@ func TestIndex(t *testing.T) {
 
 			// Assert /currencies response with the seeded Naira currency.
 			nairaCurrency := types.SupportedCurrencies{
-				Code:          "NGN",
-				Name:          "Nigerian Naira",
-				ShortName:     "Naira",
-				Decimals:      2,
-				Symbol:        "₦",
-				MarketBuyRate: decimal.NewFromFloat(950.0),
+				Code:           "NGN",
+				Name:           "Nigerian Naira",
+				ShortName:      "Naira",
+				Decimals:       2,
+				Symbol:         "₦",
+				MarketBuyRate:  decimal.NewFromFloat(950.0),
 				MarketSellRate: decimal.NewFromFloat(950.0),
 			}
 
@@ -917,5 +924,130 @@ func TestIndex(t *testing.T) {
 			assert.Equal(t, "error", response.Status)
 			assert.Equal(t, "Documents only available for rejected submissions", response.Message)
 		})
+	})
+}
+
+func TestV2GetTokenRate(t *testing.T) {
+	dbName := fmt.Sprintf("file:test_v2_rates_%d?mode=memory&cache=shared&_fk=1&_busy_timeout=5000", time.Now().UnixNano())
+	client := enttest.Open(t, "sqlite3", dbName)
+	err := client.Schema.Create(context.Background())
+	assert.NoError(t, err)
+
+	mr, err := miniredis.Run()
+	assert.NoError(t, err)
+	redisClient := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	originalClient := db.Client
+	originalRedis := db.RedisClient
+	db.Client = client
+	db.RedisClient = redisClient
+	defer func() {
+		db.Client = originalClient
+		db.RedisClient = originalRedis
+		_ = client.Close()
+		_ = redisClient.Close()
+		mr.Close()
+	}()
+
+	currency, err := test.CreateTestFiatCurrency(nil)
+	assert.NoError(t, err)
+	providerUser, err := test.CreateTestUser(map[string]interface{}{
+		"email": "provider-rates@test.com",
+		"scope": "provider",
+	})
+	assert.NoError(t, err)
+	provider, err := test.CreateTestProviderProfile(map[string]interface{}{
+		"currency_id": currency.ID,
+		"user_id":     providerUser.ID,
+	})
+	assert.NoError(t, err)
+	tokenObj, err := test.CreateERC20Token(map[string]interface{}{
+		"symbol":       "USDT",
+		"identifier":   "base",
+		"baseCurrency": "USD",
+	})
+	assert.NoError(t, err)
+	tokenObj, err = storage.Client.Token.UpdateOneID(tokenObj.ID).SetBaseCurrency("USD").Save(context.Background())
+	assert.NoError(t, err)
+
+	_, err = db.Client.ProviderBalances.
+		Update().
+		Where(
+			providerbalances.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+			providerbalances.HasFiatCurrencyWith(fiatcurrency.CodeEQ(currency.Code)),
+		).
+		SetAvailableBalance(decimal.NewFromInt(20000)).
+		SetTotalBalance(decimal.NewFromInt(20000)).
+		SetReservedBalance(decimal.Zero).
+		Save(context.Background())
+	assert.NoError(t, err)
+
+	_, err = db.Client.ProviderBalances.Create().
+		SetProvider(provider).
+		SetToken(tokenObj).
+		SetAvailableBalance(decimal.NewFromInt(5000)).
+		SetReservedBalance(decimal.Zero).
+		SetTotalBalance(decimal.NewFromInt(5000)).
+		SetIsAvailable(true).
+		Save(context.Background())
+	assert.NoError(t, err)
+
+	_, err = test.AddProviderOrderTokenToProvider(map[string]interface{}{
+		"provider":         provider,
+		"currency_id":      currency.ID,
+		"token_id":         tokenObj.ID,
+		"network":          "base",
+		"fixed_buy_rate":   decimal.NewFromFloat(965.0),
+		"fixed_sell_rate":  decimal.NewFromFloat(955.0),
+		"min_order_amount": decimal.NewFromFloat(1.0),
+		"max_order_amount": decimal.NewFromFloat(1000.0),
+	})
+	assert.NoError(t, err)
+
+	router := gin.New()
+	ctrl := NewController()
+	router.GET("/v2/rates/:network/:token/:amount/:fiat", ctrl.V2GetTokenRate)
+
+	t.Run("returns both buy and sell when side is omitted", func(t *testing.T) {
+		res, reqErr := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/rates/base/%s/10/%s?provider_id=%s", tokenObj.Symbol, currency.Code, provider.ID), nil, nil, router)
+		assert.NoError(t, reqErr)
+		assert.Equal(t, http.StatusOK, res.Code)
+
+		var response struct {
+			Status string                    `json:"status"`
+			Data   types.V2RateQuoteResponse `json:"data"`
+		}
+		unmarshalErr := json.Unmarshal(res.Body.Bytes(), &response)
+		assert.NoError(t, unmarshalErr)
+		assert.NotNil(t, response.Data.Buy)
+		assert.NotNil(t, response.Data.Sell)
+		if response.Data.Buy == nil || response.Data.Sell == nil {
+			return
+		}
+		assert.Equal(t, "965", response.Data.Buy.Rate)
+		assert.Equal(t, "955", response.Data.Sell.Rate)
+		assert.Equal(t, []string{provider.ID}, response.Data.Buy.ProviderIDs)
+		assert.Equal(t, []string{provider.ID}, response.Data.Sell.ProviderIDs)
+	})
+
+	t.Run("returns only buy side when requested", func(t *testing.T) {
+		res, reqErr := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/rates/base/%s/10/%s?side=buy&provider_id=%s", tokenObj.Symbol, currency.Code, provider.ID), nil, nil, router)
+		assert.NoError(t, reqErr)
+		assert.Equal(t, http.StatusOK, res.Code)
+
+		var response struct {
+			Data types.V2RateQuoteResponse `json:"data"`
+		}
+		unmarshalErr := json.Unmarshal(res.Body.Bytes(), &response)
+		assert.NoError(t, unmarshalErr)
+		assert.NotNil(t, response.Data.Buy)
+		assert.Nil(t, response.Data.Sell)
+		assert.Equal(t, "965", response.Data.Buy.Rate)
+	})
+
+	t.Run("rejects invalid provider id format", func(t *testing.T) {
+		res, reqErr := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/rates/base/%s/10/%s?provider_id=abc123", tokenObj.Symbol, currency.Code), nil, nil, router)
+		assert.NoError(t, reqErr)
+		assert.Equal(t, http.StatusBadRequest, res.Code)
 	})
 }
