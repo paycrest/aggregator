@@ -398,12 +398,22 @@ func (ctrl *Controller) handleRateValidationError(ctx *gin.Context, err error, t
 }
 
 func (ctrl *Controller) handleRateLookupError(ctx *gin.Context, err error, tokenSymbol, fiatCode, networkFilter string) {
+	reqCtx := ctx.Request.Context()
 	if ent.IsNotFound(err) {
 		tokenNetworkQuery := storage.Client.Token.Query().Where(
 			tokenEnt.SymbolEQ(tokenSymbol),
 			tokenEnt.IsEnabledEQ(true),
 		)
-		if _, tokenErr := tokenNetworkQuery.First(ctx.Request.Context()); tokenErr != nil {
+		if networkFilter != "" {
+			tokenNetworkQuery = tokenNetworkQuery.Where(tokenEnt.HasNetworkWith(
+				networkent.Identifier(strings.ToLower(networkFilter)),
+			))
+		}
+		if _, tokenErr := tokenNetworkQuery.First(reqCtx); tokenErr != nil {
+			if !ent.IsNotFound(tokenErr) {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch token rate", nil)
+				return
+			}
 			errorMsg := fmt.Sprintf("Token %s is not supported", tokenSymbol)
 			if networkFilter != "" {
 				errorMsg = fmt.Sprintf("Token %s is not supported on network %s", tokenSymbol, networkFilter)
@@ -416,7 +426,11 @@ func (ctrl *Controller) handleRateLookupError(ctx *gin.Context, err error, token
 			Where(
 				fiatcurrency.IsEnabledEQ(true),
 				fiatcurrency.CodeEQ(fiatCode),
-			).Only(ctx.Request.Context()); fiatErr != nil {
+			).Only(reqCtx); fiatErr != nil {
+			if !ent.IsNotFound(fiatErr) {
+				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to fetch token rate", nil)
+				return
+			}
 			u.APIResponse(ctx, http.StatusBadRequest, "error", fmt.Sprintf("Fiat currency %s is not supported", fiatCode), nil)
 			return
 		}
