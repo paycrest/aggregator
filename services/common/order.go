@@ -283,7 +283,6 @@ func ProcessPaymentOrderFromBlockchain(
 		}
 	}
 
-
 	orderCreated, err := orderBuilder.Save(ctx)
 	if err != nil {
 		return fmt.Errorf("%s - failed to create payment order: %w", paymentOrderFields.GatewayID, err)
@@ -429,7 +428,6 @@ func UpdateOrderStatusRefunded(ctx context.Context, network *ent.Network, event 
 		SetBlockNumber(event.BlockNumber).
 		SetTxHash(event.TxHash).
 		SetStatus(paymentorder.StatusRefunded)
-
 
 	updatedOrderRows, err := paymentOrderUpdate.Save(ctx)
 	if err != nil {
@@ -596,7 +594,6 @@ func UpdateOrderStatusSettleOut(ctx context.Context, network *ent.Network, event
 		paymentOrderUpdate = paymentOrderUpdate.AddPercentSettled(event.SettlePercent.Div(decimal.NewFromInt(1000)))
 	}
 
-
 	updatedOrderRows, err := paymentOrderUpdate.Save(ctx)
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettleOut.aggregator: %v", err)
@@ -755,7 +752,6 @@ func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event 
 		SetTxHash(event.TxHash).
 		SetStatus(paymentorder.StatusSettled)
 
-
 	updatedOrderRows, err := paymentOrderUpdate.Save(ctx)
 	if err != nil {
 		return fmt.Errorf("UpdateOrderStatusSettleIn.aggregator: %v", err)
@@ -794,7 +790,14 @@ func UpdateOrderStatusSettleIn(ctx context.Context, network *ent.Network, event 
 	// Release reserved token balance only after on-chain confirmation (SettleIn event)
 	if paymentOrder.Edges.Provider != nil && paymentOrder.Edges.Token != nil {
 		balanceService := balance.New()
-		totalCryptoReserved := paymentOrder.Amount.Add(paymentOrder.SenderFee)
+		totalCryptoReserved, gErr := services.GrossCryptoReservedForApprove(ctx, services.GatewayPayinFeeSettingsReader{}, paymentOrder)
+		if gErr != nil {
+			logger.WithFields(logger.Fields{
+				"OrderID": gatewayID,
+				"Error":   gErr.Error(),
+			}).Warnf("UpdateOrderStatusSettleIn.releaseBalance: fallback amount+senderFee")
+			totalCryptoReserved = paymentOrder.Amount.Add(paymentOrder.SenderFee)
+		}
 		if relErr := balanceService.ReleaseTokenBalance(ctx, paymentOrder.Edges.Provider.ID, paymentOrder.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
 			logger.WithFields(logger.Fields{
 				"OrderID": gatewayID,

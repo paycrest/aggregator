@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -18,8 +19,11 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/services/contracts"
+	u "github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
+	"github.com/shopspring/decimal"
 )
 
 // --- Public API ---
@@ -544,4 +548,131 @@ func getDefaultNonceManager() *NonceManager {
 		defaultNonceManager = NewNonceManager()
 	})
 	return defaultNonceManager
+}
+
+// --- Payin settleIn / approve alignment (EVM) ---
+
+// MetadataKeyPayinSettleInAmountSubunit is stored on payment order metadata when the provider accepts payin (principal subunits for settleIn _amount).
+const MetadataKeyPayinSettleInAmountSubunit = "payinSettleInAmountSubunit"
+
+// PayinFeeSettingsReader fetches gateway token fee settings from chain (FX gross-up).
+type PayinFeeSettingsReader interface {
+	GetTokenFeeSettings(ctx context.Context, network *ent.Network, tokenAddress string) (contracts.GatewaySettingManagerTokenFeeSettings, error)
+}
+
+// GatewayPayinFeeSettingsReader reads token fee settings from the gateway contract via RPC.
+type GatewayPayinFeeSettingsReader struct{}
+
+// GetTokenFeeSettings implements PayinFeeSettingsReader.
+func (GatewayPayinFeeSettingsReader) GetTokenFeeSettings(ctx context.Context, network *ent.Network, tokenAddress string) (contracts.GatewaySettingManagerTokenFeeSettings, error) {
+	if network == nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("network is nil")
+	}
+	if network.RPCEndpoint == "" {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("rpc endpoint not configured")
+	}
+	if network.GatewayContractAddress == "" {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("gateway contract address not configured")
+	}
+	client, err := ethclient.DialContext(ctx, network.RPCEndpoint)
+	if err != nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("dial rpc: %w", err)
+	}
+	defer client.Close()
+	caller, err := contracts.NewGatewayCaller(common.HexToAddress(network.GatewayContractAddress), client)
+	if err != nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("gateway caller: %w", err)
+	}
+	settings, err := caller.GetTokenFeeSettings(&bind.CallOpts{Context: ctx}, common.HexToAddress(tokenAddress))
+	if err != nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("get token fee settings: %w", err)
+	}
+	return settings, nil
+}
+
+// ComputeSettleInPrincipalSubunit returns the token subunit amount passed as settleIn _amount for FX flows (gross-up from net).
+func ComputeSettleInPrincipalSubunit(netAmount *big.Int, rate decimal.Decimal, providerToAggregatorFx *big.Int) (*big.Int, error) {
+	if netAmount == nil {
+		return nil, fmt.Errorf("net amount is nil")
+	}
+	if netAmount.Sign() < 0 {
+		return nil, fmt.Errorf("net amount cannot be negative")
+	}
+	if rate.Equal(decimal.NewFromInt(100)) {
+		return new(big.Int).Set(netAmount), nil
+	}
+	if providerToAggregatorFx == nil {
+		return nil, fmt.Errorf("providerToAggregatorFx is nil for FX settlement")
+	}
+	maxBPS := big.NewInt(100000)
+	if providerToAggregatorFx.Sign() < 0 || providerToAggregatorFx.Cmp(maxBPS) >= 0 {
+		return nil, fmt.Errorf("invalid providerToAggregatorFx bps: %s", providerToAggregatorFx.String())
+	}
+	denominator := new(big.Int).Sub(maxBPS, providerToAggregatorFx)
+	numerator := new(big.Int).Mul(netAmount, maxBPS)
+	numerator.Add(numerator, new(big.Int).Sub(denominator, big.NewInt(1)))
+	return new(big.Int).Div(numerator, denominator), nil
+}
+
+// PrincipalSubunitFromMetadata returns the frozen settleIn principal subunits from accept-time metadata, if present and valid.
+func PrincipalSubunitFromMetadata(metadata map[string]interface{}) (*big.Int, bool) {
+	if metadata == nil {
+		return nil, false
+	}
+	raw, ok := metadata[MetadataKeyPayinSettleInAmountSubunit]
+	if !ok || raw == nil {
+		return nil, false
+	}
+	switch value := raw.(type) {
+	case string:
+		n := new(big.Int)
+		if _, ok := n.SetString(value, 10); ok {
+			return n, true
+		}
+	case fmt.Stringer:
+		n := new(big.Int)
+		if _, ok := n.SetString(value.String(), 10); ok {
+			return n, true
+		}
+	}
+	return nil, false
+}
+
+// GrossCryptoReservedForApprove returns the human decimal token amount matching ERC20 approve(spender, amount)
+// for payin: settleIn principal + sender fee (same subunit sum as prepareApproveCallData).
+func GrossCryptoReservedForApprove(ctx context.Context, reader PayinFeeSettingsReader, order *ent.PaymentOrder) (decimal.Decimal, error) {
+	if order == nil {
+		return decimal.Zero, fmt.Errorf("order is nil")
+	}
+	if order.Edges.Token == nil {
+		return decimal.Zero, fmt.Errorf("order has no token")
+	}
+	if order.Edges.Token.Edges.Network == nil {
+		return decimal.Zero, fmt.Errorf("order token has no network")
+	}
+	dec := order.Edges.Token.Decimals
+	netBig := u.ToSubunit(order.Amount, dec)
+	senderFeeBig := u.ToSubunit(order.SenderFee, dec)
+
+	principalBig, hasSnapshot := PrincipalSubunitFromMetadata(order.Metadata)
+	if !hasSnapshot {
+		principalBig = new(big.Int).Set(netBig)
+		if !order.Rate.Equal(decimal.NewFromInt(100)) {
+			if reader == nil {
+				return decimal.Zero, fmt.Errorf("fee reader is required for FX payin gross amount")
+			}
+			settings, err := reader.GetTokenFeeSettings(ctx, order.Edges.Token.Edges.Network, order.Edges.Token.ContractAddress)
+			if err != nil {
+				return decimal.Zero, fmt.Errorf("get token fee settings: %w", err)
+			}
+			var err2 error
+			principalBig, err2 = ComputeSettleInPrincipalSubunit(netBig, order.Rate, settings.ProviderToAggregatorFx)
+			if err2 != nil {
+				return decimal.Zero, err2
+			}
+		}
+	}
+
+	grossSub := new(big.Int).Add(new(big.Int).Set(principalBig), senderFeeBig)
+	return u.FromSubunit(grossSub, dec), nil
 }

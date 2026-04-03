@@ -1930,6 +1930,20 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		return
 	}
 
+	// Gross token liquidity to reserve must match payin ERC20 approve (settleIn principal + sender fee).
+	pseudoOrder := &ent.PaymentOrder{
+		Amount:    cryptoAmountOut,
+		SenderFee: senderFeeCrypto,
+		Rate:      orderRate,
+	}
+	pseudoOrder.Edges.Token = token
+	totalCryptoToReserve, err := svc.GrossCryptoReservedForApprove(ctx, svc.GatewayPayinFeeSettingsReader{}, pseudoOrder)
+	if err != nil {
+		logger.Errorf("Failed to compute payin gross reserve: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		return
+	}
+
 	// Reserve provider token liquidity at order creation
 	balanceService := balance.New()
 	tx, err := storage.Client.Tx(ctx)
@@ -1939,8 +1953,6 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		return
 	}
 
-	// Reserve token balance: amount + senderFee (both in crypto)
-	totalCryptoToReserve := cryptoAmountOut.Add(senderFeeCrypto)
 	err = balanceService.ReserveTokenBalance(ctx, providerID, token.ID, totalCryptoToReserve, tx)
 	if err != nil {
 		logger.Errorf("Failed to reserve token balance: %v", err)
@@ -2032,7 +2044,18 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 
 	// On virtual account step failure: release balance and delete the order.
 	deleteFailedOnrampOrder := func() {
-		totalCryptoReserved := paymentOrder.Amount.Add(paymentOrder.SenderFee)
+		relOrder := &ent.PaymentOrder{
+			Amount:    paymentOrder.Amount,
+			SenderFee: paymentOrder.SenderFee,
+			Rate:      paymentOrder.Rate,
+			Metadata:  paymentOrder.Metadata,
+		}
+		relOrder.Edges.Token = token
+		totalCryptoReserved, gErr := svc.GrossCryptoReservedForApprove(ctx, svc.GatewayPayinFeeSettingsReader{}, relOrder)
+		if gErr != nil {
+			logger.Warnf("deleteFailedOnrampOrder: GrossCryptoReservedForApprove failed, using amount+senderFee: %v", gErr)
+			totalCryptoReserved = paymentOrder.Amount.Add(paymentOrder.SenderFee)
+		}
 		if relErr := balanceService.ReleaseTokenBalance(ctx, providerID, token.ID, totalCryptoReserved, nil); relErr != nil {
 			logger.Errorf("Failed to release token balance after onramp init failure (order %s): %v", paymentOrder.ID, relErr)
 		}
@@ -2171,12 +2194,12 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		TransactionFee:   transactionFee.String(),
 		Reference:        paymentOrder.Reference,
 		ProviderAccount: types.V2FiatProviderAccount{
-			Institution:         institutionName,
-			AccountIdentifier:   accountIdentifier,
-			AccountName:         accountName,
-			ValidUntil:          validUntil,
-			AmountToTransfer:    totalFiatToPay.String(),
-			Currency:            source.Currency,
+			Institution:       institutionName,
+			AccountIdentifier: accountIdentifier,
+			AccountName:       accountName,
+			ValidUntil:        validUntil,
+			AmountToTransfer:  totalFiatToPay.String(),
+			Currency:          source.Currency,
 		},
 		Source:      source,
 		Destination: destOnrampResp,
