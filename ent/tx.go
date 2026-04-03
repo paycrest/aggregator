@@ -32,12 +32,16 @@ type Tx struct {
 	PaymentOrderFulfillment *PaymentOrderFulfillmentClient
 	// PaymentWebhook is the client for interacting with the PaymentWebhook builders.
 	PaymentWebhook *PaymentWebhookClient
+	// ProviderAssignmentRun is the client for interacting with the ProviderAssignmentRun builders.
+	ProviderAssignmentRun *ProviderAssignmentRunClient
 	// ProviderBalances is the client for interacting with the ProviderBalances builders.
 	ProviderBalances *ProviderBalancesClient
 	// ProviderFiatAccount is the client for interacting with the ProviderFiatAccount builders.
 	ProviderFiatAccount *ProviderFiatAccountClient
 	// ProviderOrderToken is the client for interacting with the ProviderOrderToken builders.
 	ProviderOrderToken *ProviderOrderTokenClient
+	// ProviderOrderTokenScoreHistory is the client for interacting with the ProviderOrderTokenScoreHistory builders.
+	ProviderOrderTokenScoreHistory *ProviderOrderTokenScoreHistoryClient
 	// ProviderProfile is the client for interacting with the ProviderProfile builders.
 	ProviderProfile *ProviderProfileClient
 	// ProviderRating is the client for interacting with the ProviderRating builders.
@@ -199,9 +203,11 @@ func (tx *Tx) init() {
 	tx.PaymentOrder = NewPaymentOrderClient(tx.config)
 	tx.PaymentOrderFulfillment = NewPaymentOrderFulfillmentClient(tx.config)
 	tx.PaymentWebhook = NewPaymentWebhookClient(tx.config)
+	tx.ProviderAssignmentRun = NewProviderAssignmentRunClient(tx.config)
 	tx.ProviderBalances = NewProviderBalancesClient(tx.config)
 	tx.ProviderFiatAccount = NewProviderFiatAccountClient(tx.config)
 	tx.ProviderOrderToken = NewProviderOrderTokenClient(tx.config)
+	tx.ProviderOrderTokenScoreHistory = NewProviderOrderTokenScoreHistoryClient(tx.config)
 	tx.ProviderProfile = NewProviderProfileClient(tx.config)
 	tx.ProviderRating = NewProviderRatingClient(tx.config)
 	tx.ProvisionBucket = NewProvisionBucketClient(tx.config)

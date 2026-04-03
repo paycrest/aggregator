@@ -91,6 +91,12 @@ const (
 	FieldOrderType = "order_type"
 	// FieldFallbackTriedAt holds the string denoting the fallback_tried_at field in the database.
 	FieldFallbackTriedAt = "fallback_tried_at"
+	// FieldAssignmentMarketBuyRate holds the string denoting the assignment_market_buy_rate field in the database.
+	FieldAssignmentMarketBuyRate = "assignment_market_buy_rate"
+	// FieldAssignmentMarketSellRate holds the string denoting the assignment_market_sell_rate field in the database.
+	FieldAssignmentMarketSellRate = "assignment_market_sell_rate"
+	// FieldLegacyProvisionBucketID holds the string denoting the legacy_provision_bucket_id field in the database.
+	FieldLegacyProvisionBucketID = "provision_bucket_payment_orders"
 	// EdgeToken holds the string denoting the token edge name in mutations.
 	EdgeToken = "token"
 	// EdgeSenderProfile holds the string denoting the sender_profile edge name in mutations.
@@ -99,12 +105,14 @@ const (
 	EdgePaymentWebhook = "payment_webhook"
 	// EdgeProvider holds the string denoting the provider edge name in mutations.
 	EdgeProvider = "provider"
-	// EdgeProvisionBucket holds the string denoting the provision_bucket edge name in mutations.
-	EdgeProvisionBucket = "provision_bucket"
 	// EdgeFulfillments holds the string denoting the fulfillments edge name in mutations.
 	EdgeFulfillments = "fulfillments"
 	// EdgeTransactions holds the string denoting the transactions edge name in mutations.
 	EdgeTransactions = "transactions"
+	// EdgeProviderAssignmentRuns holds the string denoting the provider_assignment_runs edge name in mutations.
+	EdgeProviderAssignmentRuns = "provider_assignment_runs"
+	// EdgeProviderOrderTokenScoreHistories holds the string denoting the provider_order_token_score_histories edge name in mutations.
+	EdgeProviderOrderTokenScoreHistories = "provider_order_token_score_histories"
 	// Table holds the table name of the paymentorder in the database.
 	Table = "payment_orders"
 	// TokenTable is the table that holds the token relation/edge.
@@ -135,13 +143,6 @@ const (
 	ProviderInverseTable = "provider_profiles"
 	// ProviderColumn is the table column denoting the provider relation/edge.
 	ProviderColumn = "provider_profile_assigned_orders"
-	// ProvisionBucketTable is the table that holds the provision_bucket relation/edge.
-	ProvisionBucketTable = "payment_orders"
-	// ProvisionBucketInverseTable is the table name for the ProvisionBucket entity.
-	// It exists in this package in order to avoid circular dependency with the "provisionbucket" package.
-	ProvisionBucketInverseTable = "provision_buckets"
-	// ProvisionBucketColumn is the table column denoting the provision_bucket relation/edge.
-	ProvisionBucketColumn = "provision_bucket_payment_orders"
 	// FulfillmentsTable is the table that holds the fulfillments relation/edge.
 	FulfillmentsTable = "payment_order_fulfillments"
 	// FulfillmentsInverseTable is the table name for the PaymentOrderFulfillment entity.
@@ -156,6 +157,20 @@ const (
 	TransactionsInverseTable = "transaction_logs"
 	// TransactionsColumn is the table column denoting the transactions relation/edge.
 	TransactionsColumn = "payment_order_transactions"
+	// ProviderAssignmentRunsTable is the table that holds the provider_assignment_runs relation/edge.
+	ProviderAssignmentRunsTable = "provider_assignment_runs"
+	// ProviderAssignmentRunsInverseTable is the table name for the ProviderAssignmentRun entity.
+	// It exists in this package in order to avoid circular dependency with the "providerassignmentrun" package.
+	ProviderAssignmentRunsInverseTable = "provider_assignment_runs"
+	// ProviderAssignmentRunsColumn is the table column denoting the provider_assignment_runs relation/edge.
+	ProviderAssignmentRunsColumn = "payment_order_provider_assignment_runs"
+	// ProviderOrderTokenScoreHistoriesTable is the table that holds the provider_order_token_score_histories relation/edge.
+	ProviderOrderTokenScoreHistoriesTable = "provider_order_token_score_histories"
+	// ProviderOrderTokenScoreHistoriesInverseTable is the table name for the ProviderOrderTokenScoreHistory entity.
+	// It exists in this package in order to avoid circular dependency with the "providerordertokenscorehistory" package.
+	ProviderOrderTokenScoreHistoriesInverseTable = "provider_order_token_score_histories"
+	// ProviderOrderTokenScoreHistoriesColumn is the table column denoting the provider_order_token_score_histories relation/edge.
+	ProviderOrderTokenScoreHistoriesColumn = "payment_order_provider_order_token_score_histories"
 )
 
 // Columns holds all SQL columns for paymentorder fields.
@@ -198,6 +213,9 @@ var Columns = []string{
 	FieldDirection,
 	FieldOrderType,
 	FieldFallbackTriedAt,
+	FieldAssignmentMarketBuyRate,
+	FieldAssignmentMarketSellRate,
+	FieldLegacyProvisionBucketID,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "payment_orders"
@@ -205,7 +223,6 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"api_key_payment_orders",
 	"provider_profile_assigned_orders",
-	"provision_bucket_payment_orders",
 	"sender_profile_payment_orders",
 	"token_payment_orders",
 }
@@ -548,6 +565,21 @@ func ByFallbackTriedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFallbackTriedAt, opts...).ToFunc()
 }
 
+// ByAssignmentMarketBuyRate orders the results by the assignment_market_buy_rate field.
+func ByAssignmentMarketBuyRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAssignmentMarketBuyRate, opts...).ToFunc()
+}
+
+// ByAssignmentMarketSellRate orders the results by the assignment_market_sell_rate field.
+func ByAssignmentMarketSellRate(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAssignmentMarketSellRate, opts...).ToFunc()
+}
+
+// ByLegacyProvisionBucketID orders the results by the legacy_provision_bucket_id field.
+func ByLegacyProvisionBucketID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLegacyProvisionBucketID, opts...).ToFunc()
+}
+
 // ByTokenField orders the results by token field.
 func ByTokenField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -573,13 +605,6 @@ func ByPaymentWebhookField(field string, opts ...sql.OrderTermOption) OrderOptio
 func ByProviderField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newProviderStep(), sql.OrderByField(field, opts...))
-	}
-}
-
-// ByProvisionBucketField orders the results by provision_bucket field.
-func ByProvisionBucketField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProvisionBucketStep(), sql.OrderByField(field, opts...))
 	}
 }
 
@@ -610,6 +635,34 @@ func ByTransactions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTransactionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByProviderAssignmentRunsCount orders the results by provider_assignment_runs count.
+func ByProviderAssignmentRunsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderAssignmentRunsStep(), opts...)
+	}
+}
+
+// ByProviderAssignmentRuns orders the results by provider_assignment_runs terms.
+func ByProviderAssignmentRuns(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderAssignmentRunsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByProviderOrderTokenScoreHistoriesCount orders the results by provider_order_token_score_histories count.
+func ByProviderOrderTokenScoreHistoriesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProviderOrderTokenScoreHistoriesStep(), opts...)
+	}
+}
+
+// ByProviderOrderTokenScoreHistories orders the results by provider_order_token_score_histories terms.
+func ByProviderOrderTokenScoreHistories(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderOrderTokenScoreHistoriesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newTokenStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -638,13 +691,6 @@ func newProviderStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, ProviderTable, ProviderColumn),
 	)
 }
-func newProvisionBucketStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProvisionBucketInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, ProvisionBucketTable, ProvisionBucketColumn),
-	)
-}
 func newFulfillmentsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -657,5 +703,19 @@ func newTransactionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TransactionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TransactionsTable, TransactionsColumn),
+	)
+}
+func newProviderAssignmentRunsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderAssignmentRunsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderAssignmentRunsTable, ProviderAssignmentRunsColumn),
+	)
+}
+func newProviderOrderTokenScoreHistoriesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProviderOrderTokenScoreHistoriesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderOrderTokenScoreHistoriesTable, ProviderOrderTokenScoreHistoriesColumn),
 	)
 }

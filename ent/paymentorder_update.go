@@ -17,8 +17,9 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerassignmentrun"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
@@ -709,6 +710,87 @@ func (_u *PaymentOrderUpdate) ClearFallbackTriedAt() *PaymentOrderUpdate {
 	return _u
 }
 
+// SetAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field.
+func (_u *PaymentOrderUpdate) SetAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetAssignmentMarketBuyRate()
+	_u.mutation.SetAssignmentMarketBuyRate(v)
+	return _u
+}
+
+// SetNillableAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableAssignmentMarketBuyRate(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetAssignmentMarketBuyRate(*v)
+	}
+	return _u
+}
+
+// AddAssignmentMarketBuyRate adds value to the "assignment_market_buy_rate" field.
+func (_u *PaymentOrderUpdate) AddAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddAssignmentMarketBuyRate(v)
+	return _u
+}
+
+// ClearAssignmentMarketBuyRate clears the value of the "assignment_market_buy_rate" field.
+func (_u *PaymentOrderUpdate) ClearAssignmentMarketBuyRate() *PaymentOrderUpdate {
+	_u.mutation.ClearAssignmentMarketBuyRate()
+	return _u
+}
+
+// SetAssignmentMarketSellRate sets the "assignment_market_sell_rate" field.
+func (_u *PaymentOrderUpdate) SetAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.ResetAssignmentMarketSellRate()
+	_u.mutation.SetAssignmentMarketSellRate(v)
+	return _u
+}
+
+// SetNillableAssignmentMarketSellRate sets the "assignment_market_sell_rate" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableAssignmentMarketSellRate(v *decimal.Decimal) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetAssignmentMarketSellRate(*v)
+	}
+	return _u
+}
+
+// AddAssignmentMarketSellRate adds value to the "assignment_market_sell_rate" field.
+func (_u *PaymentOrderUpdate) AddAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderUpdate {
+	_u.mutation.AddAssignmentMarketSellRate(v)
+	return _u
+}
+
+// ClearAssignmentMarketSellRate clears the value of the "assignment_market_sell_rate" field.
+func (_u *PaymentOrderUpdate) ClearAssignmentMarketSellRate() *PaymentOrderUpdate {
+	_u.mutation.ClearAssignmentMarketSellRate()
+	return _u
+}
+
+// SetLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field.
+func (_u *PaymentOrderUpdate) SetLegacyProvisionBucketID(v int) *PaymentOrderUpdate {
+	_u.mutation.ResetLegacyProvisionBucketID()
+	_u.mutation.SetLegacyProvisionBucketID(v)
+	return _u
+}
+
+// SetNillableLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableLegacyProvisionBucketID(v *int) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetLegacyProvisionBucketID(*v)
+	}
+	return _u
+}
+
+// AddLegacyProvisionBucketID adds value to the "legacy_provision_bucket_id" field.
+func (_u *PaymentOrderUpdate) AddLegacyProvisionBucketID(v int) *PaymentOrderUpdate {
+	_u.mutation.AddLegacyProvisionBucketID(v)
+	return _u
+}
+
+// ClearLegacyProvisionBucketID clears the value of the "legacy_provision_bucket_id" field.
+func (_u *PaymentOrderUpdate) ClearLegacyProvisionBucketID() *PaymentOrderUpdate {
+	_u.mutation.ClearLegacyProvisionBucketID()
+	return _u
+}
+
 // SetTokenID sets the "token" edge to the Token entity by ID.
 func (_u *PaymentOrderUpdate) SetTokenID(id int) *PaymentOrderUpdate {
 	_u.mutation.SetTokenID(id)
@@ -777,25 +859,6 @@ func (_u *PaymentOrderUpdate) SetProvider(v *ProviderProfile) *PaymentOrderUpdat
 	return _u.SetProviderID(v.ID)
 }
 
-// SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
-func (_u *PaymentOrderUpdate) SetProvisionBucketID(id int) *PaymentOrderUpdate {
-	_u.mutation.SetProvisionBucketID(id)
-	return _u
-}
-
-// SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
-func (_u *PaymentOrderUpdate) SetNillableProvisionBucketID(id *int) *PaymentOrderUpdate {
-	if id != nil {
-		_u = _u.SetProvisionBucketID(*id)
-	}
-	return _u
-}
-
-// SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
-func (_u *PaymentOrderUpdate) SetProvisionBucket(v *ProvisionBucket) *PaymentOrderUpdate {
-	return _u.SetProvisionBucketID(v.ID)
-}
-
 // AddFulfillmentIDs adds the "fulfillments" edge to the PaymentOrderFulfillment entity by IDs.
 func (_u *PaymentOrderUpdate) AddFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
 	_u.mutation.AddFulfillmentIDs(ids...)
@@ -826,6 +889,36 @@ func (_u *PaymentOrderUpdate) AddTransactions(v ...*TransactionLog) *PaymentOrde
 	return _u.AddTransactionIDs(ids...)
 }
 
+// AddProviderAssignmentRunIDs adds the "provider_assignment_runs" edge to the ProviderAssignmentRun entity by IDs.
+func (_u *PaymentOrderUpdate) AddProviderAssignmentRunIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.AddProviderAssignmentRunIDs(ids...)
+	return _u
+}
+
+// AddProviderAssignmentRuns adds the "provider_assignment_runs" edges to the ProviderAssignmentRun entity.
+func (_u *PaymentOrderUpdate) AddProviderAssignmentRuns(v ...*ProviderAssignmentRun) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddProviderAssignmentRunIDs(ids...)
+}
+
+// AddProviderOrderTokenScoreHistoryIDs adds the "provider_order_token_score_histories" edge to the ProviderOrderTokenScoreHistory entity by IDs.
+func (_u *PaymentOrderUpdate) AddProviderOrderTokenScoreHistoryIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.AddProviderOrderTokenScoreHistoryIDs(ids...)
+	return _u
+}
+
+// AddProviderOrderTokenScoreHistories adds the "provider_order_token_score_histories" edges to the ProviderOrderTokenScoreHistory entity.
+func (_u *PaymentOrderUpdate) AddProviderOrderTokenScoreHistories(v ...*ProviderOrderTokenScoreHistory) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddProviderOrderTokenScoreHistoryIDs(ids...)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (_u *PaymentOrderUpdate) Mutation() *PaymentOrderMutation {
 	return _u.mutation
@@ -852,12 +945,6 @@ func (_u *PaymentOrderUpdate) ClearPaymentWebhook() *PaymentOrderUpdate {
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
 func (_u *PaymentOrderUpdate) ClearProvider() *PaymentOrderUpdate {
 	_u.mutation.ClearProvider()
-	return _u
-}
-
-// ClearProvisionBucket clears the "provision_bucket" edge to the ProvisionBucket entity.
-func (_u *PaymentOrderUpdate) ClearProvisionBucket() *PaymentOrderUpdate {
-	_u.mutation.ClearProvisionBucket()
 	return _u
 }
 
@@ -901,6 +988,48 @@ func (_u *PaymentOrderUpdate) RemoveTransactions(v ...*TransactionLog) *PaymentO
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTransactionIDs(ids...)
+}
+
+// ClearProviderAssignmentRuns clears all "provider_assignment_runs" edges to the ProviderAssignmentRun entity.
+func (_u *PaymentOrderUpdate) ClearProviderAssignmentRuns() *PaymentOrderUpdate {
+	_u.mutation.ClearProviderAssignmentRuns()
+	return _u
+}
+
+// RemoveProviderAssignmentRunIDs removes the "provider_assignment_runs" edge to ProviderAssignmentRun entities by IDs.
+func (_u *PaymentOrderUpdate) RemoveProviderAssignmentRunIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.RemoveProviderAssignmentRunIDs(ids...)
+	return _u
+}
+
+// RemoveProviderAssignmentRuns removes "provider_assignment_runs" edges to ProviderAssignmentRun entities.
+func (_u *PaymentOrderUpdate) RemoveProviderAssignmentRuns(v ...*ProviderAssignmentRun) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProviderAssignmentRunIDs(ids...)
+}
+
+// ClearProviderOrderTokenScoreHistories clears all "provider_order_token_score_histories" edges to the ProviderOrderTokenScoreHistory entity.
+func (_u *PaymentOrderUpdate) ClearProviderOrderTokenScoreHistories() *PaymentOrderUpdate {
+	_u.mutation.ClearProviderOrderTokenScoreHistories()
+	return _u
+}
+
+// RemoveProviderOrderTokenScoreHistoryIDs removes the "provider_order_token_score_histories" edge to ProviderOrderTokenScoreHistory entities by IDs.
+func (_u *PaymentOrderUpdate) RemoveProviderOrderTokenScoreHistoryIDs(ids ...uuid.UUID) *PaymentOrderUpdate {
+	_u.mutation.RemoveProviderOrderTokenScoreHistoryIDs(ids...)
+	return _u
+}
+
+// RemoveProviderOrderTokenScoreHistories removes "provider_order_token_score_histories" edges to ProviderOrderTokenScoreHistory entities.
+func (_u *PaymentOrderUpdate) RemoveProviderOrderTokenScoreHistories(v ...*ProviderOrderTokenScoreHistory) *PaymentOrderUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProviderOrderTokenScoreHistoryIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1237,6 +1366,33 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if _u.mutation.FallbackTriedAtCleared() {
 		_spec.ClearField(paymentorder.FieldFallbackTriedAt, field.TypeTime)
 	}
+	if value, ok := _u.mutation.AssignmentMarketBuyRate(); ok {
+		_spec.SetField(paymentorder.FieldAssignmentMarketBuyRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAssignmentMarketBuyRate(); ok {
+		_spec.AddField(paymentorder.FieldAssignmentMarketBuyRate, field.TypeFloat64, value)
+	}
+	if _u.mutation.AssignmentMarketBuyRateCleared() {
+		_spec.ClearField(paymentorder.FieldAssignmentMarketBuyRate, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.AssignmentMarketSellRate(); ok {
+		_spec.SetField(paymentorder.FieldAssignmentMarketSellRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAssignmentMarketSellRate(); ok {
+		_spec.AddField(paymentorder.FieldAssignmentMarketSellRate, field.TypeFloat64, value)
+	}
+	if _u.mutation.AssignmentMarketSellRateCleared() {
+		_spec.ClearField(paymentorder.FieldAssignmentMarketSellRate, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.LegacyProvisionBucketID(); ok {
+		_spec.SetField(paymentorder.FieldLegacyProvisionBucketID, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedLegacyProvisionBucketID(); ok {
+		_spec.AddField(paymentorder.FieldLegacyProvisionBucketID, field.TypeInt, value)
+	}
+	if _u.mutation.LegacyProvisionBucketIDCleared() {
+		_spec.ClearField(paymentorder.FieldLegacyProvisionBucketID, field.TypeInt)
+	}
 	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -1353,35 +1509,6 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.ProvisionBucketCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.ProvisionBucketTable,
-			Columns: []string{paymentorder.ProvisionBucketColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.ProvisionBucketTable,
-			Columns: []string{paymentorder.ProvisionBucketColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if _u.mutation.FulfillmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1465,6 +1592,96 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProviderAssignmentRunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentRunsTable,
+			Columns: []string{paymentorder.ProviderAssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedProviderAssignmentRunsIDs(); len(nodes) > 0 && !_u.mutation.ProviderAssignmentRunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentRunsTable,
+			Columns: []string{paymentorder.ProviderAssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderAssignmentRunsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentRunsTable,
+			Columns: []string{paymentorder.ProviderAssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProviderOrderTokenScoreHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderOrderTokenScoreHistoriesTable,
+			Columns: []string{paymentorder.ProviderOrderTokenScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedProviderOrderTokenScoreHistoriesIDs(); len(nodes) > 0 && !_u.mutation.ProviderOrderTokenScoreHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderOrderTokenScoreHistoriesTable,
+			Columns: []string{paymentorder.ProviderOrderTokenScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderOrderTokenScoreHistoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderOrderTokenScoreHistoriesTable,
+			Columns: []string{paymentorder.ProviderOrderTokenScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -2163,6 +2380,87 @@ func (_u *PaymentOrderUpdateOne) ClearFallbackTriedAt() *PaymentOrderUpdateOne {
 	return _u
 }
 
+// SetAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field.
+func (_u *PaymentOrderUpdateOne) SetAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetAssignmentMarketBuyRate()
+	_u.mutation.SetAssignmentMarketBuyRate(v)
+	return _u
+}
+
+// SetNillableAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableAssignmentMarketBuyRate(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAssignmentMarketBuyRate(*v)
+	}
+	return _u
+}
+
+// AddAssignmentMarketBuyRate adds value to the "assignment_market_buy_rate" field.
+func (_u *PaymentOrderUpdateOne) AddAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddAssignmentMarketBuyRate(v)
+	return _u
+}
+
+// ClearAssignmentMarketBuyRate clears the value of the "assignment_market_buy_rate" field.
+func (_u *PaymentOrderUpdateOne) ClearAssignmentMarketBuyRate() *PaymentOrderUpdateOne {
+	_u.mutation.ClearAssignmentMarketBuyRate()
+	return _u
+}
+
+// SetAssignmentMarketSellRate sets the "assignment_market_sell_rate" field.
+func (_u *PaymentOrderUpdateOne) SetAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.ResetAssignmentMarketSellRate()
+	_u.mutation.SetAssignmentMarketSellRate(v)
+	return _u
+}
+
+// SetNillableAssignmentMarketSellRate sets the "assignment_market_sell_rate" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableAssignmentMarketSellRate(v *decimal.Decimal) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetAssignmentMarketSellRate(*v)
+	}
+	return _u
+}
+
+// AddAssignmentMarketSellRate adds value to the "assignment_market_sell_rate" field.
+func (_u *PaymentOrderUpdateOne) AddAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderUpdateOne {
+	_u.mutation.AddAssignmentMarketSellRate(v)
+	return _u
+}
+
+// ClearAssignmentMarketSellRate clears the value of the "assignment_market_sell_rate" field.
+func (_u *PaymentOrderUpdateOne) ClearAssignmentMarketSellRate() *PaymentOrderUpdateOne {
+	_u.mutation.ClearAssignmentMarketSellRate()
+	return _u
+}
+
+// SetLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field.
+func (_u *PaymentOrderUpdateOne) SetLegacyProvisionBucketID(v int) *PaymentOrderUpdateOne {
+	_u.mutation.ResetLegacyProvisionBucketID()
+	_u.mutation.SetLegacyProvisionBucketID(v)
+	return _u
+}
+
+// SetNillableLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableLegacyProvisionBucketID(v *int) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetLegacyProvisionBucketID(*v)
+	}
+	return _u
+}
+
+// AddLegacyProvisionBucketID adds value to the "legacy_provision_bucket_id" field.
+func (_u *PaymentOrderUpdateOne) AddLegacyProvisionBucketID(v int) *PaymentOrderUpdateOne {
+	_u.mutation.AddLegacyProvisionBucketID(v)
+	return _u
+}
+
+// ClearLegacyProvisionBucketID clears the value of the "legacy_provision_bucket_id" field.
+func (_u *PaymentOrderUpdateOne) ClearLegacyProvisionBucketID() *PaymentOrderUpdateOne {
+	_u.mutation.ClearLegacyProvisionBucketID()
+	return _u
+}
+
 // SetTokenID sets the "token" edge to the Token entity by ID.
 func (_u *PaymentOrderUpdateOne) SetTokenID(id int) *PaymentOrderUpdateOne {
 	_u.mutation.SetTokenID(id)
@@ -2231,25 +2529,6 @@ func (_u *PaymentOrderUpdateOne) SetProvider(v *ProviderProfile) *PaymentOrderUp
 	return _u.SetProviderID(v.ID)
 }
 
-// SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
-func (_u *PaymentOrderUpdateOne) SetProvisionBucketID(id int) *PaymentOrderUpdateOne {
-	_u.mutation.SetProvisionBucketID(id)
-	return _u
-}
-
-// SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
-func (_u *PaymentOrderUpdateOne) SetNillableProvisionBucketID(id *int) *PaymentOrderUpdateOne {
-	if id != nil {
-		_u = _u.SetProvisionBucketID(*id)
-	}
-	return _u
-}
-
-// SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
-func (_u *PaymentOrderUpdateOne) SetProvisionBucket(v *ProvisionBucket) *PaymentOrderUpdateOne {
-	return _u.SetProvisionBucketID(v.ID)
-}
-
 // AddFulfillmentIDs adds the "fulfillments" edge to the PaymentOrderFulfillment entity by IDs.
 func (_u *PaymentOrderUpdateOne) AddFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
 	_u.mutation.AddFulfillmentIDs(ids...)
@@ -2280,6 +2559,36 @@ func (_u *PaymentOrderUpdateOne) AddTransactions(v ...*TransactionLog) *PaymentO
 	return _u.AddTransactionIDs(ids...)
 }
 
+// AddProviderAssignmentRunIDs adds the "provider_assignment_runs" edge to the ProviderAssignmentRun entity by IDs.
+func (_u *PaymentOrderUpdateOne) AddProviderAssignmentRunIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.AddProviderAssignmentRunIDs(ids...)
+	return _u
+}
+
+// AddProviderAssignmentRuns adds the "provider_assignment_runs" edges to the ProviderAssignmentRun entity.
+func (_u *PaymentOrderUpdateOne) AddProviderAssignmentRuns(v ...*ProviderAssignmentRun) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddProviderAssignmentRunIDs(ids...)
+}
+
+// AddProviderOrderTokenScoreHistoryIDs adds the "provider_order_token_score_histories" edge to the ProviderOrderTokenScoreHistory entity by IDs.
+func (_u *PaymentOrderUpdateOne) AddProviderOrderTokenScoreHistoryIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.AddProviderOrderTokenScoreHistoryIDs(ids...)
+	return _u
+}
+
+// AddProviderOrderTokenScoreHistories adds the "provider_order_token_score_histories" edges to the ProviderOrderTokenScoreHistory entity.
+func (_u *PaymentOrderUpdateOne) AddProviderOrderTokenScoreHistories(v ...*ProviderOrderTokenScoreHistory) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddProviderOrderTokenScoreHistoryIDs(ids...)
+}
+
 // Mutation returns the PaymentOrderMutation object of the builder.
 func (_u *PaymentOrderUpdateOne) Mutation() *PaymentOrderMutation {
 	return _u.mutation
@@ -2306,12 +2615,6 @@ func (_u *PaymentOrderUpdateOne) ClearPaymentWebhook() *PaymentOrderUpdateOne {
 // ClearProvider clears the "provider" edge to the ProviderProfile entity.
 func (_u *PaymentOrderUpdateOne) ClearProvider() *PaymentOrderUpdateOne {
 	_u.mutation.ClearProvider()
-	return _u
-}
-
-// ClearProvisionBucket clears the "provision_bucket" edge to the ProvisionBucket entity.
-func (_u *PaymentOrderUpdateOne) ClearProvisionBucket() *PaymentOrderUpdateOne {
-	_u.mutation.ClearProvisionBucket()
 	return _u
 }
 
@@ -2355,6 +2658,48 @@ func (_u *PaymentOrderUpdateOne) RemoveTransactions(v ...*TransactionLog) *Payme
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTransactionIDs(ids...)
+}
+
+// ClearProviderAssignmentRuns clears all "provider_assignment_runs" edges to the ProviderAssignmentRun entity.
+func (_u *PaymentOrderUpdateOne) ClearProviderAssignmentRuns() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProviderAssignmentRuns()
+	return _u
+}
+
+// RemoveProviderAssignmentRunIDs removes the "provider_assignment_runs" edge to ProviderAssignmentRun entities by IDs.
+func (_u *PaymentOrderUpdateOne) RemoveProviderAssignmentRunIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.RemoveProviderAssignmentRunIDs(ids...)
+	return _u
+}
+
+// RemoveProviderAssignmentRuns removes "provider_assignment_runs" edges to ProviderAssignmentRun entities.
+func (_u *PaymentOrderUpdateOne) RemoveProviderAssignmentRuns(v ...*ProviderAssignmentRun) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProviderAssignmentRunIDs(ids...)
+}
+
+// ClearProviderOrderTokenScoreHistories clears all "provider_order_token_score_histories" edges to the ProviderOrderTokenScoreHistory entity.
+func (_u *PaymentOrderUpdateOne) ClearProviderOrderTokenScoreHistories() *PaymentOrderUpdateOne {
+	_u.mutation.ClearProviderOrderTokenScoreHistories()
+	return _u
+}
+
+// RemoveProviderOrderTokenScoreHistoryIDs removes the "provider_order_token_score_histories" edge to ProviderOrderTokenScoreHistory entities by IDs.
+func (_u *PaymentOrderUpdateOne) RemoveProviderOrderTokenScoreHistoryIDs(ids ...uuid.UUID) *PaymentOrderUpdateOne {
+	_u.mutation.RemoveProviderOrderTokenScoreHistoryIDs(ids...)
+	return _u
+}
+
+// RemoveProviderOrderTokenScoreHistories removes "provider_order_token_score_histories" edges to ProviderOrderTokenScoreHistory entities.
+func (_u *PaymentOrderUpdateOne) RemoveProviderOrderTokenScoreHistories(v ...*ProviderOrderTokenScoreHistory) *PaymentOrderUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProviderOrderTokenScoreHistoryIDs(ids...)
 }
 
 // Where appends a list predicates to the PaymentOrderUpdate builder.
@@ -2721,6 +3066,33 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	if _u.mutation.FallbackTriedAtCleared() {
 		_spec.ClearField(paymentorder.FieldFallbackTriedAt, field.TypeTime)
 	}
+	if value, ok := _u.mutation.AssignmentMarketBuyRate(); ok {
+		_spec.SetField(paymentorder.FieldAssignmentMarketBuyRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAssignmentMarketBuyRate(); ok {
+		_spec.AddField(paymentorder.FieldAssignmentMarketBuyRate, field.TypeFloat64, value)
+	}
+	if _u.mutation.AssignmentMarketBuyRateCleared() {
+		_spec.ClearField(paymentorder.FieldAssignmentMarketBuyRate, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.AssignmentMarketSellRate(); ok {
+		_spec.SetField(paymentorder.FieldAssignmentMarketSellRate, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAssignmentMarketSellRate(); ok {
+		_spec.AddField(paymentorder.FieldAssignmentMarketSellRate, field.TypeFloat64, value)
+	}
+	if _u.mutation.AssignmentMarketSellRateCleared() {
+		_spec.ClearField(paymentorder.FieldAssignmentMarketSellRate, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.LegacyProvisionBucketID(); ok {
+		_spec.SetField(paymentorder.FieldLegacyProvisionBucketID, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedLegacyProvisionBucketID(); ok {
+		_spec.AddField(paymentorder.FieldLegacyProvisionBucketID, field.TypeInt, value)
+	}
+	if _u.mutation.LegacyProvisionBucketIDCleared() {
+		_spec.ClearField(paymentorder.FieldLegacyProvisionBucketID, field.TypeInt)
+	}
 	if _u.mutation.TokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -2837,35 +3209,6 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.ProvisionBucketCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.ProvisionBucketTable,
-			Columns: []string{paymentorder.ProvisionBucketColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.ProvisionBucketTable,
-			Columns: []string{paymentorder.ProvisionBucketColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if _u.mutation.FulfillmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -2949,6 +3292,96 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProviderAssignmentRunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentRunsTable,
+			Columns: []string{paymentorder.ProviderAssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedProviderAssignmentRunsIDs(); len(nodes) > 0 && !_u.mutation.ProviderAssignmentRunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentRunsTable,
+			Columns: []string{paymentorder.ProviderAssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderAssignmentRunsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentRunsTable,
+			Columns: []string{paymentorder.ProviderAssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ProviderOrderTokenScoreHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderOrderTokenScoreHistoriesTable,
+			Columns: []string{paymentorder.ProviderOrderTokenScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedProviderOrderTokenScoreHistoriesIDs(); len(nodes) > 0 && !_u.mutation.ProviderOrderTokenScoreHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderOrderTokenScoreHistoriesTable,
+			Columns: []string{paymentorder.ProviderOrderTokenScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderOrderTokenScoreHistoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderOrderTokenScoreHistoriesTable,
+			Columns: []string{paymentorder.ProviderOrderTokenScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

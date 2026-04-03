@@ -17,8 +17,9 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerassignmentrun"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
@@ -27,18 +28,19 @@ import (
 // PaymentOrderQuery is the builder for querying PaymentOrder entities.
 type PaymentOrderQuery struct {
 	config
-	ctx                 *QueryContext
-	order               []paymentorder.OrderOption
-	inters              []Interceptor
-	predicates          []predicate.PaymentOrder
-	withToken           *TokenQuery
-	withSenderProfile   *SenderProfileQuery
-	withPaymentWebhook  *PaymentWebhookQuery
-	withProvider        *ProviderProfileQuery
-	withProvisionBucket *ProvisionBucketQuery
-	withFulfillments    *PaymentOrderFulfillmentQuery
-	withTransactions    *TransactionLogQuery
-	withFKs             bool
+	ctx                                  *QueryContext
+	order                                []paymentorder.OrderOption
+	inters                               []Interceptor
+	predicates                           []predicate.PaymentOrder
+	withToken                            *TokenQuery
+	withSenderProfile                    *SenderProfileQuery
+	withPaymentWebhook                   *PaymentWebhookQuery
+	withProvider                         *ProviderProfileQuery
+	withFulfillments                     *PaymentOrderFulfillmentQuery
+	withTransactions                     *TransactionLogQuery
+	withProviderAssignmentRuns           *ProviderAssignmentRunQuery
+	withProviderOrderTokenScoreHistories *ProviderOrderTokenScoreHistoryQuery
+	withFKs                              bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -163,28 +165,6 @@ func (_q *PaymentOrderQuery) QueryProvider() *ProviderProfileQuery {
 	return query
 }
 
-// QueryProvisionBucket chains the current query on the "provision_bucket" edge.
-func (_q *PaymentOrderQuery) QueryProvisionBucket() *ProvisionBucketQuery {
-	query := (&ProvisionBucketClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
-			sqlgraph.To(provisionbucket.Table, provisionbucket.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, paymentorder.ProvisionBucketTable, paymentorder.ProvisionBucketColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
 // QueryFulfillments chains the current query on the "fulfillments" edge.
 func (_q *PaymentOrderQuery) QueryFulfillments() *PaymentOrderFulfillmentQuery {
 	query := (&PaymentOrderFulfillmentClient{config: _q.config}).Query()
@@ -222,6 +202,50 @@ func (_q *PaymentOrderQuery) QueryTransactions() *TransactionLogQuery {
 			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
 			sqlgraph.To(transactionlog.Table, transactionlog.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, paymentorder.TransactionsTable, paymentorder.TransactionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProviderAssignmentRuns chains the current query on the "provider_assignment_runs" edge.
+func (_q *PaymentOrderQuery) QueryProviderAssignmentRuns() *ProviderAssignmentRunQuery {
+	query := (&ProviderAssignmentRunClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
+			sqlgraph.To(providerassignmentrun.Table, providerassignmentrun.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, paymentorder.ProviderAssignmentRunsTable, paymentorder.ProviderAssignmentRunsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryProviderOrderTokenScoreHistories chains the current query on the "provider_order_token_score_histories" edge.
+func (_q *PaymentOrderQuery) QueryProviderOrderTokenScoreHistories() *ProviderOrderTokenScoreHistoryQuery {
+	query := (&ProviderOrderTokenScoreHistoryClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(paymentorder.Table, paymentorder.FieldID, selector),
+			sqlgraph.To(providerordertokenscorehistory.Table, providerordertokenscorehistory.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, paymentorder.ProviderOrderTokenScoreHistoriesTable, paymentorder.ProviderOrderTokenScoreHistoriesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -416,18 +440,19 @@ func (_q *PaymentOrderQuery) Clone() *PaymentOrderQuery {
 		return nil
 	}
 	return &PaymentOrderQuery{
-		config:              _q.config,
-		ctx:                 _q.ctx.Clone(),
-		order:               append([]paymentorder.OrderOption{}, _q.order...),
-		inters:              append([]Interceptor{}, _q.inters...),
-		predicates:          append([]predicate.PaymentOrder{}, _q.predicates...),
-		withToken:           _q.withToken.Clone(),
-		withSenderProfile:   _q.withSenderProfile.Clone(),
-		withPaymentWebhook:  _q.withPaymentWebhook.Clone(),
-		withProvider:        _q.withProvider.Clone(),
-		withProvisionBucket: _q.withProvisionBucket.Clone(),
-		withFulfillments:    _q.withFulfillments.Clone(),
-		withTransactions:    _q.withTransactions.Clone(),
+		config:                               _q.config,
+		ctx:                                  _q.ctx.Clone(),
+		order:                                append([]paymentorder.OrderOption{}, _q.order...),
+		inters:                               append([]Interceptor{}, _q.inters...),
+		predicates:                           append([]predicate.PaymentOrder{}, _q.predicates...),
+		withToken:                            _q.withToken.Clone(),
+		withSenderProfile:                    _q.withSenderProfile.Clone(),
+		withPaymentWebhook:                   _q.withPaymentWebhook.Clone(),
+		withProvider:                         _q.withProvider.Clone(),
+		withFulfillments:                     _q.withFulfillments.Clone(),
+		withTransactions:                     _q.withTransactions.Clone(),
+		withProviderAssignmentRuns:           _q.withProviderAssignmentRuns.Clone(),
+		withProviderOrderTokenScoreHistories: _q.withProviderOrderTokenScoreHistories.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -478,17 +503,6 @@ func (_q *PaymentOrderQuery) WithProvider(opts ...func(*ProviderProfileQuery)) *
 	return _q
 }
 
-// WithProvisionBucket tells the query-builder to eager-load the nodes that are connected to
-// the "provision_bucket" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *PaymentOrderQuery) WithProvisionBucket(opts ...func(*ProvisionBucketQuery)) *PaymentOrderQuery {
-	query := (&ProvisionBucketClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withProvisionBucket = query
-	return _q
-}
-
 // WithFulfillments tells the query-builder to eager-load the nodes that are connected to
 // the "fulfillments" edge. The optional arguments are used to configure the query builder of the edge.
 func (_q *PaymentOrderQuery) WithFulfillments(opts ...func(*PaymentOrderFulfillmentQuery)) *PaymentOrderQuery {
@@ -508,6 +522,28 @@ func (_q *PaymentOrderQuery) WithTransactions(opts ...func(*TransactionLogQuery)
 		opt(query)
 	}
 	_q.withTransactions = query
+	return _q
+}
+
+// WithProviderAssignmentRuns tells the query-builder to eager-load the nodes that are connected to
+// the "provider_assignment_runs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PaymentOrderQuery) WithProviderAssignmentRuns(opts ...func(*ProviderAssignmentRunQuery)) *PaymentOrderQuery {
+	query := (&ProviderAssignmentRunClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withProviderAssignmentRuns = query
+	return _q
+}
+
+// WithProviderOrderTokenScoreHistories tells the query-builder to eager-load the nodes that are connected to
+// the "provider_order_token_score_histories" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *PaymentOrderQuery) WithProviderOrderTokenScoreHistories(opts ...func(*ProviderOrderTokenScoreHistoryQuery)) *PaymentOrderQuery {
+	query := (&ProviderOrderTokenScoreHistoryClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withProviderOrderTokenScoreHistories = query
 	return _q
 }
 
@@ -590,17 +626,18 @@ func (_q *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 		nodes       = []*PaymentOrder{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [7]bool{
+		loadedTypes = [8]bool{
 			_q.withToken != nil,
 			_q.withSenderProfile != nil,
 			_q.withPaymentWebhook != nil,
 			_q.withProvider != nil,
-			_q.withProvisionBucket != nil,
 			_q.withFulfillments != nil,
 			_q.withTransactions != nil,
+			_q.withProviderAssignmentRuns != nil,
+			_q.withProviderOrderTokenScoreHistories != nil,
 		}
 	)
-	if _q.withToken != nil || _q.withSenderProfile != nil || _q.withProvider != nil || _q.withProvisionBucket != nil {
+	if _q.withToken != nil || _q.withSenderProfile != nil || _q.withProvider != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -648,12 +685,6 @@ func (_q *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 			return nil, err
 		}
 	}
-	if query := _q.withProvisionBucket; query != nil {
-		if err := _q.loadProvisionBucket(ctx, query, nodes, nil,
-			func(n *PaymentOrder, e *ProvisionBucket) { n.Edges.ProvisionBucket = e }); err != nil {
-			return nil, err
-		}
-	}
 	if query := _q.withFulfillments; query != nil {
 		if err := _q.loadFulfillments(ctx, query, nodes,
 			func(n *PaymentOrder) { n.Edges.Fulfillments = []*PaymentOrderFulfillment{} },
@@ -667,6 +698,24 @@ func (_q *PaymentOrderQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 		if err := _q.loadTransactions(ctx, query, nodes,
 			func(n *PaymentOrder) { n.Edges.Transactions = []*TransactionLog{} },
 			func(n *PaymentOrder, e *TransactionLog) { n.Edges.Transactions = append(n.Edges.Transactions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withProviderAssignmentRuns; query != nil {
+		if err := _q.loadProviderAssignmentRuns(ctx, query, nodes,
+			func(n *PaymentOrder) { n.Edges.ProviderAssignmentRuns = []*ProviderAssignmentRun{} },
+			func(n *PaymentOrder, e *ProviderAssignmentRun) {
+				n.Edges.ProviderAssignmentRuns = append(n.Edges.ProviderAssignmentRuns, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withProviderOrderTokenScoreHistories; query != nil {
+		if err := _q.loadProviderOrderTokenScoreHistories(ctx, query, nodes,
+			func(n *PaymentOrder) { n.Edges.ProviderOrderTokenScoreHistories = []*ProviderOrderTokenScoreHistory{} },
+			func(n *PaymentOrder, e *ProviderOrderTokenScoreHistory) {
+				n.Edges.ProviderOrderTokenScoreHistories = append(n.Edges.ProviderOrderTokenScoreHistories, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -797,38 +846,6 @@ func (_q *PaymentOrderQuery) loadProvider(ctx context.Context, query *ProviderPr
 	}
 	return nil
 }
-func (_q *PaymentOrderQuery) loadProvisionBucket(ctx context.Context, query *ProvisionBucketQuery, nodes []*PaymentOrder, init func(*PaymentOrder), assign func(*PaymentOrder, *ProvisionBucket)) error {
-	ids := make([]int, 0, len(nodes))
-	nodeids := make(map[int][]*PaymentOrder)
-	for i := range nodes {
-		if nodes[i].provision_bucket_payment_orders == nil {
-			continue
-		}
-		fk := *nodes[i].provision_bucket_payment_orders
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(provisionbucket.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "provision_bucket_payment_orders" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
 func (_q *PaymentOrderQuery) loadFulfillments(ctx context.Context, query *PaymentOrderFulfillmentQuery, nodes []*PaymentOrder, init func(*PaymentOrder), assign func(*PaymentOrder, *PaymentOrderFulfillment)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[uuid.UUID]*PaymentOrder)
@@ -886,6 +903,68 @@ func (_q *PaymentOrderQuery) loadTransactions(ctx context.Context, query *Transa
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "payment_order_transactions" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PaymentOrderQuery) loadProviderAssignmentRuns(ctx context.Context, query *ProviderAssignmentRunQuery, nodes []*PaymentOrder, init func(*PaymentOrder), assign func(*PaymentOrder, *ProviderAssignmentRun)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*PaymentOrder)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProviderAssignmentRun(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(paymentorder.ProviderAssignmentRunsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.payment_order_provider_assignment_runs
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "payment_order_provider_assignment_runs" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "payment_order_provider_assignment_runs" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *PaymentOrderQuery) loadProviderOrderTokenScoreHistories(ctx context.Context, query *ProviderOrderTokenScoreHistoryQuery, nodes []*PaymentOrder, init func(*PaymentOrder), assign func(*PaymentOrder, *ProviderOrderTokenScoreHistory)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*PaymentOrder)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProviderOrderTokenScoreHistory(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(paymentorder.ProviderOrderTokenScoreHistoriesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.payment_order_provider_order_token_score_histories
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "payment_order_provider_order_token_score_histories" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "payment_order_provider_order_token_score_histories" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

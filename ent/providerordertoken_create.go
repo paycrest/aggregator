@@ -13,7 +13,9 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
+	"github.com/paycrest/aggregator/ent/providerassignmentrun"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
@@ -175,6 +177,48 @@ func (_c *ProviderOrderTokenCreate) SetNetwork(v string) *ProviderOrderTokenCrea
 	return _c
 }
 
+// SetScoreOnramp sets the "score_onramp" field.
+func (_c *ProviderOrderTokenCreate) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetScoreOnramp(v)
+	return _c
+}
+
+// SetNillableScoreOnramp sets the "score_onramp" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillableScoreOnramp(v *decimal.Decimal) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetScoreOnramp(*v)
+	}
+	return _c
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (_c *ProviderOrderTokenCreate) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenCreate {
+	_c.mutation.SetScoreOfframp(v)
+	return _c
+}
+
+// SetNillableScoreOfframp sets the "score_offramp" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillableScoreOfframp(v *decimal.Decimal) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetScoreOfframp(*v)
+	}
+	return _c
+}
+
+// SetLastOrderAssignedAt sets the "last_order_assigned_at" field.
+func (_c *ProviderOrderTokenCreate) SetLastOrderAssignedAt(v time.Time) *ProviderOrderTokenCreate {
+	_c.mutation.SetLastOrderAssignedAt(v)
+	return _c
+}
+
+// SetNillableLastOrderAssignedAt sets the "last_order_assigned_at" field if the given value is not nil.
+func (_c *ProviderOrderTokenCreate) SetNillableLastOrderAssignedAt(v *time.Time) *ProviderOrderTokenCreate {
+	if v != nil {
+		_c.SetLastOrderAssignedAt(*v)
+	}
+	return _c
+}
+
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (_c *ProviderOrderTokenCreate) SetProviderID(id string) *ProviderOrderTokenCreate {
 	_c.mutation.SetProviderID(id)
@@ -206,6 +250,36 @@ func (_c *ProviderOrderTokenCreate) SetCurrencyID(id uuid.UUID) *ProviderOrderTo
 // SetCurrency sets the "currency" edge to the FiatCurrency entity.
 func (_c *ProviderOrderTokenCreate) SetCurrency(v *FiatCurrency) *ProviderOrderTokenCreate {
 	return _c.SetCurrencyID(v.ID)
+}
+
+// AddScoreHistoryIDs adds the "score_histories" edge to the ProviderOrderTokenScoreHistory entity by IDs.
+func (_c *ProviderOrderTokenCreate) AddScoreHistoryIDs(ids ...uuid.UUID) *ProviderOrderTokenCreate {
+	_c.mutation.AddScoreHistoryIDs(ids...)
+	return _c
+}
+
+// AddScoreHistories adds the "score_histories" edges to the ProviderOrderTokenScoreHistory entity.
+func (_c *ProviderOrderTokenCreate) AddScoreHistories(v ...*ProviderOrderTokenScoreHistory) *ProviderOrderTokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddScoreHistoryIDs(ids...)
+}
+
+// AddAssignmentRunIDs adds the "assignment_runs" edge to the ProviderAssignmentRun entity by IDs.
+func (_c *ProviderOrderTokenCreate) AddAssignmentRunIDs(ids ...uuid.UUID) *ProviderOrderTokenCreate {
+	_c.mutation.AddAssignmentRunIDs(ids...)
+	return _c
+}
+
+// AddAssignmentRuns adds the "assignment_runs" edges to the ProviderAssignmentRun entity.
+func (_c *ProviderOrderTokenCreate) AddAssignmentRuns(v ...*ProviderAssignmentRun) *ProviderOrderTokenCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAssignmentRunIDs(ids...)
 }
 
 // Mutation returns the ProviderOrderTokenMutation object of the builder.
@@ -251,6 +325,14 @@ func (_c *ProviderOrderTokenCreate) defaults() {
 		v := providerordertoken.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.ScoreOnramp(); !ok {
+		v := providerordertoken.DefaultScoreOnramp()
+		_c.mutation.SetScoreOnramp(v)
+	}
+	if _, ok := _c.mutation.ScoreOfframp(); !ok {
+		v := providerordertoken.DefaultScoreOfframp()
+		_c.mutation.SetScoreOfframp(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -278,6 +360,12 @@ func (_c *ProviderOrderTokenCreate) check() error {
 	}
 	if _, ok := _c.mutation.Network(); !ok {
 		return &ValidationError{Name: "network", err: errors.New(`ent: missing required field "ProviderOrderToken.network"`)}
+	}
+	if _, ok := _c.mutation.ScoreOnramp(); !ok {
+		return &ValidationError{Name: "score_onramp", err: errors.New(`ent: missing required field "ProviderOrderToken.score_onramp"`)}
+	}
+	if _, ok := _c.mutation.ScoreOfframp(); !ok {
+		return &ValidationError{Name: "score_offramp", err: errors.New(`ent: missing required field "ProviderOrderToken.score_offramp"`)}
 	}
 	if len(_c.mutation.ProviderIDs()) == 0 {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required edge "ProviderOrderToken.provider"`)}
@@ -371,6 +459,18 @@ func (_c *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgraph
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
 		_node.Network = value
 	}
+	if value, ok := _c.mutation.ScoreOnramp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOnramp, field.TypeFloat64, value)
+		_node.ScoreOnramp = value
+	}
+	if value, ok := _c.mutation.ScoreOfframp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOfframp, field.TypeFloat64, value)
+		_node.ScoreOfframp = value
+	}
+	if value, ok := _c.mutation.LastOrderAssignedAt(); ok {
+		_spec.SetField(providerordertoken.FieldLastOrderAssignedAt, field.TypeTime, value)
+		_node.LastOrderAssignedAt = &value
+	}
 	if nodes := _c.mutation.ProviderIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -420,6 +520,38 @@ func (_c *ProviderOrderTokenCreate) createSpec() (*ProviderOrderToken, *sqlgraph
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.fiat_currency_provider_order_tokens = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ScoreHistoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.ScoreHistoriesTable,
+			Columns: []string{providerordertoken.ScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AssignmentRunsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.AssignmentRunsTable,
+			Columns: []string{providerordertoken.AssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -717,6 +849,60 @@ func (u *ProviderOrderTokenUpsert) SetNetwork(v string) *ProviderOrderTokenUpser
 // UpdateNetwork sets the "network" field to the value that was provided on create.
 func (u *ProviderOrderTokenUpsert) UpdateNetwork() *ProviderOrderTokenUpsert {
 	u.SetExcluded(providerordertoken.FieldNetwork)
+	return u
+}
+
+// SetScoreOnramp sets the "score_onramp" field.
+func (u *ProviderOrderTokenUpsert) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldScoreOnramp, v)
+	return u
+}
+
+// UpdateScoreOnramp sets the "score_onramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateScoreOnramp() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldScoreOnramp)
+	return u
+}
+
+// AddScoreOnramp adds v to the "score_onramp" field.
+func (u *ProviderOrderTokenUpsert) AddScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldScoreOnramp, v)
+	return u
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (u *ProviderOrderTokenUpsert) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldScoreOfframp, v)
+	return u
+}
+
+// UpdateScoreOfframp sets the "score_offramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateScoreOfframp() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldScoreOfframp)
+	return u
+}
+
+// AddScoreOfframp adds v to the "score_offramp" field.
+func (u *ProviderOrderTokenUpsert) AddScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsert {
+	u.Add(providerordertoken.FieldScoreOfframp, v)
+	return u
+}
+
+// SetLastOrderAssignedAt sets the "last_order_assigned_at" field.
+func (u *ProviderOrderTokenUpsert) SetLastOrderAssignedAt(v time.Time) *ProviderOrderTokenUpsert {
+	u.Set(providerordertoken.FieldLastOrderAssignedAt, v)
+	return u
+}
+
+// UpdateLastOrderAssignedAt sets the "last_order_assigned_at" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsert) UpdateLastOrderAssignedAt() *ProviderOrderTokenUpsert {
+	u.SetExcluded(providerordertoken.FieldLastOrderAssignedAt)
+	return u
+}
+
+// ClearLastOrderAssignedAt clears the value of the "last_order_assigned_at" field.
+func (u *ProviderOrderTokenUpsert) ClearLastOrderAssignedAt() *ProviderOrderTokenUpsert {
+	u.SetNull(providerordertoken.FieldLastOrderAssignedAt)
 	return u
 }
 
@@ -1049,6 +1235,69 @@ func (u *ProviderOrderTokenUpsertOne) SetNetwork(v string) *ProviderOrderTokenUp
 func (u *ProviderOrderTokenUpsertOne) UpdateNetwork() *ProviderOrderTokenUpsertOne {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateNetwork()
+	})
+}
+
+// SetScoreOnramp sets the "score_onramp" field.
+func (u *ProviderOrderTokenUpsertOne) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetScoreOnramp(v)
+	})
+}
+
+// AddScoreOnramp adds v to the "score_onramp" field.
+func (u *ProviderOrderTokenUpsertOne) AddScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddScoreOnramp(v)
+	})
+}
+
+// UpdateScoreOnramp sets the "score_onramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateScoreOnramp() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateScoreOnramp()
+	})
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (u *ProviderOrderTokenUpsertOne) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetScoreOfframp(v)
+	})
+}
+
+// AddScoreOfframp adds v to the "score_offramp" field.
+func (u *ProviderOrderTokenUpsertOne) AddScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddScoreOfframp(v)
+	})
+}
+
+// UpdateScoreOfframp sets the "score_offramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateScoreOfframp() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateScoreOfframp()
+	})
+}
+
+// SetLastOrderAssignedAt sets the "last_order_assigned_at" field.
+func (u *ProviderOrderTokenUpsertOne) SetLastOrderAssignedAt(v time.Time) *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetLastOrderAssignedAt(v)
+	})
+}
+
+// UpdateLastOrderAssignedAt sets the "last_order_assigned_at" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertOne) UpdateLastOrderAssignedAt() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateLastOrderAssignedAt()
+	})
+}
+
+// ClearLastOrderAssignedAt clears the value of the "last_order_assigned_at" field.
+func (u *ProviderOrderTokenUpsertOne) ClearLastOrderAssignedAt() *ProviderOrderTokenUpsertOne {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearLastOrderAssignedAt()
 	})
 }
 
@@ -1547,6 +1796,69 @@ func (u *ProviderOrderTokenUpsertBulk) SetNetwork(v string) *ProviderOrderTokenU
 func (u *ProviderOrderTokenUpsertBulk) UpdateNetwork() *ProviderOrderTokenUpsertBulk {
 	return u.Update(func(s *ProviderOrderTokenUpsert) {
 		s.UpdateNetwork()
+	})
+}
+
+// SetScoreOnramp sets the "score_onramp" field.
+func (u *ProviderOrderTokenUpsertBulk) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetScoreOnramp(v)
+	})
+}
+
+// AddScoreOnramp adds v to the "score_onramp" field.
+func (u *ProviderOrderTokenUpsertBulk) AddScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddScoreOnramp(v)
+	})
+}
+
+// UpdateScoreOnramp sets the "score_onramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateScoreOnramp() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateScoreOnramp()
+	})
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (u *ProviderOrderTokenUpsertBulk) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetScoreOfframp(v)
+	})
+}
+
+// AddScoreOfframp adds v to the "score_offramp" field.
+func (u *ProviderOrderTokenUpsertBulk) AddScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.AddScoreOfframp(v)
+	})
+}
+
+// UpdateScoreOfframp sets the "score_offramp" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateScoreOfframp() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateScoreOfframp()
+	})
+}
+
+// SetLastOrderAssignedAt sets the "last_order_assigned_at" field.
+func (u *ProviderOrderTokenUpsertBulk) SetLastOrderAssignedAt(v time.Time) *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.SetLastOrderAssignedAt(v)
+	})
+}
+
+// UpdateLastOrderAssignedAt sets the "last_order_assigned_at" field to the value that was provided on create.
+func (u *ProviderOrderTokenUpsertBulk) UpdateLastOrderAssignedAt() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.UpdateLastOrderAssignedAt()
+	})
+}
+
+// ClearLastOrderAssignedAt clears the value of the "last_order_assigned_at" field.
+func (u *ProviderOrderTokenUpsertBulk) ClearLastOrderAssignedAt() *ProviderOrderTokenUpsertBulk {
+	return u.Update(func(s *ProviderOrderTokenUpsert) {
+		s.ClearLastOrderAssignedAt()
 	})
 }
 

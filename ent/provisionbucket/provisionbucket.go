@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -20,33 +19,10 @@ const (
 	FieldMaxAmount = "max_amount"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
-	// EdgeCurrency holds the string denoting the currency edge name in mutations.
-	EdgeCurrency = "currency"
-	// EdgePaymentOrders holds the string denoting the payment_orders edge name in mutations.
-	EdgePaymentOrders = "payment_orders"
-	// EdgeProviderProfiles holds the string denoting the provider_profiles edge name in mutations.
-	EdgeProviderProfiles = "provider_profiles"
+	// FieldFiatCurrencyID holds the string denoting the fiat_currency_id field in the database.
+	FieldFiatCurrencyID = "fiat_currency_provision_buckets"
 	// Table holds the table name of the provisionbucket in the database.
 	Table = "provision_buckets"
-	// CurrencyTable is the table that holds the currency relation/edge.
-	CurrencyTable = "provision_buckets"
-	// CurrencyInverseTable is the table name for the FiatCurrency entity.
-	// It exists in this package in order to avoid circular dependency with the "fiatcurrency" package.
-	CurrencyInverseTable = "fiat_currencies"
-	// CurrencyColumn is the table column denoting the currency relation/edge.
-	CurrencyColumn = "fiat_currency_provision_buckets"
-	// PaymentOrdersTable is the table that holds the payment_orders relation/edge.
-	PaymentOrdersTable = "payment_orders"
-	// PaymentOrdersInverseTable is the table name for the PaymentOrder entity.
-	// It exists in this package in order to avoid circular dependency with the "paymentorder" package.
-	PaymentOrdersInverseTable = "payment_orders"
-	// PaymentOrdersColumn is the table column denoting the payment_orders relation/edge.
-	PaymentOrdersColumn = "provision_bucket_payment_orders"
-	// ProviderProfilesTable is the table that holds the provider_profiles relation/edge. The primary key declared below.
-	ProviderProfilesTable = "provision_bucket_provider_profiles"
-	// ProviderProfilesInverseTable is the table name for the ProviderProfile entity.
-	// It exists in this package in order to avoid circular dependency with the "providerprofile" package.
-	ProviderProfilesInverseTable = "provider_profiles"
 )
 
 // Columns holds all SQL columns for provisionbucket fields.
@@ -55,29 +31,13 @@ var Columns = []string{
 	FieldMinAmount,
 	FieldMaxAmount,
 	FieldCreatedAt,
+	FieldFiatCurrencyID,
 }
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "provision_buckets"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"fiat_currency_provision_buckets",
-}
-
-var (
-	// ProviderProfilesPrimaryKey and ProviderProfilesColumn2 are the table columns denoting the
-	// primary key for the provider_profiles relation (M2M).
-	ProviderProfilesPrimaryKey = []string{"provision_bucket_id", "provider_profile_id"}
-)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -112,58 +72,7 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
 }
 
-// ByCurrencyField orders the results by currency field.
-func ByCurrencyField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newCurrencyStep(), sql.OrderByField(field, opts...))
-	}
-}
-
-// ByPaymentOrdersCount orders the results by payment_orders count.
-func ByPaymentOrdersCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newPaymentOrdersStep(), opts...)
-	}
-}
-
-// ByPaymentOrders orders the results by payment_orders terms.
-func ByPaymentOrders(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newPaymentOrdersStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
-// ByProviderProfilesCount orders the results by provider_profiles count.
-func ByProviderProfilesCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProviderProfilesStep(), opts...)
-	}
-}
-
-// ByProviderProfiles orders the results by provider_profiles terms.
-func ByProviderProfiles(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProviderProfilesStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-func newCurrencyStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(CurrencyInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, CurrencyTable, CurrencyColumn),
-	)
-}
-func newPaymentOrdersStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(PaymentOrdersInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, PaymentOrdersTable, PaymentOrdersColumn),
-	)
-}
-func newProviderProfilesStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProviderProfilesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2M, false, ProviderProfilesTable, ProviderProfilesPrimaryKey...),
-	)
+// ByFiatCurrencyID orders the results by the fiat_currency_id field.
+func ByFiatCurrencyID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFiatCurrencyID, opts...).ToFunc()
 }

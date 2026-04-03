@@ -565,14 +565,6 @@ func CreateTestProviderProfile(overrides map[string]interface{}) (*ent.ProviderP
 	return profile, err
 }
 
-func AddProvisionBucketToPaymentOrder(order *ent.PaymentOrder, bucketId int) (*ent.PaymentOrder, error) {
-	order, err := order.
-		Update().
-		SetProvisionBucketID(bucketId).
-		Save(context.Background())
-	return order, err
-}
-
 func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.ProviderOrderToken, error) {
 	// Default payload using new two-sided rate fields
 	payload := map[string]interface{}{
@@ -644,43 +636,6 @@ func AddProviderOrderTokenToProvider(overrides map[string]interface{}) (*ent.Pro
 		Only(context.Background())
 
 	return orderToken, err
-}
-
-// CreateTestProvisionBucket creates a test ProvisionBucket with defaults or custom values
-func CreateTestProvisionBucket(overrides map[string]interface{}) (*ent.ProvisionBucket, error) {
-	ctx := context.Background()
-
-	// Default payload
-	payload := map[string]interface{}{
-		"currency_id": 1,
-		"max_amount":  decimal.NewFromFloat(1.0),
-		"min_amount":  decimal.NewFromFloat(1.0),
-		"provider_id": nil,
-	}
-
-	// Apply overrides
-	for key, value := range overrides {
-		payload[key] = value
-	}
-
-	bucket, err := db.Client.ProvisionBucket.Create().
-		SetMinAmount(payload["min_amount"].(decimal.Decimal)).
-		SetMaxAmount(payload["max_amount"].(decimal.Decimal)).
-		SetCurrencyID(payload["currency_id"].(uuid.UUID)).
-		Save(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = db.Client.ProviderProfile.
-		UpdateOneID(payload["provider_id"].(string)).
-		AddProvisionBucketIDs(bucket.ID).
-		Save(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return bucket, nil
 }
 
 // CreateTestFiatCurrency creates a test FiatCurrency with defaults or custom values

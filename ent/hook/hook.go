@@ -129,6 +129,18 @@ func (f PaymentWebhookFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PaymentWebhookMutation", m)
 }
 
+// The ProviderAssignmentRunFunc type is an adapter to allow the use of ordinary
+// function as ProviderAssignmentRun mutator.
+type ProviderAssignmentRunFunc func(context.Context, *ent.ProviderAssignmentRunMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProviderAssignmentRunFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProviderAssignmentRunMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProviderAssignmentRunMutation", m)
+}
+
 // The ProviderBalancesFunc type is an adapter to allow the use of ordinary
 // function as ProviderBalances mutator.
 type ProviderBalancesFunc func(context.Context, *ent.ProviderBalancesMutation) (ent.Value, error)
@@ -163,6 +175,18 @@ func (f ProviderOrderTokenFunc) Mutate(ctx context.Context, m ent.Mutation) (ent
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProviderOrderTokenMutation", m)
+}
+
+// The ProviderOrderTokenScoreHistoryFunc type is an adapter to allow the use of ordinary
+// function as ProviderOrderTokenScoreHistory mutator.
+type ProviderOrderTokenScoreHistoryFunc func(context.Context, *ent.ProviderOrderTokenScoreHistoryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProviderOrderTokenScoreHistoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProviderOrderTokenScoreHistoryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProviderOrderTokenScoreHistoryMutation", m)
 }
 
 // The ProviderProfileFunc type is an adapter to allow the use of ordinary

@@ -11,10 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/paycrest/aggregator/ent/fiatcurrency"
-	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/predicate"
-	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/shopspring/decimal"
 )
@@ -74,98 +71,29 @@ func (_u *ProvisionBucketUpdate) AddMaxAmount(v decimal.Decimal) *ProvisionBucke
 	return _u
 }
 
-// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (_u *ProvisionBucketUpdate) SetCurrencyID(id uuid.UUID) *ProvisionBucketUpdate {
-	_u.mutation.SetCurrencyID(id)
+// SetFiatCurrencyID sets the "fiat_currency_id" field.
+func (_u *ProvisionBucketUpdate) SetFiatCurrencyID(v uuid.UUID) *ProvisionBucketUpdate {
+	_u.mutation.SetFiatCurrencyID(v)
 	return _u
 }
 
-// SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (_u *ProvisionBucketUpdate) SetCurrency(v *FiatCurrency) *ProvisionBucketUpdate {
-	return _u.SetCurrencyID(v.ID)
-}
-
-// AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (_u *ProvisionBucketUpdate) AddPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdate {
-	_u.mutation.AddPaymentOrderIDs(ids...)
-	return _u
-}
-
-// AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (_u *ProvisionBucketUpdate) AddPaymentOrders(v ...*PaymentOrder) *ProvisionBucketUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
+// SetNillableFiatCurrencyID sets the "fiat_currency_id" field if the given value is not nil.
+func (_u *ProvisionBucketUpdate) SetNillableFiatCurrencyID(v *uuid.UUID) *ProvisionBucketUpdate {
+	if v != nil {
+		_u.SetFiatCurrencyID(*v)
 	}
-	return _u.AddPaymentOrderIDs(ids...)
-}
-
-// AddProviderProfileIDs adds the "provider_profiles" edge to the ProviderProfile entity by IDs.
-func (_u *ProvisionBucketUpdate) AddProviderProfileIDs(ids ...string) *ProvisionBucketUpdate {
-	_u.mutation.AddProviderProfileIDs(ids...)
 	return _u
 }
 
-// AddProviderProfiles adds the "provider_profiles" edges to the ProviderProfile entity.
-func (_u *ProvisionBucketUpdate) AddProviderProfiles(v ...*ProviderProfile) *ProvisionBucketUpdate {
-	ids := make([]string, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddProviderProfileIDs(ids...)
+// ClearFiatCurrencyID clears the value of the "fiat_currency_id" field.
+func (_u *ProvisionBucketUpdate) ClearFiatCurrencyID() *ProvisionBucketUpdate {
+	_u.mutation.ClearFiatCurrencyID()
+	return _u
 }
 
 // Mutation returns the ProvisionBucketMutation object of the builder.
 func (_u *ProvisionBucketUpdate) Mutation() *ProvisionBucketMutation {
 	return _u.mutation
-}
-
-// ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (_u *ProvisionBucketUpdate) ClearCurrency() *ProvisionBucketUpdate {
-	_u.mutation.ClearCurrency()
-	return _u
-}
-
-// ClearPaymentOrders clears all "payment_orders" edges to the PaymentOrder entity.
-func (_u *ProvisionBucketUpdate) ClearPaymentOrders() *ProvisionBucketUpdate {
-	_u.mutation.ClearPaymentOrders()
-	return _u
-}
-
-// RemovePaymentOrderIDs removes the "payment_orders" edge to PaymentOrder entities by IDs.
-func (_u *ProvisionBucketUpdate) RemovePaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdate {
-	_u.mutation.RemovePaymentOrderIDs(ids...)
-	return _u
-}
-
-// RemovePaymentOrders removes "payment_orders" edges to PaymentOrder entities.
-func (_u *ProvisionBucketUpdate) RemovePaymentOrders(v ...*PaymentOrder) *ProvisionBucketUpdate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemovePaymentOrderIDs(ids...)
-}
-
-// ClearProviderProfiles clears all "provider_profiles" edges to the ProviderProfile entity.
-func (_u *ProvisionBucketUpdate) ClearProviderProfiles() *ProvisionBucketUpdate {
-	_u.mutation.ClearProviderProfiles()
-	return _u
-}
-
-// RemoveProviderProfileIDs removes the "provider_profiles" edge to ProviderProfile entities by IDs.
-func (_u *ProvisionBucketUpdate) RemoveProviderProfileIDs(ids ...string) *ProvisionBucketUpdate {
-	_u.mutation.RemoveProviderProfileIDs(ids...)
-	return _u
-}
-
-// RemoveProviderProfiles removes "provider_profiles" edges to ProviderProfile entities.
-func (_u *ProvisionBucketUpdate) RemoveProviderProfiles(v ...*ProviderProfile) *ProvisionBucketUpdate {
-	ids := make([]string, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveProviderProfileIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -195,18 +123,7 @@ func (_u *ProvisionBucketUpdate) ExecX(ctx context.Context) {
 	}
 }
 
-// check runs all checks and user-defined validators on the builder.
-func (_u *ProvisionBucketUpdate) check() error {
-	if _u.mutation.CurrencyCleared() && len(_u.mutation.CurrencyIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "ProvisionBucket.currency"`)
-	}
-	return nil
-}
-
 func (_u *ProvisionBucketUpdate) sqlSave(ctx context.Context) (_node int, err error) {
-	if err := _u.check(); err != nil {
-		return _node, err
-	}
 	_spec := sqlgraph.NewUpdateSpec(provisionbucket.Table, provisionbucket.Columns, sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt))
 	if ps := _u.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -227,124 +144,11 @@ func (_u *ProvisionBucketUpdate) sqlSave(ctx context.Context) (_node int, err er
 	if value, ok := _u.mutation.AddedMaxAmount(); ok {
 		_spec.AddField(provisionbucket.FieldMaxAmount, field.TypeFloat64, value)
 	}
-	if _u.mutation.CurrencyCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   provisionbucket.CurrencyTable,
-			Columns: []string{provisionbucket.CurrencyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	if value, ok := _u.mutation.FiatCurrencyID(); ok {
+		_spec.SetField(provisionbucket.FieldFiatCurrencyID, field.TypeUUID, value)
 	}
-	if nodes := _u.mutation.CurrencyIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   provisionbucket.CurrencyTable,
-			Columns: []string{provisionbucket.CurrencyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.PaymentOrdersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   provisionbucket.PaymentOrdersTable,
-			Columns: []string{provisionbucket.PaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.PaymentOrdersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   provisionbucket.PaymentOrdersTable,
-			Columns: []string{provisionbucket.PaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   provisionbucket.PaymentOrdersTable,
-			Columns: []string{provisionbucket.PaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ProviderProfilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   provisionbucket.ProviderProfilesTable,
-			Columns: provisionbucket.ProviderProfilesPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedProviderProfilesIDs(); len(nodes) > 0 && !_u.mutation.ProviderProfilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   provisionbucket.ProviderProfilesTable,
-			Columns: provisionbucket.ProviderProfilesPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ProviderProfilesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   provisionbucket.ProviderProfilesTable,
-			Columns: provisionbucket.ProviderProfilesPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	if _u.mutation.FiatCurrencyIDCleared() {
+		_spec.ClearField(provisionbucket.FieldFiatCurrencyID, field.TypeUUID)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -408,98 +212,29 @@ func (_u *ProvisionBucketUpdateOne) AddMaxAmount(v decimal.Decimal) *ProvisionBu
 	return _u
 }
 
-// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by ID.
-func (_u *ProvisionBucketUpdateOne) SetCurrencyID(id uuid.UUID) *ProvisionBucketUpdateOne {
-	_u.mutation.SetCurrencyID(id)
+// SetFiatCurrencyID sets the "fiat_currency_id" field.
+func (_u *ProvisionBucketUpdateOne) SetFiatCurrencyID(v uuid.UUID) *ProvisionBucketUpdateOne {
+	_u.mutation.SetFiatCurrencyID(v)
 	return _u
 }
 
-// SetCurrency sets the "currency" edge to the FiatCurrency entity.
-func (_u *ProvisionBucketUpdateOne) SetCurrency(v *FiatCurrency) *ProvisionBucketUpdateOne {
-	return _u.SetCurrencyID(v.ID)
-}
-
-// AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (_u *ProvisionBucketUpdateOne) AddPaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdateOne {
-	_u.mutation.AddPaymentOrderIDs(ids...)
-	return _u
-}
-
-// AddPaymentOrders adds the "payment_orders" edges to the PaymentOrder entity.
-func (_u *ProvisionBucketUpdateOne) AddPaymentOrders(v ...*PaymentOrder) *ProvisionBucketUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
+// SetNillableFiatCurrencyID sets the "fiat_currency_id" field if the given value is not nil.
+func (_u *ProvisionBucketUpdateOne) SetNillableFiatCurrencyID(v *uuid.UUID) *ProvisionBucketUpdateOne {
+	if v != nil {
+		_u.SetFiatCurrencyID(*v)
 	}
-	return _u.AddPaymentOrderIDs(ids...)
-}
-
-// AddProviderProfileIDs adds the "provider_profiles" edge to the ProviderProfile entity by IDs.
-func (_u *ProvisionBucketUpdateOne) AddProviderProfileIDs(ids ...string) *ProvisionBucketUpdateOne {
-	_u.mutation.AddProviderProfileIDs(ids...)
 	return _u
 }
 
-// AddProviderProfiles adds the "provider_profiles" edges to the ProviderProfile entity.
-func (_u *ProvisionBucketUpdateOne) AddProviderProfiles(v ...*ProviderProfile) *ProvisionBucketUpdateOne {
-	ids := make([]string, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddProviderProfileIDs(ids...)
+// ClearFiatCurrencyID clears the value of the "fiat_currency_id" field.
+func (_u *ProvisionBucketUpdateOne) ClearFiatCurrencyID() *ProvisionBucketUpdateOne {
+	_u.mutation.ClearFiatCurrencyID()
+	return _u
 }
 
 // Mutation returns the ProvisionBucketMutation object of the builder.
 func (_u *ProvisionBucketUpdateOne) Mutation() *ProvisionBucketMutation {
 	return _u.mutation
-}
-
-// ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (_u *ProvisionBucketUpdateOne) ClearCurrency() *ProvisionBucketUpdateOne {
-	_u.mutation.ClearCurrency()
-	return _u
-}
-
-// ClearPaymentOrders clears all "payment_orders" edges to the PaymentOrder entity.
-func (_u *ProvisionBucketUpdateOne) ClearPaymentOrders() *ProvisionBucketUpdateOne {
-	_u.mutation.ClearPaymentOrders()
-	return _u
-}
-
-// RemovePaymentOrderIDs removes the "payment_orders" edge to PaymentOrder entities by IDs.
-func (_u *ProvisionBucketUpdateOne) RemovePaymentOrderIDs(ids ...uuid.UUID) *ProvisionBucketUpdateOne {
-	_u.mutation.RemovePaymentOrderIDs(ids...)
-	return _u
-}
-
-// RemovePaymentOrders removes "payment_orders" edges to PaymentOrder entities.
-func (_u *ProvisionBucketUpdateOne) RemovePaymentOrders(v ...*PaymentOrder) *ProvisionBucketUpdateOne {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemovePaymentOrderIDs(ids...)
-}
-
-// ClearProviderProfiles clears all "provider_profiles" edges to the ProviderProfile entity.
-func (_u *ProvisionBucketUpdateOne) ClearProviderProfiles() *ProvisionBucketUpdateOne {
-	_u.mutation.ClearProviderProfiles()
-	return _u
-}
-
-// RemoveProviderProfileIDs removes the "provider_profiles" edge to ProviderProfile entities by IDs.
-func (_u *ProvisionBucketUpdateOne) RemoveProviderProfileIDs(ids ...string) *ProvisionBucketUpdateOne {
-	_u.mutation.RemoveProviderProfileIDs(ids...)
-	return _u
-}
-
-// RemoveProviderProfiles removes "provider_profiles" edges to ProviderProfile entities.
-func (_u *ProvisionBucketUpdateOne) RemoveProviderProfiles(v ...*ProviderProfile) *ProvisionBucketUpdateOne {
-	ids := make([]string, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveProviderProfileIDs(ids...)
 }
 
 // Where appends a list predicates to the ProvisionBucketUpdate builder.
@@ -542,18 +277,7 @@ func (_u *ProvisionBucketUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
-// check runs all checks and user-defined validators on the builder.
-func (_u *ProvisionBucketUpdateOne) check() error {
-	if _u.mutation.CurrencyCleared() && len(_u.mutation.CurrencyIDs()) > 0 {
-		return errors.New(`ent: clearing a required unique edge "ProvisionBucket.currency"`)
-	}
-	return nil
-}
-
 func (_u *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *ProvisionBucket, err error) {
-	if err := _u.check(); err != nil {
-		return _node, err
-	}
 	_spec := sqlgraph.NewUpdateSpec(provisionbucket.Table, provisionbucket.Columns, sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt))
 	id, ok := _u.mutation.ID()
 	if !ok {
@@ -591,124 +315,11 @@ func (_u *ProvisionBucketUpdateOne) sqlSave(ctx context.Context) (_node *Provisi
 	if value, ok := _u.mutation.AddedMaxAmount(); ok {
 		_spec.AddField(provisionbucket.FieldMaxAmount, field.TypeFloat64, value)
 	}
-	if _u.mutation.CurrencyCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   provisionbucket.CurrencyTable,
-			Columns: []string{provisionbucket.CurrencyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	if value, ok := _u.mutation.FiatCurrencyID(); ok {
+		_spec.SetField(provisionbucket.FieldFiatCurrencyID, field.TypeUUID, value)
 	}
-	if nodes := _u.mutation.CurrencyIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   provisionbucket.CurrencyTable,
-			Columns: []string{provisionbucket.CurrencyColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.PaymentOrdersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   provisionbucket.PaymentOrdersTable,
-			Columns: []string{provisionbucket.PaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedPaymentOrdersIDs(); len(nodes) > 0 && !_u.mutation.PaymentOrdersCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   provisionbucket.PaymentOrdersTable,
-			Columns: []string{provisionbucket.PaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.PaymentOrdersIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   provisionbucket.PaymentOrdersTable,
-			Columns: []string{provisionbucket.PaymentOrdersColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ProviderProfilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   provisionbucket.ProviderProfilesTable,
-			Columns: provisionbucket.ProviderProfilesPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedProviderProfilesIDs(); len(nodes) > 0 && !_u.mutation.ProviderProfilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   provisionbucket.ProviderProfilesTable,
-			Columns: provisionbucket.ProviderProfilesPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ProviderProfilesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: false,
-			Table:   provisionbucket.ProviderProfilesTable,
-			Columns: provisionbucket.ProviderProfilesPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerprofile.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	if _u.mutation.FiatCurrencyIDCleared() {
+		_spec.ClearField(provisionbucket.FieldFiatCurrencyID, field.TypeUUID)
 	}
 	_node = &ProvisionBucket{config: _u.config}
 	_spec.Assign = _node.assignValues

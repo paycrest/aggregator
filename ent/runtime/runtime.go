@@ -16,9 +16,11 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/ent/providerassignmentrun"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -364,6 +366,32 @@ func init() {
 	paymentwebhookDescID := paymentwebhookFields[0].Descriptor()
 	// paymentwebhook.DefaultID holds the default value on creation for the id field.
 	paymentwebhook.DefaultID = paymentwebhookDescID.Default.(func() uuid.UUID)
+	providerassignmentrunFields := schema.ProviderAssignmentRun{}.Fields()
+	_ = providerassignmentrunFields
+	// providerassignmentrunDescAssignedProviderID is the schema descriptor for assigned_provider_id field.
+	providerassignmentrunDescAssignedProviderID := providerassignmentrunFields[1].Descriptor()
+	// providerassignmentrun.AssignedProviderIDValidator is a validator for the "assigned_provider_id" field. It is called by the builders before save.
+	providerassignmentrun.AssignedProviderIDValidator = providerassignmentrunDescAssignedProviderID.Validators[0].(func(string) error)
+	// providerassignmentrunDescAttemptedAt is the schema descriptor for attempted_at field.
+	providerassignmentrunDescAttemptedAt := providerassignmentrunFields[2].Descriptor()
+	// providerassignmentrun.DefaultAttemptedAt holds the default value on creation for the attempted_at field.
+	providerassignmentrun.DefaultAttemptedAt = providerassignmentrunDescAttemptedAt.Default.(func() time.Time)
+	// providerassignmentrunDescTrigger is the schema descriptor for trigger field.
+	providerassignmentrunDescTrigger := providerassignmentrunFields[3].Descriptor()
+	// providerassignmentrun.TriggerValidator is a validator for the "trigger" field. It is called by the builders before save.
+	providerassignmentrun.TriggerValidator = providerassignmentrunDescTrigger.Validators[0].(func(string) error)
+	// providerassignmentrunDescResult is the schema descriptor for result field.
+	providerassignmentrunDescResult := providerassignmentrunFields[4].Descriptor()
+	// providerassignmentrun.ResultValidator is a validator for the "result" field. It is called by the builders before save.
+	providerassignmentrun.ResultValidator = providerassignmentrunDescResult.Validators[0].(func(string) error)
+	// providerassignmentrunDescUsedFallback is the schema descriptor for used_fallback field.
+	providerassignmentrunDescUsedFallback := providerassignmentrunFields[5].Descriptor()
+	// providerassignmentrun.DefaultUsedFallback holds the default value on creation for the used_fallback field.
+	providerassignmentrun.DefaultUsedFallback = providerassignmentrunDescUsedFallback.Default.(bool)
+	// providerassignmentrunDescID is the schema descriptor for id field.
+	providerassignmentrunDescID := providerassignmentrunFields[0].Descriptor()
+	// providerassignmentrun.DefaultID holds the default value on creation for the id field.
+	providerassignmentrun.DefaultID = providerassignmentrunDescID.Default.(func() uuid.UUID)
 	providerbalancesFields := schema.ProviderBalances{}.Fields()
 	_ = providerbalancesFields
 	// providerbalancesDescAvailableBalance is the schema descriptor for available_balance field.
@@ -484,6 +512,39 @@ func init() {
 	providerordertoken.DefaultUpdatedAt = providerordertokenDescUpdatedAt.Default.(func() time.Time)
 	// providerordertoken.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	providerordertoken.UpdateDefaultUpdatedAt = providerordertokenDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// providerordertokenDescScoreOnramp is the schema descriptor for score_onramp field.
+	providerordertokenDescScoreOnramp := providerordertokenFields[12].Descriptor()
+	// providerordertoken.DefaultScoreOnramp holds the default value on creation for the score_onramp field.
+	providerordertoken.DefaultScoreOnramp = providerordertokenDescScoreOnramp.Default.(func() decimal.Decimal)
+	// providerordertokenDescScoreOfframp is the schema descriptor for score_offramp field.
+	providerordertokenDescScoreOfframp := providerordertokenFields[13].Descriptor()
+	// providerordertoken.DefaultScoreOfframp holds the default value on creation for the score_offramp field.
+	providerordertoken.DefaultScoreOfframp = providerordertokenDescScoreOfframp.Default.(func() decimal.Decimal)
+	providerordertokenscorehistoryMixin := schema.ProviderOrderTokenScoreHistory{}.Mixin()
+	providerordertokenscorehistoryHooks := schema.ProviderOrderTokenScoreHistory{}.Hooks()
+	providerordertokenscorehistory.Hooks[0] = providerordertokenscorehistoryHooks[0]
+	providerordertokenscorehistoryMixinFields0 := providerordertokenscorehistoryMixin[0].Fields()
+	_ = providerordertokenscorehistoryMixinFields0
+	providerordertokenscorehistoryFields := schema.ProviderOrderTokenScoreHistory{}.Fields()
+	_ = providerordertokenscorehistoryFields
+	// providerordertokenscorehistoryDescCreatedAt is the schema descriptor for created_at field.
+	providerordertokenscorehistoryDescCreatedAt := providerordertokenscorehistoryMixinFields0[0].Descriptor()
+	// providerordertokenscorehistory.DefaultCreatedAt holds the default value on creation for the created_at field.
+	providerordertokenscorehistory.DefaultCreatedAt = providerordertokenscorehistoryDescCreatedAt.Default.(func() time.Time)
+	// providerordertokenscorehistoryDescUpdatedAt is the schema descriptor for updated_at field.
+	providerordertokenscorehistoryDescUpdatedAt := providerordertokenscorehistoryMixinFields0[1].Descriptor()
+	// providerordertokenscorehistory.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	providerordertokenscorehistory.DefaultUpdatedAt = providerordertokenscorehistoryDescUpdatedAt.Default.(func() time.Time)
+	// providerordertokenscorehistory.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	providerordertokenscorehistory.UpdateDefaultUpdatedAt = providerordertokenscorehistoryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// providerordertokenscorehistoryDescEventType is the schema descriptor for event_type field.
+	providerordertokenscorehistoryDescEventType := providerordertokenscorehistoryFields[1].Descriptor()
+	// providerordertokenscorehistory.EventTypeValidator is a validator for the "event_type" field. It is called by the builders before save.
+	providerordertokenscorehistory.EventTypeValidator = providerordertokenscorehistoryDescEventType.Validators[0].(func(string) error)
+	// providerordertokenscorehistoryDescID is the schema descriptor for id field.
+	providerordertokenscorehistoryDescID := providerordertokenscorehistoryFields[0].Descriptor()
+	// providerordertokenscorehistory.DefaultID holds the default value on creation for the id field.
+	providerordertokenscorehistory.DefaultID = providerordertokenscorehistoryDescID.Default.(func() uuid.UUID)
 	providerprofileFields := schema.ProviderProfile{}.Fields()
 	_ = providerprofileFields
 	// providerprofileDescTradingName is the schema descriptor for trading_name field.
@@ -705,6 +766,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.5"                                         // Version of ent codegen.
-	Sum     = "h1:Rj2WOYJtCkWyFo6a+5wB3EfBRP0rnx1fMk6gGA0UUe4=" // Sum of ent codegen.
+	Version = "v0.14.6"                                         // Version of ent codegen.
+	Sum     = "h1:/f2696BpwuWAEEG6PVGWflg6+Inrpq4pRWuNlWz/Skk=" // Sum of ent codegen.
 )

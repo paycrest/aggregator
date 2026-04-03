@@ -9,6 +9,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/paycrest/aggregator/ent"
 	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/assignment"
 	"github.com/paycrest/aggregator/services/common"
 	explorer "github.com/paycrest/aggregator/services/explorer"
 	"github.com/paycrest/aggregator/services/order"
@@ -20,7 +21,7 @@ import (
 
 // IndexerEVM performs blockchain to database extract, transform, load (ETL) operations.
 type IndexerEVM struct {
-	priorityQueue     *services.PriorityQueueService
+	priorityQueue     *assignment.Service
 	order             types.OrderService
 	engineService     *services.EngineService
 	etherscanService  *explorer.EtherscanService
@@ -29,7 +30,6 @@ type IndexerEVM struct {
 
 // NewIndexerEVM creates a new instance of IndexerEVM.
 func NewIndexerEVM() (types.Indexer, error) {
-	priorityQueue := services.NewPriorityQueueService()
 	orderService := order.NewOrderEVM()
 	engineService := services.NewEngineService()
 	etherscanService, err := explorer.NewEtherscanService()
@@ -39,7 +39,7 @@ func NewIndexerEVM() (types.Indexer, error) {
 	blockscoutService := explorer.NewBlockscoutService()
 
 	return &IndexerEVM{
-		priorityQueue:     priorityQueue,
+		priorityQueue:     assignment.New(),
 		order:             orderService,
 		engineService:     engineService,
 		etherscanService:  etherscanService,

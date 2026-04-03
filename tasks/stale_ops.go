@@ -8,18 +8,15 @@ import (
 	"time"
 
 	"github.com/paycrest/aggregator/ent"
-	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/transactionlog"
-	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/assignment"
 	orderService "github.com/paycrest/aggregator/services/order"
 	starknetService "github.com/paycrest/aggregator/services/starknet"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
-	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
 )
 
@@ -422,9 +419,6 @@ func RetryStaleUserOperations() error {
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
-		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-			pbq.WithCurrency()
-		}).
 		WithProvider().
 		All(ctx)
 	if err != nil {
@@ -459,7 +453,7 @@ func RetryStaleUserOperations() error {
 				}
 			}
 
-			pq := services.NewPriorityQueueService()
+			pq := assignment.New()
 
 			// If the order could still be reassigned to another public provider (per order_requests logic),
 			if order.CancellationCount < orderConf.RefundCancellationCount {
@@ -467,8 +461,7 @@ func RetryStaleUserOperations() error {
 				tryFullQueue := !fallbackAlreadyTried
 
 				// No provider or public provider: can try full-queue (reassign to public). Private provider: skip full-queue.
-				// Allow nil bucket so we can try to resolve and persist it before assignment (another node can then pick the order).
-				canTryFullQueue := (order.Edges.ProvisionBucket == nil || (order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil)) &&
+				canTryFullQueue := order.Institution != "" &&
 					(order.Edges.Provider == nil || order.Edges.Provider.VisibilityMode != providerprofile.VisibilityModePrivate)
 
 				if tryFullQueue && canTryFullQueue {
@@ -482,66 +475,37 @@ func RetryStaleUserOperations() error {
 							Save(ctx)
 					}
 
-					// Resolve and persist nil provision bucket so AssignPaymentOrder can run and another node can pick the order.
-					if order.Edges.ProvisionBucket == nil {
-						institution, instErr := utils.GetInstitutionByCode(ctx, order.Institution, true)
-						if instErr == nil && institution != nil && institution.Edges.FiatCurrency != nil {
-							fiatAmount := order.Amount.Mul(order.Rate)
-							bucket, bErr := storage.Client.ProvisionBucket.
-								Query().
-								Where(
-									provisionbucket.MaxAmountGTE(fiatAmount),
-									provisionbucket.MinAmountLTE(fiatAmount),
-									provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(institution.Edges.FiatCurrency.ID)),
-								).
-								WithCurrency().
-								First(ctx)
-							if bErr == nil && bucket != nil {
-								if _, upErr := storage.Client.PaymentOrder.UpdateOneID(order.ID).SetProvisionBucket(bucket).Save(ctx); upErr == nil {
-									order.Edges.ProvisionBucket = bucket
-								}
-							}
-						}
-						if order.Edges.ProvisionBucket == nil {
-							logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Warnf("stale_ops: could not resolve provision bucket for order; skipping full-queue assignment")
-						}
+					orderFields := types.PaymentOrderFields{
+						ID:                order.ID,
+						OrderType:         order.OrderType.String(),
+						Token:             order.Edges.Token,
+						GatewayID:         order.GatewayID,
+						Amount:            order.Amount,
+						Rate:              order.Rate,
+						Institution:       order.Institution,
+						AccountIdentifier: order.AccountIdentifier,
+						AccountName:       order.AccountName,
+						ProviderID:        "",
+						MessageHash:       order.MessageHash,
+						Memo:              order.Memo,
+						UpdatedAt:         order.UpdatedAt,
+						CreatedAt:         order.CreatedAt,
+					}
+					if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
+						orderFields.Network = order.Edges.Token.Edges.Network
 					}
 
-					if order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
-						orderFields := types.PaymentOrderFields{
-							ID:                order.ID,
-							OrderType:         order.OrderType.String(),
-							Token:             order.Edges.Token,
-							GatewayID:         order.GatewayID,
-							Amount:            order.Amount,
-							Rate:              order.Rate,
-							Institution:       order.Institution,
-							AccountIdentifier: order.AccountIdentifier,
-							AccountName:       order.AccountName,
-							ProviderID:        "",
-							ProvisionBucket:   order.Edges.ProvisionBucket,
-							MessageHash:       order.MessageHash,
-							Memo:              order.Memo,
-							UpdatedAt:         order.UpdatedAt,
-							CreatedAt:         order.CreatedAt,
-						}
-						if order.Edges.Token != nil && order.Edges.Token.Edges.Network != nil {
-							orderFields.Network = order.Edges.Token.Edges.Network
-						}
-
-						err := pq.AssignPaymentOrder(ctx, orderFields)
-						if err == nil {
-							logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Infof("order assigned to provider during refund process; skipping refund")
-							continue
-						}
-						// We tried public reassignment and it failed; set cancellation count to threshold immediately so we can refund.
-						// Any failure should proceed to try fallback, else proceed with refund
-						_, _ = storage.Client.PaymentOrder.
-							Update().
-							Where(paymentorder.IDEQ(order.ID)).
-							SetCancellationCount(orderConf.RefundCancellationCount).
-							Save(ctx)
+					err := pq.AssignPaymentOrderWithTrigger(ctx, orderFields, assignment.AssignmentTriggerStaleOps)
+					if err == nil {
+						logger.WithFields(logger.Fields{"OrderID": order.ID.String()}).Infof("order assigned to provider during refund process; skipping refund")
+						continue
 					}
+					// We tried public reassignment and it failed; set cancellation count to threshold immediately so we can refund.
+					_, _ = storage.Client.PaymentOrder.
+						Update().
+						Where(paymentorder.IDEQ(order.ID)).
+						SetCancellationCount(orderConf.RefundCancellationCount).
+						Save(ctx)
 				}
 
 				// Private orders: try assignment to pre-set provider (AssignPaymentOrder accepts nil bucket for pre-set provider).
@@ -564,7 +528,6 @@ func RetryStaleUserOperations() error {
 						AccountIdentifier: order.AccountIdentifier,
 						AccountName:       order.AccountName,
 						ProviderID:        order.Edges.Provider.ID,
-						ProvisionBucket:   order.Edges.ProvisionBucket,
 						MessageHash:       order.MessageHash,
 						Memo:              order.Memo,
 						UpdatedAt:         order.UpdatedAt,
@@ -585,7 +548,7 @@ func RetryStaleUserOperations() error {
 			// Fallback only succeeds when order_request_* key is gone (expired or cleared); TryFallbackAssignment returns error if key exists.
 			// Any failure should proceed with refund
 			if tryFallback {
-				err := pq.TryFallbackAssignment(ctx, order)
+				err := pq.TryFallbackAssignment(ctx, order, false)
 				if err == nil {
 					continue
 				}

@@ -23,9 +23,11 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerassignmentrun"
 	"github.com/paycrest/aggregator/ent/providerbalances"
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
 	"github.com/paycrest/aggregator/ent/provisionbucket"
@@ -48,29 +50,31 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAPIKey                      = "APIKey"
-	TypeBeneficialOwner             = "BeneficialOwner"
-	TypeFiatCurrency                = "FiatCurrency"
-	TypeIdentityVerificationRequest = "IdentityVerificationRequest"
-	TypeInstitution                 = "Institution"
-	TypeKYBProfile                  = "KYBProfile"
-	TypeNetwork                     = "Network"
-	TypePaymentOrder                = "PaymentOrder"
-	TypePaymentOrderFulfillment     = "PaymentOrderFulfillment"
-	TypePaymentWebhook              = "PaymentWebhook"
-	TypeProviderBalances            = "ProviderBalances"
-	TypeProviderFiatAccount         = "ProviderFiatAccount"
-	TypeProviderOrderToken          = "ProviderOrderToken"
-	TypeProviderProfile             = "ProviderProfile"
-	TypeProviderRating              = "ProviderRating"
-	TypeProvisionBucket             = "ProvisionBucket"
-	TypeSenderOrderToken            = "SenderOrderToken"
-	TypeSenderProfile               = "SenderProfile"
-	TypeToken                       = "Token"
-	TypeTransactionLog              = "TransactionLog"
-	TypeUser                        = "User"
-	TypeVerificationToken           = "VerificationToken"
-	TypeWebhookRetryAttempt         = "WebhookRetryAttempt"
+	TypeAPIKey                         = "APIKey"
+	TypeBeneficialOwner                = "BeneficialOwner"
+	TypeFiatCurrency                   = "FiatCurrency"
+	TypeIdentityVerificationRequest    = "IdentityVerificationRequest"
+	TypeInstitution                    = "Institution"
+	TypeKYBProfile                     = "KYBProfile"
+	TypeNetwork                        = "Network"
+	TypePaymentOrder                   = "PaymentOrder"
+	TypePaymentOrderFulfillment        = "PaymentOrderFulfillment"
+	TypePaymentWebhook                 = "PaymentWebhook"
+	TypeProviderAssignmentRun          = "ProviderAssignmentRun"
+	TypeProviderBalances               = "ProviderBalances"
+	TypeProviderFiatAccount            = "ProviderFiatAccount"
+	TypeProviderOrderToken             = "ProviderOrderToken"
+	TypeProviderOrderTokenScoreHistory = "ProviderOrderTokenScoreHistory"
+	TypeProviderProfile                = "ProviderProfile"
+	TypeProviderRating                 = "ProviderRating"
+	TypeProvisionBucket                = "ProvisionBucket"
+	TypeSenderOrderToken               = "SenderOrderToken"
+	TypeSenderProfile                  = "SenderProfile"
+	TypeToken                          = "Token"
+	TypeTransactionLog                 = "TransactionLog"
+	TypeUser                           = "User"
+	TypeVerificationToken              = "VerificationToken"
+	TypeWebhookRetryAttempt            = "WebhookRetryAttempt"
 )
 
 // APIKeyMutation represents an operation that mutates the APIKey nodes in the graph.
@@ -1420,9 +1424,6 @@ type FiatCurrencyMutation struct {
 	provider_balances            map[uuid.UUID]struct{}
 	removedprovider_balances     map[uuid.UUID]struct{}
 	clearedprovider_balances     bool
-	provision_buckets            map[int]struct{}
-	removedprovision_buckets     map[int]struct{}
-	clearedprovision_buckets     bool
 	institutions                 map[int]struct{}
 	removedinstitutions          map[int]struct{}
 	clearedinstitutions          bool
@@ -2040,60 +2041,6 @@ func (m *FiatCurrencyMutation) ResetProviderBalances() {
 	m.removedprovider_balances = nil
 }
 
-// AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by ids.
-func (m *FiatCurrencyMutation) AddProvisionBucketIDs(ids ...int) {
-	if m.provision_buckets == nil {
-		m.provision_buckets = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.provision_buckets[ids[i]] = struct{}{}
-	}
-}
-
-// ClearProvisionBuckets clears the "provision_buckets" edge to the ProvisionBucket entity.
-func (m *FiatCurrencyMutation) ClearProvisionBuckets() {
-	m.clearedprovision_buckets = true
-}
-
-// ProvisionBucketsCleared reports if the "provision_buckets" edge to the ProvisionBucket entity was cleared.
-func (m *FiatCurrencyMutation) ProvisionBucketsCleared() bool {
-	return m.clearedprovision_buckets
-}
-
-// RemoveProvisionBucketIDs removes the "provision_buckets" edge to the ProvisionBucket entity by IDs.
-func (m *FiatCurrencyMutation) RemoveProvisionBucketIDs(ids ...int) {
-	if m.removedprovision_buckets == nil {
-		m.removedprovision_buckets = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.provision_buckets, ids[i])
-		m.removedprovision_buckets[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedProvisionBuckets returns the removed IDs of the "provision_buckets" edge to the ProvisionBucket entity.
-func (m *FiatCurrencyMutation) RemovedProvisionBucketsIDs() (ids []int) {
-	for id := range m.removedprovision_buckets {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ProvisionBucketsIDs returns the "provision_buckets" edge IDs in the mutation.
-func (m *FiatCurrencyMutation) ProvisionBucketsIDs() (ids []int) {
-	for id := range m.provision_buckets {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetProvisionBuckets resets all changes to the "provision_buckets" edge.
-func (m *FiatCurrencyMutation) ResetProvisionBuckets() {
-	m.provision_buckets = nil
-	m.clearedprovision_buckets = false
-	m.removedprovision_buckets = nil
-}
-
 // AddInstitutionIDs adds the "institutions" edge to the Institution entity by ids.
 func (m *FiatCurrencyMutation) AddInstitutionIDs(ids ...int) {
 	if m.institutions == nil {
@@ -2542,12 +2489,9 @@ func (m *FiatCurrencyMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *FiatCurrencyMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 3)
 	if m.provider_balances != nil {
 		edges = append(edges, fiatcurrency.EdgeProviderBalances)
-	}
-	if m.provision_buckets != nil {
-		edges = append(edges, fiatcurrency.EdgeProvisionBuckets)
 	}
 	if m.institutions != nil {
 		edges = append(edges, fiatcurrency.EdgeInstitutions)
@@ -2565,12 +2509,6 @@ func (m *FiatCurrencyMutation) AddedIDs(name string) []ent.Value {
 	case fiatcurrency.EdgeProviderBalances:
 		ids := make([]ent.Value, 0, len(m.provider_balances))
 		for id := range m.provider_balances {
-			ids = append(ids, id)
-		}
-		return ids
-	case fiatcurrency.EdgeProvisionBuckets:
-		ids := make([]ent.Value, 0, len(m.provision_buckets))
-		for id := range m.provision_buckets {
 			ids = append(ids, id)
 		}
 		return ids
@@ -2592,12 +2530,9 @@ func (m *FiatCurrencyMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *FiatCurrencyMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 3)
 	if m.removedprovider_balances != nil {
 		edges = append(edges, fiatcurrency.EdgeProviderBalances)
-	}
-	if m.removedprovision_buckets != nil {
-		edges = append(edges, fiatcurrency.EdgeProvisionBuckets)
 	}
 	if m.removedinstitutions != nil {
 		edges = append(edges, fiatcurrency.EdgeInstitutions)
@@ -2615,12 +2550,6 @@ func (m *FiatCurrencyMutation) RemovedIDs(name string) []ent.Value {
 	case fiatcurrency.EdgeProviderBalances:
 		ids := make([]ent.Value, 0, len(m.removedprovider_balances))
 		for id := range m.removedprovider_balances {
-			ids = append(ids, id)
-		}
-		return ids
-	case fiatcurrency.EdgeProvisionBuckets:
-		ids := make([]ent.Value, 0, len(m.removedprovision_buckets))
-		for id := range m.removedprovision_buckets {
 			ids = append(ids, id)
 		}
 		return ids
@@ -2642,12 +2571,9 @@ func (m *FiatCurrencyMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *FiatCurrencyMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 3)
 	if m.clearedprovider_balances {
 		edges = append(edges, fiatcurrency.EdgeProviderBalances)
-	}
-	if m.clearedprovision_buckets {
-		edges = append(edges, fiatcurrency.EdgeProvisionBuckets)
 	}
 	if m.clearedinstitutions {
 		edges = append(edges, fiatcurrency.EdgeInstitutions)
@@ -2664,8 +2590,6 @@ func (m *FiatCurrencyMutation) EdgeCleared(name string) bool {
 	switch name {
 	case fiatcurrency.EdgeProviderBalances:
 		return m.clearedprovider_balances
-	case fiatcurrency.EdgeProvisionBuckets:
-		return m.clearedprovision_buckets
 	case fiatcurrency.EdgeInstitutions:
 		return m.clearedinstitutions
 	case fiatcurrency.EdgeProviderOrderTokens:
@@ -2688,9 +2612,6 @@ func (m *FiatCurrencyMutation) ResetEdge(name string) error {
 	switch name {
 	case fiatcurrency.EdgeProviderBalances:
 		m.ResetProviderBalances()
-		return nil
-	case fiatcurrency.EdgeProvisionBuckets:
-		m.ResetProvisionBuckets()
 		return nil
 	case fiatcurrency.EdgeInstitutions:
 		m.ResetInstitutions()
@@ -6504,80 +6425,90 @@ func (m *NetworkMutation) ResetEdge(name string) error {
 // PaymentOrderMutation represents an operation that mutates the PaymentOrder nodes in the graph.
 type PaymentOrderMutation struct {
 	config
-	op                          Op
-	typ                         string
-	id                          *uuid.UUID
-	created_at                  *time.Time
-	updated_at                  *time.Time
-	amount                      *decimal.Decimal
-	addamount                   *decimal.Decimal
-	rate                        *decimal.Decimal
-	addrate                     *decimal.Decimal
-	amount_in_usd               *decimal.Decimal
-	addamount_in_usd            *decimal.Decimal
-	amount_paid                 *decimal.Decimal
-	addamount_paid              *decimal.Decimal
-	amount_returned             *decimal.Decimal
-	addamount_returned          *decimal.Decimal
-	percent_settled             *decimal.Decimal
-	addpercent_settled          *decimal.Decimal
-	sender_fee                  *decimal.Decimal
-	addsender_fee               *decimal.Decimal
-	network_fee                 *decimal.Decimal
-	addnetwork_fee              *decimal.Decimal
-	protocol_fee                *decimal.Decimal
-	addprotocol_fee             *decimal.Decimal
-	order_percent               *decimal.Decimal
-	addorder_percent            *decimal.Decimal
-	fee_percent                 *decimal.Decimal
-	addfee_percent              *decimal.Decimal
-	tx_hash                     *string
-	block_number                *int64
-	addblock_number             *int64
-	message_hash                *string
-	gateway_id                  *string
-	from_address                *string
-	refund_or_recipient_address *string
-	receive_address             *string
-	receive_address_salt        *[]byte
-	receive_address_expiry      *time.Time
-	fee_address                 *string
-	indexer_created_at          *time.Time
-	institution                 *string
-	account_identifier          *string
-	account_name                *string
-	metadata                    *map[string]interface{}
-	sender                      *string
-	reference                   *string
-	cancellation_count          *int
-	addcancellation_count       *int
-	cancellation_reasons        *[]string
-	appendcancellation_reasons  []string
-	memo                        *string
-	status                      *paymentorder.Status
-	direction                   *paymentorder.Direction
-	order_type                  *paymentorder.OrderType
-	fallback_tried_at           *time.Time
-	clearedFields               map[string]struct{}
-	token                       *int
-	clearedtoken                bool
-	sender_profile              *uuid.UUID
-	clearedsender_profile       bool
-	payment_webhook             *uuid.UUID
-	clearedpayment_webhook      bool
-	provider                    *string
-	clearedprovider             bool
-	provision_bucket            *int
-	clearedprovision_bucket     bool
-	fulfillments                map[uuid.UUID]struct{}
-	removedfulfillments         map[uuid.UUID]struct{}
-	clearedfulfillments         bool
-	transactions                map[uuid.UUID]struct{}
-	removedtransactions         map[uuid.UUID]struct{}
-	clearedtransactions         bool
-	done                        bool
-	oldValue                    func(context.Context) (*PaymentOrder, error)
-	predicates                  []predicate.PaymentOrder
+	op                                          Op
+	typ                                         string
+	id                                          *uuid.UUID
+	created_at                                  *time.Time
+	updated_at                                  *time.Time
+	amount                                      *decimal.Decimal
+	addamount                                   *decimal.Decimal
+	rate                                        *decimal.Decimal
+	addrate                                     *decimal.Decimal
+	amount_in_usd                               *decimal.Decimal
+	addamount_in_usd                            *decimal.Decimal
+	amount_paid                                 *decimal.Decimal
+	addamount_paid                              *decimal.Decimal
+	amount_returned                             *decimal.Decimal
+	addamount_returned                          *decimal.Decimal
+	percent_settled                             *decimal.Decimal
+	addpercent_settled                          *decimal.Decimal
+	sender_fee                                  *decimal.Decimal
+	addsender_fee                               *decimal.Decimal
+	network_fee                                 *decimal.Decimal
+	addnetwork_fee                              *decimal.Decimal
+	protocol_fee                                *decimal.Decimal
+	addprotocol_fee                             *decimal.Decimal
+	order_percent                               *decimal.Decimal
+	addorder_percent                            *decimal.Decimal
+	fee_percent                                 *decimal.Decimal
+	addfee_percent                              *decimal.Decimal
+	tx_hash                                     *string
+	block_number                                *int64
+	addblock_number                             *int64
+	message_hash                                *string
+	gateway_id                                  *string
+	from_address                                *string
+	refund_or_recipient_address                 *string
+	receive_address                             *string
+	receive_address_salt                        *[]byte
+	receive_address_expiry                      *time.Time
+	fee_address                                 *string
+	indexer_created_at                          *time.Time
+	institution                                 *string
+	account_identifier                          *string
+	account_name                                *string
+	metadata                                    *map[string]interface{}
+	sender                                      *string
+	reference                                   *string
+	cancellation_count                          *int
+	addcancellation_count                       *int
+	cancellation_reasons                        *[]string
+	appendcancellation_reasons                  []string
+	memo                                        *string
+	status                                      *paymentorder.Status
+	direction                                   *paymentorder.Direction
+	order_type                                  *paymentorder.OrderType
+	fallback_tried_at                           *time.Time
+	assignment_market_buy_rate                  *decimal.Decimal
+	addassignment_market_buy_rate               *decimal.Decimal
+	assignment_market_sell_rate                 *decimal.Decimal
+	addassignment_market_sell_rate              *decimal.Decimal
+	legacy_provision_bucket_id                  *int
+	addlegacy_provision_bucket_id               *int
+	clearedFields                               map[string]struct{}
+	token                                       *int
+	clearedtoken                                bool
+	sender_profile                              *uuid.UUID
+	clearedsender_profile                       bool
+	payment_webhook                             *uuid.UUID
+	clearedpayment_webhook                      bool
+	provider                                    *string
+	clearedprovider                             bool
+	fulfillments                                map[uuid.UUID]struct{}
+	removedfulfillments                         map[uuid.UUID]struct{}
+	clearedfulfillments                         bool
+	transactions                                map[uuid.UUID]struct{}
+	removedtransactions                         map[uuid.UUID]struct{}
+	clearedtransactions                         bool
+	provider_assignment_runs                    map[uuid.UUID]struct{}
+	removedprovider_assignment_runs             map[uuid.UUID]struct{}
+	clearedprovider_assignment_runs             bool
+	provider_order_token_score_histories        map[uuid.UUID]struct{}
+	removedprovider_order_token_score_histories map[uuid.UUID]struct{}
+	clearedprovider_order_token_score_histories bool
+	done                                        bool
+	oldValue                                    func(context.Context) (*PaymentOrder, error)
+	predicates                                  []predicate.PaymentOrder
 }
 
 var _ ent.Mutation = (*PaymentOrderMutation)(nil)
@@ -8514,6 +8445,216 @@ func (m *PaymentOrderMutation) ResetFallbackTriedAt() {
 	delete(m.clearedFields, paymentorder.FieldFallbackTriedAt)
 }
 
+// SetAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field.
+func (m *PaymentOrderMutation) SetAssignmentMarketBuyRate(d decimal.Decimal) {
+	m.assignment_market_buy_rate = &d
+	m.addassignment_market_buy_rate = nil
+}
+
+// AssignmentMarketBuyRate returns the value of the "assignment_market_buy_rate" field in the mutation.
+func (m *PaymentOrderMutation) AssignmentMarketBuyRate() (r decimal.Decimal, exists bool) {
+	v := m.assignment_market_buy_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAssignmentMarketBuyRate returns the old "assignment_market_buy_rate" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldAssignmentMarketBuyRate(ctx context.Context) (v *decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAssignmentMarketBuyRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAssignmentMarketBuyRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAssignmentMarketBuyRate: %w", err)
+	}
+	return oldValue.AssignmentMarketBuyRate, nil
+}
+
+// AddAssignmentMarketBuyRate adds d to the "assignment_market_buy_rate" field.
+func (m *PaymentOrderMutation) AddAssignmentMarketBuyRate(d decimal.Decimal) {
+	if m.addassignment_market_buy_rate != nil {
+		*m.addassignment_market_buy_rate = m.addassignment_market_buy_rate.Add(d)
+	} else {
+		m.addassignment_market_buy_rate = &d
+	}
+}
+
+// AddedAssignmentMarketBuyRate returns the value that was added to the "assignment_market_buy_rate" field in this mutation.
+func (m *PaymentOrderMutation) AddedAssignmentMarketBuyRate() (r decimal.Decimal, exists bool) {
+	v := m.addassignment_market_buy_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearAssignmentMarketBuyRate clears the value of the "assignment_market_buy_rate" field.
+func (m *PaymentOrderMutation) ClearAssignmentMarketBuyRate() {
+	m.assignment_market_buy_rate = nil
+	m.addassignment_market_buy_rate = nil
+	m.clearedFields[paymentorder.FieldAssignmentMarketBuyRate] = struct{}{}
+}
+
+// AssignmentMarketBuyRateCleared returns if the "assignment_market_buy_rate" field was cleared in this mutation.
+func (m *PaymentOrderMutation) AssignmentMarketBuyRateCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldAssignmentMarketBuyRate]
+	return ok
+}
+
+// ResetAssignmentMarketBuyRate resets all changes to the "assignment_market_buy_rate" field.
+func (m *PaymentOrderMutation) ResetAssignmentMarketBuyRate() {
+	m.assignment_market_buy_rate = nil
+	m.addassignment_market_buy_rate = nil
+	delete(m.clearedFields, paymentorder.FieldAssignmentMarketBuyRate)
+}
+
+// SetAssignmentMarketSellRate sets the "assignment_market_sell_rate" field.
+func (m *PaymentOrderMutation) SetAssignmentMarketSellRate(d decimal.Decimal) {
+	m.assignment_market_sell_rate = &d
+	m.addassignment_market_sell_rate = nil
+}
+
+// AssignmentMarketSellRate returns the value of the "assignment_market_sell_rate" field in the mutation.
+func (m *PaymentOrderMutation) AssignmentMarketSellRate() (r decimal.Decimal, exists bool) {
+	v := m.assignment_market_sell_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAssignmentMarketSellRate returns the old "assignment_market_sell_rate" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldAssignmentMarketSellRate(ctx context.Context) (v *decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAssignmentMarketSellRate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAssignmentMarketSellRate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAssignmentMarketSellRate: %w", err)
+	}
+	return oldValue.AssignmentMarketSellRate, nil
+}
+
+// AddAssignmentMarketSellRate adds d to the "assignment_market_sell_rate" field.
+func (m *PaymentOrderMutation) AddAssignmentMarketSellRate(d decimal.Decimal) {
+	if m.addassignment_market_sell_rate != nil {
+		*m.addassignment_market_sell_rate = m.addassignment_market_sell_rate.Add(d)
+	} else {
+		m.addassignment_market_sell_rate = &d
+	}
+}
+
+// AddedAssignmentMarketSellRate returns the value that was added to the "assignment_market_sell_rate" field in this mutation.
+func (m *PaymentOrderMutation) AddedAssignmentMarketSellRate() (r decimal.Decimal, exists bool) {
+	v := m.addassignment_market_sell_rate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearAssignmentMarketSellRate clears the value of the "assignment_market_sell_rate" field.
+func (m *PaymentOrderMutation) ClearAssignmentMarketSellRate() {
+	m.assignment_market_sell_rate = nil
+	m.addassignment_market_sell_rate = nil
+	m.clearedFields[paymentorder.FieldAssignmentMarketSellRate] = struct{}{}
+}
+
+// AssignmentMarketSellRateCleared returns if the "assignment_market_sell_rate" field was cleared in this mutation.
+func (m *PaymentOrderMutation) AssignmentMarketSellRateCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldAssignmentMarketSellRate]
+	return ok
+}
+
+// ResetAssignmentMarketSellRate resets all changes to the "assignment_market_sell_rate" field.
+func (m *PaymentOrderMutation) ResetAssignmentMarketSellRate() {
+	m.assignment_market_sell_rate = nil
+	m.addassignment_market_sell_rate = nil
+	delete(m.clearedFields, paymentorder.FieldAssignmentMarketSellRate)
+}
+
+// SetLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field.
+func (m *PaymentOrderMutation) SetLegacyProvisionBucketID(i int) {
+	m.legacy_provision_bucket_id = &i
+	m.addlegacy_provision_bucket_id = nil
+}
+
+// LegacyProvisionBucketID returns the value of the "legacy_provision_bucket_id" field in the mutation.
+func (m *PaymentOrderMutation) LegacyProvisionBucketID() (r int, exists bool) {
+	v := m.legacy_provision_bucket_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLegacyProvisionBucketID returns the old "legacy_provision_bucket_id" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldLegacyProvisionBucketID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLegacyProvisionBucketID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLegacyProvisionBucketID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLegacyProvisionBucketID: %w", err)
+	}
+	return oldValue.LegacyProvisionBucketID, nil
+}
+
+// AddLegacyProvisionBucketID adds i to the "legacy_provision_bucket_id" field.
+func (m *PaymentOrderMutation) AddLegacyProvisionBucketID(i int) {
+	if m.addlegacy_provision_bucket_id != nil {
+		*m.addlegacy_provision_bucket_id += i
+	} else {
+		m.addlegacy_provision_bucket_id = &i
+	}
+}
+
+// AddedLegacyProvisionBucketID returns the value that was added to the "legacy_provision_bucket_id" field in this mutation.
+func (m *PaymentOrderMutation) AddedLegacyProvisionBucketID() (r int, exists bool) {
+	v := m.addlegacy_provision_bucket_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearLegacyProvisionBucketID clears the value of the "legacy_provision_bucket_id" field.
+func (m *PaymentOrderMutation) ClearLegacyProvisionBucketID() {
+	m.legacy_provision_bucket_id = nil
+	m.addlegacy_provision_bucket_id = nil
+	m.clearedFields[paymentorder.FieldLegacyProvisionBucketID] = struct{}{}
+}
+
+// LegacyProvisionBucketIDCleared returns if the "legacy_provision_bucket_id" field was cleared in this mutation.
+func (m *PaymentOrderMutation) LegacyProvisionBucketIDCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldLegacyProvisionBucketID]
+	return ok
+}
+
+// ResetLegacyProvisionBucketID resets all changes to the "legacy_provision_bucket_id" field.
+func (m *PaymentOrderMutation) ResetLegacyProvisionBucketID() {
+	m.legacy_provision_bucket_id = nil
+	m.addlegacy_provision_bucket_id = nil
+	delete(m.clearedFields, paymentorder.FieldLegacyProvisionBucketID)
+}
+
 // SetTokenID sets the "token" edge to the Token entity by id.
 func (m *PaymentOrderMutation) SetTokenID(id int) {
 	m.token = &id
@@ -8670,45 +8811,6 @@ func (m *PaymentOrderMutation) ResetProvider() {
 	m.clearedprovider = false
 }
 
-// SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by id.
-func (m *PaymentOrderMutation) SetProvisionBucketID(id int) {
-	m.provision_bucket = &id
-}
-
-// ClearProvisionBucket clears the "provision_bucket" edge to the ProvisionBucket entity.
-func (m *PaymentOrderMutation) ClearProvisionBucket() {
-	m.clearedprovision_bucket = true
-}
-
-// ProvisionBucketCleared reports if the "provision_bucket" edge to the ProvisionBucket entity was cleared.
-func (m *PaymentOrderMutation) ProvisionBucketCleared() bool {
-	return m.clearedprovision_bucket
-}
-
-// ProvisionBucketID returns the "provision_bucket" edge ID in the mutation.
-func (m *PaymentOrderMutation) ProvisionBucketID() (id int, exists bool) {
-	if m.provision_bucket != nil {
-		return *m.provision_bucket, true
-	}
-	return
-}
-
-// ProvisionBucketIDs returns the "provision_bucket" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProvisionBucketID instead. It exists only for internal usage by the builders.
-func (m *PaymentOrderMutation) ProvisionBucketIDs() (ids []int) {
-	if id := m.provision_bucket; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetProvisionBucket resets all changes to the "provision_bucket" edge.
-func (m *PaymentOrderMutation) ResetProvisionBucket() {
-	m.provision_bucket = nil
-	m.clearedprovision_bucket = false
-}
-
 // AddFulfillmentIDs adds the "fulfillments" edge to the PaymentOrderFulfillment entity by ids.
 func (m *PaymentOrderMutation) AddFulfillmentIDs(ids ...uuid.UUID) {
 	if m.fulfillments == nil {
@@ -8817,6 +8919,114 @@ func (m *PaymentOrderMutation) ResetTransactions() {
 	m.removedtransactions = nil
 }
 
+// AddProviderAssignmentRunIDs adds the "provider_assignment_runs" edge to the ProviderAssignmentRun entity by ids.
+func (m *PaymentOrderMutation) AddProviderAssignmentRunIDs(ids ...uuid.UUID) {
+	if m.provider_assignment_runs == nil {
+		m.provider_assignment_runs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.provider_assignment_runs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProviderAssignmentRuns clears the "provider_assignment_runs" edge to the ProviderAssignmentRun entity.
+func (m *PaymentOrderMutation) ClearProviderAssignmentRuns() {
+	m.clearedprovider_assignment_runs = true
+}
+
+// ProviderAssignmentRunsCleared reports if the "provider_assignment_runs" edge to the ProviderAssignmentRun entity was cleared.
+func (m *PaymentOrderMutation) ProviderAssignmentRunsCleared() bool {
+	return m.clearedprovider_assignment_runs
+}
+
+// RemoveProviderAssignmentRunIDs removes the "provider_assignment_runs" edge to the ProviderAssignmentRun entity by IDs.
+func (m *PaymentOrderMutation) RemoveProviderAssignmentRunIDs(ids ...uuid.UUID) {
+	if m.removedprovider_assignment_runs == nil {
+		m.removedprovider_assignment_runs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.provider_assignment_runs, ids[i])
+		m.removedprovider_assignment_runs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProviderAssignmentRuns returns the removed IDs of the "provider_assignment_runs" edge to the ProviderAssignmentRun entity.
+func (m *PaymentOrderMutation) RemovedProviderAssignmentRunsIDs() (ids []uuid.UUID) {
+	for id := range m.removedprovider_assignment_runs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProviderAssignmentRunsIDs returns the "provider_assignment_runs" edge IDs in the mutation.
+func (m *PaymentOrderMutation) ProviderAssignmentRunsIDs() (ids []uuid.UUID) {
+	for id := range m.provider_assignment_runs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProviderAssignmentRuns resets all changes to the "provider_assignment_runs" edge.
+func (m *PaymentOrderMutation) ResetProviderAssignmentRuns() {
+	m.provider_assignment_runs = nil
+	m.clearedprovider_assignment_runs = false
+	m.removedprovider_assignment_runs = nil
+}
+
+// AddProviderOrderTokenScoreHistoryIDs adds the "provider_order_token_score_histories" edge to the ProviderOrderTokenScoreHistory entity by ids.
+func (m *PaymentOrderMutation) AddProviderOrderTokenScoreHistoryIDs(ids ...uuid.UUID) {
+	if m.provider_order_token_score_histories == nil {
+		m.provider_order_token_score_histories = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.provider_order_token_score_histories[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProviderOrderTokenScoreHistories clears the "provider_order_token_score_histories" edge to the ProviderOrderTokenScoreHistory entity.
+func (m *PaymentOrderMutation) ClearProviderOrderTokenScoreHistories() {
+	m.clearedprovider_order_token_score_histories = true
+}
+
+// ProviderOrderTokenScoreHistoriesCleared reports if the "provider_order_token_score_histories" edge to the ProviderOrderTokenScoreHistory entity was cleared.
+func (m *PaymentOrderMutation) ProviderOrderTokenScoreHistoriesCleared() bool {
+	return m.clearedprovider_order_token_score_histories
+}
+
+// RemoveProviderOrderTokenScoreHistoryIDs removes the "provider_order_token_score_histories" edge to the ProviderOrderTokenScoreHistory entity by IDs.
+func (m *PaymentOrderMutation) RemoveProviderOrderTokenScoreHistoryIDs(ids ...uuid.UUID) {
+	if m.removedprovider_order_token_score_histories == nil {
+		m.removedprovider_order_token_score_histories = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.provider_order_token_score_histories, ids[i])
+		m.removedprovider_order_token_score_histories[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProviderOrderTokenScoreHistories returns the removed IDs of the "provider_order_token_score_histories" edge to the ProviderOrderTokenScoreHistory entity.
+func (m *PaymentOrderMutation) RemovedProviderOrderTokenScoreHistoriesIDs() (ids []uuid.UUID) {
+	for id := range m.removedprovider_order_token_score_histories {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProviderOrderTokenScoreHistoriesIDs returns the "provider_order_token_score_histories" edge IDs in the mutation.
+func (m *PaymentOrderMutation) ProviderOrderTokenScoreHistoriesIDs() (ids []uuid.UUID) {
+	for id := range m.provider_order_token_score_histories {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProviderOrderTokenScoreHistories resets all changes to the "provider_order_token_score_histories" edge.
+func (m *PaymentOrderMutation) ResetProviderOrderTokenScoreHistories() {
+	m.provider_order_token_score_histories = nil
+	m.clearedprovider_order_token_score_histories = false
+	m.removedprovider_order_token_score_histories = nil
+}
+
 // Where appends a list predicates to the PaymentOrderMutation builder.
 func (m *PaymentOrderMutation) Where(ps ...predicate.PaymentOrder) {
 	m.predicates = append(m.predicates, ps...)
@@ -8851,7 +9061,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 37)
+	fields := make([]string, 0, 40)
 	if m.created_at != nil {
 		fields = append(fields, paymentorder.FieldCreatedAt)
 	}
@@ -8963,6 +9173,15 @@ func (m *PaymentOrderMutation) Fields() []string {
 	if m.fallback_tried_at != nil {
 		fields = append(fields, paymentorder.FieldFallbackTriedAt)
 	}
+	if m.assignment_market_buy_rate != nil {
+		fields = append(fields, paymentorder.FieldAssignmentMarketBuyRate)
+	}
+	if m.assignment_market_sell_rate != nil {
+		fields = append(fields, paymentorder.FieldAssignmentMarketSellRate)
+	}
+	if m.legacy_provision_bucket_id != nil {
+		fields = append(fields, paymentorder.FieldLegacyProvisionBucketID)
+	}
 	return fields
 }
 
@@ -9045,6 +9264,12 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.OrderType()
 	case paymentorder.FieldFallbackTriedAt:
 		return m.FallbackTriedAt()
+	case paymentorder.FieldAssignmentMarketBuyRate:
+		return m.AssignmentMarketBuyRate()
+	case paymentorder.FieldAssignmentMarketSellRate:
+		return m.AssignmentMarketSellRate()
+	case paymentorder.FieldLegacyProvisionBucketID:
+		return m.LegacyProvisionBucketID()
 	}
 	return nil, false
 }
@@ -9128,6 +9353,12 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldOrderType(ctx)
 	case paymentorder.FieldFallbackTriedAt:
 		return m.OldFallbackTriedAt(ctx)
+	case paymentorder.FieldAssignmentMarketBuyRate:
+		return m.OldAssignmentMarketBuyRate(ctx)
+	case paymentorder.FieldAssignmentMarketSellRate:
+		return m.OldAssignmentMarketSellRate(ctx)
+	case paymentorder.FieldLegacyProvisionBucketID:
+		return m.OldLegacyProvisionBucketID(ctx)
 	}
 	return nil, fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -9396,6 +9627,27 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetFallbackTriedAt(v)
 		return nil
+	case paymentorder.FieldAssignmentMarketBuyRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAssignmentMarketBuyRate(v)
+		return nil
+	case paymentorder.FieldAssignmentMarketSellRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAssignmentMarketSellRate(v)
+		return nil
+	case paymentorder.FieldLegacyProvisionBucketID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLegacyProvisionBucketID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
 }
@@ -9443,6 +9695,15 @@ func (m *PaymentOrderMutation) AddedFields() []string {
 	if m.addcancellation_count != nil {
 		fields = append(fields, paymentorder.FieldCancellationCount)
 	}
+	if m.addassignment_market_buy_rate != nil {
+		fields = append(fields, paymentorder.FieldAssignmentMarketBuyRate)
+	}
+	if m.addassignment_market_sell_rate != nil {
+		fields = append(fields, paymentorder.FieldAssignmentMarketSellRate)
+	}
+	if m.addlegacy_provision_bucket_id != nil {
+		fields = append(fields, paymentorder.FieldLegacyProvisionBucketID)
+	}
 	return fields
 }
 
@@ -9477,6 +9738,12 @@ func (m *PaymentOrderMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedBlockNumber()
 	case paymentorder.FieldCancellationCount:
 		return m.AddedCancellationCount()
+	case paymentorder.FieldAssignmentMarketBuyRate:
+		return m.AddedAssignmentMarketBuyRate()
+	case paymentorder.FieldAssignmentMarketSellRate:
+		return m.AddedAssignmentMarketSellRate()
+	case paymentorder.FieldLegacyProvisionBucketID:
+		return m.AddedLegacyProvisionBucketID()
 	}
 	return nil, false
 }
@@ -9577,6 +9844,27 @@ func (m *PaymentOrderMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddCancellationCount(v)
 		return nil
+	case paymentorder.FieldAssignmentMarketBuyRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAssignmentMarketBuyRate(v)
+		return nil
+	case paymentorder.FieldAssignmentMarketSellRate:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAssignmentMarketSellRate(v)
+		return nil
+	case paymentorder.FieldLegacyProvisionBucketID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLegacyProvisionBucketID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder numeric field %s", name)
 }
@@ -9635,6 +9923,15 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(paymentorder.FieldFallbackTriedAt) {
 		fields = append(fields, paymentorder.FieldFallbackTriedAt)
+	}
+	if m.FieldCleared(paymentorder.FieldAssignmentMarketBuyRate) {
+		fields = append(fields, paymentorder.FieldAssignmentMarketBuyRate)
+	}
+	if m.FieldCleared(paymentorder.FieldAssignmentMarketSellRate) {
+		fields = append(fields, paymentorder.FieldAssignmentMarketSellRate)
+	}
+	if m.FieldCleared(paymentorder.FieldLegacyProvisionBucketID) {
+		fields = append(fields, paymentorder.FieldLegacyProvisionBucketID)
 	}
 	return fields
 }
@@ -9700,6 +9997,15 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 		return nil
 	case paymentorder.FieldFallbackTriedAt:
 		m.ClearFallbackTriedAt()
+		return nil
+	case paymentorder.FieldAssignmentMarketBuyRate:
+		m.ClearAssignmentMarketBuyRate()
+		return nil
+	case paymentorder.FieldAssignmentMarketSellRate:
+		m.ClearAssignmentMarketSellRate()
+		return nil
+	case paymentorder.FieldLegacyProvisionBucketID:
+		m.ClearLegacyProvisionBucketID()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder nullable field %s", name)
@@ -9820,13 +10126,22 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 	case paymentorder.FieldFallbackTriedAt:
 		m.ResetFallbackTriedAt()
 		return nil
+	case paymentorder.FieldAssignmentMarketBuyRate:
+		m.ResetAssignmentMarketBuyRate()
+		return nil
+	case paymentorder.FieldAssignmentMarketSellRate:
+		m.ResetAssignmentMarketSellRate()
+		return nil
+	case paymentorder.FieldLegacyProvisionBucketID:
+		m.ResetLegacyProvisionBucketID()
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PaymentOrderMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.token != nil {
 		edges = append(edges, paymentorder.EdgeToken)
 	}
@@ -9839,14 +10154,17 @@ func (m *PaymentOrderMutation) AddedEdges() []string {
 	if m.provider != nil {
 		edges = append(edges, paymentorder.EdgeProvider)
 	}
-	if m.provision_bucket != nil {
-		edges = append(edges, paymentorder.EdgeProvisionBucket)
-	}
 	if m.fulfillments != nil {
 		edges = append(edges, paymentorder.EdgeFulfillments)
 	}
 	if m.transactions != nil {
 		edges = append(edges, paymentorder.EdgeTransactions)
+	}
+	if m.provider_assignment_runs != nil {
+		edges = append(edges, paymentorder.EdgeProviderAssignmentRuns)
+	}
+	if m.provider_order_token_score_histories != nil {
+		edges = append(edges, paymentorder.EdgeProviderOrderTokenScoreHistories)
 	}
 	return edges
 }
@@ -9871,10 +10189,6 @@ func (m *PaymentOrderMutation) AddedIDs(name string) []ent.Value {
 		if id := m.provider; id != nil {
 			return []ent.Value{*id}
 		}
-	case paymentorder.EdgeProvisionBucket:
-		if id := m.provision_bucket; id != nil {
-			return []ent.Value{*id}
-		}
 	case paymentorder.EdgeFulfillments:
 		ids := make([]ent.Value, 0, len(m.fulfillments))
 		for id := range m.fulfillments {
@@ -9887,18 +10201,36 @@ func (m *PaymentOrderMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case paymentorder.EdgeProviderAssignmentRuns:
+		ids := make([]ent.Value, 0, len(m.provider_assignment_runs))
+		for id := range m.provider_assignment_runs {
+			ids = append(ids, id)
+		}
+		return ids
+	case paymentorder.EdgeProviderOrderTokenScoreHistories:
+		ids := make([]ent.Value, 0, len(m.provider_order_token_score_histories))
+		for id := range m.provider_order_token_score_histories {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PaymentOrderMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.removedfulfillments != nil {
 		edges = append(edges, paymentorder.EdgeFulfillments)
 	}
 	if m.removedtransactions != nil {
 		edges = append(edges, paymentorder.EdgeTransactions)
+	}
+	if m.removedprovider_assignment_runs != nil {
+		edges = append(edges, paymentorder.EdgeProviderAssignmentRuns)
+	}
+	if m.removedprovider_order_token_score_histories != nil {
+		edges = append(edges, paymentorder.EdgeProviderOrderTokenScoreHistories)
 	}
 	return edges
 }
@@ -9919,13 +10251,25 @@ func (m *PaymentOrderMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case paymentorder.EdgeProviderAssignmentRuns:
+		ids := make([]ent.Value, 0, len(m.removedprovider_assignment_runs))
+		for id := range m.removedprovider_assignment_runs {
+			ids = append(ids, id)
+		}
+		return ids
+	case paymentorder.EdgeProviderOrderTokenScoreHistories:
+		ids := make([]ent.Value, 0, len(m.removedprovider_order_token_score_histories))
+		for id := range m.removedprovider_order_token_score_histories {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PaymentOrderMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.clearedtoken {
 		edges = append(edges, paymentorder.EdgeToken)
 	}
@@ -9938,14 +10282,17 @@ func (m *PaymentOrderMutation) ClearedEdges() []string {
 	if m.clearedprovider {
 		edges = append(edges, paymentorder.EdgeProvider)
 	}
-	if m.clearedprovision_bucket {
-		edges = append(edges, paymentorder.EdgeProvisionBucket)
-	}
 	if m.clearedfulfillments {
 		edges = append(edges, paymentorder.EdgeFulfillments)
 	}
 	if m.clearedtransactions {
 		edges = append(edges, paymentorder.EdgeTransactions)
+	}
+	if m.clearedprovider_assignment_runs {
+		edges = append(edges, paymentorder.EdgeProviderAssignmentRuns)
+	}
+	if m.clearedprovider_order_token_score_histories {
+		edges = append(edges, paymentorder.EdgeProviderOrderTokenScoreHistories)
 	}
 	return edges
 }
@@ -9962,12 +10309,14 @@ func (m *PaymentOrderMutation) EdgeCleared(name string) bool {
 		return m.clearedpayment_webhook
 	case paymentorder.EdgeProvider:
 		return m.clearedprovider
-	case paymentorder.EdgeProvisionBucket:
-		return m.clearedprovision_bucket
 	case paymentorder.EdgeFulfillments:
 		return m.clearedfulfillments
 	case paymentorder.EdgeTransactions:
 		return m.clearedtransactions
+	case paymentorder.EdgeProviderAssignmentRuns:
+		return m.clearedprovider_assignment_runs
+	case paymentorder.EdgeProviderOrderTokenScoreHistories:
+		return m.clearedprovider_order_token_score_histories
 	}
 	return false
 }
@@ -9987,9 +10336,6 @@ func (m *PaymentOrderMutation) ClearEdge(name string) error {
 		return nil
 	case paymentorder.EdgeProvider:
 		m.ClearProvider()
-		return nil
-	case paymentorder.EdgeProvisionBucket:
-		m.ClearProvisionBucket()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder unique edge %s", name)
@@ -10011,14 +10357,17 @@ func (m *PaymentOrderMutation) ResetEdge(name string) error {
 	case paymentorder.EdgeProvider:
 		m.ResetProvider()
 		return nil
-	case paymentorder.EdgeProvisionBucket:
-		m.ResetProvisionBucket()
-		return nil
 	case paymentorder.EdgeFulfillments:
 		m.ResetFulfillments()
 		return nil
 	case paymentorder.EdgeTransactions:
 		m.ResetTransactions()
+		return nil
+	case paymentorder.EdgeProviderAssignmentRuns:
+		m.ResetProviderAssignmentRuns()
+		return nil
+	case paymentorder.EdgeProviderOrderTokenScoreHistories:
+		m.ResetProviderOrderTokenScoreHistories()
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentOrder edge %s", name)
@@ -11425,6 +11774,992 @@ func (m *PaymentWebhookMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown PaymentWebhook edge %s", name)
+}
+
+// ProviderAssignmentRunMutation represents an operation that mutates the ProviderAssignmentRun nodes in the graph.
+type ProviderAssignmentRunMutation struct {
+	config
+	op                           Op
+	typ                          string
+	id                           *uuid.UUID
+	assigned_provider_id         *string
+	attempted_at                 *time.Time
+	trigger                      *string
+	result                       *string
+	used_fallback                *bool
+	market_buy_rate_snapshot     *decimal.Decimal
+	addmarket_buy_rate_snapshot  *decimal.Decimal
+	market_sell_rate_snapshot    *decimal.Decimal
+	addmarket_sell_rate_snapshot *decimal.Decimal
+	error_message                *string
+	clearedFields                map[string]struct{}
+	payment_order                *uuid.UUID
+	clearedpayment_order         bool
+	provider_order_token         *int
+	clearedprovider_order_token  bool
+	done                         bool
+	oldValue                     func(context.Context) (*ProviderAssignmentRun, error)
+	predicates                   []predicate.ProviderAssignmentRun
+}
+
+var _ ent.Mutation = (*ProviderAssignmentRunMutation)(nil)
+
+// providerassignmentrunOption allows management of the mutation configuration using functional options.
+type providerassignmentrunOption func(*ProviderAssignmentRunMutation)
+
+// newProviderAssignmentRunMutation creates new mutation for the ProviderAssignmentRun entity.
+func newProviderAssignmentRunMutation(c config, op Op, opts ...providerassignmentrunOption) *ProviderAssignmentRunMutation {
+	m := &ProviderAssignmentRunMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeProviderAssignmentRun,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withProviderAssignmentRunID sets the ID field of the mutation.
+func withProviderAssignmentRunID(id uuid.UUID) providerassignmentrunOption {
+	return func(m *ProviderAssignmentRunMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ProviderAssignmentRun
+		)
+		m.oldValue = func(ctx context.Context) (*ProviderAssignmentRun, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ProviderAssignmentRun.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withProviderAssignmentRun sets the old ProviderAssignmentRun of the mutation.
+func withProviderAssignmentRun(node *ProviderAssignmentRun) providerassignmentrunOption {
+	return func(m *ProviderAssignmentRunMutation) {
+		m.oldValue = func(context.Context) (*ProviderAssignmentRun, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ProviderAssignmentRunMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ProviderAssignmentRunMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ProviderAssignmentRun entities.
+func (m *ProviderAssignmentRunMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ProviderAssignmentRunMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProviderAssignmentRunMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProviderAssignmentRun.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetAssignedProviderID sets the "assigned_provider_id" field.
+func (m *ProviderAssignmentRunMutation) SetAssignedProviderID(s string) {
+	m.assigned_provider_id = &s
+}
+
+// AssignedProviderID returns the value of the "assigned_provider_id" field in the mutation.
+func (m *ProviderAssignmentRunMutation) AssignedProviderID() (r string, exists bool) {
+	v := m.assigned_provider_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAssignedProviderID returns the old "assigned_provider_id" field's value of the ProviderAssignmentRun entity.
+// If the ProviderAssignmentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderAssignmentRunMutation) OldAssignedProviderID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAssignedProviderID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAssignedProviderID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAssignedProviderID: %w", err)
+	}
+	return oldValue.AssignedProviderID, nil
+}
+
+// ClearAssignedProviderID clears the value of the "assigned_provider_id" field.
+func (m *ProviderAssignmentRunMutation) ClearAssignedProviderID() {
+	m.assigned_provider_id = nil
+	m.clearedFields[providerassignmentrun.FieldAssignedProviderID] = struct{}{}
+}
+
+// AssignedProviderIDCleared returns if the "assigned_provider_id" field was cleared in this mutation.
+func (m *ProviderAssignmentRunMutation) AssignedProviderIDCleared() bool {
+	_, ok := m.clearedFields[providerassignmentrun.FieldAssignedProviderID]
+	return ok
+}
+
+// ResetAssignedProviderID resets all changes to the "assigned_provider_id" field.
+func (m *ProviderAssignmentRunMutation) ResetAssignedProviderID() {
+	m.assigned_provider_id = nil
+	delete(m.clearedFields, providerassignmentrun.FieldAssignedProviderID)
+}
+
+// SetAttemptedAt sets the "attempted_at" field.
+func (m *ProviderAssignmentRunMutation) SetAttemptedAt(t time.Time) {
+	m.attempted_at = &t
+}
+
+// AttemptedAt returns the value of the "attempted_at" field in the mutation.
+func (m *ProviderAssignmentRunMutation) AttemptedAt() (r time.Time, exists bool) {
+	v := m.attempted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttemptedAt returns the old "attempted_at" field's value of the ProviderAssignmentRun entity.
+// If the ProviderAssignmentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderAssignmentRunMutation) OldAttemptedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttemptedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttemptedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttemptedAt: %w", err)
+	}
+	return oldValue.AttemptedAt, nil
+}
+
+// ResetAttemptedAt resets all changes to the "attempted_at" field.
+func (m *ProviderAssignmentRunMutation) ResetAttemptedAt() {
+	m.attempted_at = nil
+}
+
+// SetTrigger sets the "trigger" field.
+func (m *ProviderAssignmentRunMutation) SetTrigger(s string) {
+	m.trigger = &s
+}
+
+// Trigger returns the value of the "trigger" field in the mutation.
+func (m *ProviderAssignmentRunMutation) Trigger() (r string, exists bool) {
+	v := m.trigger
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTrigger returns the old "trigger" field's value of the ProviderAssignmentRun entity.
+// If the ProviderAssignmentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderAssignmentRunMutation) OldTrigger(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTrigger is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTrigger requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTrigger: %w", err)
+	}
+	return oldValue.Trigger, nil
+}
+
+// ResetTrigger resets all changes to the "trigger" field.
+func (m *ProviderAssignmentRunMutation) ResetTrigger() {
+	m.trigger = nil
+}
+
+// SetResult sets the "result" field.
+func (m *ProviderAssignmentRunMutation) SetResult(s string) {
+	m.result = &s
+}
+
+// Result returns the value of the "result" field in the mutation.
+func (m *ProviderAssignmentRunMutation) Result() (r string, exists bool) {
+	v := m.result
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResult returns the old "result" field's value of the ProviderAssignmentRun entity.
+// If the ProviderAssignmentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderAssignmentRunMutation) OldResult(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResult is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResult requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResult: %w", err)
+	}
+	return oldValue.Result, nil
+}
+
+// ResetResult resets all changes to the "result" field.
+func (m *ProviderAssignmentRunMutation) ResetResult() {
+	m.result = nil
+}
+
+// SetUsedFallback sets the "used_fallback" field.
+func (m *ProviderAssignmentRunMutation) SetUsedFallback(b bool) {
+	m.used_fallback = &b
+}
+
+// UsedFallback returns the value of the "used_fallback" field in the mutation.
+func (m *ProviderAssignmentRunMutation) UsedFallback() (r bool, exists bool) {
+	v := m.used_fallback
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUsedFallback returns the old "used_fallback" field's value of the ProviderAssignmentRun entity.
+// If the ProviderAssignmentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderAssignmentRunMutation) OldUsedFallback(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUsedFallback is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUsedFallback requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUsedFallback: %w", err)
+	}
+	return oldValue.UsedFallback, nil
+}
+
+// ResetUsedFallback resets all changes to the "used_fallback" field.
+func (m *ProviderAssignmentRunMutation) ResetUsedFallback() {
+	m.used_fallback = nil
+}
+
+// SetMarketBuyRateSnapshot sets the "market_buy_rate_snapshot" field.
+func (m *ProviderAssignmentRunMutation) SetMarketBuyRateSnapshot(d decimal.Decimal) {
+	m.market_buy_rate_snapshot = &d
+	m.addmarket_buy_rate_snapshot = nil
+}
+
+// MarketBuyRateSnapshot returns the value of the "market_buy_rate_snapshot" field in the mutation.
+func (m *ProviderAssignmentRunMutation) MarketBuyRateSnapshot() (r decimal.Decimal, exists bool) {
+	v := m.market_buy_rate_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMarketBuyRateSnapshot returns the old "market_buy_rate_snapshot" field's value of the ProviderAssignmentRun entity.
+// If the ProviderAssignmentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderAssignmentRunMutation) OldMarketBuyRateSnapshot(ctx context.Context) (v *decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMarketBuyRateSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMarketBuyRateSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMarketBuyRateSnapshot: %w", err)
+	}
+	return oldValue.MarketBuyRateSnapshot, nil
+}
+
+// AddMarketBuyRateSnapshot adds d to the "market_buy_rate_snapshot" field.
+func (m *ProviderAssignmentRunMutation) AddMarketBuyRateSnapshot(d decimal.Decimal) {
+	if m.addmarket_buy_rate_snapshot != nil {
+		*m.addmarket_buy_rate_snapshot = m.addmarket_buy_rate_snapshot.Add(d)
+	} else {
+		m.addmarket_buy_rate_snapshot = &d
+	}
+}
+
+// AddedMarketBuyRateSnapshot returns the value that was added to the "market_buy_rate_snapshot" field in this mutation.
+func (m *ProviderAssignmentRunMutation) AddedMarketBuyRateSnapshot() (r decimal.Decimal, exists bool) {
+	v := m.addmarket_buy_rate_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearMarketBuyRateSnapshot clears the value of the "market_buy_rate_snapshot" field.
+func (m *ProviderAssignmentRunMutation) ClearMarketBuyRateSnapshot() {
+	m.market_buy_rate_snapshot = nil
+	m.addmarket_buy_rate_snapshot = nil
+	m.clearedFields[providerassignmentrun.FieldMarketBuyRateSnapshot] = struct{}{}
+}
+
+// MarketBuyRateSnapshotCleared returns if the "market_buy_rate_snapshot" field was cleared in this mutation.
+func (m *ProviderAssignmentRunMutation) MarketBuyRateSnapshotCleared() bool {
+	_, ok := m.clearedFields[providerassignmentrun.FieldMarketBuyRateSnapshot]
+	return ok
+}
+
+// ResetMarketBuyRateSnapshot resets all changes to the "market_buy_rate_snapshot" field.
+func (m *ProviderAssignmentRunMutation) ResetMarketBuyRateSnapshot() {
+	m.market_buy_rate_snapshot = nil
+	m.addmarket_buy_rate_snapshot = nil
+	delete(m.clearedFields, providerassignmentrun.FieldMarketBuyRateSnapshot)
+}
+
+// SetMarketSellRateSnapshot sets the "market_sell_rate_snapshot" field.
+func (m *ProviderAssignmentRunMutation) SetMarketSellRateSnapshot(d decimal.Decimal) {
+	m.market_sell_rate_snapshot = &d
+	m.addmarket_sell_rate_snapshot = nil
+}
+
+// MarketSellRateSnapshot returns the value of the "market_sell_rate_snapshot" field in the mutation.
+func (m *ProviderAssignmentRunMutation) MarketSellRateSnapshot() (r decimal.Decimal, exists bool) {
+	v := m.market_sell_rate_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMarketSellRateSnapshot returns the old "market_sell_rate_snapshot" field's value of the ProviderAssignmentRun entity.
+// If the ProviderAssignmentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderAssignmentRunMutation) OldMarketSellRateSnapshot(ctx context.Context) (v *decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMarketSellRateSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMarketSellRateSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMarketSellRateSnapshot: %w", err)
+	}
+	return oldValue.MarketSellRateSnapshot, nil
+}
+
+// AddMarketSellRateSnapshot adds d to the "market_sell_rate_snapshot" field.
+func (m *ProviderAssignmentRunMutation) AddMarketSellRateSnapshot(d decimal.Decimal) {
+	if m.addmarket_sell_rate_snapshot != nil {
+		*m.addmarket_sell_rate_snapshot = m.addmarket_sell_rate_snapshot.Add(d)
+	} else {
+		m.addmarket_sell_rate_snapshot = &d
+	}
+}
+
+// AddedMarketSellRateSnapshot returns the value that was added to the "market_sell_rate_snapshot" field in this mutation.
+func (m *ProviderAssignmentRunMutation) AddedMarketSellRateSnapshot() (r decimal.Decimal, exists bool) {
+	v := m.addmarket_sell_rate_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearMarketSellRateSnapshot clears the value of the "market_sell_rate_snapshot" field.
+func (m *ProviderAssignmentRunMutation) ClearMarketSellRateSnapshot() {
+	m.market_sell_rate_snapshot = nil
+	m.addmarket_sell_rate_snapshot = nil
+	m.clearedFields[providerassignmentrun.FieldMarketSellRateSnapshot] = struct{}{}
+}
+
+// MarketSellRateSnapshotCleared returns if the "market_sell_rate_snapshot" field was cleared in this mutation.
+func (m *ProviderAssignmentRunMutation) MarketSellRateSnapshotCleared() bool {
+	_, ok := m.clearedFields[providerassignmentrun.FieldMarketSellRateSnapshot]
+	return ok
+}
+
+// ResetMarketSellRateSnapshot resets all changes to the "market_sell_rate_snapshot" field.
+func (m *ProviderAssignmentRunMutation) ResetMarketSellRateSnapshot() {
+	m.market_sell_rate_snapshot = nil
+	m.addmarket_sell_rate_snapshot = nil
+	delete(m.clearedFields, providerassignmentrun.FieldMarketSellRateSnapshot)
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (m *ProviderAssignmentRunMutation) SetErrorMessage(s string) {
+	m.error_message = &s
+}
+
+// ErrorMessage returns the value of the "error_message" field in the mutation.
+func (m *ProviderAssignmentRunMutation) ErrorMessage() (r string, exists bool) {
+	v := m.error_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldErrorMessage returns the old "error_message" field's value of the ProviderAssignmentRun entity.
+// If the ProviderAssignmentRun object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderAssignmentRunMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
+	}
+	return oldValue.ErrorMessage, nil
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (m *ProviderAssignmentRunMutation) ClearErrorMessage() {
+	m.error_message = nil
+	m.clearedFields[providerassignmentrun.FieldErrorMessage] = struct{}{}
+}
+
+// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
+func (m *ProviderAssignmentRunMutation) ErrorMessageCleared() bool {
+	_, ok := m.clearedFields[providerassignmentrun.FieldErrorMessage]
+	return ok
+}
+
+// ResetErrorMessage resets all changes to the "error_message" field.
+func (m *ProviderAssignmentRunMutation) ResetErrorMessage() {
+	m.error_message = nil
+	delete(m.clearedFields, providerassignmentrun.FieldErrorMessage)
+}
+
+// SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by id.
+func (m *ProviderAssignmentRunMutation) SetPaymentOrderID(id uuid.UUID) {
+	m.payment_order = &id
+}
+
+// ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
+func (m *ProviderAssignmentRunMutation) ClearPaymentOrder() {
+	m.clearedpayment_order = true
+}
+
+// PaymentOrderCleared reports if the "payment_order" edge to the PaymentOrder entity was cleared.
+func (m *ProviderAssignmentRunMutation) PaymentOrderCleared() bool {
+	return m.clearedpayment_order
+}
+
+// PaymentOrderID returns the "payment_order" edge ID in the mutation.
+func (m *ProviderAssignmentRunMutation) PaymentOrderID() (id uuid.UUID, exists bool) {
+	if m.payment_order != nil {
+		return *m.payment_order, true
+	}
+	return
+}
+
+// PaymentOrderIDs returns the "payment_order" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PaymentOrderID instead. It exists only for internal usage by the builders.
+func (m *ProviderAssignmentRunMutation) PaymentOrderIDs() (ids []uuid.UUID) {
+	if id := m.payment_order; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPaymentOrder resets all changes to the "payment_order" edge.
+func (m *ProviderAssignmentRunMutation) ResetPaymentOrder() {
+	m.payment_order = nil
+	m.clearedpayment_order = false
+}
+
+// SetProviderOrderTokenID sets the "provider_order_token" edge to the ProviderOrderToken entity by id.
+func (m *ProviderAssignmentRunMutation) SetProviderOrderTokenID(id int) {
+	m.provider_order_token = &id
+}
+
+// ClearProviderOrderToken clears the "provider_order_token" edge to the ProviderOrderToken entity.
+func (m *ProviderAssignmentRunMutation) ClearProviderOrderToken() {
+	m.clearedprovider_order_token = true
+}
+
+// ProviderOrderTokenCleared reports if the "provider_order_token" edge to the ProviderOrderToken entity was cleared.
+func (m *ProviderAssignmentRunMutation) ProviderOrderTokenCleared() bool {
+	return m.clearedprovider_order_token
+}
+
+// ProviderOrderTokenID returns the "provider_order_token" edge ID in the mutation.
+func (m *ProviderAssignmentRunMutation) ProviderOrderTokenID() (id int, exists bool) {
+	if m.provider_order_token != nil {
+		return *m.provider_order_token, true
+	}
+	return
+}
+
+// ProviderOrderTokenIDs returns the "provider_order_token" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProviderOrderTokenID instead. It exists only for internal usage by the builders.
+func (m *ProviderAssignmentRunMutation) ProviderOrderTokenIDs() (ids []int) {
+	if id := m.provider_order_token; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProviderOrderToken resets all changes to the "provider_order_token" edge.
+func (m *ProviderAssignmentRunMutation) ResetProviderOrderToken() {
+	m.provider_order_token = nil
+	m.clearedprovider_order_token = false
+}
+
+// Where appends a list predicates to the ProviderAssignmentRunMutation builder.
+func (m *ProviderAssignmentRunMutation) Where(ps ...predicate.ProviderAssignmentRun) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ProviderAssignmentRunMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProviderAssignmentRunMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProviderAssignmentRun, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ProviderAssignmentRunMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProviderAssignmentRunMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ProviderAssignmentRun).
+func (m *ProviderAssignmentRunMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ProviderAssignmentRunMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.assigned_provider_id != nil {
+		fields = append(fields, providerassignmentrun.FieldAssignedProviderID)
+	}
+	if m.attempted_at != nil {
+		fields = append(fields, providerassignmentrun.FieldAttemptedAt)
+	}
+	if m.trigger != nil {
+		fields = append(fields, providerassignmentrun.FieldTrigger)
+	}
+	if m.result != nil {
+		fields = append(fields, providerassignmentrun.FieldResult)
+	}
+	if m.used_fallback != nil {
+		fields = append(fields, providerassignmentrun.FieldUsedFallback)
+	}
+	if m.market_buy_rate_snapshot != nil {
+		fields = append(fields, providerassignmentrun.FieldMarketBuyRateSnapshot)
+	}
+	if m.market_sell_rate_snapshot != nil {
+		fields = append(fields, providerassignmentrun.FieldMarketSellRateSnapshot)
+	}
+	if m.error_message != nil {
+		fields = append(fields, providerassignmentrun.FieldErrorMessage)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ProviderAssignmentRunMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case providerassignmentrun.FieldAssignedProviderID:
+		return m.AssignedProviderID()
+	case providerassignmentrun.FieldAttemptedAt:
+		return m.AttemptedAt()
+	case providerassignmentrun.FieldTrigger:
+		return m.Trigger()
+	case providerassignmentrun.FieldResult:
+		return m.Result()
+	case providerassignmentrun.FieldUsedFallback:
+		return m.UsedFallback()
+	case providerassignmentrun.FieldMarketBuyRateSnapshot:
+		return m.MarketBuyRateSnapshot()
+	case providerassignmentrun.FieldMarketSellRateSnapshot:
+		return m.MarketSellRateSnapshot()
+	case providerassignmentrun.FieldErrorMessage:
+		return m.ErrorMessage()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ProviderAssignmentRunMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case providerassignmentrun.FieldAssignedProviderID:
+		return m.OldAssignedProviderID(ctx)
+	case providerassignmentrun.FieldAttemptedAt:
+		return m.OldAttemptedAt(ctx)
+	case providerassignmentrun.FieldTrigger:
+		return m.OldTrigger(ctx)
+	case providerassignmentrun.FieldResult:
+		return m.OldResult(ctx)
+	case providerassignmentrun.FieldUsedFallback:
+		return m.OldUsedFallback(ctx)
+	case providerassignmentrun.FieldMarketBuyRateSnapshot:
+		return m.OldMarketBuyRateSnapshot(ctx)
+	case providerassignmentrun.FieldMarketSellRateSnapshot:
+		return m.OldMarketSellRateSnapshot(ctx)
+	case providerassignmentrun.FieldErrorMessage:
+		return m.OldErrorMessage(ctx)
+	}
+	return nil, fmt.Errorf("unknown ProviderAssignmentRun field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderAssignmentRunMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case providerassignmentrun.FieldAssignedProviderID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAssignedProviderID(v)
+		return nil
+	case providerassignmentrun.FieldAttemptedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttemptedAt(v)
+		return nil
+	case providerassignmentrun.FieldTrigger:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTrigger(v)
+		return nil
+	case providerassignmentrun.FieldResult:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResult(v)
+		return nil
+	case providerassignmentrun.FieldUsedFallback:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUsedFallback(v)
+		return nil
+	case providerassignmentrun.FieldMarketBuyRateSnapshot:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMarketBuyRateSnapshot(v)
+		return nil
+	case providerassignmentrun.FieldMarketSellRateSnapshot:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMarketSellRateSnapshot(v)
+		return nil
+	case providerassignmentrun.FieldErrorMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetErrorMessage(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderAssignmentRun field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ProviderAssignmentRunMutation) AddedFields() []string {
+	var fields []string
+	if m.addmarket_buy_rate_snapshot != nil {
+		fields = append(fields, providerassignmentrun.FieldMarketBuyRateSnapshot)
+	}
+	if m.addmarket_sell_rate_snapshot != nil {
+		fields = append(fields, providerassignmentrun.FieldMarketSellRateSnapshot)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ProviderAssignmentRunMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case providerassignmentrun.FieldMarketBuyRateSnapshot:
+		return m.AddedMarketBuyRateSnapshot()
+	case providerassignmentrun.FieldMarketSellRateSnapshot:
+		return m.AddedMarketSellRateSnapshot()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderAssignmentRunMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case providerassignmentrun.FieldMarketBuyRateSnapshot:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMarketBuyRateSnapshot(v)
+		return nil
+	case providerassignmentrun.FieldMarketSellRateSnapshot:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMarketSellRateSnapshot(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderAssignmentRun numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ProviderAssignmentRunMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(providerassignmentrun.FieldAssignedProviderID) {
+		fields = append(fields, providerassignmentrun.FieldAssignedProviderID)
+	}
+	if m.FieldCleared(providerassignmentrun.FieldMarketBuyRateSnapshot) {
+		fields = append(fields, providerassignmentrun.FieldMarketBuyRateSnapshot)
+	}
+	if m.FieldCleared(providerassignmentrun.FieldMarketSellRateSnapshot) {
+		fields = append(fields, providerassignmentrun.FieldMarketSellRateSnapshot)
+	}
+	if m.FieldCleared(providerassignmentrun.FieldErrorMessage) {
+		fields = append(fields, providerassignmentrun.FieldErrorMessage)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ProviderAssignmentRunMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ProviderAssignmentRunMutation) ClearField(name string) error {
+	switch name {
+	case providerassignmentrun.FieldAssignedProviderID:
+		m.ClearAssignedProviderID()
+		return nil
+	case providerassignmentrun.FieldMarketBuyRateSnapshot:
+		m.ClearMarketBuyRateSnapshot()
+		return nil
+	case providerassignmentrun.FieldMarketSellRateSnapshot:
+		m.ClearMarketSellRateSnapshot()
+		return nil
+	case providerassignmentrun.FieldErrorMessage:
+		m.ClearErrorMessage()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderAssignmentRun nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ProviderAssignmentRunMutation) ResetField(name string) error {
+	switch name {
+	case providerassignmentrun.FieldAssignedProviderID:
+		m.ResetAssignedProviderID()
+		return nil
+	case providerassignmentrun.FieldAttemptedAt:
+		m.ResetAttemptedAt()
+		return nil
+	case providerassignmentrun.FieldTrigger:
+		m.ResetTrigger()
+		return nil
+	case providerassignmentrun.FieldResult:
+		m.ResetResult()
+		return nil
+	case providerassignmentrun.FieldUsedFallback:
+		m.ResetUsedFallback()
+		return nil
+	case providerassignmentrun.FieldMarketBuyRateSnapshot:
+		m.ResetMarketBuyRateSnapshot()
+		return nil
+	case providerassignmentrun.FieldMarketSellRateSnapshot:
+		m.ResetMarketSellRateSnapshot()
+		return nil
+	case providerassignmentrun.FieldErrorMessage:
+		m.ResetErrorMessage()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderAssignmentRun field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ProviderAssignmentRunMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.payment_order != nil {
+		edges = append(edges, providerassignmentrun.EdgePaymentOrder)
+	}
+	if m.provider_order_token != nil {
+		edges = append(edges, providerassignmentrun.EdgeProviderOrderToken)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ProviderAssignmentRunMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case providerassignmentrun.EdgePaymentOrder:
+		if id := m.payment_order; id != nil {
+			return []ent.Value{*id}
+		}
+	case providerassignmentrun.EdgeProviderOrderToken:
+		if id := m.provider_order_token; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ProviderAssignmentRunMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ProviderAssignmentRunMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ProviderAssignmentRunMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedpayment_order {
+		edges = append(edges, providerassignmentrun.EdgePaymentOrder)
+	}
+	if m.clearedprovider_order_token {
+		edges = append(edges, providerassignmentrun.EdgeProviderOrderToken)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ProviderAssignmentRunMutation) EdgeCleared(name string) bool {
+	switch name {
+	case providerassignmentrun.EdgePaymentOrder:
+		return m.clearedpayment_order
+	case providerassignmentrun.EdgeProviderOrderToken:
+		return m.clearedprovider_order_token
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ProviderAssignmentRunMutation) ClearEdge(name string) error {
+	switch name {
+	case providerassignmentrun.EdgePaymentOrder:
+		m.ClearPaymentOrder()
+		return nil
+	case providerassignmentrun.EdgeProviderOrderToken:
+		m.ClearProviderOrderToken()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderAssignmentRun unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ProviderAssignmentRunMutation) ResetEdge(name string) error {
+	switch name {
+	case providerassignmentrun.EdgePaymentOrder:
+		m.ResetPaymentOrder()
+		return nil
+	case providerassignmentrun.EdgeProviderOrderToken:
+		m.ResetProviderOrderToken()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderAssignmentRun edge %s", name)
 }
 
 // ProviderBalancesMutation represents an operation that mutates the ProviderBalances nodes in the graph.
@@ -12993,6 +14328,11 @@ type ProviderOrderTokenMutation struct {
 	settlement_address      *string
 	payout_address          *string
 	network                 *string
+	score_onramp            *decimal.Decimal
+	addscore_onramp         *decimal.Decimal
+	score_offramp           *decimal.Decimal
+	addscore_offramp        *decimal.Decimal
+	last_order_assigned_at  *time.Time
 	clearedFields           map[string]struct{}
 	provider                *string
 	clearedprovider         bool
@@ -13000,6 +14340,12 @@ type ProviderOrderTokenMutation struct {
 	clearedtoken            bool
 	currency                *uuid.UUID
 	clearedcurrency         bool
+	score_histories         map[uuid.UUID]struct{}
+	removedscore_histories  map[uuid.UUID]struct{}
+	clearedscore_histories  bool
+	assignment_runs         map[uuid.UUID]struct{}
+	removedassignment_runs  map[uuid.UUID]struct{}
+	clearedassignment_runs  bool
 	done                    bool
 	oldValue                func(context.Context) (*ProviderOrderToken, error)
 	predicates              []predicate.ProviderOrderToken
@@ -13869,6 +15215,167 @@ func (m *ProviderOrderTokenMutation) ResetNetwork() {
 	m.network = nil
 }
 
+// SetScoreOnramp sets the "score_onramp" field.
+func (m *ProviderOrderTokenMutation) SetScoreOnramp(d decimal.Decimal) {
+	m.score_onramp = &d
+	m.addscore_onramp = nil
+}
+
+// ScoreOnramp returns the value of the "score_onramp" field in the mutation.
+func (m *ProviderOrderTokenMutation) ScoreOnramp() (r decimal.Decimal, exists bool) {
+	v := m.score_onramp
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScoreOnramp returns the old "score_onramp" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldScoreOnramp(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScoreOnramp is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScoreOnramp requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScoreOnramp: %w", err)
+	}
+	return oldValue.ScoreOnramp, nil
+}
+
+// AddScoreOnramp adds d to the "score_onramp" field.
+func (m *ProviderOrderTokenMutation) AddScoreOnramp(d decimal.Decimal) {
+	if m.addscore_onramp != nil {
+		*m.addscore_onramp = m.addscore_onramp.Add(d)
+	} else {
+		m.addscore_onramp = &d
+	}
+}
+
+// AddedScoreOnramp returns the value that was added to the "score_onramp" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedScoreOnramp() (r decimal.Decimal, exists bool) {
+	v := m.addscore_onramp
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetScoreOnramp resets all changes to the "score_onramp" field.
+func (m *ProviderOrderTokenMutation) ResetScoreOnramp() {
+	m.score_onramp = nil
+	m.addscore_onramp = nil
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (m *ProviderOrderTokenMutation) SetScoreOfframp(d decimal.Decimal) {
+	m.score_offramp = &d
+	m.addscore_offramp = nil
+}
+
+// ScoreOfframp returns the value of the "score_offramp" field in the mutation.
+func (m *ProviderOrderTokenMutation) ScoreOfframp() (r decimal.Decimal, exists bool) {
+	v := m.score_offramp
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScoreOfframp returns the old "score_offramp" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldScoreOfframp(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScoreOfframp is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScoreOfframp requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScoreOfframp: %w", err)
+	}
+	return oldValue.ScoreOfframp, nil
+}
+
+// AddScoreOfframp adds d to the "score_offramp" field.
+func (m *ProviderOrderTokenMutation) AddScoreOfframp(d decimal.Decimal) {
+	if m.addscore_offramp != nil {
+		*m.addscore_offramp = m.addscore_offramp.Add(d)
+	} else {
+		m.addscore_offramp = &d
+	}
+}
+
+// AddedScoreOfframp returns the value that was added to the "score_offramp" field in this mutation.
+func (m *ProviderOrderTokenMutation) AddedScoreOfframp() (r decimal.Decimal, exists bool) {
+	v := m.addscore_offramp
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetScoreOfframp resets all changes to the "score_offramp" field.
+func (m *ProviderOrderTokenMutation) ResetScoreOfframp() {
+	m.score_offramp = nil
+	m.addscore_offramp = nil
+}
+
+// SetLastOrderAssignedAt sets the "last_order_assigned_at" field.
+func (m *ProviderOrderTokenMutation) SetLastOrderAssignedAt(t time.Time) {
+	m.last_order_assigned_at = &t
+}
+
+// LastOrderAssignedAt returns the value of the "last_order_assigned_at" field in the mutation.
+func (m *ProviderOrderTokenMutation) LastOrderAssignedAt() (r time.Time, exists bool) {
+	v := m.last_order_assigned_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastOrderAssignedAt returns the old "last_order_assigned_at" field's value of the ProviderOrderToken entity.
+// If the ProviderOrderToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenMutation) OldLastOrderAssignedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastOrderAssignedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastOrderAssignedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastOrderAssignedAt: %w", err)
+	}
+	return oldValue.LastOrderAssignedAt, nil
+}
+
+// ClearLastOrderAssignedAt clears the value of the "last_order_assigned_at" field.
+func (m *ProviderOrderTokenMutation) ClearLastOrderAssignedAt() {
+	m.last_order_assigned_at = nil
+	m.clearedFields[providerordertoken.FieldLastOrderAssignedAt] = struct{}{}
+}
+
+// LastOrderAssignedAtCleared returns if the "last_order_assigned_at" field was cleared in this mutation.
+func (m *ProviderOrderTokenMutation) LastOrderAssignedAtCleared() bool {
+	_, ok := m.clearedFields[providerordertoken.FieldLastOrderAssignedAt]
+	return ok
+}
+
+// ResetLastOrderAssignedAt resets all changes to the "last_order_assigned_at" field.
+func (m *ProviderOrderTokenMutation) ResetLastOrderAssignedAt() {
+	m.last_order_assigned_at = nil
+	delete(m.clearedFields, providerordertoken.FieldLastOrderAssignedAt)
+}
+
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by id.
 func (m *ProviderOrderTokenMutation) SetProviderID(id string) {
 	m.provider = &id
@@ -13986,6 +15493,114 @@ func (m *ProviderOrderTokenMutation) ResetCurrency() {
 	m.clearedcurrency = false
 }
 
+// AddScoreHistoryIDs adds the "score_histories" edge to the ProviderOrderTokenScoreHistory entity by ids.
+func (m *ProviderOrderTokenMutation) AddScoreHistoryIDs(ids ...uuid.UUID) {
+	if m.score_histories == nil {
+		m.score_histories = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.score_histories[ids[i]] = struct{}{}
+	}
+}
+
+// ClearScoreHistories clears the "score_histories" edge to the ProviderOrderTokenScoreHistory entity.
+func (m *ProviderOrderTokenMutation) ClearScoreHistories() {
+	m.clearedscore_histories = true
+}
+
+// ScoreHistoriesCleared reports if the "score_histories" edge to the ProviderOrderTokenScoreHistory entity was cleared.
+func (m *ProviderOrderTokenMutation) ScoreHistoriesCleared() bool {
+	return m.clearedscore_histories
+}
+
+// RemoveScoreHistoryIDs removes the "score_histories" edge to the ProviderOrderTokenScoreHistory entity by IDs.
+func (m *ProviderOrderTokenMutation) RemoveScoreHistoryIDs(ids ...uuid.UUID) {
+	if m.removedscore_histories == nil {
+		m.removedscore_histories = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.score_histories, ids[i])
+		m.removedscore_histories[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedScoreHistories returns the removed IDs of the "score_histories" edge to the ProviderOrderTokenScoreHistory entity.
+func (m *ProviderOrderTokenMutation) RemovedScoreHistoriesIDs() (ids []uuid.UUID) {
+	for id := range m.removedscore_histories {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ScoreHistoriesIDs returns the "score_histories" edge IDs in the mutation.
+func (m *ProviderOrderTokenMutation) ScoreHistoriesIDs() (ids []uuid.UUID) {
+	for id := range m.score_histories {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetScoreHistories resets all changes to the "score_histories" edge.
+func (m *ProviderOrderTokenMutation) ResetScoreHistories() {
+	m.score_histories = nil
+	m.clearedscore_histories = false
+	m.removedscore_histories = nil
+}
+
+// AddAssignmentRunIDs adds the "assignment_runs" edge to the ProviderAssignmentRun entity by ids.
+func (m *ProviderOrderTokenMutation) AddAssignmentRunIDs(ids ...uuid.UUID) {
+	if m.assignment_runs == nil {
+		m.assignment_runs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.assignment_runs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAssignmentRuns clears the "assignment_runs" edge to the ProviderAssignmentRun entity.
+func (m *ProviderOrderTokenMutation) ClearAssignmentRuns() {
+	m.clearedassignment_runs = true
+}
+
+// AssignmentRunsCleared reports if the "assignment_runs" edge to the ProviderAssignmentRun entity was cleared.
+func (m *ProviderOrderTokenMutation) AssignmentRunsCleared() bool {
+	return m.clearedassignment_runs
+}
+
+// RemoveAssignmentRunIDs removes the "assignment_runs" edge to the ProviderAssignmentRun entity by IDs.
+func (m *ProviderOrderTokenMutation) RemoveAssignmentRunIDs(ids ...uuid.UUID) {
+	if m.removedassignment_runs == nil {
+		m.removedassignment_runs = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.assignment_runs, ids[i])
+		m.removedassignment_runs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAssignmentRuns returns the removed IDs of the "assignment_runs" edge to the ProviderAssignmentRun entity.
+func (m *ProviderOrderTokenMutation) RemovedAssignmentRunsIDs() (ids []uuid.UUID) {
+	for id := range m.removedassignment_runs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AssignmentRunsIDs returns the "assignment_runs" edge IDs in the mutation.
+func (m *ProviderOrderTokenMutation) AssignmentRunsIDs() (ids []uuid.UUID) {
+	for id := range m.assignment_runs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAssignmentRuns resets all changes to the "assignment_runs" edge.
+func (m *ProviderOrderTokenMutation) ResetAssignmentRuns() {
+	m.assignment_runs = nil
+	m.clearedassignment_runs = false
+	m.removedassignment_runs = nil
+}
+
 // Where appends a list predicates to the ProviderOrderTokenMutation builder.
 func (m *ProviderOrderTokenMutation) Where(ps ...predicate.ProviderOrderToken) {
 	m.predicates = append(m.predicates, ps...)
@@ -14020,7 +15635,7 @@ func (m *ProviderOrderTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderOrderTokenMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 17)
 	if m.created_at != nil {
 		fields = append(fields, providerordertoken.FieldCreatedAt)
 	}
@@ -14063,6 +15678,15 @@ func (m *ProviderOrderTokenMutation) Fields() []string {
 	if m.network != nil {
 		fields = append(fields, providerordertoken.FieldNetwork)
 	}
+	if m.score_onramp != nil {
+		fields = append(fields, providerordertoken.FieldScoreOnramp)
+	}
+	if m.score_offramp != nil {
+		fields = append(fields, providerordertoken.FieldScoreOfframp)
+	}
+	if m.last_order_assigned_at != nil {
+		fields = append(fields, providerordertoken.FieldLastOrderAssignedAt)
+	}
 	return fields
 }
 
@@ -14099,6 +15723,12 @@ func (m *ProviderOrderTokenMutation) Field(name string) (ent.Value, bool) {
 		return m.PayoutAddress()
 	case providerordertoken.FieldNetwork:
 		return m.Network()
+	case providerordertoken.FieldScoreOnramp:
+		return m.ScoreOnramp()
+	case providerordertoken.FieldScoreOfframp:
+		return m.ScoreOfframp()
+	case providerordertoken.FieldLastOrderAssignedAt:
+		return m.LastOrderAssignedAt()
 	}
 	return nil, false
 }
@@ -14136,6 +15766,12 @@ func (m *ProviderOrderTokenMutation) OldField(ctx context.Context, name string) 
 		return m.OldPayoutAddress(ctx)
 	case providerordertoken.FieldNetwork:
 		return m.OldNetwork(ctx)
+	case providerordertoken.FieldScoreOnramp:
+		return m.OldScoreOnramp(ctx)
+	case providerordertoken.FieldScoreOfframp:
+		return m.OldScoreOfframp(ctx)
+	case providerordertoken.FieldLastOrderAssignedAt:
+		return m.OldLastOrderAssignedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProviderOrderToken field %s", name)
 }
@@ -14243,6 +15879,27 @@ func (m *ProviderOrderTokenMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetNetwork(v)
 		return nil
+	case providerordertoken.FieldScoreOnramp:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScoreOnramp(v)
+		return nil
+	case providerordertoken.FieldScoreOfframp:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScoreOfframp(v)
+		return nil
+	case providerordertoken.FieldLastOrderAssignedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastOrderAssignedAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken field %s", name)
 }
@@ -14278,6 +15935,12 @@ func (m *ProviderOrderTokenMutation) AddedFields() []string {
 	if m.addrate_slippage != nil {
 		fields = append(fields, providerordertoken.FieldRateSlippage)
 	}
+	if m.addscore_onramp != nil {
+		fields = append(fields, providerordertoken.FieldScoreOnramp)
+	}
+	if m.addscore_offramp != nil {
+		fields = append(fields, providerordertoken.FieldScoreOfframp)
+	}
 	return fields
 }
 
@@ -14304,6 +15967,10 @@ func (m *ProviderOrderTokenMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedMinOrderAmountOtc()
 	case providerordertoken.FieldRateSlippage:
 		return m.AddedRateSlippage()
+	case providerordertoken.FieldScoreOnramp:
+		return m.AddedScoreOnramp()
+	case providerordertoken.FieldScoreOfframp:
+		return m.AddedScoreOfframp()
 	}
 	return nil, false
 }
@@ -14376,6 +16043,20 @@ func (m *ProviderOrderTokenMutation) AddField(name string, value ent.Value) erro
 		}
 		m.AddRateSlippage(v)
 		return nil
+	case providerordertoken.FieldScoreOnramp:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddScoreOnramp(v)
+		return nil
+	case providerordertoken.FieldScoreOfframp:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddScoreOfframp(v)
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken numeric field %s", name)
 }
@@ -14401,6 +16082,9 @@ func (m *ProviderOrderTokenMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(providerordertoken.FieldPayoutAddress) {
 		fields = append(fields, providerordertoken.FieldPayoutAddress)
+	}
+	if m.FieldCleared(providerordertoken.FieldLastOrderAssignedAt) {
+		fields = append(fields, providerordertoken.FieldLastOrderAssignedAt)
 	}
 	return fields
 }
@@ -14433,6 +16117,9 @@ func (m *ProviderOrderTokenMutation) ClearField(name string) error {
 		return nil
 	case providerordertoken.FieldPayoutAddress:
 		m.ClearPayoutAddress()
+		return nil
+	case providerordertoken.FieldLastOrderAssignedAt:
+		m.ClearLastOrderAssignedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken nullable field %s", name)
@@ -14484,13 +16171,22 @@ func (m *ProviderOrderTokenMutation) ResetField(name string) error {
 	case providerordertoken.FieldNetwork:
 		m.ResetNetwork()
 		return nil
+	case providerordertoken.FieldScoreOnramp:
+		m.ResetScoreOnramp()
+		return nil
+	case providerordertoken.FieldScoreOfframp:
+		m.ResetScoreOfframp()
+		return nil
+	case providerordertoken.FieldLastOrderAssignedAt:
+		m.ResetLastOrderAssignedAt()
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProviderOrderTokenMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 5)
 	if m.provider != nil {
 		edges = append(edges, providerordertoken.EdgeProvider)
 	}
@@ -14499,6 +16195,12 @@ func (m *ProviderOrderTokenMutation) AddedEdges() []string {
 	}
 	if m.currency != nil {
 		edges = append(edges, providerordertoken.EdgeCurrency)
+	}
+	if m.score_histories != nil {
+		edges = append(edges, providerordertoken.EdgeScoreHistories)
+	}
+	if m.assignment_runs != nil {
+		edges = append(edges, providerordertoken.EdgeAssignmentRuns)
 	}
 	return edges
 }
@@ -14519,25 +16221,57 @@ func (m *ProviderOrderTokenMutation) AddedIDs(name string) []ent.Value {
 		if id := m.currency; id != nil {
 			return []ent.Value{*id}
 		}
+	case providerordertoken.EdgeScoreHistories:
+		ids := make([]ent.Value, 0, len(m.score_histories))
+		for id := range m.score_histories {
+			ids = append(ids, id)
+		}
+		return ids
+	case providerordertoken.EdgeAssignmentRuns:
+		ids := make([]ent.Value, 0, len(m.assignment_runs))
+		for id := range m.assignment_runs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderOrderTokenMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 5)
+	if m.removedscore_histories != nil {
+		edges = append(edges, providerordertoken.EdgeScoreHistories)
+	}
+	if m.removedassignment_runs != nil {
+		edges = append(edges, providerordertoken.EdgeAssignmentRuns)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ProviderOrderTokenMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case providerordertoken.EdgeScoreHistories:
+		ids := make([]ent.Value, 0, len(m.removedscore_histories))
+		for id := range m.removedscore_histories {
+			ids = append(ids, id)
+		}
+		return ids
+	case providerordertoken.EdgeAssignmentRuns:
+		ids := make([]ent.Value, 0, len(m.removedassignment_runs))
+		for id := range m.removedassignment_runs {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProviderOrderTokenMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 5)
 	if m.clearedprovider {
 		edges = append(edges, providerordertoken.EdgeProvider)
 	}
@@ -14546,6 +16280,12 @@ func (m *ProviderOrderTokenMutation) ClearedEdges() []string {
 	}
 	if m.clearedcurrency {
 		edges = append(edges, providerordertoken.EdgeCurrency)
+	}
+	if m.clearedscore_histories {
+		edges = append(edges, providerordertoken.EdgeScoreHistories)
+	}
+	if m.clearedassignment_runs {
+		edges = append(edges, providerordertoken.EdgeAssignmentRuns)
 	}
 	return edges
 }
@@ -14560,6 +16300,10 @@ func (m *ProviderOrderTokenMutation) EdgeCleared(name string) bool {
 		return m.clearedtoken
 	case providerordertoken.EdgeCurrency:
 		return m.clearedcurrency
+	case providerordertoken.EdgeScoreHistories:
+		return m.clearedscore_histories
+	case providerordertoken.EdgeAssignmentRuns:
+		return m.clearedassignment_runs
 	}
 	return false
 }
@@ -14594,8 +16338,670 @@ func (m *ProviderOrderTokenMutation) ResetEdge(name string) error {
 	case providerordertoken.EdgeCurrency:
 		m.ResetCurrency()
 		return nil
+	case providerordertoken.EdgeScoreHistories:
+		m.ResetScoreHistories()
+		return nil
+	case providerordertoken.EdgeAssignmentRuns:
+		m.ResetAssignmentRuns()
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderOrderToken edge %s", name)
+}
+
+// ProviderOrderTokenScoreHistoryMutation represents an operation that mutates the ProviderOrderTokenScoreHistory nodes in the graph.
+type ProviderOrderTokenScoreHistoryMutation struct {
+	config
+	op                          Op
+	typ                         string
+	id                          *uuid.UUID
+	created_at                  *time.Time
+	updated_at                  *time.Time
+	event_type                  *string
+	delta                       *decimal.Decimal
+	adddelta                    *decimal.Decimal
+	clearedFields               map[string]struct{}
+	payment_order               *uuid.UUID
+	clearedpayment_order        bool
+	provider_order_token        *int
+	clearedprovider_order_token bool
+	done                        bool
+	oldValue                    func(context.Context) (*ProviderOrderTokenScoreHistory, error)
+	predicates                  []predicate.ProviderOrderTokenScoreHistory
+}
+
+var _ ent.Mutation = (*ProviderOrderTokenScoreHistoryMutation)(nil)
+
+// providerordertokenscorehistoryOption allows management of the mutation configuration using functional options.
+type providerordertokenscorehistoryOption func(*ProviderOrderTokenScoreHistoryMutation)
+
+// newProviderOrderTokenScoreHistoryMutation creates new mutation for the ProviderOrderTokenScoreHistory entity.
+func newProviderOrderTokenScoreHistoryMutation(c config, op Op, opts ...providerordertokenscorehistoryOption) *ProviderOrderTokenScoreHistoryMutation {
+	m := &ProviderOrderTokenScoreHistoryMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeProviderOrderTokenScoreHistory,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withProviderOrderTokenScoreHistoryID sets the ID field of the mutation.
+func withProviderOrderTokenScoreHistoryID(id uuid.UUID) providerordertokenscorehistoryOption {
+	return func(m *ProviderOrderTokenScoreHistoryMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ProviderOrderTokenScoreHistory
+		)
+		m.oldValue = func(ctx context.Context) (*ProviderOrderTokenScoreHistory, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ProviderOrderTokenScoreHistory.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withProviderOrderTokenScoreHistory sets the old ProviderOrderTokenScoreHistory of the mutation.
+func withProviderOrderTokenScoreHistory(node *ProviderOrderTokenScoreHistory) providerordertokenscorehistoryOption {
+	return func(m *ProviderOrderTokenScoreHistoryMutation) {
+		m.oldValue = func(context.Context) (*ProviderOrderTokenScoreHistory, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ProviderOrderTokenScoreHistoryMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ProviderOrderTokenScoreHistoryMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ProviderOrderTokenScoreHistory entities.
+func (m *ProviderOrderTokenScoreHistoryMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ProviderOrderTokenScoreHistoryMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProviderOrderTokenScoreHistory.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ProviderOrderTokenScoreHistoryMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ProviderOrderTokenScoreHistory entity.
+// If the ProviderOrderTokenScoreHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenScoreHistoryMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ProviderOrderTokenScoreHistoryMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ProviderOrderTokenScoreHistoryMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ProviderOrderTokenScoreHistory entity.
+// If the ProviderOrderTokenScoreHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenScoreHistoryMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ProviderOrderTokenScoreHistoryMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetEventType sets the "event_type" field.
+func (m *ProviderOrderTokenScoreHistoryMutation) SetEventType(s string) {
+	m.event_type = &s
+}
+
+// EventType returns the value of the "event_type" field in the mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) EventType() (r string, exists bool) {
+	v := m.event_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEventType returns the old "event_type" field's value of the ProviderOrderTokenScoreHistory entity.
+// If the ProviderOrderTokenScoreHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenScoreHistoryMutation) OldEventType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEventType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEventType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEventType: %w", err)
+	}
+	return oldValue.EventType, nil
+}
+
+// ResetEventType resets all changes to the "event_type" field.
+func (m *ProviderOrderTokenScoreHistoryMutation) ResetEventType() {
+	m.event_type = nil
+}
+
+// SetDelta sets the "delta" field.
+func (m *ProviderOrderTokenScoreHistoryMutation) SetDelta(d decimal.Decimal) {
+	m.delta = &d
+	m.adddelta = nil
+}
+
+// Delta returns the value of the "delta" field in the mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) Delta() (r decimal.Decimal, exists bool) {
+	v := m.delta
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDelta returns the old "delta" field's value of the ProviderOrderTokenScoreHistory entity.
+// If the ProviderOrderTokenScoreHistory object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderOrderTokenScoreHistoryMutation) OldDelta(ctx context.Context) (v decimal.Decimal, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDelta is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDelta requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDelta: %w", err)
+	}
+	return oldValue.Delta, nil
+}
+
+// AddDelta adds d to the "delta" field.
+func (m *ProviderOrderTokenScoreHistoryMutation) AddDelta(d decimal.Decimal) {
+	if m.adddelta != nil {
+		*m.adddelta = m.adddelta.Add(d)
+	} else {
+		m.adddelta = &d
+	}
+}
+
+// AddedDelta returns the value that was added to the "delta" field in this mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) AddedDelta() (r decimal.Decimal, exists bool) {
+	v := m.adddelta
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDelta resets all changes to the "delta" field.
+func (m *ProviderOrderTokenScoreHistoryMutation) ResetDelta() {
+	m.delta = nil
+	m.adddelta = nil
+}
+
+// SetPaymentOrderID sets the "payment_order" edge to the PaymentOrder entity by id.
+func (m *ProviderOrderTokenScoreHistoryMutation) SetPaymentOrderID(id uuid.UUID) {
+	m.payment_order = &id
+}
+
+// ClearPaymentOrder clears the "payment_order" edge to the PaymentOrder entity.
+func (m *ProviderOrderTokenScoreHistoryMutation) ClearPaymentOrder() {
+	m.clearedpayment_order = true
+}
+
+// PaymentOrderCleared reports if the "payment_order" edge to the PaymentOrder entity was cleared.
+func (m *ProviderOrderTokenScoreHistoryMutation) PaymentOrderCleared() bool {
+	return m.clearedpayment_order
+}
+
+// PaymentOrderID returns the "payment_order" edge ID in the mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) PaymentOrderID() (id uuid.UUID, exists bool) {
+	if m.payment_order != nil {
+		return *m.payment_order, true
+	}
+	return
+}
+
+// PaymentOrderIDs returns the "payment_order" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PaymentOrderID instead. It exists only for internal usage by the builders.
+func (m *ProviderOrderTokenScoreHistoryMutation) PaymentOrderIDs() (ids []uuid.UUID) {
+	if id := m.payment_order; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPaymentOrder resets all changes to the "payment_order" edge.
+func (m *ProviderOrderTokenScoreHistoryMutation) ResetPaymentOrder() {
+	m.payment_order = nil
+	m.clearedpayment_order = false
+}
+
+// SetProviderOrderTokenID sets the "provider_order_token" edge to the ProviderOrderToken entity by id.
+func (m *ProviderOrderTokenScoreHistoryMutation) SetProviderOrderTokenID(id int) {
+	m.provider_order_token = &id
+}
+
+// ClearProviderOrderToken clears the "provider_order_token" edge to the ProviderOrderToken entity.
+func (m *ProviderOrderTokenScoreHistoryMutation) ClearProviderOrderToken() {
+	m.clearedprovider_order_token = true
+}
+
+// ProviderOrderTokenCleared reports if the "provider_order_token" edge to the ProviderOrderToken entity was cleared.
+func (m *ProviderOrderTokenScoreHistoryMutation) ProviderOrderTokenCleared() bool {
+	return m.clearedprovider_order_token
+}
+
+// ProviderOrderTokenID returns the "provider_order_token" edge ID in the mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) ProviderOrderTokenID() (id int, exists bool) {
+	if m.provider_order_token != nil {
+		return *m.provider_order_token, true
+	}
+	return
+}
+
+// ProviderOrderTokenIDs returns the "provider_order_token" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProviderOrderTokenID instead. It exists only for internal usage by the builders.
+func (m *ProviderOrderTokenScoreHistoryMutation) ProviderOrderTokenIDs() (ids []int) {
+	if id := m.provider_order_token; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProviderOrderToken resets all changes to the "provider_order_token" edge.
+func (m *ProviderOrderTokenScoreHistoryMutation) ResetProviderOrderToken() {
+	m.provider_order_token = nil
+	m.clearedprovider_order_token = false
+}
+
+// Where appends a list predicates to the ProviderOrderTokenScoreHistoryMutation builder.
+func (m *ProviderOrderTokenScoreHistoryMutation) Where(ps ...predicate.ProviderOrderTokenScoreHistory) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ProviderOrderTokenScoreHistoryMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProviderOrderTokenScoreHistoryMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProviderOrderTokenScoreHistory, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ProviderOrderTokenScoreHistoryMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProviderOrderTokenScoreHistoryMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ProviderOrderTokenScoreHistory).
+func (m *ProviderOrderTokenScoreHistoryMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ProviderOrderTokenScoreHistoryMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.created_at != nil {
+		fields = append(fields, providerordertokenscorehistory.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, providerordertokenscorehistory.FieldUpdatedAt)
+	}
+	if m.event_type != nil {
+		fields = append(fields, providerordertokenscorehistory.FieldEventType)
+	}
+	if m.delta != nil {
+		fields = append(fields, providerordertokenscorehistory.FieldDelta)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ProviderOrderTokenScoreHistoryMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case providerordertokenscorehistory.FieldCreatedAt:
+		return m.CreatedAt()
+	case providerordertokenscorehistory.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case providerordertokenscorehistory.FieldEventType:
+		return m.EventType()
+	case providerordertokenscorehistory.FieldDelta:
+		return m.Delta()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ProviderOrderTokenScoreHistoryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case providerordertokenscorehistory.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case providerordertokenscorehistory.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case providerordertokenscorehistory.FieldEventType:
+		return m.OldEventType(ctx)
+	case providerordertokenscorehistory.FieldDelta:
+		return m.OldDelta(ctx)
+	}
+	return nil, fmt.Errorf("unknown ProviderOrderTokenScoreHistory field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderOrderTokenScoreHistoryMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case providerordertokenscorehistory.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case providerordertokenscorehistory.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case providerordertokenscorehistory.FieldEventType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEventType(v)
+		return nil
+	case providerordertokenscorehistory.FieldDelta:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDelta(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderOrderTokenScoreHistory field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) AddedFields() []string {
+	var fields []string
+	if m.adddelta != nil {
+		fields = append(fields, providerordertokenscorehistory.FieldDelta)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ProviderOrderTokenScoreHistoryMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case providerordertokenscorehistory.FieldDelta:
+		return m.AddedDelta()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProviderOrderTokenScoreHistoryMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case providerordertokenscorehistory.FieldDelta:
+		v, ok := value.(decimal.Decimal)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDelta(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderOrderTokenScoreHistory numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ProviderOrderTokenScoreHistoryMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ProviderOrderTokenScoreHistory nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ProviderOrderTokenScoreHistoryMutation) ResetField(name string) error {
+	switch name {
+	case providerordertokenscorehistory.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case providerordertokenscorehistory.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case providerordertokenscorehistory.FieldEventType:
+		m.ResetEventType()
+		return nil
+	case providerordertokenscorehistory.FieldDelta:
+		m.ResetDelta()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderOrderTokenScoreHistory field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.payment_order != nil {
+		edges = append(edges, providerordertokenscorehistory.EdgePaymentOrder)
+	}
+	if m.provider_order_token != nil {
+		edges = append(edges, providerordertokenscorehistory.EdgeProviderOrderToken)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case providerordertokenscorehistory.EdgePaymentOrder:
+		if id := m.payment_order; id != nil {
+			return []ent.Value{*id}
+		}
+	case providerordertokenscorehistory.EdgeProviderOrderToken:
+		if id := m.provider_order_token; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedpayment_order {
+		edges = append(edges, providerordertokenscorehistory.EdgePaymentOrder)
+	}
+	if m.clearedprovider_order_token {
+		edges = append(edges, providerordertokenscorehistory.EdgeProviderOrderToken)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ProviderOrderTokenScoreHistoryMutation) EdgeCleared(name string) bool {
+	switch name {
+	case providerordertokenscorehistory.EdgePaymentOrder:
+		return m.clearedpayment_order
+	case providerordertokenscorehistory.EdgeProviderOrderToken:
+		return m.clearedprovider_order_token
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ProviderOrderTokenScoreHistoryMutation) ClearEdge(name string) error {
+	switch name {
+	case providerordertokenscorehistory.EdgePaymentOrder:
+		m.ClearPaymentOrder()
+		return nil
+	case providerordertokenscorehistory.EdgeProviderOrderToken:
+		m.ClearProviderOrderToken()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderOrderTokenScoreHistory unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ProviderOrderTokenScoreHistoryMutation) ResetEdge(name string) error {
+	switch name {
+	case providerordertokenscorehistory.EdgePaymentOrder:
+		m.ResetPaymentOrder()
+		return nil
+	case providerordertokenscorehistory.EdgeProviderOrderToken:
+		m.ResetProviderOrderToken()
+		return nil
+	}
+	return fmt.Errorf("unknown ProviderOrderTokenScoreHistory edge %s", name)
 }
 
 // ProviderProfileMutation represents an operation that mutates the ProviderProfile nodes in the graph.
@@ -14618,9 +17024,6 @@ type ProviderProfileMutation struct {
 	provider_balances        map[uuid.UUID]struct{}
 	removedprovider_balances map[uuid.UUID]struct{}
 	clearedprovider_balances bool
-	provision_buckets        map[int]struct{}
-	removedprovision_buckets map[int]struct{}
-	clearedprovision_buckets bool
 	order_tokens             map[int]struct{}
 	removedorder_tokens      map[int]struct{}
 	clearedorder_tokens      bool
@@ -15115,60 +17518,6 @@ func (m *ProviderProfileMutation) ResetProviderBalances() {
 	m.removedprovider_balances = nil
 }
 
-// AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by ids.
-func (m *ProviderProfileMutation) AddProvisionBucketIDs(ids ...int) {
-	if m.provision_buckets == nil {
-		m.provision_buckets = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.provision_buckets[ids[i]] = struct{}{}
-	}
-}
-
-// ClearProvisionBuckets clears the "provision_buckets" edge to the ProvisionBucket entity.
-func (m *ProviderProfileMutation) ClearProvisionBuckets() {
-	m.clearedprovision_buckets = true
-}
-
-// ProvisionBucketsCleared reports if the "provision_buckets" edge to the ProvisionBucket entity was cleared.
-func (m *ProviderProfileMutation) ProvisionBucketsCleared() bool {
-	return m.clearedprovision_buckets
-}
-
-// RemoveProvisionBucketIDs removes the "provision_buckets" edge to the ProvisionBucket entity by IDs.
-func (m *ProviderProfileMutation) RemoveProvisionBucketIDs(ids ...int) {
-	if m.removedprovision_buckets == nil {
-		m.removedprovision_buckets = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.provision_buckets, ids[i])
-		m.removedprovision_buckets[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedProvisionBuckets returns the removed IDs of the "provision_buckets" edge to the ProvisionBucket entity.
-func (m *ProviderProfileMutation) RemovedProvisionBucketsIDs() (ids []int) {
-	for id := range m.removedprovision_buckets {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ProvisionBucketsIDs returns the "provision_buckets" edge IDs in the mutation.
-func (m *ProviderProfileMutation) ProvisionBucketsIDs() (ids []int) {
-	for id := range m.provision_buckets {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetProvisionBuckets resets all changes to the "provision_buckets" edge.
-func (m *ProviderProfileMutation) ResetProvisionBuckets() {
-	m.provision_buckets = nil
-	m.clearedprovision_buckets = false
-	m.removedprovision_buckets = nil
-}
-
 // AddOrderTokenIDs adds the "order_tokens" edge to the ProviderOrderToken entity by ids.
 func (m *ProviderProfileMutation) AddOrderTokenIDs(ids ...int) {
 	if m.order_tokens == nil {
@@ -15603,7 +17952,7 @@ func (m *ProviderProfileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProviderProfileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 7)
 	if m.user != nil {
 		edges = append(edges, providerprofile.EdgeUser)
 	}
@@ -15612,9 +17961,6 @@ func (m *ProviderProfileMutation) AddedEdges() []string {
 	}
 	if m.provider_balances != nil {
 		edges = append(edges, providerprofile.EdgeProviderBalances)
-	}
-	if m.provision_buckets != nil {
-		edges = append(edges, providerprofile.EdgeProvisionBuckets)
 	}
 	if m.order_tokens != nil {
 		edges = append(edges, providerprofile.EdgeOrderTokens)
@@ -15649,12 +17995,6 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case providerprofile.EdgeProvisionBuckets:
-		ids := make([]ent.Value, 0, len(m.provision_buckets))
-		for id := range m.provision_buckets {
-			ids = append(ids, id)
-		}
-		return ids
 	case providerprofile.EdgeOrderTokens:
 		ids := make([]ent.Value, 0, len(m.order_tokens))
 		for id := range m.order_tokens {
@@ -15683,12 +18023,9 @@ func (m *ProviderProfileMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderProfileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 7)
 	if m.removedprovider_balances != nil {
 		edges = append(edges, providerprofile.EdgeProviderBalances)
-	}
-	if m.removedprovision_buckets != nil {
-		edges = append(edges, providerprofile.EdgeProvisionBuckets)
 	}
 	if m.removedorder_tokens != nil {
 		edges = append(edges, providerprofile.EdgeOrderTokens)
@@ -15709,12 +18046,6 @@ func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 	case providerprofile.EdgeProviderBalances:
 		ids := make([]ent.Value, 0, len(m.removedprovider_balances))
 		for id := range m.removedprovider_balances {
-			ids = append(ids, id)
-		}
-		return ids
-	case providerprofile.EdgeProvisionBuckets:
-		ids := make([]ent.Value, 0, len(m.removedprovision_buckets))
-		for id := range m.removedprovision_buckets {
 			ids = append(ids, id)
 		}
 		return ids
@@ -15742,7 +18073,7 @@ func (m *ProviderProfileMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProviderProfileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 7)
 	if m.cleareduser {
 		edges = append(edges, providerprofile.EdgeUser)
 	}
@@ -15751,9 +18082,6 @@ func (m *ProviderProfileMutation) ClearedEdges() []string {
 	}
 	if m.clearedprovider_balances {
 		edges = append(edges, providerprofile.EdgeProviderBalances)
-	}
-	if m.clearedprovision_buckets {
-		edges = append(edges, providerprofile.EdgeProvisionBuckets)
 	}
 	if m.clearedorder_tokens {
 		edges = append(edges, providerprofile.EdgeOrderTokens)
@@ -15780,8 +18108,6 @@ func (m *ProviderProfileMutation) EdgeCleared(name string) bool {
 		return m.clearedapi_key
 	case providerprofile.EdgeProviderBalances:
 		return m.clearedprovider_balances
-	case providerprofile.EdgeProvisionBuckets:
-		return m.clearedprovision_buckets
 	case providerprofile.EdgeOrderTokens:
 		return m.clearedorder_tokens
 	case providerprofile.EdgeProviderRating:
@@ -15823,9 +18149,6 @@ func (m *ProviderProfileMutation) ResetEdge(name string) error {
 		return nil
 	case providerprofile.EdgeProviderBalances:
 		m.ResetProviderBalances()
-		return nil
-	case providerprofile.EdgeProvisionBuckets:
-		m.ResetProvisionBuckets()
 		return nil
 	case providerprofile.EdgeOrderTokens:
 		m.ResetOrderTokens()
@@ -16383,26 +18706,19 @@ func (m *ProviderRatingMutation) ResetEdge(name string) error {
 // ProvisionBucketMutation represents an operation that mutates the ProvisionBucket nodes in the graph.
 type ProvisionBucketMutation struct {
 	config
-	op                       Op
-	typ                      string
-	id                       *int
-	min_amount               *decimal.Decimal
-	addmin_amount            *decimal.Decimal
-	max_amount               *decimal.Decimal
-	addmax_amount            *decimal.Decimal
-	created_at               *time.Time
-	clearedFields            map[string]struct{}
-	currency                 *uuid.UUID
-	clearedcurrency          bool
-	payment_orders           map[uuid.UUID]struct{}
-	removedpayment_orders    map[uuid.UUID]struct{}
-	clearedpayment_orders    bool
-	provider_profiles        map[string]struct{}
-	removedprovider_profiles map[string]struct{}
-	clearedprovider_profiles bool
-	done                     bool
-	oldValue                 func(context.Context) (*ProvisionBucket, error)
-	predicates               []predicate.ProvisionBucket
+	op               Op
+	typ              string
+	id               *int
+	min_amount       *decimal.Decimal
+	addmin_amount    *decimal.Decimal
+	max_amount       *decimal.Decimal
+	addmax_amount    *decimal.Decimal
+	created_at       *time.Time
+	fiat_currency_id *uuid.UUID
+	clearedFields    map[string]struct{}
+	done             bool
+	oldValue         func(context.Context) (*ProvisionBucket, error)
+	predicates       []predicate.ProvisionBucket
 }
 
 var _ ent.Mutation = (*ProvisionBucketMutation)(nil)
@@ -16651,151 +18967,53 @@ func (m *ProvisionBucketMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
-// SetCurrencyID sets the "currency" edge to the FiatCurrency entity by id.
-func (m *ProvisionBucketMutation) SetCurrencyID(id uuid.UUID) {
-	m.currency = &id
+// SetFiatCurrencyID sets the "fiat_currency_id" field.
+func (m *ProvisionBucketMutation) SetFiatCurrencyID(u uuid.UUID) {
+	m.fiat_currency_id = &u
 }
 
-// ClearCurrency clears the "currency" edge to the FiatCurrency entity.
-func (m *ProvisionBucketMutation) ClearCurrency() {
-	m.clearedcurrency = true
-}
-
-// CurrencyCleared reports if the "currency" edge to the FiatCurrency entity was cleared.
-func (m *ProvisionBucketMutation) CurrencyCleared() bool {
-	return m.clearedcurrency
-}
-
-// CurrencyID returns the "currency" edge ID in the mutation.
-func (m *ProvisionBucketMutation) CurrencyID() (id uuid.UUID, exists bool) {
-	if m.currency != nil {
-		return *m.currency, true
+// FiatCurrencyID returns the value of the "fiat_currency_id" field in the mutation.
+func (m *ProvisionBucketMutation) FiatCurrencyID() (r uuid.UUID, exists bool) {
+	v := m.fiat_currency_id
+	if v == nil {
+		return
 	}
-	return
+	return *v, true
 }
 
-// CurrencyIDs returns the "currency" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// CurrencyID instead. It exists only for internal usage by the builders.
-func (m *ProvisionBucketMutation) CurrencyIDs() (ids []uuid.UUID) {
-	if id := m.currency; id != nil {
-		ids = append(ids, *id)
+// OldFiatCurrencyID returns the old "fiat_currency_id" field's value of the ProvisionBucket entity.
+// If the ProvisionBucket object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProvisionBucketMutation) OldFiatCurrencyID(ctx context.Context) (v *uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFiatCurrencyID is only allowed on UpdateOne operations")
 	}
-	return
-}
-
-// ResetCurrency resets all changes to the "currency" edge.
-func (m *ProvisionBucketMutation) ResetCurrency() {
-	m.currency = nil
-	m.clearedcurrency = false
-}
-
-// AddPaymentOrderIDs adds the "payment_orders" edge to the PaymentOrder entity by ids.
-func (m *ProvisionBucketMutation) AddPaymentOrderIDs(ids ...uuid.UUID) {
-	if m.payment_orders == nil {
-		m.payment_orders = make(map[uuid.UUID]struct{})
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFiatCurrencyID requires an ID field in the mutation")
 	}
-	for i := range ids {
-		m.payment_orders[ids[i]] = struct{}{}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFiatCurrencyID: %w", err)
 	}
+	return oldValue.FiatCurrencyID, nil
 }
 
-// ClearPaymentOrders clears the "payment_orders" edge to the PaymentOrder entity.
-func (m *ProvisionBucketMutation) ClearPaymentOrders() {
-	m.clearedpayment_orders = true
+// ClearFiatCurrencyID clears the value of the "fiat_currency_id" field.
+func (m *ProvisionBucketMutation) ClearFiatCurrencyID() {
+	m.fiat_currency_id = nil
+	m.clearedFields[provisionbucket.FieldFiatCurrencyID] = struct{}{}
 }
 
-// PaymentOrdersCleared reports if the "payment_orders" edge to the PaymentOrder entity was cleared.
-func (m *ProvisionBucketMutation) PaymentOrdersCleared() bool {
-	return m.clearedpayment_orders
+// FiatCurrencyIDCleared returns if the "fiat_currency_id" field was cleared in this mutation.
+func (m *ProvisionBucketMutation) FiatCurrencyIDCleared() bool {
+	_, ok := m.clearedFields[provisionbucket.FieldFiatCurrencyID]
+	return ok
 }
 
-// RemovePaymentOrderIDs removes the "payment_orders" edge to the PaymentOrder entity by IDs.
-func (m *ProvisionBucketMutation) RemovePaymentOrderIDs(ids ...uuid.UUID) {
-	if m.removedpayment_orders == nil {
-		m.removedpayment_orders = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.payment_orders, ids[i])
-		m.removedpayment_orders[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedPaymentOrders returns the removed IDs of the "payment_orders" edge to the PaymentOrder entity.
-func (m *ProvisionBucketMutation) RemovedPaymentOrdersIDs() (ids []uuid.UUID) {
-	for id := range m.removedpayment_orders {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// PaymentOrdersIDs returns the "payment_orders" edge IDs in the mutation.
-func (m *ProvisionBucketMutation) PaymentOrdersIDs() (ids []uuid.UUID) {
-	for id := range m.payment_orders {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetPaymentOrders resets all changes to the "payment_orders" edge.
-func (m *ProvisionBucketMutation) ResetPaymentOrders() {
-	m.payment_orders = nil
-	m.clearedpayment_orders = false
-	m.removedpayment_orders = nil
-}
-
-// AddProviderProfileIDs adds the "provider_profiles" edge to the ProviderProfile entity by ids.
-func (m *ProvisionBucketMutation) AddProviderProfileIDs(ids ...string) {
-	if m.provider_profiles == nil {
-		m.provider_profiles = make(map[string]struct{})
-	}
-	for i := range ids {
-		m.provider_profiles[ids[i]] = struct{}{}
-	}
-}
-
-// ClearProviderProfiles clears the "provider_profiles" edge to the ProviderProfile entity.
-func (m *ProvisionBucketMutation) ClearProviderProfiles() {
-	m.clearedprovider_profiles = true
-}
-
-// ProviderProfilesCleared reports if the "provider_profiles" edge to the ProviderProfile entity was cleared.
-func (m *ProvisionBucketMutation) ProviderProfilesCleared() bool {
-	return m.clearedprovider_profiles
-}
-
-// RemoveProviderProfileIDs removes the "provider_profiles" edge to the ProviderProfile entity by IDs.
-func (m *ProvisionBucketMutation) RemoveProviderProfileIDs(ids ...string) {
-	if m.removedprovider_profiles == nil {
-		m.removedprovider_profiles = make(map[string]struct{})
-	}
-	for i := range ids {
-		delete(m.provider_profiles, ids[i])
-		m.removedprovider_profiles[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedProviderProfiles returns the removed IDs of the "provider_profiles" edge to the ProviderProfile entity.
-func (m *ProvisionBucketMutation) RemovedProviderProfilesIDs() (ids []string) {
-	for id := range m.removedprovider_profiles {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ProviderProfilesIDs returns the "provider_profiles" edge IDs in the mutation.
-func (m *ProvisionBucketMutation) ProviderProfilesIDs() (ids []string) {
-	for id := range m.provider_profiles {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetProviderProfiles resets all changes to the "provider_profiles" edge.
-func (m *ProvisionBucketMutation) ResetProviderProfiles() {
-	m.provider_profiles = nil
-	m.clearedprovider_profiles = false
-	m.removedprovider_profiles = nil
+// ResetFiatCurrencyID resets all changes to the "fiat_currency_id" field.
+func (m *ProvisionBucketMutation) ResetFiatCurrencyID() {
+	m.fiat_currency_id = nil
+	delete(m.clearedFields, provisionbucket.FieldFiatCurrencyID)
 }
 
 // Where appends a list predicates to the ProvisionBucketMutation builder.
@@ -16832,7 +19050,7 @@ func (m *ProvisionBucketMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProvisionBucketMutation) Fields() []string {
-	fields := make([]string, 0, 3)
+	fields := make([]string, 0, 4)
 	if m.min_amount != nil {
 		fields = append(fields, provisionbucket.FieldMinAmount)
 	}
@@ -16841,6 +19059,9 @@ func (m *ProvisionBucketMutation) Fields() []string {
 	}
 	if m.created_at != nil {
 		fields = append(fields, provisionbucket.FieldCreatedAt)
+	}
+	if m.fiat_currency_id != nil {
+		fields = append(fields, provisionbucket.FieldFiatCurrencyID)
 	}
 	return fields
 }
@@ -16856,6 +19077,8 @@ func (m *ProvisionBucketMutation) Field(name string) (ent.Value, bool) {
 		return m.MaxAmount()
 	case provisionbucket.FieldCreatedAt:
 		return m.CreatedAt()
+	case provisionbucket.FieldFiatCurrencyID:
+		return m.FiatCurrencyID()
 	}
 	return nil, false
 }
@@ -16871,6 +19094,8 @@ func (m *ProvisionBucketMutation) OldField(ctx context.Context, name string) (en
 		return m.OldMaxAmount(ctx)
 	case provisionbucket.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
+	case provisionbucket.FieldFiatCurrencyID:
+		return m.OldFiatCurrencyID(ctx)
 	}
 	return nil, fmt.Errorf("unknown ProvisionBucket field %s", name)
 }
@@ -16900,6 +19125,13 @@ func (m *ProvisionBucketMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCreatedAt(v)
+		return nil
+	case provisionbucket.FieldFiatCurrencyID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFiatCurrencyID(v)
 		return nil
 	}
 	return fmt.Errorf("unknown ProvisionBucket field %s", name)
@@ -16957,7 +19189,11 @@ func (m *ProvisionBucketMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *ProvisionBucketMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(provisionbucket.FieldFiatCurrencyID) {
+		fields = append(fields, provisionbucket.FieldFiatCurrencyID)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -16970,6 +19206,11 @@ func (m *ProvisionBucketMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *ProvisionBucketMutation) ClearField(name string) error {
+	switch name {
+	case provisionbucket.FieldFiatCurrencyID:
+		m.ClearFiatCurrencyID()
+		return nil
+	}
 	return fmt.Errorf("unknown ProvisionBucket nullable field %s", name)
 }
 
@@ -16986,135 +19227,58 @@ func (m *ProvisionBucketMutation) ResetField(name string) error {
 	case provisionbucket.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
+	case provisionbucket.FieldFiatCurrencyID:
+		m.ResetFiatCurrencyID()
+		return nil
 	}
 	return fmt.Errorf("unknown ProvisionBucket field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProvisionBucketMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
-	if m.currency != nil {
-		edges = append(edges, provisionbucket.EdgeCurrency)
-	}
-	if m.payment_orders != nil {
-		edges = append(edges, provisionbucket.EdgePaymentOrders)
-	}
-	if m.provider_profiles != nil {
-		edges = append(edges, provisionbucket.EdgeProviderProfiles)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *ProvisionBucketMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case provisionbucket.EdgeCurrency:
-		if id := m.currency; id != nil {
-			return []ent.Value{*id}
-		}
-	case provisionbucket.EdgePaymentOrders:
-		ids := make([]ent.Value, 0, len(m.payment_orders))
-		for id := range m.payment_orders {
-			ids = append(ids, id)
-		}
-		return ids
-	case provisionbucket.EdgeProviderProfiles:
-		ids := make([]ent.Value, 0, len(m.provider_profiles))
-		for id := range m.provider_profiles {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProvisionBucketMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
-	if m.removedpayment_orders != nil {
-		edges = append(edges, provisionbucket.EdgePaymentOrders)
-	}
-	if m.removedprovider_profiles != nil {
-		edges = append(edges, provisionbucket.EdgeProviderProfiles)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *ProvisionBucketMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case provisionbucket.EdgePaymentOrders:
-		ids := make([]ent.Value, 0, len(m.removedpayment_orders))
-		for id := range m.removedpayment_orders {
-			ids = append(ids, id)
-		}
-		return ids
-	case provisionbucket.EdgeProviderProfiles:
-		ids := make([]ent.Value, 0, len(m.removedprovider_profiles))
-		for id := range m.removedprovider_profiles {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProvisionBucketMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
-	if m.clearedcurrency {
-		edges = append(edges, provisionbucket.EdgeCurrency)
-	}
-	if m.clearedpayment_orders {
-		edges = append(edges, provisionbucket.EdgePaymentOrders)
-	}
-	if m.clearedprovider_profiles {
-		edges = append(edges, provisionbucket.EdgeProviderProfiles)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *ProvisionBucketMutation) EdgeCleared(name string) bool {
-	switch name {
-	case provisionbucket.EdgeCurrency:
-		return m.clearedcurrency
-	case provisionbucket.EdgePaymentOrders:
-		return m.clearedpayment_orders
-	case provisionbucket.EdgeProviderProfiles:
-		return m.clearedprovider_profiles
-	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *ProvisionBucketMutation) ClearEdge(name string) error {
-	switch name {
-	case provisionbucket.EdgeCurrency:
-		m.ClearCurrency()
-		return nil
-	}
 	return fmt.Errorf("unknown ProvisionBucket unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *ProvisionBucketMutation) ResetEdge(name string) error {
-	switch name {
-	case provisionbucket.EdgeCurrency:
-		m.ResetCurrency()
-		return nil
-	case provisionbucket.EdgePaymentOrders:
-		m.ResetPaymentOrders()
-		return nil
-	case provisionbucket.EdgeProviderProfiles:
-		m.ResetProviderProfiles()
-		return nil
-	}
 	return fmt.Errorf("unknown ProvisionBucket edge %s", name)
 }
 

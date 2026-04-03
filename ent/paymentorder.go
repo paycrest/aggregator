@@ -14,7 +14,6 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
@@ -99,12 +98,17 @@ type PaymentOrder struct {
 	OrderType paymentorder.OrderType `json:"order_type,omitempty"`
 	// FallbackTriedAt holds the value of the "fallback_tried_at" field.
 	FallbackTriedAt time.Time `json:"fallback_tried_at,omitempty"`
+	// AssignmentMarketBuyRate holds the value of the "assignment_market_buy_rate" field.
+	AssignmentMarketBuyRate *decimal.Decimal `json:"assignment_market_buy_rate,omitempty"`
+	// AssignmentMarketSellRate holds the value of the "assignment_market_sell_rate" field.
+	AssignmentMarketSellRate *decimal.Decimal `json:"assignment_market_sell_rate,omitempty"`
+	// LegacyProvisionBucketID holds the value of the "legacy_provision_bucket_id" field.
+	LegacyProvisionBucketID *int `json:"legacy_provision_bucket_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PaymentOrderQuery when eager-loading is set.
 	Edges                            PaymentOrderEdges `json:"edges"`
 	api_key_payment_orders           *uuid.UUID
 	provider_profile_assigned_orders *string
-	provision_bucket_payment_orders  *int
 	sender_profile_payment_orders    *uuid.UUID
 	token_payment_orders             *int
 	selectValues                     sql.SelectValues
@@ -120,15 +124,17 @@ type PaymentOrderEdges struct {
 	PaymentWebhook *PaymentWebhook `json:"payment_webhook,omitempty"`
 	// Provider holds the value of the provider edge.
 	Provider *ProviderProfile `json:"provider,omitempty"`
-	// ProvisionBucket holds the value of the provision_bucket edge.
-	ProvisionBucket *ProvisionBucket `json:"provision_bucket,omitempty"`
 	// Fulfillments holds the value of the fulfillments edge.
 	Fulfillments []*PaymentOrderFulfillment `json:"fulfillments,omitempty"`
 	// Transactions holds the value of the transactions edge.
 	Transactions []*TransactionLog `json:"transactions,omitempty"`
+	// ProviderAssignmentRuns holds the value of the provider_assignment_runs edge.
+	ProviderAssignmentRuns []*ProviderAssignmentRun `json:"provider_assignment_runs,omitempty"`
+	// ProviderOrderTokenScoreHistories holds the value of the provider_order_token_score_histories edge.
+	ProviderOrderTokenScoreHistories []*ProviderOrderTokenScoreHistory `json:"provider_order_token_score_histories,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // TokenOrErr returns the Token value or an error if the edge
@@ -175,21 +181,10 @@ func (e PaymentOrderEdges) ProviderOrErr() (*ProviderProfile, error) {
 	return nil, &NotLoadedError{edge: "provider"}
 }
 
-// ProvisionBucketOrErr returns the ProvisionBucket value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e PaymentOrderEdges) ProvisionBucketOrErr() (*ProvisionBucket, error) {
-	if e.ProvisionBucket != nil {
-		return e.ProvisionBucket, nil
-	} else if e.loadedTypes[4] {
-		return nil, &NotFoundError{label: provisionbucket.Label}
-	}
-	return nil, &NotLoadedError{edge: "provision_bucket"}
-}
-
 // FulfillmentsOrErr returns the Fulfillments value or an error if the edge
 // was not loaded in eager-loading.
 func (e PaymentOrderEdges) FulfillmentsOrErr() ([]*PaymentOrderFulfillment, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[4] {
 		return e.Fulfillments, nil
 	}
 	return nil, &NotLoadedError{edge: "fulfillments"}
@@ -198,10 +193,28 @@ func (e PaymentOrderEdges) FulfillmentsOrErr() ([]*PaymentOrderFulfillment, erro
 // TransactionsOrErr returns the Transactions value or an error if the edge
 // was not loaded in eager-loading.
 func (e PaymentOrderEdges) TransactionsOrErr() ([]*TransactionLog, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[5] {
 		return e.Transactions, nil
 	}
 	return nil, &NotLoadedError{edge: "transactions"}
+}
+
+// ProviderAssignmentRunsOrErr returns the ProviderAssignmentRuns value or an error if the edge
+// was not loaded in eager-loading.
+func (e PaymentOrderEdges) ProviderAssignmentRunsOrErr() ([]*ProviderAssignmentRun, error) {
+	if e.loadedTypes[6] {
+		return e.ProviderAssignmentRuns, nil
+	}
+	return nil, &NotLoadedError{edge: "provider_assignment_runs"}
+}
+
+// ProviderOrderTokenScoreHistoriesOrErr returns the ProviderOrderTokenScoreHistories value or an error if the edge
+// was not loaded in eager-loading.
+func (e PaymentOrderEdges) ProviderOrderTokenScoreHistoriesOrErr() ([]*ProviderOrderTokenScoreHistory, error) {
+	if e.loadedTypes[7] {
+		return e.ProviderOrderTokenScoreHistories, nil
+	}
+	return nil, &NotLoadedError{edge: "provider_order_token_score_histories"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -209,11 +222,13 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case paymentorder.FieldAssignmentMarketBuyRate, paymentorder.FieldAssignmentMarketSellRate:
+			values[i] = &sql.NullScanner{S: new(decimal.Decimal)}
 		case paymentorder.FieldReceiveAddressSalt, paymentorder.FieldMetadata, paymentorder.FieldCancellationReasons:
 			values[i] = new([]byte)
 		case paymentorder.FieldAmount, paymentorder.FieldRate, paymentorder.FieldAmountInUsd, paymentorder.FieldAmountPaid, paymentorder.FieldAmountReturned, paymentorder.FieldPercentSettled, paymentorder.FieldSenderFee, paymentorder.FieldNetworkFee, paymentorder.FieldProtocolFee, paymentorder.FieldOrderPercent, paymentorder.FieldFeePercent:
 			values[i] = new(decimal.Decimal)
-		case paymentorder.FieldBlockNumber, paymentorder.FieldCancellationCount:
+		case paymentorder.FieldBlockNumber, paymentorder.FieldCancellationCount, paymentorder.FieldLegacyProvisionBucketID:
 			values[i] = new(sql.NullInt64)
 		case paymentorder.FieldTxHash, paymentorder.FieldMessageHash, paymentorder.FieldGatewayID, paymentorder.FieldFromAddress, paymentorder.FieldRefundOrRecipientAddress, paymentorder.FieldReceiveAddress, paymentorder.FieldFeeAddress, paymentorder.FieldInstitution, paymentorder.FieldAccountIdentifier, paymentorder.FieldAccountName, paymentorder.FieldSender, paymentorder.FieldReference, paymentorder.FieldMemo, paymentorder.FieldStatus, paymentorder.FieldDirection, paymentorder.FieldOrderType:
 			values[i] = new(sql.NullString)
@@ -225,11 +240,9 @@ func (*PaymentOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case paymentorder.ForeignKeys[1]: // provider_profile_assigned_orders
 			values[i] = new(sql.NullString)
-		case paymentorder.ForeignKeys[2]: // provision_bucket_payment_orders
-			values[i] = new(sql.NullInt64)
-		case paymentorder.ForeignKeys[3]: // sender_profile_payment_orders
+		case paymentorder.ForeignKeys[2]: // sender_profile_payment_orders
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case paymentorder.ForeignKeys[4]: // token_payment_orders
+		case paymentorder.ForeignKeys[3]: // token_payment_orders
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -478,6 +491,27 @@ func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.FallbackTriedAt = value.Time
 			}
+		case paymentorder.FieldAssignmentMarketBuyRate:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field assignment_market_buy_rate", values[i])
+			} else if value.Valid {
+				_m.AssignmentMarketBuyRate = new(decimal.Decimal)
+				*_m.AssignmentMarketBuyRate = *value.S.(*decimal.Decimal)
+			}
+		case paymentorder.FieldAssignmentMarketSellRate:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field assignment_market_sell_rate", values[i])
+			} else if value.Valid {
+				_m.AssignmentMarketSellRate = new(decimal.Decimal)
+				*_m.AssignmentMarketSellRate = *value.S.(*decimal.Decimal)
+			}
+		case paymentorder.FieldLegacyProvisionBucketID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field legacy_provision_bucket_id", values[i])
+			} else if value.Valid {
+				_m.LegacyProvisionBucketID = new(int)
+				*_m.LegacyProvisionBucketID = int(value.Int64)
+			}
 		case paymentorder.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field api_key_payment_orders", values[i])
@@ -493,20 +527,13 @@ func (_m *PaymentOrder) assignValues(columns []string, values []any) error {
 				*_m.provider_profile_assigned_orders = value.String
 			}
 		case paymentorder.ForeignKeys[2]:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field provision_bucket_payment_orders", value)
-			} else if value.Valid {
-				_m.provision_bucket_payment_orders = new(int)
-				*_m.provision_bucket_payment_orders = int(value.Int64)
-			}
-		case paymentorder.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field sender_profile_payment_orders", values[i])
 			} else if value.Valid {
 				_m.sender_profile_payment_orders = new(uuid.UUID)
 				*_m.sender_profile_payment_orders = *value.S.(*uuid.UUID)
 			}
-		case paymentorder.ForeignKeys[4]:
+		case paymentorder.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field token_payment_orders", value)
 			} else if value.Valid {
@@ -546,11 +573,6 @@ func (_m *PaymentOrder) QueryProvider() *ProviderProfileQuery {
 	return NewPaymentOrderClient(_m.config).QueryProvider(_m)
 }
 
-// QueryProvisionBucket queries the "provision_bucket" edge of the PaymentOrder entity.
-func (_m *PaymentOrder) QueryProvisionBucket() *ProvisionBucketQuery {
-	return NewPaymentOrderClient(_m.config).QueryProvisionBucket(_m)
-}
-
 // QueryFulfillments queries the "fulfillments" edge of the PaymentOrder entity.
 func (_m *PaymentOrder) QueryFulfillments() *PaymentOrderFulfillmentQuery {
 	return NewPaymentOrderClient(_m.config).QueryFulfillments(_m)
@@ -559,6 +581,16 @@ func (_m *PaymentOrder) QueryFulfillments() *PaymentOrderFulfillmentQuery {
 // QueryTransactions queries the "transactions" edge of the PaymentOrder entity.
 func (_m *PaymentOrder) QueryTransactions() *TransactionLogQuery {
 	return NewPaymentOrderClient(_m.config).QueryTransactions(_m)
+}
+
+// QueryProviderAssignmentRuns queries the "provider_assignment_runs" edge of the PaymentOrder entity.
+func (_m *PaymentOrder) QueryProviderAssignmentRuns() *ProviderAssignmentRunQuery {
+	return NewPaymentOrderClient(_m.config).QueryProviderAssignmentRuns(_m)
+}
+
+// QueryProviderOrderTokenScoreHistories queries the "provider_order_token_score_histories" edge of the PaymentOrder entity.
+func (_m *PaymentOrder) QueryProviderOrderTokenScoreHistories() *ProviderOrderTokenScoreHistoryQuery {
+	return NewPaymentOrderClient(_m.config).QueryProviderOrderTokenScoreHistories(_m)
 }
 
 // Update returns a builder for updating this PaymentOrder.
@@ -694,6 +726,21 @@ func (_m *PaymentOrder) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("fallback_tried_at=")
 	builder.WriteString(_m.FallbackTriedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := _m.AssignmentMarketBuyRate; v != nil {
+		builder.WriteString("assignment_market_buy_rate=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.AssignmentMarketSellRate; v != nil {
+		builder.WriteString("assignment_market_sell_rate=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.LegacyProvisionBucketID; v != nil {
+		builder.WriteString("legacy_provision_bucket_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -20,7 +20,7 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	tokenent "github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
-	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/assignment"
 	"github.com/paycrest/aggregator/storage"
 	db "github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/types"
@@ -34,7 +34,7 @@ import (
 func ProcessTransfers(
 	ctx context.Context,
 	orderService types.OrderService,
-	priorityQueueService *services.PriorityQueueService,
+	priorityQueueService *assignment.Service,
 	unknownAddresses []string,
 	addressToEvent map[string]*types.TokenTransferEvent,
 ) error {
@@ -79,7 +79,7 @@ func ProcessTransfers(
 
 			_, err := UpdateReceiveAddressStatus(ctx, order, transferEvent, orderService.CreateOrder, func(ctx context.Context, providerProfile *ent.ProviderProfile, tokenSymbol string, currency string) (decimal.Decimal, error) {
 				// Offramp context: use sell side rates
-				return priorityQueueService.GetProviderRate(ctx, providerProfile, tokenSymbol, currency, services.RateSideSell)
+				return priorityQueueService.GetProviderRate(ctx, providerProfile, tokenSymbol, currency, assignment.RateSideSell)
 			})
 			if err != nil {
 				if !strings.Contains(fmt.Sprintf("%v", err), "Duplicate payment order") && !strings.Contains(fmt.Sprintf("%v", err), "Receive address not found") {
@@ -103,7 +103,7 @@ func ProcessCreatedOrders(
 	orderIds []string,
 	orderIdToEvent map[string]*types.OrderCreatedEvent,
 	orderService types.OrderService,
-	priorityQueueService *services.PriorityQueueService,
+	priorityQueueService *assignment.Service,
 ) error {
 	var wg sync.WaitGroup
 
@@ -565,13 +565,21 @@ func GetProviderAddressFromOrder(ctx context.Context, order *ent.PaymentOrder) (
 	if order.Edges.Provider == nil {
 		return "", fmt.Errorf("payment order has no provider")
 	}
-
-	// Get the currency from the provision bucket
-	if order.Edges.ProvisionBucket == nil {
-		return "", fmt.Errorf("payment order has no provision bucket")
+	if order.Edges.Token == nil {
+		return "", fmt.Errorf("payment order has no token")
 	}
 
-	currencyCode := order.Edges.ProvisionBucket.Edges.Currency.Code
+	if order.Institution == "" {
+		return "", fmt.Errorf("payment order has no institution for currency resolution")
+	}
+	inst, ierr := utils.GetInstitutionByCode(ctx, order.Institution, true)
+	if ierr != nil || inst == nil || inst.Edges.FiatCurrency == nil {
+		if ierr != nil {
+			return "", fmt.Errorf("institution or fiat currency: %w", ierr)
+		}
+		return "", fmt.Errorf("institution or fiat currency not found")
+	}
+	currencyCode := inst.Edges.FiatCurrency.Code
 
 	// Get provider order token for this provider, token, and currency
 	providerOrderToken, err := storage.Client.ProviderOrderToken.

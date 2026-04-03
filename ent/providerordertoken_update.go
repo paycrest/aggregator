@@ -14,7 +14,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerassignmentrun"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/shopspring/decimal"
@@ -306,6 +308,68 @@ func (_u *ProviderOrderTokenUpdate) SetNillableNetwork(v *string) *ProviderOrder
 	return _u
 }
 
+// SetScoreOnramp sets the "score_onramp" field.
+func (_u *ProviderOrderTokenUpdate) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetScoreOnramp()
+	_u.mutation.SetScoreOnramp(v)
+	return _u
+}
+
+// SetNillableScoreOnramp sets the "score_onramp" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdate) SetNillableScoreOnramp(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetScoreOnramp(*v)
+	}
+	return _u
+}
+
+// AddScoreOnramp adds value to the "score_onramp" field.
+func (_u *ProviderOrderTokenUpdate) AddScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddScoreOnramp(v)
+	return _u
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (_u *ProviderOrderTokenUpdate) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.ResetScoreOfframp()
+	_u.mutation.SetScoreOfframp(v)
+	return _u
+}
+
+// SetNillableScoreOfframp sets the "score_offramp" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdate) SetNillableScoreOfframp(v *decimal.Decimal) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetScoreOfframp(*v)
+	}
+	return _u
+}
+
+// AddScoreOfframp adds value to the "score_offramp" field.
+func (_u *ProviderOrderTokenUpdate) AddScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpdate {
+	_u.mutation.AddScoreOfframp(v)
+	return _u
+}
+
+// SetLastOrderAssignedAt sets the "last_order_assigned_at" field.
+func (_u *ProviderOrderTokenUpdate) SetLastOrderAssignedAt(v time.Time) *ProviderOrderTokenUpdate {
+	_u.mutation.SetLastOrderAssignedAt(v)
+	return _u
+}
+
+// SetNillableLastOrderAssignedAt sets the "last_order_assigned_at" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdate) SetNillableLastOrderAssignedAt(v *time.Time) *ProviderOrderTokenUpdate {
+	if v != nil {
+		_u.SetLastOrderAssignedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastOrderAssignedAt clears the value of the "last_order_assigned_at" field.
+func (_u *ProviderOrderTokenUpdate) ClearLastOrderAssignedAt() *ProviderOrderTokenUpdate {
+	_u.mutation.ClearLastOrderAssignedAt()
+	return _u
+}
+
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (_u *ProviderOrderTokenUpdate) SetProviderID(id string) *ProviderOrderTokenUpdate {
 	_u.mutation.SetProviderID(id)
@@ -339,6 +403,36 @@ func (_u *ProviderOrderTokenUpdate) SetCurrency(v *FiatCurrency) *ProviderOrderT
 	return _u.SetCurrencyID(v.ID)
 }
 
+// AddScoreHistoryIDs adds the "score_histories" edge to the ProviderOrderTokenScoreHistory entity by IDs.
+func (_u *ProviderOrderTokenUpdate) AddScoreHistoryIDs(ids ...uuid.UUID) *ProviderOrderTokenUpdate {
+	_u.mutation.AddScoreHistoryIDs(ids...)
+	return _u
+}
+
+// AddScoreHistories adds the "score_histories" edges to the ProviderOrderTokenScoreHistory entity.
+func (_u *ProviderOrderTokenUpdate) AddScoreHistories(v ...*ProviderOrderTokenScoreHistory) *ProviderOrderTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddScoreHistoryIDs(ids...)
+}
+
+// AddAssignmentRunIDs adds the "assignment_runs" edge to the ProviderAssignmentRun entity by IDs.
+func (_u *ProviderOrderTokenUpdate) AddAssignmentRunIDs(ids ...uuid.UUID) *ProviderOrderTokenUpdate {
+	_u.mutation.AddAssignmentRunIDs(ids...)
+	return _u
+}
+
+// AddAssignmentRuns adds the "assignment_runs" edges to the ProviderAssignmentRun entity.
+func (_u *ProviderOrderTokenUpdate) AddAssignmentRuns(v ...*ProviderAssignmentRun) *ProviderOrderTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAssignmentRunIDs(ids...)
+}
+
 // Mutation returns the ProviderOrderTokenMutation object of the builder.
 func (_u *ProviderOrderTokenUpdate) Mutation() *ProviderOrderTokenMutation {
 	return _u.mutation
@@ -360,6 +454,48 @@ func (_u *ProviderOrderTokenUpdate) ClearToken() *ProviderOrderTokenUpdate {
 func (_u *ProviderOrderTokenUpdate) ClearCurrency() *ProviderOrderTokenUpdate {
 	_u.mutation.ClearCurrency()
 	return _u
+}
+
+// ClearScoreHistories clears all "score_histories" edges to the ProviderOrderTokenScoreHistory entity.
+func (_u *ProviderOrderTokenUpdate) ClearScoreHistories() *ProviderOrderTokenUpdate {
+	_u.mutation.ClearScoreHistories()
+	return _u
+}
+
+// RemoveScoreHistoryIDs removes the "score_histories" edge to ProviderOrderTokenScoreHistory entities by IDs.
+func (_u *ProviderOrderTokenUpdate) RemoveScoreHistoryIDs(ids ...uuid.UUID) *ProviderOrderTokenUpdate {
+	_u.mutation.RemoveScoreHistoryIDs(ids...)
+	return _u
+}
+
+// RemoveScoreHistories removes "score_histories" edges to ProviderOrderTokenScoreHistory entities.
+func (_u *ProviderOrderTokenUpdate) RemoveScoreHistories(v ...*ProviderOrderTokenScoreHistory) *ProviderOrderTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveScoreHistoryIDs(ids...)
+}
+
+// ClearAssignmentRuns clears all "assignment_runs" edges to the ProviderAssignmentRun entity.
+func (_u *ProviderOrderTokenUpdate) ClearAssignmentRuns() *ProviderOrderTokenUpdate {
+	_u.mutation.ClearAssignmentRuns()
+	return _u
+}
+
+// RemoveAssignmentRunIDs removes the "assignment_runs" edge to ProviderAssignmentRun entities by IDs.
+func (_u *ProviderOrderTokenUpdate) RemoveAssignmentRunIDs(ids ...uuid.UUID) *ProviderOrderTokenUpdate {
+	_u.mutation.RemoveAssignmentRunIDs(ids...)
+	return _u
+}
+
+// RemoveAssignmentRuns removes "assignment_runs" edges to ProviderAssignmentRun entities.
+func (_u *ProviderOrderTokenUpdate) RemoveAssignmentRuns(v ...*ProviderAssignmentRun) *ProviderOrderTokenUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAssignmentRunIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -508,6 +644,24 @@ func (_u *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (_node int, err
 	if value, ok := _u.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.ScoreOnramp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOnramp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedScoreOnramp(); ok {
+		_spec.AddField(providerordertoken.FieldScoreOnramp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.ScoreOfframp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOfframp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedScoreOfframp(); ok {
+		_spec.AddField(providerordertoken.FieldScoreOfframp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.LastOrderAssignedAt(); ok {
+		_spec.SetField(providerordertoken.FieldLastOrderAssignedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastOrderAssignedAtCleared() {
+		_spec.ClearField(providerordertoken.FieldLastOrderAssignedAt, field.TypeTime)
+	}
 	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -588,6 +742,96 @@ func (_u *ProviderOrderTokenUpdate) sqlSave(ctx context.Context) (_node int, err
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ScoreHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.ScoreHistoriesTable,
+			Columns: []string{providerordertoken.ScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedScoreHistoriesIDs(); len(nodes) > 0 && !_u.mutation.ScoreHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.ScoreHistoriesTable,
+			Columns: []string{providerordertoken.ScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ScoreHistoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.ScoreHistoriesTable,
+			Columns: []string{providerordertoken.ScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AssignmentRunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.AssignmentRunsTable,
+			Columns: []string{providerordertoken.AssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAssignmentRunsIDs(); len(nodes) > 0 && !_u.mutation.AssignmentRunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.AssignmentRunsTable,
+			Columns: []string{providerordertoken.AssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AssignmentRunsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.AssignmentRunsTable,
+			Columns: []string{providerordertoken.AssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -888,6 +1132,68 @@ func (_u *ProviderOrderTokenUpdateOne) SetNillableNetwork(v *string) *ProviderOr
 	return _u
 }
 
+// SetScoreOnramp sets the "score_onramp" field.
+func (_u *ProviderOrderTokenUpdateOne) SetScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetScoreOnramp()
+	_u.mutation.SetScoreOnramp(v)
+	return _u
+}
+
+// SetNillableScoreOnramp sets the "score_onramp" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdateOne) SetNillableScoreOnramp(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetScoreOnramp(*v)
+	}
+	return _u
+}
+
+// AddScoreOnramp adds value to the "score_onramp" field.
+func (_u *ProviderOrderTokenUpdateOne) AddScoreOnramp(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddScoreOnramp(v)
+	return _u
+}
+
+// SetScoreOfframp sets the "score_offramp" field.
+func (_u *ProviderOrderTokenUpdateOne) SetScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.ResetScoreOfframp()
+	_u.mutation.SetScoreOfframp(v)
+	return _u
+}
+
+// SetNillableScoreOfframp sets the "score_offramp" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdateOne) SetNillableScoreOfframp(v *decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetScoreOfframp(*v)
+	}
+	return _u
+}
+
+// AddScoreOfframp adds value to the "score_offramp" field.
+func (_u *ProviderOrderTokenUpdateOne) AddScoreOfframp(v decimal.Decimal) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddScoreOfframp(v)
+	return _u
+}
+
+// SetLastOrderAssignedAt sets the "last_order_assigned_at" field.
+func (_u *ProviderOrderTokenUpdateOne) SetLastOrderAssignedAt(v time.Time) *ProviderOrderTokenUpdateOne {
+	_u.mutation.SetLastOrderAssignedAt(v)
+	return _u
+}
+
+// SetNillableLastOrderAssignedAt sets the "last_order_assigned_at" field if the given value is not nil.
+func (_u *ProviderOrderTokenUpdateOne) SetNillableLastOrderAssignedAt(v *time.Time) *ProviderOrderTokenUpdateOne {
+	if v != nil {
+		_u.SetLastOrderAssignedAt(*v)
+	}
+	return _u
+}
+
+// ClearLastOrderAssignedAt clears the value of the "last_order_assigned_at" field.
+func (_u *ProviderOrderTokenUpdateOne) ClearLastOrderAssignedAt() *ProviderOrderTokenUpdateOne {
+	_u.mutation.ClearLastOrderAssignedAt()
+	return _u
+}
+
 // SetProviderID sets the "provider" edge to the ProviderProfile entity by ID.
 func (_u *ProviderOrderTokenUpdateOne) SetProviderID(id string) *ProviderOrderTokenUpdateOne {
 	_u.mutation.SetProviderID(id)
@@ -921,6 +1227,36 @@ func (_u *ProviderOrderTokenUpdateOne) SetCurrency(v *FiatCurrency) *ProviderOrd
 	return _u.SetCurrencyID(v.ID)
 }
 
+// AddScoreHistoryIDs adds the "score_histories" edge to the ProviderOrderTokenScoreHistory entity by IDs.
+func (_u *ProviderOrderTokenUpdateOne) AddScoreHistoryIDs(ids ...uuid.UUID) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddScoreHistoryIDs(ids...)
+	return _u
+}
+
+// AddScoreHistories adds the "score_histories" edges to the ProviderOrderTokenScoreHistory entity.
+func (_u *ProviderOrderTokenUpdateOne) AddScoreHistories(v ...*ProviderOrderTokenScoreHistory) *ProviderOrderTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddScoreHistoryIDs(ids...)
+}
+
+// AddAssignmentRunIDs adds the "assignment_runs" edge to the ProviderAssignmentRun entity by IDs.
+func (_u *ProviderOrderTokenUpdateOne) AddAssignmentRunIDs(ids ...uuid.UUID) *ProviderOrderTokenUpdateOne {
+	_u.mutation.AddAssignmentRunIDs(ids...)
+	return _u
+}
+
+// AddAssignmentRuns adds the "assignment_runs" edges to the ProviderAssignmentRun entity.
+func (_u *ProviderOrderTokenUpdateOne) AddAssignmentRuns(v ...*ProviderAssignmentRun) *ProviderOrderTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAssignmentRunIDs(ids...)
+}
+
 // Mutation returns the ProviderOrderTokenMutation object of the builder.
 func (_u *ProviderOrderTokenUpdateOne) Mutation() *ProviderOrderTokenMutation {
 	return _u.mutation
@@ -942,6 +1278,48 @@ func (_u *ProviderOrderTokenUpdateOne) ClearToken() *ProviderOrderTokenUpdateOne
 func (_u *ProviderOrderTokenUpdateOne) ClearCurrency() *ProviderOrderTokenUpdateOne {
 	_u.mutation.ClearCurrency()
 	return _u
+}
+
+// ClearScoreHistories clears all "score_histories" edges to the ProviderOrderTokenScoreHistory entity.
+func (_u *ProviderOrderTokenUpdateOne) ClearScoreHistories() *ProviderOrderTokenUpdateOne {
+	_u.mutation.ClearScoreHistories()
+	return _u
+}
+
+// RemoveScoreHistoryIDs removes the "score_histories" edge to ProviderOrderTokenScoreHistory entities by IDs.
+func (_u *ProviderOrderTokenUpdateOne) RemoveScoreHistoryIDs(ids ...uuid.UUID) *ProviderOrderTokenUpdateOne {
+	_u.mutation.RemoveScoreHistoryIDs(ids...)
+	return _u
+}
+
+// RemoveScoreHistories removes "score_histories" edges to ProviderOrderTokenScoreHistory entities.
+func (_u *ProviderOrderTokenUpdateOne) RemoveScoreHistories(v ...*ProviderOrderTokenScoreHistory) *ProviderOrderTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveScoreHistoryIDs(ids...)
+}
+
+// ClearAssignmentRuns clears all "assignment_runs" edges to the ProviderAssignmentRun entity.
+func (_u *ProviderOrderTokenUpdateOne) ClearAssignmentRuns() *ProviderOrderTokenUpdateOne {
+	_u.mutation.ClearAssignmentRuns()
+	return _u
+}
+
+// RemoveAssignmentRunIDs removes the "assignment_runs" edge to ProviderAssignmentRun entities by IDs.
+func (_u *ProviderOrderTokenUpdateOne) RemoveAssignmentRunIDs(ids ...uuid.UUID) *ProviderOrderTokenUpdateOne {
+	_u.mutation.RemoveAssignmentRunIDs(ids...)
+	return _u
+}
+
+// RemoveAssignmentRuns removes "assignment_runs" edges to ProviderAssignmentRun entities.
+func (_u *ProviderOrderTokenUpdateOne) RemoveAssignmentRuns(v ...*ProviderAssignmentRun) *ProviderOrderTokenUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAssignmentRunIDs(ids...)
 }
 
 // Where appends a list predicates to the ProviderOrderTokenUpdate builder.
@@ -1120,6 +1498,24 @@ func (_u *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Prov
 	if value, ok := _u.mutation.Network(); ok {
 		_spec.SetField(providerordertoken.FieldNetwork, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.ScoreOnramp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOnramp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedScoreOnramp(); ok {
+		_spec.AddField(providerordertoken.FieldScoreOnramp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.ScoreOfframp(); ok {
+		_spec.SetField(providerordertoken.FieldScoreOfframp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedScoreOfframp(); ok {
+		_spec.AddField(providerordertoken.FieldScoreOfframp, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.LastOrderAssignedAt(); ok {
+		_spec.SetField(providerordertoken.FieldLastOrderAssignedAt, field.TypeTime, value)
+	}
+	if _u.mutation.LastOrderAssignedAtCleared() {
+		_spec.ClearField(providerordertoken.FieldLastOrderAssignedAt, field.TypeTime)
+	}
 	if _u.mutation.ProviderCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -1200,6 +1596,96 @@ func (_u *ProviderOrderTokenUpdateOne) sqlSave(ctx context.Context) (_node *Prov
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(fiatcurrency.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.ScoreHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.ScoreHistoriesTable,
+			Columns: []string{providerordertoken.ScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedScoreHistoriesIDs(); len(nodes) > 0 && !_u.mutation.ScoreHistoriesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.ScoreHistoriesTable,
+			Columns: []string{providerordertoken.ScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ScoreHistoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.ScoreHistoriesTable,
+			Columns: []string{providerordertoken.ScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AssignmentRunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.AssignmentRunsTable,
+			Columns: []string{providerordertoken.AssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAssignmentRunsIDs(); len(nodes) > 0 && !_u.mutation.AssignmentRunsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.AssignmentRunsTable,
+			Columns: []string{providerordertoken.AssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AssignmentRunsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   providerordertoken.AssignmentRunsTable,
+			Columns: []string{providerordertoken.AssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

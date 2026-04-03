@@ -16,8 +16,9 @@ import (
 	"github.com/paycrest/aggregator/ent/paymentorder"
 	"github.com/paycrest/aggregator/ent/paymentorderfulfillment"
 	"github.com/paycrest/aggregator/ent/paymentwebhook"
+	"github.com/paycrest/aggregator/ent/providerassignmentrun"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
@@ -478,6 +479,48 @@ func (_c *PaymentOrderCreate) SetNillableFallbackTriedAt(v *time.Time) *PaymentO
 	return _c
 }
 
+// SetAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field.
+func (_c *PaymentOrderCreate) SetAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetAssignmentMarketBuyRate(v)
+	return _c
+}
+
+// SetNillableAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableAssignmentMarketBuyRate(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetAssignmentMarketBuyRate(*v)
+	}
+	return _c
+}
+
+// SetAssignmentMarketSellRate sets the "assignment_market_sell_rate" field.
+func (_c *PaymentOrderCreate) SetAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderCreate {
+	_c.mutation.SetAssignmentMarketSellRate(v)
+	return _c
+}
+
+// SetNillableAssignmentMarketSellRate sets the "assignment_market_sell_rate" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableAssignmentMarketSellRate(v *decimal.Decimal) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetAssignmentMarketSellRate(*v)
+	}
+	return _c
+}
+
+// SetLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field.
+func (_c *PaymentOrderCreate) SetLegacyProvisionBucketID(v int) *PaymentOrderCreate {
+	_c.mutation.SetLegacyProvisionBucketID(v)
+	return _c
+}
+
+// SetNillableLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableLegacyProvisionBucketID(v *int) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetLegacyProvisionBucketID(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *PaymentOrderCreate) SetID(v uuid.UUID) *PaymentOrderCreate {
 	_c.mutation.SetID(v)
@@ -560,25 +603,6 @@ func (_c *PaymentOrderCreate) SetProvider(v *ProviderProfile) *PaymentOrderCreat
 	return _c.SetProviderID(v.ID)
 }
 
-// SetProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID.
-func (_c *PaymentOrderCreate) SetProvisionBucketID(id int) *PaymentOrderCreate {
-	_c.mutation.SetProvisionBucketID(id)
-	return _c
-}
-
-// SetNillableProvisionBucketID sets the "provision_bucket" edge to the ProvisionBucket entity by ID if the given value is not nil.
-func (_c *PaymentOrderCreate) SetNillableProvisionBucketID(id *int) *PaymentOrderCreate {
-	if id != nil {
-		_c = _c.SetProvisionBucketID(*id)
-	}
-	return _c
-}
-
-// SetProvisionBucket sets the "provision_bucket" edge to the ProvisionBucket entity.
-func (_c *PaymentOrderCreate) SetProvisionBucket(v *ProvisionBucket) *PaymentOrderCreate {
-	return _c.SetProvisionBucketID(v.ID)
-}
-
 // AddFulfillmentIDs adds the "fulfillments" edge to the PaymentOrderFulfillment entity by IDs.
 func (_c *PaymentOrderCreate) AddFulfillmentIDs(ids ...uuid.UUID) *PaymentOrderCreate {
 	_c.mutation.AddFulfillmentIDs(ids...)
@@ -607,6 +631,36 @@ func (_c *PaymentOrderCreate) AddTransactions(v ...*TransactionLog) *PaymentOrde
 		ids[i] = v[i].ID
 	}
 	return _c.AddTransactionIDs(ids...)
+}
+
+// AddProviderAssignmentRunIDs adds the "provider_assignment_runs" edge to the ProviderAssignmentRun entity by IDs.
+func (_c *PaymentOrderCreate) AddProviderAssignmentRunIDs(ids ...uuid.UUID) *PaymentOrderCreate {
+	_c.mutation.AddProviderAssignmentRunIDs(ids...)
+	return _c
+}
+
+// AddProviderAssignmentRuns adds the "provider_assignment_runs" edges to the ProviderAssignmentRun entity.
+func (_c *PaymentOrderCreate) AddProviderAssignmentRuns(v ...*ProviderAssignmentRun) *PaymentOrderCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddProviderAssignmentRunIDs(ids...)
+}
+
+// AddProviderOrderTokenScoreHistoryIDs adds the "provider_order_token_score_histories" edge to the ProviderOrderTokenScoreHistory entity by IDs.
+func (_c *PaymentOrderCreate) AddProviderOrderTokenScoreHistoryIDs(ids ...uuid.UUID) *PaymentOrderCreate {
+	_c.mutation.AddProviderOrderTokenScoreHistoryIDs(ids...)
+	return _c
+}
+
+// AddProviderOrderTokenScoreHistories adds the "provider_order_token_score_histories" edges to the ProviderOrderTokenScoreHistory entity.
+func (_c *PaymentOrderCreate) AddProviderOrderTokenScoreHistories(v ...*ProviderOrderTokenScoreHistory) *PaymentOrderCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddProviderOrderTokenScoreHistoryIDs(ids...)
 }
 
 // Mutation returns the PaymentOrderMutation object of the builder.
@@ -1038,6 +1092,18 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_spec.SetField(paymentorder.FieldFallbackTriedAt, field.TypeTime, value)
 		_node.FallbackTriedAt = value
 	}
+	if value, ok := _c.mutation.AssignmentMarketBuyRate(); ok {
+		_spec.SetField(paymentorder.FieldAssignmentMarketBuyRate, field.TypeFloat64, value)
+		_node.AssignmentMarketBuyRate = &value
+	}
+	if value, ok := _c.mutation.AssignmentMarketSellRate(); ok {
+		_spec.SetField(paymentorder.FieldAssignmentMarketSellRate, field.TypeFloat64, value)
+		_node.AssignmentMarketSellRate = &value
+	}
+	if value, ok := _c.mutation.LegacyProvisionBucketID(); ok {
+		_spec.SetField(paymentorder.FieldLegacyProvisionBucketID, field.TypeInt, value)
+		_node.LegacyProvisionBucketID = &value
+	}
 	if nodes := _c.mutation.TokenIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -1105,23 +1171,6 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_node.provider_profile_assigned_orders = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := _c.mutation.ProvisionBucketIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   paymentorder.ProvisionBucketTable,
-			Columns: []string{paymentorder.ProvisionBucketColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.provision_bucket_payment_orders = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := _c.mutation.FulfillmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -1147,6 +1196,38 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transactionlog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ProviderAssignmentRunsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderAssignmentRunsTable,
+			Columns: []string{paymentorder.ProviderAssignmentRunsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerassignmentrun.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.ProviderOrderTokenScoreHistoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   paymentorder.ProviderOrderTokenScoreHistoriesTable,
+			Columns: []string{paymentorder.ProviderOrderTokenScoreHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerordertokenscorehistory.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -1815,6 +1896,78 @@ func (u *PaymentOrderUpsert) UpdateFallbackTriedAt() *PaymentOrderUpsert {
 // ClearFallbackTriedAt clears the value of the "fallback_tried_at" field.
 func (u *PaymentOrderUpsert) ClearFallbackTriedAt() *PaymentOrderUpsert {
 	u.SetNull(paymentorder.FieldFallbackTriedAt)
+	return u
+}
+
+// SetAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field.
+func (u *PaymentOrderUpsert) SetAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldAssignmentMarketBuyRate, v)
+	return u
+}
+
+// UpdateAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateAssignmentMarketBuyRate() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldAssignmentMarketBuyRate)
+	return u
+}
+
+// AddAssignmentMarketBuyRate adds v to the "assignment_market_buy_rate" field.
+func (u *PaymentOrderUpsert) AddAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldAssignmentMarketBuyRate, v)
+	return u
+}
+
+// ClearAssignmentMarketBuyRate clears the value of the "assignment_market_buy_rate" field.
+func (u *PaymentOrderUpsert) ClearAssignmentMarketBuyRate() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldAssignmentMarketBuyRate)
+	return u
+}
+
+// SetAssignmentMarketSellRate sets the "assignment_market_sell_rate" field.
+func (u *PaymentOrderUpsert) SetAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldAssignmentMarketSellRate, v)
+	return u
+}
+
+// UpdateAssignmentMarketSellRate sets the "assignment_market_sell_rate" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateAssignmentMarketSellRate() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldAssignmentMarketSellRate)
+	return u
+}
+
+// AddAssignmentMarketSellRate adds v to the "assignment_market_sell_rate" field.
+func (u *PaymentOrderUpsert) AddAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldAssignmentMarketSellRate, v)
+	return u
+}
+
+// ClearAssignmentMarketSellRate clears the value of the "assignment_market_sell_rate" field.
+func (u *PaymentOrderUpsert) ClearAssignmentMarketSellRate() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldAssignmentMarketSellRate)
+	return u
+}
+
+// SetLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field.
+func (u *PaymentOrderUpsert) SetLegacyProvisionBucketID(v int) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldLegacyProvisionBucketID, v)
+	return u
+}
+
+// UpdateLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateLegacyProvisionBucketID() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldLegacyProvisionBucketID)
+	return u
+}
+
+// AddLegacyProvisionBucketID adds v to the "legacy_provision_bucket_id" field.
+func (u *PaymentOrderUpsert) AddLegacyProvisionBucketID(v int) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldLegacyProvisionBucketID, v)
+	return u
+}
+
+// ClearLegacyProvisionBucketID clears the value of the "legacy_provision_bucket_id" field.
+func (u *PaymentOrderUpsert) ClearLegacyProvisionBucketID() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldLegacyProvisionBucketID)
 	return u
 }
 
@@ -2580,6 +2733,90 @@ func (u *PaymentOrderUpsertOne) UpdateFallbackTriedAt() *PaymentOrderUpsertOne {
 func (u *PaymentOrderUpsertOne) ClearFallbackTriedAt() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearFallbackTriedAt()
+	})
+}
+
+// SetAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field.
+func (u *PaymentOrderUpsertOne) SetAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetAssignmentMarketBuyRate(v)
+	})
+}
+
+// AddAssignmentMarketBuyRate adds v to the "assignment_market_buy_rate" field.
+func (u *PaymentOrderUpsertOne) AddAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddAssignmentMarketBuyRate(v)
+	})
+}
+
+// UpdateAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateAssignmentMarketBuyRate() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateAssignmentMarketBuyRate()
+	})
+}
+
+// ClearAssignmentMarketBuyRate clears the value of the "assignment_market_buy_rate" field.
+func (u *PaymentOrderUpsertOne) ClearAssignmentMarketBuyRate() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearAssignmentMarketBuyRate()
+	})
+}
+
+// SetAssignmentMarketSellRate sets the "assignment_market_sell_rate" field.
+func (u *PaymentOrderUpsertOne) SetAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetAssignmentMarketSellRate(v)
+	})
+}
+
+// AddAssignmentMarketSellRate adds v to the "assignment_market_sell_rate" field.
+func (u *PaymentOrderUpsertOne) AddAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddAssignmentMarketSellRate(v)
+	})
+}
+
+// UpdateAssignmentMarketSellRate sets the "assignment_market_sell_rate" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateAssignmentMarketSellRate() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateAssignmentMarketSellRate()
+	})
+}
+
+// ClearAssignmentMarketSellRate clears the value of the "assignment_market_sell_rate" field.
+func (u *PaymentOrderUpsertOne) ClearAssignmentMarketSellRate() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearAssignmentMarketSellRate()
+	})
+}
+
+// SetLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field.
+func (u *PaymentOrderUpsertOne) SetLegacyProvisionBucketID(v int) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetLegacyProvisionBucketID(v)
+	})
+}
+
+// AddLegacyProvisionBucketID adds v to the "legacy_provision_bucket_id" field.
+func (u *PaymentOrderUpsertOne) AddLegacyProvisionBucketID(v int) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddLegacyProvisionBucketID(v)
+	})
+}
+
+// UpdateLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateLegacyProvisionBucketID() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateLegacyProvisionBucketID()
+	})
+}
+
+// ClearLegacyProvisionBucketID clears the value of the "legacy_provision_bucket_id" field.
+func (u *PaymentOrderUpsertOne) ClearLegacyProvisionBucketID() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearLegacyProvisionBucketID()
 	})
 }
 
@@ -3512,6 +3749,90 @@ func (u *PaymentOrderUpsertBulk) UpdateFallbackTriedAt() *PaymentOrderUpsertBulk
 func (u *PaymentOrderUpsertBulk) ClearFallbackTriedAt() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearFallbackTriedAt()
+	})
+}
+
+// SetAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field.
+func (u *PaymentOrderUpsertBulk) SetAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetAssignmentMarketBuyRate(v)
+	})
+}
+
+// AddAssignmentMarketBuyRate adds v to the "assignment_market_buy_rate" field.
+func (u *PaymentOrderUpsertBulk) AddAssignmentMarketBuyRate(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddAssignmentMarketBuyRate(v)
+	})
+}
+
+// UpdateAssignmentMarketBuyRate sets the "assignment_market_buy_rate" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateAssignmentMarketBuyRate() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateAssignmentMarketBuyRate()
+	})
+}
+
+// ClearAssignmentMarketBuyRate clears the value of the "assignment_market_buy_rate" field.
+func (u *PaymentOrderUpsertBulk) ClearAssignmentMarketBuyRate() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearAssignmentMarketBuyRate()
+	})
+}
+
+// SetAssignmentMarketSellRate sets the "assignment_market_sell_rate" field.
+func (u *PaymentOrderUpsertBulk) SetAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetAssignmentMarketSellRate(v)
+	})
+}
+
+// AddAssignmentMarketSellRate adds v to the "assignment_market_sell_rate" field.
+func (u *PaymentOrderUpsertBulk) AddAssignmentMarketSellRate(v decimal.Decimal) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddAssignmentMarketSellRate(v)
+	})
+}
+
+// UpdateAssignmentMarketSellRate sets the "assignment_market_sell_rate" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateAssignmentMarketSellRate() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateAssignmentMarketSellRate()
+	})
+}
+
+// ClearAssignmentMarketSellRate clears the value of the "assignment_market_sell_rate" field.
+func (u *PaymentOrderUpsertBulk) ClearAssignmentMarketSellRate() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearAssignmentMarketSellRate()
+	})
+}
+
+// SetLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field.
+func (u *PaymentOrderUpsertBulk) SetLegacyProvisionBucketID(v int) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetLegacyProvisionBucketID(v)
+	})
+}
+
+// AddLegacyProvisionBucketID adds v to the "legacy_provision_bucket_id" field.
+func (u *PaymentOrderUpsertBulk) AddLegacyProvisionBucketID(v int) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddLegacyProvisionBucketID(v)
+	})
+}
+
+// UpdateLegacyProvisionBucketID sets the "legacy_provision_bucket_id" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateLegacyProvisionBucketID() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateLegacyProvisionBucketID()
+	})
+}
+
+// ClearLegacyProvisionBucketID clears the value of the "legacy_provision_bucket_id" field.
+func (u *PaymentOrderUpsertBulk) ClearLegacyProvisionBucketID() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearLegacyProvisionBucketID()
 	})
 }
 

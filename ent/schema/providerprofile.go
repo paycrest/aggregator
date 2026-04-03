@@ -52,8 +52,6 @@ func (ProviderProfile) Edges() []ent.Edge {
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("provider_balances", ProviderBalances.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
-		edge.From("provision_buckets", ProvisionBucket.Type).
-			Ref("provider_profiles"),
 		edge.To("order_tokens", ProviderOrderToken.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("provider_rating", ProviderRating.Type).

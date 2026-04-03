@@ -33,6 +33,7 @@ import (
 	"github.com/paycrest/aggregator/ent/token"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/services"
+	"github.com/paycrest/aggregator/services/assignment"
 	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/services/contracts"
 	orderService "github.com/paycrest/aggregator/services/order"
@@ -448,9 +449,6 @@ func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, prov
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
 		}).
-		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-			pbq.WithCurrency()
-		}).
 		Limit(maxExportLimit).
 		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
 		All(reqCtx)
@@ -525,8 +523,10 @@ func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, prov
 		}
 
 		var currencyCode string
-		if paymentOrder.Edges.ProvisionBucket != nil && paymentOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-			currencyCode = paymentOrder.Edges.ProvisionBucket.Edges.Currency.Code
+		if paymentOrder.Institution != "" {
+			if inst, ierr := u.GetInstitutionByCode(reqCtx, paymentOrder.Institution, true); ierr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
+				currencyCode = inst.Edges.FiatCurrency.Code
+			}
 		}
 
 		row := []string{
@@ -590,7 +590,6 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			WithProvider().
 			WithSenderProfile().
 			WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
-			WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) { pbq.WithCurrency() }).
 			Only(reqCtx)
 		if fallbackErr != nil || fallbackOrder == nil {
 			if fallbackErr != nil && !ent.IsNotFound(fallbackErr) {
@@ -628,9 +627,7 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 		}
 		if fallbackOrder.Direction == paymentorder.DirectionOnramp {
 			result["amount"] = fallbackOrder.Amount.Add(fallbackOrder.SenderFee).Mul(fallbackOrder.Rate).RoundBank(0).String()
-			if fallbackOrder.Edges.ProvisionBucket != nil && fallbackOrder.Edges.ProvisionBucket.Edges.Currency != nil {
-				result["currency"] = fallbackOrder.Edges.ProvisionBucket.Edges.Currency.Code
-			} else if fallbackOrder.Institution != "" {
+			if fallbackOrder.Institution != "" {
 				inst, instErr := u.GetInstitutionByCode(reqCtx, fallbackOrder.Institution, true)
 				if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
 					result["currency"] = inst.Edges.FiatCurrency.Code
@@ -1159,9 +1156,6 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				tq.WithNetwork()
 			})
 			poq.WithProvider()
-			poq.WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-				pbq.WithCurrency()
-			})
 		}).
 		Only(reqCtx)
 	if err != nil {
@@ -1214,9 +1208,7 @@ func (ctrl *ProviderController) FulfillOrder(ctx *gin.Context) {
 				WithOrder(func(poq *ent.PaymentOrderQuery) {
 					poq.WithToken(func(tq *ent.TokenQuery) {
 						tq.WithNetwork()
-					}).WithProvider().WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-						pbq.WithCurrency()
-					})
+					}).WithProvider()
 				}).
 				Only(reqCtx)
 			if err != nil {
@@ -1408,10 +1400,7 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 		}
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
 		currency := ""
-		if fulfillment.Edges.Order.Edges.ProvisionBucket != nil && fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency != nil {
-			currency = fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
-		}
-		if currency == "" && fulfillment.Edges.Order.Institution != "" {
+		if fulfillment.Edges.Order.Institution != "" {
 			inst, instErr := u.GetInstitutionByCode(reqCtx, fulfillment.Edges.Order.Institution, true)
 			if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
 				currency = inst.Edges.FiatCurrency.Code
@@ -1421,8 +1410,8 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 			logger.WithFields(logger.Fields{
 				"OrderID": orderID.String(),
 				"TxID":    payload.TxID,
-			}).Errorf("FulfillOrder: order missing provision bucket and could not resolve currency from institution")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order missing provider or provision bucket", nil)
+			}).Errorf("FulfillOrder: could not resolve fiat currency from institution")
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Order missing provider or institution currency", nil)
 			_ = tx.Rollback()
 			return
 		}
@@ -1461,6 +1450,10 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 			_ = tx.Rollback()
 			return
+		}
+
+		if scoreErr := assignment.ApplyProviderScoreChange(reqCtx, orderID, assignment.ScoreEventFulfilledValidated, decimal.NewFromFloat(assignment.RewardFulfilledValidated)); scoreErr != nil {
+			logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": scoreErr.Error()}).Warnf("FulfillOrder: score reward")
 		}
 
 		// Clean up order exclude list from Redis (best effort, don't fail if it errors)
@@ -1549,10 +1542,7 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 		}
 		providerID := fulfillment.Edges.Order.Edges.Provider.ID
 		currency := ""
-		if fulfillment.Edges.Order.Edges.ProvisionBucket != nil && fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency != nil {
-			currency = fulfillment.Edges.Order.Edges.ProvisionBucket.Edges.Currency.Code
-		}
-		if currency == "" && fulfillment.Edges.Order.Institution != "" {
+		if fulfillment.Edges.Order.Institution != "" {
 			inst, instErr := u.GetInstitutionByCode(reqCtx, fulfillment.Edges.Order.Institution, true)
 			if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
 				currency = inst.Edges.FiatCurrency.Code
@@ -1562,7 +1552,7 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 			logger.WithFields(logger.Fields{
 				"OrderID": orderID.String(),
 				"TxID":    payload.TxID,
-			}).Errorf("FulfillOrder: order missing provision bucket and could not resolve currency from institution")
+			}).Errorf("FulfillOrder: could not resolve fiat currency from institution")
 			return
 		}
 		amount := fulfillment.Edges.Order.Amount.Mul(fulfillment.Edges.Order.Rate).RoundBank(0)
@@ -1577,6 +1567,9 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 				"Amount":     amount.String(),
 			}).Errorf("failed to release reserved balance for failed validation")
 			// Don't return error here as the order status is already updated
+		}
+		if scoreErr := assignment.ApplyProviderScoreChange(reqCtx, orderID, assignment.ScoreEventValidationFailed, decimal.NewFromFloat(assignment.PenaltyValidationFailed)); scoreErr != nil {
+			logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": scoreErr.Error()}).Warnf("FulfillOrder: score validation failed penalty")
 		}
 
 	default:
@@ -1790,6 +1783,9 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 			if relErr := ctrl.balanceService.ReleaseTokenBalance(ctx, fulfillment.Edges.Order.Edges.Provider.ID, fulfillment.Edges.Order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
 				logger.Errorf("Failed to release token balance for payin validation failure (order %s): %v", orderID, relErr)
 			}
+		}
+		if scoreErr := assignment.ApplyProviderScoreChange(reqCtx, orderID, assignment.ScoreEventValidationFailed, decimal.NewFromFloat(assignment.PenaltyValidationFailed)); scoreErr != nil {
+			logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": scoreErr.Error()}).Warnf("FulfillOrder payin: score validation failed penalty")
 		}
 		u.APIResponse(ctx, http.StatusOK, "success", "Fulfillment validation failed", nil)
 		return
@@ -2022,6 +2018,10 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 		logger.Errorf("Failed to commit transaction: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update order status", nil)
 		return
+	}
+
+	if scoreErr := assignment.ApplyProviderScoreChange(reqCtx, orderID, assignment.ScoreEventFulfilledValidated, decimal.NewFromFloat(assignment.RewardFulfilledValidated)); scoreErr != nil {
+		logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": scoreErr.Error()}).Warnf("FulfillOrder payin: score reward")
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Order submitted for settlement", nil)
@@ -2358,9 +2358,6 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 			tq.WithNetwork()
 		}).
 		WithProvider().
-		WithProvisionBucket(func(pbq *ent.ProvisionBucketQuery) {
-			pbq.WithCurrency()
-		}).
 		Only(reqCtx)
 	if err != nil {
 		logger.WithFields(logger.Fields{
@@ -2381,49 +2378,8 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	} else if payload.Reason != "Insufficient funds" {
 		cancellationCount += 1
 		orderUpdate.AppendCancellationReasons([]string{payload.Reason})
-	} else if payload.Reason == "Insufficient funds" && order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
-		// Search for the specific provider in the queue using a Redis list (private orders with nil bucket are not in the queue)
-		redisKey := fmt.Sprintf("bucket_%s_%s_%s", order.Edges.ProvisionBucket.Edges.Currency.Code, order.Edges.ProvisionBucket.MinAmount, order.Edges.ProvisionBucket.MaxAmount)
-
-		// Check if the provider ID exists in the list
-		for index := -1; ; index-- {
-			providerData, err := storage.RedisClient.LIndex(reqCtx, redisKey, int64(index)).Result()
-			if err != nil {
-				break
-			}
-
-			// Extract the id from the data (format "providerID:token:network:rate:minAmount:maxAmount")
-			parts := strings.Split(providerData, ":")
-			if len(parts) != 6 {
-				logger.WithFields(logger.Fields{
-					"Provider Data": providerData,
-				}).Error("Invalid provider data format")
-				continue // Skip this entry due to invalid format
-			}
-
-			if parts[0] == provider.ID {
-				// Remove the provider from the list
-				placeholder := "DELETED_PROVIDER" // Define a placeholder value
-				_, err := storage.RedisClient.LSet(reqCtx, redisKey, int64(index), placeholder).Result()
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error": fmt.Sprintf("%v", err),
-						"Index": index,
-					}).Errorf("Failed to set placeholder at index %d: %v", index, err)
-				}
-
-				// Remove all occurences of the placeholder from the list
-				_, err = storage.RedisClient.LRem(reqCtx, redisKey, 0, placeholder).Result()
-				if err != nil {
-					logger.WithFields(logger.Fields{
-						"Error":       fmt.Sprintf("%v", err),
-						"Placeholder": placeholder,
-					}).Errorf("Failed to remove placeholder from circular queue: %v", err)
-				}
-
-				break
-			}
-		}
+	} else if payload.Reason == "Insufficient funds" {
+		orderUpdate.AppendCancellationReasons([]string{payload.Reason})
 	}
 
 	// Update order status to cancelled
@@ -2447,10 +2403,7 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	// Release reserved balance for this cancelled order
 	providerID := order.Edges.Provider.ID
 	currency := ""
-	if order.Edges.ProvisionBucket != nil && order.Edges.ProvisionBucket.Edges.Currency != nil {
-		currency = order.Edges.ProvisionBucket.Edges.Currency.Code
-	}
-	if currency == "" && order.Institution != "" {
+	if order.Institution != "" {
 		inst, instErr := u.GetInstitutionByCode(reqCtx, order.Institution, true)
 		if instErr == nil && inst != nil && inst.Edges.FiatCurrency != nil {
 			currency = inst.Edges.FiatCurrency.Code
@@ -2488,6 +2441,17 @@ func (ctrl *ProviderController) CancelOrder(ctx *gin.Context) {
 	err = storage.RedisClient.ExpireAt(reqCtx, orderKey, time.Now().Add(orderConf.OrderRequestValidity*2)).Err()
 	if err != nil {
 		logger.Errorf("error setting TTL for order %s exclude_list on Redis: %v", orderID, err)
+	}
+
+	switch {
+	case payload.Reason == "Insufficient funds":
+		if scoreErr := assignment.ApplyProviderScoreChange(reqCtx, orderID, assignment.ScoreEventCancelInsufficientFunds, decimal.NewFromFloat(assignment.PenaltyCancelInsufficientFunds)); scoreErr != nil {
+			logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": scoreErr.Error()}).Warnf("CancelOrder: score insufficient funds penalty")
+		}
+	case assignment.IsProviderFaultCancelReason(payload.Reason):
+		if scoreErr := assignment.ApplyProviderScoreChange(reqCtx, orderID, assignment.ScoreEventCancelProviderFault, decimal.NewFromFloat(assignment.PenaltyCancelProviderFault)); scoreErr != nil {
+			logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": scoreErr.Error()}).Warnf("CancelOrder: score provider-fault penalty")
+		}
 	}
 
 	u.APIResponse(ctx, http.StatusOK, "success", "Order cancelled successfully", nil)

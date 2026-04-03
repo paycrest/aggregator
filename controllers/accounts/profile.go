@@ -16,7 +16,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerfiataccount"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/senderordertoken"
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/token"
@@ -35,15 +34,13 @@ var orderConf = config.OrderConfig()
 
 // ProfileController is a controller type for profile settings
 type ProfileController struct {
-	apiKeyService        *svc.APIKeyService
-	priorityQueueService *svc.PriorityQueueService
+	apiKeyService *svc.APIKeyService
 }
 
 // NewProfileController creates a new instance of ProfileController
 func NewProfileController() *ProfileController {
 	return &ProfileController{
-		apiKeyService:        svc.NewAPIKeyService(),
-		priorityQueueService: svc.NewPriorityQueueService(),
+		apiKeyService: svc.NewAPIKeyService(),
 	}
 }
 
@@ -666,8 +663,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 		txUpdate.SetVisibilityMode(providerprofile.VisibilityMode(payload.VisibilityMode))
 	}
 
-	var allBuckets []*ent.ProvisionBucket
-
 	// Process all token operations
 	for _, op := range tokenOperations {
 
@@ -731,35 +726,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				return
 			}
 		}
-
-		// Collect buckets for this token
-		convertedMin := op.TokenPayload.MinOrderAmount.Mul(op.Rate)
-		convertedMax := op.TokenPayload.MaxOrderAmount.Mul(op.Rate)
-
-		buckets, err := tx.ProvisionBucket.
-			Query().
-			Where(
-				provisionbucket.And(
-					provisionbucket.HasCurrencyWith(fiatcurrency.IDEQ(op.Currency.ID)),
-					provisionbucket.MinAmountLTE(convertedMax), // providerMin ≤ bucketMax
-					provisionbucket.MaxAmountGTE(convertedMin), // providerMax ≥ bucketMin
-				),
-			).
-			All(reqCtx)
-		if err != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				logger.Errorf("Failed to rollback transaction: %v", rollbackErr)
-			}
-			logger.WithFields(logger.Fields{
-				"Error":      fmt.Sprintf("%v", err),
-				"ProviderID": provider.ID,
-				"MinAmount":  op.TokenPayload.MinOrderAmount,
-				"MaxAmount":  op.TokenPayload.MaxOrderAmount,
-			}).Errorf("Failed to assign provider to buckets")
-			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
-			return
-		}
-		allBuckets = append(allBuckets, buckets...)
 	}
 
 	// Process all fiat account operations (same pattern as tokens)
@@ -875,26 +841,6 @@ func (ctrl *ProfileController) UpdateProviderProfile(ctx *gin.Context) {
 				u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to update profile", nil)
 				return
 			}
-		}
-	}
-
-	// Deduplicate buckets to prevent duplicate many-to-many edges
-	seenBuckets := make(map[int]bool)
-	var dedupedBuckets []*ent.ProvisionBucket
-	for _, bucket := range allBuckets {
-		if !seenBuckets[bucket.ID] {
-			seenBuckets[bucket.ID] = true
-			dedupedBuckets = append(dedupedBuckets, bucket)
-		}
-	}
-
-	// Update provider profile with deduplicated buckets
-	// When Tokens field is present, always clear existing buckets first
-	if payload.Tokens != nil {
-		txUpdate.ClearProvisionBuckets()
-		// Only add buckets if there are any matches
-		if len(dedupedBuckets) > 0 {
-			txUpdate.AddProvisionBuckets(dedupedBuckets...)
 		}
 	}
 

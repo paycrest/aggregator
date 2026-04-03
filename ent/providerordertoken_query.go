@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -14,7 +15,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/paycrest/aggregator/ent/fiatcurrency"
 	"github.com/paycrest/aggregator/ent/predicate"
+	"github.com/paycrest/aggregator/ent/providerassignmentrun"
 	"github.com/paycrest/aggregator/ent/providerordertoken"
+	"github.com/paycrest/aggregator/ent/providerordertokenscorehistory"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/token"
 )
@@ -22,14 +25,16 @@ import (
 // ProviderOrderTokenQuery is the builder for querying ProviderOrderToken entities.
 type ProviderOrderTokenQuery struct {
 	config
-	ctx          *QueryContext
-	order        []providerordertoken.OrderOption
-	inters       []Interceptor
-	predicates   []predicate.ProviderOrderToken
-	withProvider *ProviderProfileQuery
-	withToken    *TokenQuery
-	withCurrency *FiatCurrencyQuery
-	withFKs      bool
+	ctx                *QueryContext
+	order              []providerordertoken.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.ProviderOrderToken
+	withProvider       *ProviderProfileQuery
+	withToken          *TokenQuery
+	withCurrency       *FiatCurrencyQuery
+	withScoreHistories *ProviderOrderTokenScoreHistoryQuery
+	withAssignmentRuns *ProviderAssignmentRunQuery
+	withFKs            bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -125,6 +130,50 @@ func (_q *ProviderOrderTokenQuery) QueryCurrency() *FiatCurrencyQuery {
 			sqlgraph.From(providerordertoken.Table, providerordertoken.FieldID, selector),
 			sqlgraph.To(fiatcurrency.Table, fiatcurrency.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, providerordertoken.CurrencyTable, providerordertoken.CurrencyColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryScoreHistories chains the current query on the "score_histories" edge.
+func (_q *ProviderOrderTokenQuery) QueryScoreHistories() *ProviderOrderTokenScoreHistoryQuery {
+	query := (&ProviderOrderTokenScoreHistoryClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerordertoken.Table, providerordertoken.FieldID, selector),
+			sqlgraph.To(providerordertokenscorehistory.Table, providerordertokenscorehistory.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerordertoken.ScoreHistoriesTable, providerordertoken.ScoreHistoriesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAssignmentRuns chains the current query on the "assignment_runs" edge.
+func (_q *ProviderOrderTokenQuery) QueryAssignmentRuns() *ProviderAssignmentRunQuery {
+	query := (&ProviderAssignmentRunClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerordertoken.Table, providerordertoken.FieldID, selector),
+			sqlgraph.To(providerassignmentrun.Table, providerassignmentrun.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, providerordertoken.AssignmentRunsTable, providerordertoken.AssignmentRunsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -319,14 +368,16 @@ func (_q *ProviderOrderTokenQuery) Clone() *ProviderOrderTokenQuery {
 		return nil
 	}
 	return &ProviderOrderTokenQuery{
-		config:       _q.config,
-		ctx:          _q.ctx.Clone(),
-		order:        append([]providerordertoken.OrderOption{}, _q.order...),
-		inters:       append([]Interceptor{}, _q.inters...),
-		predicates:   append([]predicate.ProviderOrderToken{}, _q.predicates...),
-		withProvider: _q.withProvider.Clone(),
-		withToken:    _q.withToken.Clone(),
-		withCurrency: _q.withCurrency.Clone(),
+		config:             _q.config,
+		ctx:                _q.ctx.Clone(),
+		order:              append([]providerordertoken.OrderOption{}, _q.order...),
+		inters:             append([]Interceptor{}, _q.inters...),
+		predicates:         append([]predicate.ProviderOrderToken{}, _q.predicates...),
+		withProvider:       _q.withProvider.Clone(),
+		withToken:          _q.withToken.Clone(),
+		withCurrency:       _q.withCurrency.Clone(),
+		withScoreHistories: _q.withScoreHistories.Clone(),
+		withAssignmentRuns: _q.withAssignmentRuns.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -363,6 +414,28 @@ func (_q *ProviderOrderTokenQuery) WithCurrency(opts ...func(*FiatCurrencyQuery)
 		opt(query)
 	}
 	_q.withCurrency = query
+	return _q
+}
+
+// WithScoreHistories tells the query-builder to eager-load the nodes that are connected to
+// the "score_histories" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProviderOrderTokenQuery) WithScoreHistories(opts ...func(*ProviderOrderTokenScoreHistoryQuery)) *ProviderOrderTokenQuery {
+	query := (&ProviderOrderTokenScoreHistoryClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withScoreHistories = query
+	return _q
+}
+
+// WithAssignmentRuns tells the query-builder to eager-load the nodes that are connected to
+// the "assignment_runs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProviderOrderTokenQuery) WithAssignmentRuns(opts ...func(*ProviderAssignmentRunQuery)) *ProviderOrderTokenQuery {
+	query := (&ProviderAssignmentRunClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAssignmentRuns = query
 	return _q
 }
 
@@ -445,10 +518,12 @@ func (_q *ProviderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 		nodes       = []*ProviderOrderToken{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [5]bool{
 			_q.withProvider != nil,
 			_q.withToken != nil,
 			_q.withCurrency != nil,
+			_q.withScoreHistories != nil,
+			_q.withAssignmentRuns != nil,
 		}
 	)
 	if _q.withProvider != nil || _q.withToken != nil || _q.withCurrency != nil {
@@ -490,6 +565,24 @@ func (_q *ProviderOrderTokenQuery) sqlAll(ctx context.Context, hooks ...queryHoo
 	if query := _q.withCurrency; query != nil {
 		if err := _q.loadCurrency(ctx, query, nodes, nil,
 			func(n *ProviderOrderToken, e *FiatCurrency) { n.Edges.Currency = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withScoreHistories; query != nil {
+		if err := _q.loadScoreHistories(ctx, query, nodes,
+			func(n *ProviderOrderToken) { n.Edges.ScoreHistories = []*ProviderOrderTokenScoreHistory{} },
+			func(n *ProviderOrderToken, e *ProviderOrderTokenScoreHistory) {
+				n.Edges.ScoreHistories = append(n.Edges.ScoreHistories, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAssignmentRuns; query != nil {
+		if err := _q.loadAssignmentRuns(ctx, query, nodes,
+			func(n *ProviderOrderToken) { n.Edges.AssignmentRuns = []*ProviderAssignmentRun{} },
+			func(n *ProviderOrderToken, e *ProviderAssignmentRun) {
+				n.Edges.AssignmentRuns = append(n.Edges.AssignmentRuns, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -589,6 +682,68 @@ func (_q *ProviderOrderTokenQuery) loadCurrency(ctx context.Context, query *Fiat
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (_q *ProviderOrderTokenQuery) loadScoreHistories(ctx context.Context, query *ProviderOrderTokenScoreHistoryQuery, nodes []*ProviderOrderToken, init func(*ProviderOrderToken), assign func(*ProviderOrderToken, *ProviderOrderTokenScoreHistory)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*ProviderOrderToken)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProviderOrderTokenScoreHistory(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(providerordertoken.ScoreHistoriesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.provider_order_token_score_histories
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "provider_order_token_score_histories" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_order_token_score_histories" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ProviderOrderTokenQuery) loadAssignmentRuns(ctx context.Context, query *ProviderAssignmentRunQuery, nodes []*ProviderOrderToken, init func(*ProviderOrderToken), assign func(*ProviderOrderToken, *ProviderAssignmentRun)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*ProviderOrderToken)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.ProviderAssignmentRun(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(providerordertoken.AssignmentRunsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.provider_order_token_assignment_runs
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "provider_order_token_assignment_runs" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "provider_order_token_assignment_runs" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

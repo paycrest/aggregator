@@ -217,6 +217,21 @@ func FallbackTriedAt(v time.Time) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldFallbackTriedAt, v))
 }
 
+// AssignmentMarketBuyRate applies equality check predicate on the "assignment_market_buy_rate" field. It's identical to AssignmentMarketBuyRateEQ.
+func AssignmentMarketBuyRate(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldAssignmentMarketBuyRate, v))
+}
+
+// AssignmentMarketSellRate applies equality check predicate on the "assignment_market_sell_rate" field. It's identical to AssignmentMarketSellRateEQ.
+func AssignmentMarketSellRate(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldAssignmentMarketSellRate, v))
+}
+
+// LegacyProvisionBucketID applies equality check predicate on the "legacy_provision_bucket_id" field. It's identical to LegacyProvisionBucketIDEQ.
+func LegacyProvisionBucketID(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldLegacyProvisionBucketID, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldCreatedAt, v))
@@ -2052,6 +2067,156 @@ func FallbackTriedAtNotNil() predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldNotNull(FieldFallbackTriedAt))
 }
 
+// AssignmentMarketBuyRateEQ applies the EQ predicate on the "assignment_market_buy_rate" field.
+func AssignmentMarketBuyRateEQ(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldAssignmentMarketBuyRate, v))
+}
+
+// AssignmentMarketBuyRateNEQ applies the NEQ predicate on the "assignment_market_buy_rate" field.
+func AssignmentMarketBuyRateNEQ(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldAssignmentMarketBuyRate, v))
+}
+
+// AssignmentMarketBuyRateIn applies the In predicate on the "assignment_market_buy_rate" field.
+func AssignmentMarketBuyRateIn(vs ...decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldAssignmentMarketBuyRate, vs...))
+}
+
+// AssignmentMarketBuyRateNotIn applies the NotIn predicate on the "assignment_market_buy_rate" field.
+func AssignmentMarketBuyRateNotIn(vs ...decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldAssignmentMarketBuyRate, vs...))
+}
+
+// AssignmentMarketBuyRateGT applies the GT predicate on the "assignment_market_buy_rate" field.
+func AssignmentMarketBuyRateGT(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldAssignmentMarketBuyRate, v))
+}
+
+// AssignmentMarketBuyRateGTE applies the GTE predicate on the "assignment_market_buy_rate" field.
+func AssignmentMarketBuyRateGTE(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldAssignmentMarketBuyRate, v))
+}
+
+// AssignmentMarketBuyRateLT applies the LT predicate on the "assignment_market_buy_rate" field.
+func AssignmentMarketBuyRateLT(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldAssignmentMarketBuyRate, v))
+}
+
+// AssignmentMarketBuyRateLTE applies the LTE predicate on the "assignment_market_buy_rate" field.
+func AssignmentMarketBuyRateLTE(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldAssignmentMarketBuyRate, v))
+}
+
+// AssignmentMarketBuyRateIsNil applies the IsNil predicate on the "assignment_market_buy_rate" field.
+func AssignmentMarketBuyRateIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldAssignmentMarketBuyRate))
+}
+
+// AssignmentMarketBuyRateNotNil applies the NotNil predicate on the "assignment_market_buy_rate" field.
+func AssignmentMarketBuyRateNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldAssignmentMarketBuyRate))
+}
+
+// AssignmentMarketSellRateEQ applies the EQ predicate on the "assignment_market_sell_rate" field.
+func AssignmentMarketSellRateEQ(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldAssignmentMarketSellRate, v))
+}
+
+// AssignmentMarketSellRateNEQ applies the NEQ predicate on the "assignment_market_sell_rate" field.
+func AssignmentMarketSellRateNEQ(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldAssignmentMarketSellRate, v))
+}
+
+// AssignmentMarketSellRateIn applies the In predicate on the "assignment_market_sell_rate" field.
+func AssignmentMarketSellRateIn(vs ...decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldAssignmentMarketSellRate, vs...))
+}
+
+// AssignmentMarketSellRateNotIn applies the NotIn predicate on the "assignment_market_sell_rate" field.
+func AssignmentMarketSellRateNotIn(vs ...decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldAssignmentMarketSellRate, vs...))
+}
+
+// AssignmentMarketSellRateGT applies the GT predicate on the "assignment_market_sell_rate" field.
+func AssignmentMarketSellRateGT(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldAssignmentMarketSellRate, v))
+}
+
+// AssignmentMarketSellRateGTE applies the GTE predicate on the "assignment_market_sell_rate" field.
+func AssignmentMarketSellRateGTE(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldAssignmentMarketSellRate, v))
+}
+
+// AssignmentMarketSellRateLT applies the LT predicate on the "assignment_market_sell_rate" field.
+func AssignmentMarketSellRateLT(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldAssignmentMarketSellRate, v))
+}
+
+// AssignmentMarketSellRateLTE applies the LTE predicate on the "assignment_market_sell_rate" field.
+func AssignmentMarketSellRateLTE(v decimal.Decimal) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldAssignmentMarketSellRate, v))
+}
+
+// AssignmentMarketSellRateIsNil applies the IsNil predicate on the "assignment_market_sell_rate" field.
+func AssignmentMarketSellRateIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldAssignmentMarketSellRate))
+}
+
+// AssignmentMarketSellRateNotNil applies the NotNil predicate on the "assignment_market_sell_rate" field.
+func AssignmentMarketSellRateNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldAssignmentMarketSellRate))
+}
+
+// LegacyProvisionBucketIDEQ applies the EQ predicate on the "legacy_provision_bucket_id" field.
+func LegacyProvisionBucketIDEQ(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldLegacyProvisionBucketID, v))
+}
+
+// LegacyProvisionBucketIDNEQ applies the NEQ predicate on the "legacy_provision_bucket_id" field.
+func LegacyProvisionBucketIDNEQ(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldLegacyProvisionBucketID, v))
+}
+
+// LegacyProvisionBucketIDIn applies the In predicate on the "legacy_provision_bucket_id" field.
+func LegacyProvisionBucketIDIn(vs ...int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldLegacyProvisionBucketID, vs...))
+}
+
+// LegacyProvisionBucketIDNotIn applies the NotIn predicate on the "legacy_provision_bucket_id" field.
+func LegacyProvisionBucketIDNotIn(vs ...int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldLegacyProvisionBucketID, vs...))
+}
+
+// LegacyProvisionBucketIDGT applies the GT predicate on the "legacy_provision_bucket_id" field.
+func LegacyProvisionBucketIDGT(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldLegacyProvisionBucketID, v))
+}
+
+// LegacyProvisionBucketIDGTE applies the GTE predicate on the "legacy_provision_bucket_id" field.
+func LegacyProvisionBucketIDGTE(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldLegacyProvisionBucketID, v))
+}
+
+// LegacyProvisionBucketIDLT applies the LT predicate on the "legacy_provision_bucket_id" field.
+func LegacyProvisionBucketIDLT(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldLegacyProvisionBucketID, v))
+}
+
+// LegacyProvisionBucketIDLTE applies the LTE predicate on the "legacy_provision_bucket_id" field.
+func LegacyProvisionBucketIDLTE(v int) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldLegacyProvisionBucketID, v))
+}
+
+// LegacyProvisionBucketIDIsNil applies the IsNil predicate on the "legacy_provision_bucket_id" field.
+func LegacyProvisionBucketIDIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldLegacyProvisionBucketID))
+}
+
+// LegacyProvisionBucketIDNotNil applies the NotNil predicate on the "legacy_provision_bucket_id" field.
+func LegacyProvisionBucketIDNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldLegacyProvisionBucketID))
+}
+
 // HasToken applies the HasEdge predicate on the "token" edge.
 func HasToken() predicate.PaymentOrder {
 	return predicate.PaymentOrder(func(s *sql.Selector) {
@@ -2144,29 +2309,6 @@ func HasProviderWith(preds ...predicate.ProviderProfile) predicate.PaymentOrder 
 	})
 }
 
-// HasProvisionBucket applies the HasEdge predicate on the "provision_bucket" edge.
-func HasProvisionBucket() predicate.PaymentOrder {
-	return predicate.PaymentOrder(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ProvisionBucketTable, ProvisionBucketColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasProvisionBucketWith applies the HasEdge predicate on the "provision_bucket" edge with a given conditions (other predicates).
-func HasProvisionBucketWith(preds ...predicate.ProvisionBucket) predicate.PaymentOrder {
-	return predicate.PaymentOrder(func(s *sql.Selector) {
-		step := newProvisionBucketStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasFulfillments applies the HasEdge predicate on the "fulfillments" edge.
 func HasFulfillments() predicate.PaymentOrder {
 	return predicate.PaymentOrder(func(s *sql.Selector) {
@@ -2205,6 +2347,52 @@ func HasTransactions() predicate.PaymentOrder {
 func HasTransactionsWith(preds ...predicate.TransactionLog) predicate.PaymentOrder {
 	return predicate.PaymentOrder(func(s *sql.Selector) {
 		step := newTransactionsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasProviderAssignmentRuns applies the HasEdge predicate on the "provider_assignment_runs" edge.
+func HasProviderAssignmentRuns() predicate.PaymentOrder {
+	return predicate.PaymentOrder(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProviderAssignmentRunsTable, ProviderAssignmentRunsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProviderAssignmentRunsWith applies the HasEdge predicate on the "provider_assignment_runs" edge with a given conditions (other predicates).
+func HasProviderAssignmentRunsWith(preds ...predicate.ProviderAssignmentRun) predicate.PaymentOrder {
+	return predicate.PaymentOrder(func(s *sql.Selector) {
+		step := newProviderAssignmentRunsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasProviderOrderTokenScoreHistories applies the HasEdge predicate on the "provider_order_token_score_histories" edge.
+func HasProviderOrderTokenScoreHistories() predicate.PaymentOrder {
+	return predicate.PaymentOrder(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProviderOrderTokenScoreHistoriesTable, ProviderOrderTokenScoreHistoriesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProviderOrderTokenScoreHistoriesWith applies the HasEdge predicate on the "provider_order_token_score_histories" edge with a given conditions (other predicates).
+func HasProviderOrderTokenScoreHistoriesWith(preds ...predicate.ProviderOrderTokenScoreHistory) predicate.PaymentOrder {
+	return predicate.PaymentOrder(func(s *sql.Selector) {
+		step := newProviderOrderTokenScoreHistoriesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

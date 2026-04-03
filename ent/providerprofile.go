@@ -48,8 +48,6 @@ type ProviderProfileEdges struct {
 	APIKey *APIKey `json:"api_key,omitempty"`
 	// ProviderBalances holds the value of the provider_balances edge.
 	ProviderBalances []*ProviderBalances `json:"provider_balances,omitempty"`
-	// ProvisionBuckets holds the value of the provision_buckets edge.
-	ProvisionBuckets []*ProvisionBucket `json:"provision_buckets,omitempty"`
 	// OrderTokens holds the value of the order_tokens edge.
 	OrderTokens []*ProviderOrderToken `json:"order_tokens,omitempty"`
 	// ProviderRating holds the value of the provider_rating edge.
@@ -60,7 +58,7 @@ type ProviderProfileEdges struct {
 	FiatAccounts []*ProviderFiatAccount `json:"fiat_accounts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [8]bool
+	loadedTypes [7]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -94,19 +92,10 @@ func (e ProviderProfileEdges) ProviderBalancesOrErr() ([]*ProviderBalances, erro
 	return nil, &NotLoadedError{edge: "provider_balances"}
 }
 
-// ProvisionBucketsOrErr returns the ProvisionBuckets value or an error if the edge
-// was not loaded in eager-loading.
-func (e ProviderProfileEdges) ProvisionBucketsOrErr() ([]*ProvisionBucket, error) {
-	if e.loadedTypes[3] {
-		return e.ProvisionBuckets, nil
-	}
-	return nil, &NotLoadedError{edge: "provision_buckets"}
-}
-
 // OrderTokensOrErr returns the OrderTokens value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProviderProfileEdges) OrderTokensOrErr() ([]*ProviderOrderToken, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[3] {
 		return e.OrderTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "order_tokens"}
@@ -117,7 +106,7 @@ func (e ProviderProfileEdges) OrderTokensOrErr() ([]*ProviderOrderToken, error) 
 func (e ProviderProfileEdges) ProviderRatingOrErr() (*ProviderRating, error) {
 	if e.ProviderRating != nil {
 		return e.ProviderRating, nil
-	} else if e.loadedTypes[5] {
+	} else if e.loadedTypes[4] {
 		return nil, &NotFoundError{label: providerrating.Label}
 	}
 	return nil, &NotLoadedError{edge: "provider_rating"}
@@ -126,7 +115,7 @@ func (e ProviderProfileEdges) ProviderRatingOrErr() (*ProviderRating, error) {
 // AssignedOrdersOrErr returns the AssignedOrders value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProviderProfileEdges) AssignedOrdersOrErr() ([]*PaymentOrder, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[5] {
 		return e.AssignedOrders, nil
 	}
 	return nil, &NotLoadedError{edge: "assigned_orders"}
@@ -135,7 +124,7 @@ func (e ProviderProfileEdges) AssignedOrdersOrErr() ([]*PaymentOrder, error) {
 // FiatAccountsOrErr returns the FiatAccounts value or an error if the edge
 // was not loaded in eager-loading.
 func (e ProviderProfileEdges) FiatAccountsOrErr() ([]*ProviderFiatAccount, error) {
-	if e.loadedTypes[7] {
+	if e.loadedTypes[6] {
 		return e.FiatAccounts, nil
 	}
 	return nil, &NotLoadedError{edge: "fiat_accounts"}
@@ -244,11 +233,6 @@ func (_m *ProviderProfile) QueryAPIKey() *APIKeyQuery {
 // QueryProviderBalances queries the "provider_balances" edge of the ProviderProfile entity.
 func (_m *ProviderProfile) QueryProviderBalances() *ProviderBalancesQuery {
 	return NewProviderProfileClient(_m.config).QueryProviderBalances(_m)
-}
-
-// QueryProvisionBuckets queries the "provision_buckets" edge of the ProviderProfile entity.
-func (_m *ProviderProfile) QueryProvisionBuckets() *ProvisionBucketQuery {
-	return NewProviderProfileClient(_m.config).QueryProvisionBuckets(_m)
 }
 
 // QueryOrderTokens queries the "order_tokens" edge of the ProviderProfile entity.

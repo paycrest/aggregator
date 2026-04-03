@@ -20,7 +20,6 @@ import (
 	"github.com/paycrest/aggregator/ent/providerordertoken"
 	"github.com/paycrest/aggregator/ent/providerprofile"
 	"github.com/paycrest/aggregator/ent/providerrating"
-	"github.com/paycrest/aggregator/ent/provisionbucket"
 	"github.com/paycrest/aggregator/ent/user"
 )
 
@@ -173,21 +172,6 @@ func (_c *ProviderProfileCreate) AddProviderBalances(v ...*ProviderBalances) *Pr
 		ids[i] = v[i].ID
 	}
 	return _c.AddProviderBalanceIDs(ids...)
-}
-
-// AddProvisionBucketIDs adds the "provision_buckets" edge to the ProvisionBucket entity by IDs.
-func (_c *ProviderProfileCreate) AddProvisionBucketIDs(ids ...int) *ProviderProfileCreate {
-	_c.mutation.AddProvisionBucketIDs(ids...)
-	return _c
-}
-
-// AddProvisionBuckets adds the "provision_buckets" edges to the ProvisionBucket entity.
-func (_c *ProviderProfileCreate) AddProvisionBuckets(v ...*ProvisionBucket) *ProviderProfileCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddProvisionBucketIDs(ids...)
 }
 
 // AddOrderTokenIDs adds the "order_tokens" edge to the ProviderOrderToken entity by IDs.
@@ -445,22 +429,6 @@ func (_c *ProviderProfileCreate) createSpec() (*ProviderProfile, *sqlgraph.Creat
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerbalances.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.ProvisionBucketsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   providerprofile.ProvisionBucketsTable,
-			Columns: providerprofile.ProvisionBucketsPrimaryKey,
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(provisionbucket.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

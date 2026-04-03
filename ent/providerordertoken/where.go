@@ -126,6 +126,21 @@ func Network(v string) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldNetwork, v))
 }
 
+// ScoreOnramp applies equality check predicate on the "score_onramp" field. It's identical to ScoreOnrampEQ.
+func ScoreOnramp(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldScoreOnramp, v))
+}
+
+// ScoreOfframp applies equality check predicate on the "score_offramp" field. It's identical to ScoreOfframpEQ.
+func ScoreOfframp(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldScoreOfframp, v))
+}
+
+// LastOrderAssignedAt applies equality check predicate on the "last_order_assigned_at" field. It's identical to LastOrderAssignedAtEQ.
+func LastOrderAssignedAt(v time.Time) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldLastOrderAssignedAt, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldEQ(FieldCreatedAt, v))
@@ -821,6 +836,136 @@ func NetworkContainsFold(v string) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(sql.FieldContainsFold(FieldNetwork, v))
 }
 
+// ScoreOnrampEQ applies the EQ predicate on the "score_onramp" field.
+func ScoreOnrampEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldScoreOnramp, v))
+}
+
+// ScoreOnrampNEQ applies the NEQ predicate on the "score_onramp" field.
+func ScoreOnrampNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldScoreOnramp, v))
+}
+
+// ScoreOnrampIn applies the In predicate on the "score_onramp" field.
+func ScoreOnrampIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldScoreOnramp, vs...))
+}
+
+// ScoreOnrampNotIn applies the NotIn predicate on the "score_onramp" field.
+func ScoreOnrampNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldScoreOnramp, vs...))
+}
+
+// ScoreOnrampGT applies the GT predicate on the "score_onramp" field.
+func ScoreOnrampGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldScoreOnramp, v))
+}
+
+// ScoreOnrampGTE applies the GTE predicate on the "score_onramp" field.
+func ScoreOnrampGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldScoreOnramp, v))
+}
+
+// ScoreOnrampLT applies the LT predicate on the "score_onramp" field.
+func ScoreOnrampLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldScoreOnramp, v))
+}
+
+// ScoreOnrampLTE applies the LTE predicate on the "score_onramp" field.
+func ScoreOnrampLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldScoreOnramp, v))
+}
+
+// ScoreOfframpEQ applies the EQ predicate on the "score_offramp" field.
+func ScoreOfframpEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldScoreOfframp, v))
+}
+
+// ScoreOfframpNEQ applies the NEQ predicate on the "score_offramp" field.
+func ScoreOfframpNEQ(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldScoreOfframp, v))
+}
+
+// ScoreOfframpIn applies the In predicate on the "score_offramp" field.
+func ScoreOfframpIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldScoreOfframp, vs...))
+}
+
+// ScoreOfframpNotIn applies the NotIn predicate on the "score_offramp" field.
+func ScoreOfframpNotIn(vs ...decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldScoreOfframp, vs...))
+}
+
+// ScoreOfframpGT applies the GT predicate on the "score_offramp" field.
+func ScoreOfframpGT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldScoreOfframp, v))
+}
+
+// ScoreOfframpGTE applies the GTE predicate on the "score_offramp" field.
+func ScoreOfframpGTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldScoreOfframp, v))
+}
+
+// ScoreOfframpLT applies the LT predicate on the "score_offramp" field.
+func ScoreOfframpLT(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldScoreOfframp, v))
+}
+
+// ScoreOfframpLTE applies the LTE predicate on the "score_offramp" field.
+func ScoreOfframpLTE(v decimal.Decimal) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldScoreOfframp, v))
+}
+
+// LastOrderAssignedAtEQ applies the EQ predicate on the "last_order_assigned_at" field.
+func LastOrderAssignedAtEQ(v time.Time) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldEQ(FieldLastOrderAssignedAt, v))
+}
+
+// LastOrderAssignedAtNEQ applies the NEQ predicate on the "last_order_assigned_at" field.
+func LastOrderAssignedAtNEQ(v time.Time) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNEQ(FieldLastOrderAssignedAt, v))
+}
+
+// LastOrderAssignedAtIn applies the In predicate on the "last_order_assigned_at" field.
+func LastOrderAssignedAtIn(vs ...time.Time) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIn(FieldLastOrderAssignedAt, vs...))
+}
+
+// LastOrderAssignedAtNotIn applies the NotIn predicate on the "last_order_assigned_at" field.
+func LastOrderAssignedAtNotIn(vs ...time.Time) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotIn(FieldLastOrderAssignedAt, vs...))
+}
+
+// LastOrderAssignedAtGT applies the GT predicate on the "last_order_assigned_at" field.
+func LastOrderAssignedAtGT(v time.Time) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGT(FieldLastOrderAssignedAt, v))
+}
+
+// LastOrderAssignedAtGTE applies the GTE predicate on the "last_order_assigned_at" field.
+func LastOrderAssignedAtGTE(v time.Time) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldGTE(FieldLastOrderAssignedAt, v))
+}
+
+// LastOrderAssignedAtLT applies the LT predicate on the "last_order_assigned_at" field.
+func LastOrderAssignedAtLT(v time.Time) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLT(FieldLastOrderAssignedAt, v))
+}
+
+// LastOrderAssignedAtLTE applies the LTE predicate on the "last_order_assigned_at" field.
+func LastOrderAssignedAtLTE(v time.Time) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldLTE(FieldLastOrderAssignedAt, v))
+}
+
+// LastOrderAssignedAtIsNil applies the IsNil predicate on the "last_order_assigned_at" field.
+func LastOrderAssignedAtIsNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldIsNull(FieldLastOrderAssignedAt))
+}
+
+// LastOrderAssignedAtNotNil applies the NotNil predicate on the "last_order_assigned_at" field.
+func LastOrderAssignedAtNotNil() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(sql.FieldNotNull(FieldLastOrderAssignedAt))
+}
+
 // HasProvider applies the HasEdge predicate on the "provider" edge.
 func HasProvider() predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(func(s *sql.Selector) {
@@ -882,6 +1027,52 @@ func HasCurrency() predicate.ProviderOrderToken {
 func HasCurrencyWith(preds ...predicate.FiatCurrency) predicate.ProviderOrderToken {
 	return predicate.ProviderOrderToken(func(s *sql.Selector) {
 		step := newCurrencyStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasScoreHistories applies the HasEdge predicate on the "score_histories" edge.
+func HasScoreHistories() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ScoreHistoriesTable, ScoreHistoriesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasScoreHistoriesWith applies the HasEdge predicate on the "score_histories" edge with a given conditions (other predicates).
+func HasScoreHistoriesWith(preds ...predicate.ProviderOrderTokenScoreHistory) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(func(s *sql.Selector) {
+		step := newScoreHistoriesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAssignmentRuns applies the HasEdge predicate on the "assignment_runs" edge.
+func HasAssignmentRuns() predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AssignmentRunsTable, AssignmentRunsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAssignmentRunsWith applies the HasEdge predicate on the "assignment_runs" edge with a given conditions (other predicates).
+func HasAssignmentRunsWith(preds ...predicate.ProviderAssignmentRun) predicate.ProviderOrderToken {
+	return predicate.ProviderOrderToken(func(s *sql.Selector) {
+		step := newAssignmentRunsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -1636,20 +1636,6 @@ func TestProvider(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
-			// Create a provision bucket for the order
-			provisionBucket, err := db.Client.ProvisionBucket.
-				Create().
-				SetMinAmount(decimal.NewFromFloat(100.0)).
-				SetMaxAmount(decimal.NewFromFloat(1000.0)).
-				SetCurrency(testCtx.currency).
-				Save(context.Background())
-			assert.NoError(t, err)
-
-			order, err = order.Update().
-				SetProvisionBucket(provisionBucket).
-				Save(context.Background())
-			assert.NoError(t, err)
-
 			orderKey := fmt.Sprintf("order_request_%s", order.ID)
 
 			user, err := test.CreateTestUser(map[string]interface{}{
@@ -1701,20 +1687,6 @@ func TestProvider(t *testing.T) {
 				"gateway_id": uuid.New().String(),
 				"provider":   testCtx.provider,
 			})
-			assert.NoError(t, err)
-
-			// Create a provision bucket for the order
-			provisionBucket, err := db.Client.ProvisionBucket.
-				Create().
-				SetMinAmount(decimal.NewFromFloat(100.0)).
-				SetMaxAmount(decimal.NewFromFloat(1000.0)).
-				SetCurrency(testCtx.currency).
-				Save(context.Background())
-			assert.NoError(t, err)
-
-			order, err = order.Update().
-				SetProvisionBucket(provisionBucket).
-				Save(context.Background())
 			assert.NoError(t, err)
 
 			orderKey := fmt.Sprintf("order_request_%s", order.ID)
@@ -1922,19 +1894,6 @@ func TestProvider(t *testing.T) {
 				"provider":   testCtx.provider,
 				"status":     "fulfilled",
 			})
-			assert.NoError(t, err)
-
-			// Create a provision bucket and associate it with the order
-			provisionBucket, err := test.CreateTestProvisionBucket(map[string]interface{}{
-				"currency_id": testCtx.currency.ID,
-				"provider_id": testCtx.provider.ID,
-				"max_amount":  decimal.NewFromFloat(1000.0),
-				"min_amount":  decimal.NewFromFloat(1.0),
-			})
-			assert.NoError(t, err)
-
-			// Associate the provision bucket with the order
-			order, err = test.AddProvisionBucketToPaymentOrder(order, provisionBucket.ID)
 			assert.NoError(t, err)
 
 			tx_id := "0x123" + fmt.Sprint(rand.Intn(1000000))

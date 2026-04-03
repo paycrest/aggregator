@@ -50,6 +50,12 @@ type ProviderOrderToken struct {
 	PayoutAddress string `json:"payout_address,omitempty"`
 	// Network holds the value of the "network" field.
 	Network string `json:"network,omitempty"`
+	// ScoreOnramp holds the value of the "score_onramp" field.
+	ScoreOnramp decimal.Decimal `json:"score_onramp,omitempty"`
+	// ScoreOfframp holds the value of the "score_offramp" field.
+	ScoreOfframp decimal.Decimal `json:"score_offramp,omitempty"`
+	// LastOrderAssignedAt holds the value of the "last_order_assigned_at" field.
+	LastOrderAssignedAt *time.Time `json:"last_order_assigned_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProviderOrderTokenQuery when eager-loading is set.
 	Edges                               ProviderOrderTokenEdges `json:"edges"`
@@ -67,9 +73,13 @@ type ProviderOrderTokenEdges struct {
 	Token *Token `json:"token,omitempty"`
 	// Currency holds the value of the currency edge.
 	Currency *FiatCurrency `json:"currency,omitempty"`
+	// ScoreHistories holds the value of the score_histories edge.
+	ScoreHistories []*ProviderOrderTokenScoreHistory `json:"score_histories,omitempty"`
+	// AssignmentRuns holds the value of the assignment_runs edge.
+	AssignmentRuns []*ProviderAssignmentRun `json:"assignment_runs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [5]bool
 }
 
 // ProviderOrErr returns the Provider value or an error if the edge
@@ -105,18 +115,36 @@ func (e ProviderOrderTokenEdges) CurrencyOrErr() (*FiatCurrency, error) {
 	return nil, &NotLoadedError{edge: "currency"}
 }
 
+// ScoreHistoriesOrErr returns the ScoreHistories value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProviderOrderTokenEdges) ScoreHistoriesOrErr() ([]*ProviderOrderTokenScoreHistory, error) {
+	if e.loadedTypes[3] {
+		return e.ScoreHistories, nil
+	}
+	return nil, &NotLoadedError{edge: "score_histories"}
+}
+
+// AssignmentRunsOrErr returns the AssignmentRuns value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProviderOrderTokenEdges) AssignmentRunsOrErr() ([]*ProviderAssignmentRun, error) {
+	if e.loadedTypes[4] {
+		return e.AssignmentRuns, nil
+	}
+	return nil, &NotLoadedError{edge: "assignment_runs"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*ProviderOrderToken) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case providerordertoken.FieldFixedBuyRate, providerordertoken.FieldFixedSellRate, providerordertoken.FieldFloatingBuyDelta, providerordertoken.FieldFloatingSellDelta, providerordertoken.FieldMaxOrderAmount, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmountOtc, providerordertoken.FieldMinOrderAmountOtc, providerordertoken.FieldRateSlippage:
+		case providerordertoken.FieldFixedBuyRate, providerordertoken.FieldFixedSellRate, providerordertoken.FieldFloatingBuyDelta, providerordertoken.FieldFloatingSellDelta, providerordertoken.FieldMaxOrderAmount, providerordertoken.FieldMinOrderAmount, providerordertoken.FieldMaxOrderAmountOtc, providerordertoken.FieldMinOrderAmountOtc, providerordertoken.FieldRateSlippage, providerordertoken.FieldScoreOnramp, providerordertoken.FieldScoreOfframp:
 			values[i] = new(decimal.Decimal)
 		case providerordertoken.FieldID:
 			values[i] = new(sql.NullInt64)
 		case providerordertoken.FieldSettlementAddress, providerordertoken.FieldPayoutAddress, providerordertoken.FieldNetwork:
 			values[i] = new(sql.NullString)
-		case providerordertoken.FieldCreatedAt, providerordertoken.FieldUpdatedAt:
+		case providerordertoken.FieldCreatedAt, providerordertoken.FieldUpdatedAt, providerordertoken.FieldLastOrderAssignedAt:
 			values[i] = new(sql.NullTime)
 		case providerordertoken.ForeignKeys[0]: // fiat_currency_provider_order_tokens
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -229,6 +257,25 @@ func (_m *ProviderOrderToken) assignValues(columns []string, values []any) error
 			} else if value.Valid {
 				_m.Network = value.String
 			}
+		case providerordertoken.FieldScoreOnramp:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field score_onramp", values[i])
+			} else if value != nil {
+				_m.ScoreOnramp = *value
+			}
+		case providerordertoken.FieldScoreOfframp:
+			if value, ok := values[i].(*decimal.Decimal); !ok {
+				return fmt.Errorf("unexpected type %T for field score_offramp", values[i])
+			} else if value != nil {
+				_m.ScoreOfframp = *value
+			}
+		case providerordertoken.FieldLastOrderAssignedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field last_order_assigned_at", values[i])
+			} else if value.Valid {
+				_m.LastOrderAssignedAt = new(time.Time)
+				*_m.LastOrderAssignedAt = value.Time
+			}
 		case providerordertoken.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field fiat_currency_provider_order_tokens", values[i])
@@ -276,6 +323,16 @@ func (_m *ProviderOrderToken) QueryToken() *TokenQuery {
 // QueryCurrency queries the "currency" edge of the ProviderOrderToken entity.
 func (_m *ProviderOrderToken) QueryCurrency() *FiatCurrencyQuery {
 	return NewProviderOrderTokenClient(_m.config).QueryCurrency(_m)
+}
+
+// QueryScoreHistories queries the "score_histories" edge of the ProviderOrderToken entity.
+func (_m *ProviderOrderToken) QueryScoreHistories() *ProviderOrderTokenScoreHistoryQuery {
+	return NewProviderOrderTokenClient(_m.config).QueryScoreHistories(_m)
+}
+
+// QueryAssignmentRuns queries the "assignment_runs" edge of the ProviderOrderToken entity.
+func (_m *ProviderOrderToken) QueryAssignmentRuns() *ProviderAssignmentRunQuery {
+	return NewProviderOrderTokenClient(_m.config).QueryAssignmentRuns(_m)
 }
 
 // Update returns a builder for updating this ProviderOrderToken.
@@ -342,6 +399,17 @@ func (_m *ProviderOrderToken) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("network=")
 	builder.WriteString(_m.Network)
+	builder.WriteString(", ")
+	builder.WriteString("score_onramp=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ScoreOnramp))
+	builder.WriteString(", ")
+	builder.WriteString("score_offramp=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ScoreOfframp))
+	builder.WriteString(", ")
+	if v := _m.LastOrderAssignedAt; v != nil {
+		builder.WriteString("last_order_assigned_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }
