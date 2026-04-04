@@ -1486,6 +1486,9 @@ func TestSender(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
+			exportFrom := time.Now().Format("2006-01-02")
+			exportTo := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+
 			listPayload2 := map[string]interface{}{
 				"timestamp": time.Now().Unix(),
 			}
@@ -1533,6 +1536,23 @@ func TestSender(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, baselineOrderCount, int(statsResp.Data.(map[string]interface{})["totalOrders"].(float64)))
 
+			exportV1Payload := map[string]interface{}{
+				"export":    "csv",
+				"from":      exportFrom,
+				"to":        exportTo,
+				"timestamp": time.Now().Unix(),
+			}
+			exportV1Sig := token.GenerateHMACSignature(exportV1Payload, testCtx.apiKeySecret)
+			exportV1Headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + exportV1Sig,
+			}
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", exportFrom, exportTo, exportV1Payload["timestamp"]), nil, exportV1Headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			csvV1 := res.Body.String()
+			assert.NotContains(t, csvV1, cancelledOrder.ID.String())
+			assert.NotContains(t, csvV1, "sender-cancelled-search-id")
+
 			onePayload := map[string]interface{}{
 				"timestamp": time.Now().Unix(),
 			}
@@ -1572,6 +1592,23 @@ func TestSender(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &listResp)
 			assert.NoError(t, err)
 			assert.Equal(t, 0, int(listResp.Data.(map[string]interface{})["total"].(float64)))
+
+			exportV2Payload := map[string]interface{}{
+				"export":    "csv",
+				"from":      exportFrom,
+				"to":        exportTo,
+				"timestamp": time.Now().Unix(),
+			}
+			exportV2Sig := token.GenerateHMACSignature(exportV2Payload, testCtx.apiKeySecret)
+			exportV2Headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + exportV2Sig,
+			}
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/v2/sender/orders?from=%s&to=%s&timestamp=%v&export=csv", exportFrom, exportTo, exportV2Payload["timestamp"]), nil, exportV2Headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			csvV2 := res.Body.String()
+			assert.NotContains(t, csvV2, cancelledOrder.ID.String())
+			assert.NotContains(t, csvV2, "sender-cancelled-search-id")
 
 			v2OnePayload := map[string]interface{}{
 				"timestamp": time.Now().Unix(),
