@@ -890,8 +890,29 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			firstName = "User"
 		}
 
+		// Store channel and message ts so we can update this message after approve/reject
+		if ch, ok := payload["channel"].(map[string]interface{}); ok {
+			if chID, ok := ch["id"].(string); ok {
+				if msg, ok := payload["message"].(map[string]interface{}); ok {
+					if msgTs, ok := msg["ts"].(string); ok && chID != "" && msgTs != "" {
+						redisKey := "kyb_slack_message:" + kybProfileID
+						redisVal := chID + "|" + msgTs
+						if err := storage.RedisClient.Set(reqCtx, redisKey, redisVal, 7*24*time.Hour).Err(); err != nil {
+							logger.Warnf("Failed to store Slack message ref for KYB %s: %v", kybProfileID, err)
+						}
+					}
+				}
+			}
+		}
+
 		// Handle review button - open modal with KYB details
 		if actionID == "review_kyb" {
+			// Guard: do not open modal if already approved (DB is source of truth; avoids relying only on Slack/Redis)
+			if kybProfile.Edges.User.KybVerificationStatus == user.KybVerificationStatusApproved {
+				logger.Infof("KYB Profile %s already approved, not opening modal", kybProfileID)
+				ctx.JSON(http.StatusOK, gin.H{"text": "This submission has already been approved."})
+				return
+			}
 			logger.Infof("Review button clicked for KYB Profile %s", kybProfileID)
 			triggerID, ok := payload["trigger_id"].(string)
 			if !ok {
@@ -1439,6 +1460,23 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
 			}
 
+			// Update original KYB message to remove Review/Reject buttons
+			cnfg := config.AuthConfig()
+			if cnfg.SlackBotToken != "" {
+				redisKey := "kyb_slack_message:" + kybProfileID
+				val, getErr := storage.RedisClient.Get(reqCtx, redisKey).Result()
+				if getErr == nil {
+					parts := strings.SplitN(val, "|", 2)
+					if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
+						if updateErr := ctrl.slackService.UpdateKYBSubmissionMessage(cnfg.SlackBotToken, parts[0], parts[1], kyb.CompanyName, "Rejected", finalRejectionComment); updateErr != nil {
+							logger.Warnf("Failed to update Slack KYB message for %s: %v", kybProfileID, updateErr)
+						} else {
+							_ = storage.RedisClient.Del(reqCtx, redisKey).Err()
+						}
+					}
+				}
+			}
+
 			logger.Infof("Processed Slack modal submission for rejection in %v", time.Since(startTime))
 			return
 		}
@@ -1583,6 +1621,23 @@ func (ctrl *Controller) SlackInteractionHandler(ctx *gin.Context) {
 			err = ctrl.slackService.SendActionFeedbackNotification(firstName, email, kybProfileID, "approve", approvalReason)
 			if err != nil {
 				logger.Warnf("Failed to send Slack feedback notification for KYB Profile %s: %v", kybProfileID, err)
+			}
+
+			// Update original KYB message to remove Review/Reject buttons
+			cnfg := config.AuthConfig()
+			if cnfg.SlackBotToken != "" {
+				redisKey := "kyb_slack_message:" + kybProfileID
+				val, getErr := storage.RedisClient.Get(reqCtx, redisKey).Result()
+				if getErr == nil {
+					parts := strings.SplitN(val, "|", 2)
+					if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
+						if updateErr := ctrl.slackService.UpdateKYBSubmissionMessage(cnfg.SlackBotToken, parts[0], parts[1], kyb.CompanyName, "Approved", approvalReason); updateErr != nil {
+							logger.Warnf("Failed to update Slack KYB message for %s: %v", kybProfileID, updateErr)
+						} else {
+							_ = storage.RedisClient.Del(reqCtx, redisKey).Err()
+						}
+					}
+				}
 			}
 
 			logger.Infof("Processed Slack modal submission for approval in %v", time.Since(startTime))
@@ -1859,11 +1914,32 @@ func (ctrl *Controller) HandleKYBSubmission(ctx *gin.Context) {
 	}
 
 	// ✅ Send Slack notification (outside transaction)
-	err = ctrl.slackService.SendSubmissionNotification(userRecord.FirstName, userRecord.Email, kybSubmission.ID.String())
-	if err != nil {
-		logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", kybSubmission.ID, err)
-		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Error sending Slack notification", nil)
-		return
+	// Prefer chat.postMessage so we get ts and can update the message after approve/reject
+	cnfg := config.AuthConfig()
+	kybProfileID := kybSubmission.ID.String()
+	if cnfg.SlackBotToken != "" && cnfg.SlackChannelID != "" {
+		msgTs, postErr := ctrl.slackService.PostKYBSubmissionMessage(
+			cnfg.SlackBotToken, cnfg.SlackChannelID, userRecord.FirstName, userRecord.Email, kybProfileID,
+		)
+		if postErr != nil {
+			logger.Warnf("Failed to post KYB Slack message for %s: %v, falling back to webhook", kybProfileID, postErr)
+			if err := ctrl.slackService.SendSubmissionNotification(userRecord.FirstName, userRecord.Email, kybProfileID); err != nil {
+				logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", kybSubmission.ID, err)
+				// Do not return 500; submission is already committed (retries would get 409)
+			}
+		} else if msgTs != "" {
+			redisKey := "kyb_slack_message:" + kybProfileID
+			redisVal := cnfg.SlackChannelID + "|" + msgTs
+			if err := storage.RedisClient.Set(reqCtx, redisKey, redisVal, 7*24*time.Hour).Err(); err != nil {
+				logger.Warnf("Failed to store Slack message ref for KYB %s: %v", kybProfileID, err)
+			}
+		}
+	} else {
+		err = ctrl.slackService.SendSubmissionNotification(userRecord.FirstName, userRecord.Email, kybProfileID)
+		if err != nil {
+			logger.Errorf("Webhook log: Error sending Slack notification for submission %s: %v", kybSubmission.ID, err)
+			// Do not return 500; submission is already committed (retries would get 409)
+		}
 	}
 
 	// Determine response message based on whether it's an update or new submission
