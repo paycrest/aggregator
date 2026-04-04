@@ -2058,11 +2058,9 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			Metadata:  paymentOrder.Metadata,
 		}
 		relOrder.Edges.Token = token
-		totalCryptoReserved, gErr := svc.GrossCryptoReservedForApprove(reqCtx, svc.GatewayPayinFeeSettingsReader{}, relOrder)
-		if gErr != nil {
+		totalCryptoReserved := svc.PayinReleaseGrossForCleanup(reqCtx, svc.GatewayPayinFeeSettingsReader{}, relOrder, func(gErr error) {
 			logger.Warnf("deleteFailedOnrampOrder: GrossCryptoReservedForApprove failed, using amount+senderFee: %v", gErr)
-			totalCryptoReserved = paymentOrder.Amount.Add(paymentOrder.SenderFee)
-		}
+		})
 		if relErr := balanceService.ReleaseTokenBalance(reqCtx, providerID, token.ID, totalCryptoReserved, nil); relErr != nil {
 			logger.Errorf("Failed to release token balance after onramp init failure (order %s): %v", paymentOrder.ID, relErr)
 		}

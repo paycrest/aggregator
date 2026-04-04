@@ -9,6 +9,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/services/contracts"
+	"github.com/shopspring/decimal"
 )
 
 // Public API: NativeService has only SendTransaction(ctx, orderIDPrefix, network, to, data, authList).
@@ -473,5 +476,163 @@ func TestPackExecute_MultipleCalls(t *testing.T) {
 
 	if len(data2) <= len(data1) {
 		t.Error("two calls should produce longer calldata than one")
+	}
+}
+
+// --- Payin gross reserve / cleanup (GrossCryptoReservedForApprove, PayinReleaseGrossForCleanup) ---
+
+// mustPanicFeeReader fails the test if the gateway fee RPC path is used.
+type mustPanicFeeReader struct{}
+
+func (mustPanicFeeReader) GetTokenFeeSettings(context.Context, *ent.Network, string) (contracts.GatewaySettingManagerTokenFeeSettings, error) {
+	panic("GetTokenFeeSettings must not be called when payinGrossCryptoReserved is present")
+}
+
+type countingFeeReader struct {
+	calls int
+	bps   *big.Int
+}
+
+func (r *countingFeeReader) GetTokenFeeSettings(context.Context, *ent.Network, string) (contracts.GatewaySettingManagerTokenFeeSettings, error) {
+	r.calls++
+	return contracts.GatewaySettingManagerTokenFeeSettings{ProviderToAggregatorFx: r.bps}, nil
+}
+
+func testTokenWithNetwork(decimals int8) *ent.Token {
+	n := &ent.Network{Identifier: "testnet", RPCEndpoint: "http://x", GatewayContractAddress: "0x0000000000000000000000000000000000000001"}
+	tok := &ent.Token{
+		Decimals:        decimals,
+		ContractAddress: "0xd4E96eF8eee8678dBFf4d535E033Ed1a4F7605b7",
+	}
+	tok.Edges.Network = n
+	return tok
+}
+
+func TestGrossCryptoReservedForApprove_PersistedGrossSkipsFeeReader(t *testing.T) {
+	tok := testTokenWithNetwork(6)
+	persisted := decimal.RequireFromString("12.345678")
+	order := &ent.PaymentOrder{
+		Amount:    decimal.RequireFromString("1"),
+		SenderFee: decimal.RequireFromString("2"),
+		Rate:      decimal.NewFromInt(750),
+		Metadata: map[string]interface{}{
+			MetadataKeyPayinGrossCryptoReserved: persisted.String(),
+		},
+	}
+	order.Edges.Token = tok
+
+	got, err := GrossCryptoReservedForApprove(context.Background(), mustPanicFeeReader{}, order)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !got.Equal(persisted) {
+		t.Fatalf("expected persisted gross %s, got %s", persisted, got)
+	}
+}
+
+func TestGrossCryptoReservedForApprove_InvalidPersistedGrossIgnored_RecomputesForLocal(t *testing.T) {
+	tok := testTokenWithNetwork(6)
+	reader := &countingFeeReader{bps: big.NewInt(5000)}
+	order := &ent.PaymentOrder{
+		Amount:    decimal.RequireFromString("10"),
+		SenderFee: decimal.RequireFromString("1"),
+		Rate:      decimal.NewFromInt(1),
+		Metadata: map[string]interface{}{
+			MetadataKeyPayinGrossCryptoReserved: "not-a-decimal",
+			MetadataKeyPayinLocalTransfer:       true,
+		},
+	}
+	order.Edges.Token = tok
+
+	got, err := GrossCryptoReservedForApprove(context.Background(), reader, order)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if reader.calls != 0 {
+		t.Fatalf("local recompute should not call fee reader, got %d calls", reader.calls)
+	}
+	want := decimal.RequireFromString("11")
+	if !got.Equal(want) {
+		t.Fatalf("expected recomputed local gross %s, got %s", want, got)
+	}
+}
+
+func TestGrossCryptoReservedForApprove_ZeroPersistedGrossIgnored_FXUsesReader(t *testing.T) {
+	tok := testTokenWithNetwork(6)
+	reader := &countingFeeReader{bps: big.NewInt(0)}
+	order := &ent.PaymentOrder{
+		Amount:    decimal.RequireFromString("1"),
+		SenderFee: decimal.RequireFromString("0"),
+		Rate:      decimal.NewFromInt(750),
+		Metadata: map[string]interface{}{
+			MetadataKeyPayinGrossCryptoReserved: "0",
+			MetadataKeyPayinLocalTransfer:       false,
+		},
+	}
+	order.Edges.Token = tok
+
+	_, err := GrossCryptoReservedForApprove(context.Background(), reader, order)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if reader.calls != 1 {
+		t.Fatalf("expected fee reader call when persisted gross is non-positive/ignored, got %d", reader.calls)
+	}
+}
+
+func TestGrossCryptoReservedForApprove_MissingPersistedGross_CallsFeeReaderForFX(t *testing.T) {
+	tok := testTokenWithNetwork(6)
+	reader := &countingFeeReader{bps: big.NewInt(5000)}
+	order := &ent.PaymentOrder{
+		Amount:    decimal.RequireFromString("1"),
+		SenderFee: decimal.RequireFromString("0"),
+		Rate:      decimal.NewFromInt(750),
+		Metadata:  map[string]interface{}{MetadataKeyPayinLocalTransfer: false},
+	}
+	order.Edges.Token = tok
+
+	_, err := GrossCryptoReservedForApprove(context.Background(), reader, order)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if reader.calls != 1 {
+		t.Fatalf("expected exactly one fee reader call for FX without persisted gross, got %d", reader.calls)
+	}
+}
+
+func TestPayinReleaseGrossForCleanup_GrossCryptoError_FallsBackToAmountPlusSenderFee(t *testing.T) {
+	tok := testTokenWithNetwork(6)
+	order := &ent.PaymentOrder{
+		Amount:    decimal.RequireFromString("10"),
+		SenderFee: decimal.RequireFromString("1.5"),
+		Rate:      decimal.NewFromInt(750),
+		Metadata:  map[string]interface{}{MetadataKeyPayinLocalTransfer: false},
+	}
+	order.Edges.Token = tok
+
+	var sawErr error
+	got := PayinReleaseGrossForCleanup(context.Background(), nil, order, func(e error) { sawErr = e })
+	want := decimal.RequireFromString("11.5")
+	if !got.Equal(want) {
+		t.Fatalf("expected fallback %s, got %s", want, got)
+	}
+	if sawErr == nil {
+		t.Fatal("expected onFallback to be invoked")
+	}
+}
+
+func TestPayinReleaseGrossForCleanup_NoPanicOnNilOrder(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("unexpected panic: %v", r)
+		}
+	}()
+	var called bool
+	got := PayinReleaseGrossForCleanup(context.Background(), nil, nil, func(error) { called = true })
+	if !got.IsZero() {
+		t.Fatalf("expected zero, got %s", got)
+	}
+	if !called {
+		t.Fatal("expected onFallback when order is nil")
 	}
 }

@@ -737,3 +737,20 @@ func GrossCryptoReservedForApprove(ctx context.Context, reader PayinFeeSettingsR
 	grossSub := new(big.Int).Add(new(big.Int).Set(principalBig), senderFeeBig)
 	return u.FromSubunit(grossSub, dec), nil
 }
+
+// PayinReleaseGrossForCleanup returns the token gross amount to release after a failed onramp init (virtual account step).
+// It uses GrossCryptoReservedForApprove (honouring payinGrossCryptoReserved metadata when present). On error it falls back
+// to amount+senderFee and invokes onFallback if non-nil (e.g. logging). It does not panic.
+func PayinReleaseGrossForCleanup(ctx context.Context, reader PayinFeeSettingsReader, order *ent.PaymentOrder, onFallback func(error)) decimal.Decimal {
+	d, err := GrossCryptoReservedForApprove(ctx, reader, order)
+	if err != nil {
+		if onFallback != nil {
+			onFallback(err)
+		}
+		if order != nil {
+			return order.Amount.Add(order.SenderFee)
+		}
+		return decimal.Zero
+	}
+	return d
+}
