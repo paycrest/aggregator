@@ -1459,6 +1459,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		return
 	}
 	sender := senderCtx.(*ent.SenderProfile)
+	reqCtx := ctx.Request.Context()
 
 	// Validate mutually exclusive fields: senderFee and senderFeePercent cannot both be provided
 	if payload.SenderFee != "" && payload.SenderFeePercent != "" {
@@ -1500,7 +1501,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			fiatcurrency.CodeEQ(source.Currency),
 			fiatcurrency.IsEnabledEQ(true),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1521,7 +1522,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			institution.CodeEQ(source.RefundAccount.Institution),
 		).
 		WithFiatCurrency().
-		First(ctx)
+		First(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1545,7 +1546,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 
 	// Validate refund account identifier (same as offramp recipient validation)
-	refundAccountName, err := u.ValidateAccount(ctx, source.RefundAccount.Institution, source.RefundAccount.AccountIdentifier)
+	refundAccountName, err := u.ValidateAccount(reqCtx, source.RefundAccount.Institution, source.RefundAccount.AccountIdentifier)
 	if err != nil {
 		if strings.Contains(err.Error(), "not supported") || strings.Contains(err.Error(), "verify account") {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1571,7 +1572,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			tokenEnt.IsEnabledEQ(true),
 		).
 		WithNetwork().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1657,7 +1658,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 				})
 				return
 			}
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(reqCtx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
@@ -1709,7 +1710,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 				})
 				return
 			}
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(reqCtx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
@@ -1756,7 +1757,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			}
 
 			// Validate rate is achievable (using buy side)
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(reqCtx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
@@ -1777,7 +1778,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			orderRate = providedRate
 		} else {
 			// Fetch rate from ValidateRate (buy side)
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(reqCtx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
@@ -1804,7 +1805,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			senderordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
 			senderordertoken.HasSenderWith(senderprofile.IDEQ(sender.ID)),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 			Field:   "Destination",
@@ -1904,7 +1905,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 				paymentorder.ReferenceEQ(payload.Reference),
 				paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
 			).
-			Exist(ctx)
+			Exist(reqCtx)
 		if err != nil {
 			logger.Errorf("Reference check error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -1931,13 +1932,17 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 
 	// Gross token liquidity to reserve must match payin ERC20 approve (settleIn principal + sender fee).
+	payinLocalTransfer := strings.EqualFold(token.BaseCurrency, currency.Code)
 	pseudoOrder := &ent.PaymentOrder{
 		Amount:    cryptoAmountOut,
 		SenderFee: senderFeeCrypto,
 		Rate:      orderRate,
+		Metadata: map[string]interface{}{
+			svc.MetadataKeyPayinLocalTransfer: payinLocalTransfer,
+		},
 	}
 	pseudoOrder.Edges.Token = token
-	totalCryptoToReserve, err := svc.GrossCryptoReservedForApprove(ctx, svc.GatewayPayinFeeSettingsReader{}, pseudoOrder)
+	totalCryptoToReserve, err := svc.GrossCryptoReservedForApprove(reqCtx, svc.GatewayPayinFeeSettingsReader{}, pseudoOrder)
 	if err != nil {
 		logger.Errorf("Failed to compute payin gross reserve: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -1946,14 +1951,14 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 
 	// Reserve provider token liquidity at order creation
 	balanceService := balance.New()
-	tx, err := storage.Client.Tx(ctx)
+	tx, err := storage.Client.Tx(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
 
-	err = balanceService.ReserveTokenBalance(ctx, providerID, token.ID, totalCryptoToReserve, tx)
+	err = balanceService.ReserveTokenBalance(reqCtx, providerID, token.ID, totalCryptoToReserve, tx)
 	if err != nil {
 		logger.Errorf("Failed to reserve token balance: %v", err)
 		_ = tx.Rollback()
@@ -1981,6 +1986,8 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	if payload.AmountIn != "" {
 		metadata["amountIn"] = payload.AmountIn
 	}
+	metadata[svc.MetadataKeyPayinGrossCryptoReserved] = totalCryptoToReserve.String()
+	metadata[svc.MetadataKeyPayinLocalTransfer] = payinLocalTransfer
 
 	// Use order type from ValidateRate result
 	orderType := rateValidationResult.OrderType
@@ -2012,7 +2019,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		SetProviderID(providerID).
 		SetStatus(paymentorder.StatusPending) // VA issued at init; provider already assigned at this point.
 
-	paymentOrder, err := paymentOrderBuilder.Save(ctx)
+	paymentOrder, err := paymentOrderBuilder.Save(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -2026,7 +2033,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		SetStatus(transactionlog.StatusOrderInitiated).
 		SetNetwork(token.Edges.Network.Identifier).
 		SetPaymentOrderID(paymentOrder.ID).
-		Save(ctx)
+		Save(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -2051,15 +2058,15 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			Metadata:  paymentOrder.Metadata,
 		}
 		relOrder.Edges.Token = token
-		totalCryptoReserved, gErr := svc.GrossCryptoReservedForApprove(ctx, svc.GatewayPayinFeeSettingsReader{}, relOrder)
+		totalCryptoReserved, gErr := svc.GrossCryptoReservedForApprove(reqCtx, svc.GatewayPayinFeeSettingsReader{}, relOrder)
 		if gErr != nil {
 			logger.Warnf("deleteFailedOnrampOrder: GrossCryptoReservedForApprove failed, using amount+senderFee: %v", gErr)
 			totalCryptoReserved = paymentOrder.Amount.Add(paymentOrder.SenderFee)
 		}
-		if relErr := balanceService.ReleaseTokenBalance(ctx, providerID, token.ID, totalCryptoReserved, nil); relErr != nil {
+		if relErr := balanceService.ReleaseTokenBalance(reqCtx, providerID, token.ID, totalCryptoReserved, nil); relErr != nil {
 			logger.Errorf("Failed to release token balance after onramp init failure (order %s): %v", paymentOrder.ID, relErr)
 		}
-		if delErr := storage.Client.PaymentOrder.DeleteOneID(paymentOrder.ID).Exec(ctx); delErr != nil {
+		if delErr := storage.Client.PaymentOrder.DeleteOneID(paymentOrder.ID).Exec(reqCtx); delErr != nil {
 			logger.Errorf("Failed to delete order after onramp init failure (order %s): %v", paymentOrder.ID, delErr)
 		}
 	}
@@ -2144,7 +2151,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		providerAccountMap["reference"] = reference
 	}
 	orderMetadata["providerAccount"] = providerAccountMap
-	if _, err := storage.Client.PaymentOrder.UpdateOneID(paymentOrder.ID).SetMetadata(orderMetadata).Save(ctx); err != nil {
+	if _, err := storage.Client.PaymentOrder.UpdateOneID(paymentOrder.ID).SetMetadata(orderMetadata).Save(reqCtx); err != nil {
 		logger.Errorf("Failed to save provider account to order metadata: %v", err)
 		deleteFailedOnrampOrder()
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -2153,7 +2160,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 
 	// Seed order_request_%s (same key as offramp) so payin AcceptOrder can validate provider
 	orderRequestKey := fmt.Sprintf("order_request_%s", paymentOrder.ID.String())
-	if err := storage.RedisClient.HSet(ctx, orderRequestKey,
+	if err := storage.RedisClient.HSet(reqCtx, orderRequestKey,
 		"providerId", providerID,
 		"direction", "payin",
 		"amount", totalFiatToPay.String(),
@@ -2164,7 +2171,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
-	_ = storage.RedisClient.Expire(ctx, orderRequestKey, 24*time.Hour).Err()
+	_ = storage.RedisClient.Expire(reqCtx, orderRequestKey, 24*time.Hour).Err()
 
 	// Format sender fee percent for response
 	senderFeePercentStr := ""

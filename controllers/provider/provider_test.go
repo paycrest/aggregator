@@ -36,9 +36,9 @@ import (
 )
 
 func TestComputeSettleInPrincipalSubunit(t *testing.T) {
-	t.Run("local rate keeps net amount", func(t *testing.T) {
+	t.Run("local keeps net amount", func(t *testing.T) {
 		net := big.NewInt(1000000)
-		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(100), big.NewInt(0))
+		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(5000), true)
 		assert.NoError(t, err)
 		assert.Equal(t, net.String(), got.String())
 	})
@@ -46,21 +46,21 @@ func TestComputeSettleInPrincipalSubunit(t *testing.T) {
 	t.Run("fx rate grosses up amount", func(t *testing.T) {
 		net := big.NewInt(1000000)
 		// 5% providerToAggregatorFx => gross should be ceil(1,000,000*100000/95000)=1,052,632
-		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(5000))
+		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(5000), false)
 		assert.NoError(t, err)
 		assert.Equal(t, "1052632", got.String())
 	})
 
 	t.Run("fx zero bps keeps net amount", func(t *testing.T) {
 		net := big.NewInt(1000000)
-		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(0))
+		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(0), false)
 		assert.NoError(t, err)
 		assert.Equal(t, net.String(), got.String())
 	})
 
 	t.Run("fx rejects invalid bps", func(t *testing.T) {
 		net := big.NewInt(1000000)
-		_, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(100000))
+		_, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(100000), false)
 		assert.Error(t, err)
 	})
 }

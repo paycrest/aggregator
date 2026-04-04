@@ -2147,12 +2147,12 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, ord
 		settleInAmountBig = new(big.Int).Set(netAmountBig)
 	}
 
-	if !hasSnapshot && !order.Rate.Equal(decimal.NewFromInt(100)) {
+	if !hasSnapshot && !services.PayinIsLocalTransfer(order) {
 		feeSettings, err := ctrl.feeReader.GetTokenFeeSettings(ctx, order.Edges.Token.Edges.Network, order.Edges.Token.ContractAddress)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to get token fee settings: %w", err)
 		}
-		settleInAmountBig, err = services.ComputeSettleInPrincipalSubunit(netAmountBig, order.Rate, feeSettings.ProviderToAggregatorFx)
+		settleInAmountBig, err = services.ComputeSettleInPrincipalSubunit(netAmountBig, order.Rate, feeSettings.ProviderToAggregatorFx, false)
 		if err != nil {
 			return nil, nil, fmt.Errorf("compute settleIn principal: %w", err)
 		}
