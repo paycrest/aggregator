@@ -53,6 +53,7 @@ var cryptoConf = config.CryptoConfig()
 type ProviderController struct {
 	balanceService *balance.Service
 	nativeService  *services.NativeService
+	feeReader      services.PayinFeeSettingsReader
 }
 
 // NewProviderController creates a new instance of ProviderController with injected services
@@ -60,6 +61,26 @@ func NewProviderController() *ProviderController {
 	return &ProviderController{
 		balanceService: balance.New(),
 		nativeService:  services.NewNativeService(),
+		feeReader:      services.GatewayPayinFeeSettingsReader{},
+	}
+}
+
+// providerExcludedOrderStatusesPredicate hides early-terminal / not-yet-actionable rows from
+// provider dashboard list, search, export, stats count, and get-by-ID.
+func providerExcludedOrderStatusesPredicate() predicate.PaymentOrder {
+	return paymentorder.StatusNotIn(
+		paymentorder.StatusInitiated,
+		paymentorder.StatusExpired,
+		paymentorder.StatusDeposited,
+	)
+}
+
+func isProviderExcludedOrderStatus(s paymentorder.Status) bool {
+	switch s {
+	case paymentorder.StatusInitiated, paymentorder.StatusExpired, paymentorder.StatusDeposited:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -167,6 +188,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 		paymentOrderQuery = paymentOrderQuery.Where(
 			paymentorder.InstitutionIn(institutionCodes...),
 		)
+		paymentOrderQuery = paymentOrderQuery.Where(providerExcludedOrderStatusesPredicate())
 	} else {
 		// Currency is required for normal listing
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency is required", nil)
@@ -273,6 +295,7 @@ func (ctrl *ProviderController) handleSearchPaymentOrders(ctx *gin.Context, prov
 	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
 		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 	)
+	paymentOrderQuery = paymentOrderQuery.Where(providerExcludedOrderStatusesPredicate())
 
 	// Apply text search across all relevant fields
 	var searchPredicates []predicate.PaymentOrder
@@ -413,6 +436,7 @@ func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, prov
 	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
 		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 	)
+	paymentOrderQuery = paymentOrderQuery.Where(providerExcludedOrderStatusesPredicate())
 
 	// Apply date range filters
 	if fromDate != nil {
@@ -702,9 +726,14 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 			return
 		}
 
-		// Ensure reserved token liquidity exists / is sufficient
-		// Total crypto needed: amount + senderFee
-		totalCryptoNeeded := currentOrder.Amount.Add(currentOrder.SenderFee)
+		// Ensure reserved token liquidity exists / is sufficient (match ERC20 approve: settleIn principal + sender fee).
+		totalCryptoNeeded, grossErr := services.GrossCryptoReservedForApprove(reqCtx, ctrl.feeReader, currentOrder)
+		if grossErr != nil {
+			_ = tx.Rollback()
+			logger.Errorf("Failed to compute payin gross crypto for accept: %v", grossErr)
+			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to validate payin reserve requirements", nil)
+			return
+		}
 
 		// Check provider token balance reservation
 		providerBalance, err := storage.Client.ProviderBalances.
@@ -736,6 +765,9 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 					paymentorder.StatusRefunding,
 				),
 			).
+			WithToken(func(tq *ent.TokenQuery) {
+				tq.WithNetwork()
+			}).
 			All(reqCtx)
 		if err != nil {
 			_ = tx.Rollback()
@@ -746,7 +778,15 @@ func (ctrl *ProviderController) AcceptOrder(ctx *gin.Context) {
 
 		totalReservedRequired := decimal.Zero
 		for _, activeOrder := range activeOnrampOrders {
-			totalReservedRequired = totalReservedRequired.Add(activeOrder.Amount.Add(activeOrder.SenderFee))
+			gross, gErr := services.GrossCryptoReservedForApprove(reqCtx, ctrl.feeReader, activeOrder)
+			if gErr != nil {
+				logger.WithFields(logger.Fields{
+					"OrderID": activeOrder.ID.String(),
+					"Error":   gErr.Error(),
+				}).Errorf("GrossCryptoReservedForApprove failed for active onramp order; using amount+senderFee")
+				gross = activeOrder.Amount.Add(activeOrder.SenderFee)
+			}
+			totalReservedRequired = totalReservedRequired.Add(gross)
 		}
 
 		// Reject if reserved balance cannot cover this order or the sum of all active onramp reservations
@@ -972,11 +1012,21 @@ func (ctrl *ProviderController) buildPayinBatchForAccept(ctx *gin.Context, order
 	if err != nil {
 		return nil, fmt.Errorf("gateway order ID: %w", err)
 	}
-	settleInData, err := ctrl.prepareSettleInCallData(ctx.Request.Context(), order, gatewayOrderID)
+	settleInData, principalAmount, err := ctrl.prepareSettleInCallData(ctx.Request.Context(), order, gatewayOrderID)
 	if err != nil {
 		return nil, fmt.Errorf("prepareSettleInCallData: %w", err)
 	}
-	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress)
+	metadata := maps.Clone(order.Metadata)
+	if metadata == nil {
+		metadata = map[string]interface{}{}
+	}
+	metadata[services.MetadataKeyPayinSettleInAmountSubunit] = principalAmount.String()
+	if _, err := storage.Client.PaymentOrder.UpdateOneID(order.ID).SetMetadata(metadata).Save(reqCtx); err != nil {
+		return nil, fmt.Errorf("persist settleIn amount snapshot: %w", err)
+	}
+	order.Metadata = metadata
+
+	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress, principalAmount)
 	if err != nil {
 		return nil, fmt.Errorf("prepareApproveCallData: %w", err)
 	}
@@ -1083,7 +1133,7 @@ func (ctrl *ProviderController) DeclineOrder(ctx *gin.Context) {
 						"ProviderID": provider.ID,
 						"Currency":   currency,
 						"Amount":     amountStr,
-					}).Warnf("DeclineOrder: failed to release reserved balance (best effort)")
+					}).Errorf("DeclineOrder: failed to release reserved balance (best effort)")
 				}
 			}
 		}
@@ -1642,6 +1692,7 @@ func (ctrl *ProviderController) handlePayoutFulfillment(ctx *gin.Context, orderI
 // handleRefundOutcomeFulfillment handles FulfillOrder when order is Refunding (payin insufficient-balance refund path).
 // It interprets payload.ValidationStatus as refund outcome: refunded, pending, or failed.
 func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context, orderID uuid.UUID, payload types.FulfillOrderPayload, fulfillment *ent.PaymentOrderFulfillment) {
+	reqCtx := ctx.Request.Context()
 	order := fulfillment.Edges.Order
 	if order == nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Order not found", nil)
@@ -1682,10 +1733,14 @@ func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context,
 			return
 		}
 
-		// Release reserved token balance
+		// Release reserved token balance (match payin approve gross: principal + sender fee)
 		if order.Edges.Token != nil && order.Edges.Provider != nil {
-			totalCryptoReserved := order.Amount.Add(order.SenderFee)
-			if relErr := ctrl.balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+			totalCryptoReserved, gErr := services.GrossCryptoReservedForApprove(reqCtx, ctrl.feeReader, order)
+			if gErr != nil {
+				logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": gErr.Error()}).Errorf("GrossCryptoReservedForApprove failed on refund release; using amount+senderFee")
+				totalCryptoReserved = order.Amount.Add(order.SenderFee)
+			}
+			if relErr := ctrl.balanceService.ReleaseTokenBalance(reqCtx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
 				logger.Errorf("Failed to release token balance for refunded order (order %s): %v", orderID, relErr)
 			}
 		}
@@ -1722,8 +1777,12 @@ func (ctrl *ProviderController) handleRefundOutcomeFulfillment(ctx *gin.Context,
 			return
 		}
 		if order.Edges.Token != nil && order.Edges.Provider != nil {
-			totalCryptoReserved := order.Amount.Add(order.SenderFee)
-			if relErr := ctrl.balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+			totalCryptoReserved, gErr := services.GrossCryptoReservedForApprove(reqCtx, ctrl.feeReader, order)
+			if gErr != nil {
+				logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": gErr.Error()}).Errorf("GrossCryptoReservedForApprove failed on refund-failure release; using amount+senderFee")
+				totalCryptoReserved = order.Amount.Add(order.SenderFee)
+			}
+			if relErr := ctrl.balanceService.ReleaseTokenBalance(reqCtx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
 				logger.Errorf("Failed to release token balance for refund-failed order (order %s): %v", orderID, relErr)
 			}
 		}
@@ -1784,10 +1843,15 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 				return
 			}
 		}
-		// Release reserved token balance (provider reserved when they accepted)
+		// Release reserved token balance (provider reserved when they accepted; match approve gross)
 		if fulfillment.Edges.Order != nil && fulfillment.Edges.Order.Edges.Token != nil && fulfillment.Edges.Order.Edges.Provider != nil {
-			totalCryptoReserved := fulfillment.Edges.Order.Amount.Add(fulfillment.Edges.Order.SenderFee)
-			if relErr := ctrl.balanceService.ReleaseTokenBalance(ctx, fulfillment.Edges.Order.Edges.Provider.ID, fulfillment.Edges.Order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
+			o := fulfillment.Edges.Order
+			totalCryptoReserved, gErr := services.GrossCryptoReservedForApprove(reqCtx, ctrl.feeReader, o)
+			if gErr != nil {
+				logger.WithFields(logger.Fields{"OrderID": orderID.String(), "Error": gErr.Error()}).Errorf("GrossCryptoReservedForApprove failed on payin validation-failure release; using amount+senderFee")
+				totalCryptoReserved = o.Amount.Add(o.SenderFee)
+			}
+			if relErr := ctrl.balanceService.ReleaseTokenBalance(reqCtx, o.Edges.Provider.ID, o.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
 				logger.Errorf("Failed to release token balance for payin validation failure (order %s): %v", orderID, relErr)
 			}
 		}
@@ -1899,7 +1963,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 
 	// Prepare settleIn call data
 	// settleIn(_orderId, _token, _amount, _senderFeeRecipient, _senderFee, _recipient, _rate)
-	settleInData, err := ctrl.prepareSettleInCallData(ctx.Request.Context(), orderWithDetails, gatewayOrderID)
+	settleInData, principalAmount, err := ctrl.prepareSettleInCallData(ctx.Request.Context(), orderWithDetails, gatewayOrderID)
 	if err != nil {
 		logger.Errorf("Failed to prepare settleIn call data: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to prepare settlement data", nil)
@@ -1965,7 +2029,7 @@ func (ctrl *ProviderController) handlePayinFulfillment(ctx *gin.Context, orderID
 	}
 	// Execute EIP-7702 transaction (after marker is persisted so retries are idempotent)
 	// Single tx to provider EOA with execute([approve, settleIn], signature) so relayer pays gas and batch runs in provider context.
-	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, providerOrderToken.PayoutAddress, payload.Authorization, settleInData, batchSig); err != nil {
+	if err := ctrl.executePayinSettlement(ctx, orderWithDetails, providerOrderToken.PayoutAddress, payload.Authorization, settleInData, principalAmount, batchSig); err != nil {
 		logger.Errorf("Failed to execute payin settlement: %v", err)
 		// Compensating update: revert order status and remove settlement log so provider can retry
 		txCompensate, txErr := storage.Client.Tx(ctx)
@@ -2063,18 +2127,21 @@ func gatewayOrderIDFromEncode(payoutAddress, aggregatorAddress string, paymentOr
 }
 
 // prepareSettleInCallData prepares the call data for Gateway settleIn method
-func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, order *ent.PaymentOrder, gatewayOrderID string) ([]byte, error) {
+func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, order *ent.PaymentOrder, gatewayOrderID string) ([]byte, *big.Int, error) {
 	if order.Edges.SenderProfile == nil {
-		return nil, fmt.Errorf("order has no sender profile")
+		return nil, nil, fmt.Errorf("order has no sender profile")
 	}
 	if order.Edges.Token == nil {
-		return nil, fmt.Errorf("order has no token")
+		return nil, nil, fmt.Errorf("order has no token")
+	}
+	if order.Edges.Token.Edges.Network == nil {
+		return nil, nil, fmt.Errorf("order token has no network")
 	}
 
 	// Use current Gateway contract bindings; plan expects regenerated bindings if ABI changes
 	gatewayABI, err := abi.JSON(strings.NewReader(contracts.GatewayMetaData.ABI))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse Gateway ABI: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse Gateway ABI: %w", err)
 	}
 
 	// Get fee address (sender fee recipient)
@@ -2086,18 +2153,32 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, ord
 		).
 		Only(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch sender order token: %w", err)
+		return nil, nil, fmt.Errorf("failed to fetch sender order token: %w", err)
 	}
 
 	// Get recipient address (onramp: crypto destination for settleIn)
 	recipientAddress := order.RefundOrRecipientAddress
 	if recipientAddress == "" {
-		return nil, fmt.Errorf("recipient address not set on order")
+		return nil, nil, fmt.Errorf("recipient address not set on order")
 	}
 
-	// Convert amounts to big.Int
-	amountBig := u.ToSubunit(order.Amount, order.Edges.Token.Decimals)
+	netAmountBig := u.ToSubunit(order.Amount, order.Edges.Token.Decimals)
 	senderFeeBig := u.ToSubunit(order.SenderFee, order.Edges.Token.Decimals)
+	settleInAmountBig, hasSnapshot := services.PrincipalSubunitFromMetadata(order.Metadata)
+	if !hasSnapshot {
+		settleInAmountBig = new(big.Int).Set(netAmountBig)
+	}
+
+	if !hasSnapshot && !services.PayinIsLocalTransfer(order) {
+		feeSettings, err := ctrl.feeReader.GetTokenFeeSettings(ctx, order.Edges.Token.Edges.Network, order.Edges.Token.ContractAddress)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get token fee settings: %w", err)
+		}
+		settleInAmountBig, err = services.ComputeSettleInPrincipalSubunit(netAmountBig, order.Rate, feeSettings.ProviderToAggregatorFx, false)
+		if err != nil {
+			return nil, nil, fmt.Errorf("compute settleIn principal: %w", err)
+		}
+	}
 
 	// Convert rate to uint96 (rate is stored as decimal, need to convert to basis points * 100)
 	// Rate format: Gateway expects rate as uint96 where 100 = 1.00 (local transfer)
@@ -2110,7 +2191,7 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, ord
 	// Generate Gateway order ID bytes
 	orderIDBytes, err := hex.DecodeString(strings.TrimPrefix(gatewayOrderID, "0x"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode gateway order ID: %w", err)
+		return nil, nil, fmt.Errorf("failed to decode gateway order ID: %w", err)
 	}
 	var orderIDByte32 [32]byte
 	copy(orderIDByte32[:], orderIDBytes)
@@ -2121,31 +2202,34 @@ func (ctrl *ProviderController) prepareSettleInCallData(ctx context.Context, ord
 		"settleIn",
 		orderIDByte32,
 		ethcommon.HexToAddress(order.Edges.Token.ContractAddress),
-		amountBig,
+		settleInAmountBig,
 		ethcommon.HexToAddress(senderOrderToken.FeeAddress),
 		senderFeeBig,
 		ethcommon.HexToAddress(recipientAddress),
 		rateBig,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to pack settleIn ABI: %w", err)
+		return nil, nil, fmt.Errorf("failed to pack settleIn ABI: %w", err)
 	}
 
-	return data, nil
+	return data, settleInAmountBig, nil
 }
 
 // prepareApproveCallData prepares ERC20 approve(spender, amount) calldata so the gateway can transfer tokens during settleIn.
-func (ctrl *ProviderController) prepareApproveCallData(order *ent.PaymentOrder, gatewayAddress string) ([]byte, error) {
+func (ctrl *ProviderController) prepareApproveCallData(order *ent.PaymentOrder, gatewayAddress string, settleInAmount *big.Int) ([]byte, error) {
 	if order.Edges.Token == nil {
 		return nil, fmt.Errorf("order has no token")
+	}
+	if settleInAmount == nil {
+		return nil, fmt.Errorf("settleIn amount is nil")
 	}
 	erc20ABI, err := abi.JSON(strings.NewReader(contracts.ERC20TokenMetaData.ABI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse ERC20 ABI: %w", err)
 	}
-	amount := order.Amount.Add(order.SenderFee)
-	amountBig := u.ToSubunit(amount, order.Edges.Token.Decimals)
-	calldata, err := erc20ABI.Pack("approve", ethcommon.HexToAddress(gatewayAddress), amountBig)
+	senderFeeBig := u.ToSubunit(order.SenderFee, order.Edges.Token.Decimals)
+	approveAmount := new(big.Int).Add(new(big.Int).Set(settleInAmount), senderFeeBig)
+	calldata, err := erc20ABI.Pack("approve", ethcommon.HexToAddress(gatewayAddress), approveAmount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack approve ABI: %w", err)
 	}
@@ -2155,7 +2239,7 @@ func (ctrl *ProviderController) prepareApproveCallData(order *ent.PaymentOrder, 
 // executePayinSettlement runs payin settlement in one EIP-7702 tx: relayer sends to provider EOA with
 // data = execute([approve, settleIn], signature). When batchSignature is provided (provider-signed), it is used;
 // otherwise empty signature is used (backward compatibility; delegation contract may accept it).
-func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, providerEOA string, authorization *coretypes.SetCodeAuthorization, settleInData []byte, batchSignature []byte) error {
+func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *ent.PaymentOrder, providerEOA string, authorization *coretypes.SetCodeAuthorization, settleInData []byte, settleInAmount *big.Int, batchSignature []byte) error {
 	network := order.Edges.Token.Edges.Network
 	gatewayAddress := network.GatewayContractAddress
 	if gatewayAddress == "" {
@@ -2183,7 +2267,7 @@ func (ctrl *ProviderController) executePayinSettlement(ctx *gin.Context, order *
 		authList = []coretypes.SetCodeAuthorization{*authorization}
 	}
 
-	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress)
+	approveData, err := ctrl.prepareApproveCallData(order, gatewayAddress, settleInAmount)
 	if err != nil {
 		return fmt.Errorf("build payin approve calldata: %w", err)
 	}
@@ -2540,21 +2624,33 @@ func (ctrl *ProviderController) GetMarketRate(ctx *gin.Context) {
 
 	var response *types.MarketRateResponse
 	if !strings.EqualFold(tokenObj.BaseCurrency, currency.Code) {
-		// Use sell rate for deviation calculation (offramp perspective)
-		deviation := currency.MarketSellRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
+		buyDeviation := currency.MarketBuyRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
+		sellDeviation := currency.MarketSellRate.Mul(orderConf.PercentDeviationFromMarketRate.Div(decimal.NewFromInt(100)))
 
 		response = &types.MarketRateResponse{
-			MarketBuyRate:  currency.MarketBuyRate,
-			MarketSellRate: currency.MarketSellRate,
-			MinimumRate:    currency.MarketSellRate.Sub(deviation),
-			MaximumRate:    currency.MarketSellRate.Add(deviation),
+			Buy: &types.MarketRateSide{
+				MarketRate:  currency.MarketBuyRate,
+				MinimumRate: currency.MarketBuyRate.Sub(buyDeviation),
+				MaximumRate: currency.MarketBuyRate.Add(buyDeviation),
+			},
+			Sell: &types.MarketRateSide{
+				MarketRate:  currency.MarketSellRate,
+				MinimumRate: currency.MarketSellRate.Sub(sellDeviation),
+				MaximumRate: currency.MarketSellRate.Add(sellDeviation),
+			},
 		}
 	} else {
 		response = &types.MarketRateResponse{
-			MarketBuyRate:  decimal.NewFromInt(1),
-			MarketSellRate: decimal.NewFromInt(1),
-			MinimumRate:    decimal.NewFromInt(1),
-			MaximumRate:    decimal.NewFromInt(1),
+			Buy: &types.MarketRateSide{
+				MarketRate:  decimal.NewFromInt(1),
+				MinimumRate: decimal.NewFromInt(1),
+				MaximumRate: decimal.NewFromInt(1),
+			},
+			Sell: &types.MarketRateSide{
+				MarketRate:  decimal.NewFromInt(1),
+				MinimumRate: decimal.NewFromInt(1),
+				MaximumRate: decimal.NewFromInt(1),
+			},
 		}
 	}
 
@@ -2711,6 +2807,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Where(
 			paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 			paymentorder.InstitutionIn(institutionCodes...),
+			providerExcludedOrderStatusesPredicate(),
 		).
 		Count(reqCtx)
 	if err != nil {
@@ -2876,6 +2973,11 @@ func (ctrl *ProviderController) GetPaymentOrderByID(ctx *gin.Context) {
 			"Payment order not found", nil)
 		return
 	}
+	if isProviderExcludedOrderStatus(paymentOrder.Status) {
+		u.APIResponse(ctx, http.StatusNotFound, "error",
+			"Payment order not found", nil)
+		return
+	}
 	var transactions []types.TransactionLog
 	for _, transaction := range paymentOrder.Edges.Transactions {
 		transactions = append(transactions, types.TransactionLog{
@@ -2941,6 +3043,10 @@ func (ctrl *ProviderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
 		u.APIResponse(ctx, http.StatusNotFound, "error", "Payment order not found", nil)
 		return
 	}
+	if isProviderExcludedOrderStatus(paymentOrder.Status) {
+		u.APIResponse(ctx, http.StatusNotFound, "error", "Payment order not found", nil)
+		return
+	}
 
 	institution, err := storage.Client.Institution.
 		Query().
@@ -2978,7 +3084,7 @@ func (ctrl *ProviderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", resp)
 }
 
-// GetPaymentOrdersV2 returns a list of payment orders in v2 API schema (list only; currency required like v1).
+// GetPaymentOrdersV2 returns payment orders in v2 API schema. Paginated list requires currency (same as v1). Search and CSV export use the same query parameters as v1.
 func (ctrl *ProviderController) GetPaymentOrdersV2(ctx *gin.Context) {
 	providerCtx, ok := ctx.Get("provider")
 	if !ok {
@@ -2986,6 +3092,36 @@ func (ctrl *ProviderController) GetPaymentOrdersV2(ctx *gin.Context) {
 		return
 	}
 	provider := providerCtx.(*ent.ProviderProfile)
+
+	export := ctx.Query("export")
+	isExport := export == "csv" || export == "true"
+	fromDateStr := ctx.Query("from")
+	toDateStr := ctx.Query("to")
+
+	searchParam := ctx.Query("search")
+	searchText := strings.TrimSpace(searchParam)
+	hasSearchParam := ctx.Request.URL.Query().Has("search")
+	isSearch := searchText != ""
+
+	if hasSearchParam && !isSearch {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Search query is required", nil)
+		return
+	}
+
+	if isExport {
+		if fromDateStr == "" || toDateStr == "" {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Both 'from' and 'to' date parameters are required for export", nil)
+			return
+		}
+		ctrl.handleExportPaymentOrders(ctx, provider)
+		return
+	}
+
+	if isSearch {
+		ctrl.handleSearchPaymentOrdersV2(ctx, provider, searchText)
+		return
+	}
+
 	ctrl.handleListPaymentOrdersV2(ctx, provider)
 }
 
@@ -3030,10 +3166,12 @@ func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, prov
 		return
 	}
 	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.InstitutionIn(institutionCodes...))
+	paymentOrderQuery = paymentOrderQuery.Where(providerExcludedOrderStatusesPredicate())
 
 	statusMap := map[string]paymentorder.Status{
 		"pending":    paymentorder.StatusPending,
 		"validated":  paymentorder.StatusValidated,
+		"processing": paymentorder.StatusFulfilling, // backwards-compatible alias (same as v1 list)
 		"fulfilling": paymentorder.StatusFulfilling,
 		"fulfilled":  paymentorder.StatusFulfilled,
 		"cancelled":  paymentorder.StatusCancelled,
@@ -3056,7 +3194,6 @@ func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, prov
 	paymentOrders, err := paymentOrderQuery.
 		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
-		WithTransactions().
 		Limit(pageSize).
 		Offset(offset).
 		Order(order).
@@ -3077,6 +3214,66 @@ func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, prov
 	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.V2PaymentOrderListResponse{
 		Page:         page,
 		PageSize:     pageSize,
+		TotalRecords: count,
+		Orders:       orders,
+	})
+}
+
+// handleSearchPaymentOrdersV2 runs the same text search as v1 provider search but returns v2 order objects.
+func (ctrl *ProviderController) handleSearchPaymentOrdersV2(ctx *gin.Context, provider *ent.ProviderProfile, searchText string) {
+	reqCtx := ctx.Request.Context()
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
+	)
+	paymentOrderQuery = paymentOrderQuery.Where(providerExcludedOrderStatusesPredicate())
+
+	var searchPredicates []predicate.PaymentOrder
+	if searchUUID, err := uuid.Parse(searchText); err == nil {
+		searchPredicates = append(searchPredicates, paymentorder.IDEQ(searchUUID))
+	}
+	searchPredicates = append(searchPredicates,
+		paymentorder.AccountIdentifierContainsFold(searchText),
+		paymentorder.AccountNameContainsFold(searchText),
+	)
+	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.Or(searchPredicates...))
+
+	count, err := paymentOrderQuery.Count(reqCtx)
+	if err != nil {
+		logger.Errorf("Failed to count payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	maxSearchResults := 10000
+	if count > maxSearchResults {
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			fmt.Sprintf("Search returned too many results (%d). Maximum allowed is %d. Please use a more specific search term.",
+				count, maxSearchResults), nil)
+		return
+	}
+
+	paymentOrders, err := paymentOrderQuery.
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+		Limit(maxSearchResults).
+		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
+		All(reqCtx)
+	if err != nil {
+		logger.Errorf("Failed to fetch payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	orders, err := ctrl.buildV2ProviderOrderGetResponses(ctx, paymentOrders)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Orders successfully retrieved", types.V2PaymentOrderListResponse{
+		Page:         1,
+		PageSize:     len(orders),
 		TotalRecords: count,
 		Orders:       orders,
 	})

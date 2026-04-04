@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -33,6 +34,64 @@ import (
 	"github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestIsProviderExcludedOrderStatus(t *testing.T) {
+	assert.True(t, isProviderExcludedOrderStatus(paymentorder.StatusInitiated))
+	assert.True(t, isProviderExcludedOrderStatus(paymentorder.StatusExpired))
+	assert.True(t, isProviderExcludedOrderStatus(paymentorder.StatusDeposited))
+	assert.False(t, isProviderExcludedOrderStatus(paymentorder.StatusPending))
+	assert.False(t, isProviderExcludedOrderStatus(paymentorder.StatusSettled))
+}
+
+func TestComputeSettleInPrincipalSubunit(t *testing.T) {
+	t.Run("local keeps net amount", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(5000), true)
+		assert.NoError(t, err)
+		assert.Equal(t, net.String(), got.String())
+	})
+
+	t.Run("fx rate grosses up amount", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		// 5% providerToAggregatorFx: minimal gross matching Gateway floored fee (not continuous ceil).
+		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(5000), false)
+		assert.NoError(t, err)
+		assert.Equal(t, "1052631", got.String())
+	})
+
+	t.Run("fx zero bps keeps net amount", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(0), false)
+		assert.NoError(t, err)
+		assert.Equal(t, net.String(), got.String())
+	})
+
+	t.Run("fx rejects invalid bps", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		_, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(100000), false)
+		assert.Error(t, err)
+	})
+}
+
+func TestSettleInAmountSubunitFromMetadata(t *testing.T) {
+	t.Run("reads valid snapshot", func(t *testing.T) {
+		metadata := map[string]interface{}{
+			services.MetadataKeyPayinSettleInAmountSubunit: "1052631",
+		}
+		got, ok := services.PrincipalSubunitFromMetadata(metadata)
+		assert.True(t, ok)
+		assert.Equal(t, "1052631", got.String())
+	})
+
+	t.Run("rejects invalid snapshot", func(t *testing.T) {
+		metadata := map[string]interface{}{
+			services.MetadataKeyPayinSettleInAmountSubunit: "not-a-number",
+		}
+		got, ok := services.PrincipalSubunitFromMetadata(metadata)
+		assert.False(t, ok)
+		assert.Nil(t, got)
+	})
+}
 
 var testCtx = struct {
 	user         *ent.User
@@ -225,6 +284,11 @@ func TestProvider(t *testing.T) {
 	router.POST("/orders/:id/fulfill", ctrl.FulfillOrder)
 	router.POST("/orders/:id/cancel", ctrl.CancelOrder)
 	router.GET("/rates/:token/:fiat", ctrl.GetMarketRate)
+	v2 := router.Group("/v2/provider/")
+	v2.Use(middleware.DynamicAuthMiddleware)
+	v2.Use(middleware.OnlyProviderMiddleware)
+	v2.GET("orders", ctrl.GetPaymentOrdersV2)
+	v2.GET("orders/:id", ctrl.GetPaymentOrderByIDV2)
 
 	t.Run("GetPaymentOrders", func(t *testing.T) {
 		_, _, cleanup := setupIsolatedTest(t)
@@ -545,6 +609,216 @@ func TestProvider(t *testing.T) {
 			assert.NotEmpty(t, data["orders"])
 			assert.Greater(t, len(data["orders"].([]interface{})), 0)
 			assert.Greater(t, firstOrderTimestamp, lastOrderTimestamp)
+		})
+
+		t.Run("excludes initiated expired deposited from list search export stats and get by id", func(t *testing.T) {
+			listPayload := map[string]interface{}{
+				"currency":  "NGN",
+				"timestamp": time.Now().Unix(),
+			}
+			sig := token.GenerateHMACSignature(listPayload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + sig,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/orders?currency=NGN&timestamp=%v", listPayload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			var listResp types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &listResp)
+			assert.NoError(t, err)
+			baselineData := listResp.Data.(map[string]interface{})
+			baselineTotal := int(baselineData["total"].(float64))
+
+			statsBaselinePayload := map[string]interface{}{
+				"currency":  "NGN",
+				"timestamp": time.Now().Unix(),
+			}
+			statsBaselineSig := token.GenerateHMACSignature(statsBaselinePayload, testCtx.apiKeySecret)
+			statsBaselineHeaders := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + statsBaselineSig,
+				"Client-Type":   "backend",
+			}
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/stats?currency=NGN&timestamp=%v", statsBaselinePayload["timestamp"]), nil, statsBaselineHeaders, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			var statsBaselineResp types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &statsBaselineResp)
+			assert.NoError(t, err)
+			statsBaselineData := statsBaselineResp.Data.(map[string]interface{})
+			baselineTotalOrders := int(statsBaselineData["totalOrders"].(float64))
+
+			hiddenInitiated, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
+				"gateway_id":         uuid.New().String(),
+				"provider":           testCtx.provider,
+				"status":             "initiated",
+				"account_identifier": "hidden-initiated-uid",
+				"account_name":       "Hidden Initiated",
+			})
+			assert.NoError(t, err)
+			hiddenExpired, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
+				"gateway_id":         uuid.New().String(),
+				"provider":           testCtx.provider,
+				"status":             "expired",
+				"account_identifier": "hidden-expired-uid",
+				"account_name":       "Hidden Expired",
+			})
+			assert.NoError(t, err)
+			hiddenDeposited, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
+				"gateway_id":         uuid.New().String(),
+				"provider":           testCtx.provider,
+				"status":             "deposited",
+				"account_identifier": "hidden-deposited-uid",
+				"account_name":       "Hidden Deposited",
+			})
+			assert.NoError(t, err)
+
+			listPayload2 := map[string]interface{}{
+				"currency":  "NGN",
+				"timestamp": time.Now().Unix(),
+			}
+			sig2 := token.GenerateHMACSignature(listPayload2, testCtx.apiKeySecret)
+			headers2 := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + sig2,
+				"Client-Type":   "backend",
+			}
+
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/orders?currency=NGN&timestamp=%v", listPayload2["timestamp"]), nil, headers2, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			err = json.Unmarshal(res.Body.Bytes(), &listResp)
+			assert.NoError(t, err)
+			data := listResp.Data.(map[string]interface{})
+			assert.Equal(t, baselineTotal, int(data["total"].(float64)), "list total should not count hidden statuses")
+			for _, raw := range data["orders"].([]interface{}) {
+				idStr := raw.(map[string]interface{})["id"].(string)
+				assert.NotEqual(t, hiddenInitiated.ID.String(), idStr)
+				assert.NotEqual(t, hiddenExpired.ID.String(), idStr)
+				assert.NotEqual(t, hiddenDeposited.ID.String(), idStr)
+			}
+
+			searchPayload := map[string]interface{}{
+				"search":    "hidden-initiated-uid",
+				"timestamp": time.Now().Unix(),
+			}
+			searchSig := token.GenerateHMACSignature(searchPayload, testCtx.apiKeySecret)
+			searchHeaders := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + searchSig,
+				"Client-Type":   "backend",
+			}
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/orders?search=hidden-initiated-uid&timestamp=%v", searchPayload["timestamp"]), nil, searchHeaders, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			err = json.Unmarshal(res.Body.Bytes(), &listResp)
+			assert.NoError(t, err)
+			data = listResp.Data.(map[string]interface{})
+			assert.Equal(t, 0, int(data["total"].(float64)))
+
+			from := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+			to := time.Now().UTC().AddDate(0, 0, 1).Format("2006-01-02")
+			exportPayload := map[string]interface{}{
+				"export":    "csv",
+				"from":      from,
+				"to":        to,
+				"timestamp": time.Now().Unix(),
+			}
+			exportSig := token.GenerateHMACSignature(exportPayload, testCtx.apiKeySecret)
+			exportHeaders := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + exportSig,
+				"Client-Type":   "backend",
+			}
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/orders?export=csv&from=%s&to=%s&timestamp=%v", from, to, exportPayload["timestamp"]), nil, exportHeaders, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			body := res.Body.String()
+			assert.NotContains(t, body, hiddenInitiated.ID.String())
+			assert.NotContains(t, body, hiddenExpired.ID.String())
+			assert.NotContains(t, body, hiddenDeposited.ID.String())
+
+			statsPayload := map[string]interface{}{
+				"currency":  "NGN",
+				"timestamp": time.Now().Unix(),
+			}
+			statsSig := token.GenerateHMACSignature(statsPayload, testCtx.apiKeySecret)
+			statsHeaders := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + statsSig,
+				"Client-Type":   "backend",
+			}
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/stats?currency=NGN&timestamp=%v", statsPayload["timestamp"]), nil, statsHeaders, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			var statsResp types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &statsResp)
+			assert.NoError(t, err)
+			statsData := statsResp.Data.(map[string]interface{})
+			assert.Equal(t, baselineTotalOrders, int(statsData["totalOrders"].(float64)))
+
+			for _, hidden := range []*ent.PaymentOrder{hiddenInitiated, hiddenExpired, hiddenDeposited} {
+				onePayload := map[string]interface{}{"timestamp": time.Now().Unix()}
+				oneSig := token.GenerateHMACSignature(onePayload, testCtx.apiKeySecret)
+				oneHeaders := map[string]string{
+					"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + oneSig,
+					"Client-Type":   "backend",
+				}
+				r, e := test.PerformRequest(t, "GET", fmt.Sprintf("/orders/%s?timestamp=%v", hidden.ID, onePayload["timestamp"]), nil, oneHeaders, router)
+				assert.NoError(t, e)
+				assert.Equal(t, http.StatusNotFound, r.Code)
+			}
+
+			v2ListPayload := map[string]interface{}{
+				"currency":  "NGN",
+				"timestamp": time.Now().Unix(),
+			}
+			v2ListSig := token.GenerateHMACSignature(v2ListPayload, testCtx.apiKeySecret)
+			v2ListHeaders := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + v2ListSig,
+				"Client-Type":   "backend",
+			}
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders?currency=NGN&timestamp=%v", v2ListPayload["timestamp"]), nil, v2ListHeaders, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			err = json.Unmarshal(res.Body.Bytes(), &listResp)
+			assert.NoError(t, err)
+			data = listResp.Data.(map[string]interface{})
+			assert.Equal(t, baselineTotal, int(data["total"].(float64)))
+
+			v2SearchPayload := map[string]interface{}{
+				"search":    "hidden-expired-uid",
+				"timestamp": time.Now().Unix(),
+			}
+			v2SearchSig := token.GenerateHMACSignature(v2SearchPayload, testCtx.apiKeySecret)
+			v2SearchHeaders := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + v2SearchSig,
+				"Client-Type":   "backend",
+			}
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders?search=hidden-expired-uid&timestamp=%v", v2SearchPayload["timestamp"]), nil, v2SearchHeaders, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			err = json.Unmarshal(res.Body.Bytes(), &listResp)
+			assert.NoError(t, err)
+			data = listResp.Data.(map[string]interface{})
+			assert.Equal(t, 0, int(data["total"].(float64)))
+
+			res, err = test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders?export=csv&from=%s&to=%s&timestamp=%v", from, to, exportPayload["timestamp"]), nil, exportHeaders, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			body = res.Body.String()
+			assert.NotContains(t, body, hiddenInitiated.ID.String())
+			assert.NotContains(t, body, hiddenExpired.ID.String())
+			assert.NotContains(t, body, hiddenDeposited.ID.String())
+
+			for _, hidden := range []*ent.PaymentOrder{hiddenInitiated, hiddenExpired, hiddenDeposited} {
+				onePayload := map[string]interface{}{"timestamp": time.Now().Unix()}
+				oneSig := token.GenerateHMACSignature(onePayload, testCtx.apiKeySecret)
+				oneHeaders := map[string]string{
+					"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + oneSig,
+					"Client-Type":   "backend",
+				}
+				r, e := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders/%s?timestamp=%v", hidden.ID, onePayload["timestamp"]), nil, oneHeaders, router)
+				assert.NoError(t, e)
+				assert.Equal(t, http.StatusNotFound, r.Code)
+			}
 		})
 
 	})
@@ -965,7 +1239,17 @@ func TestProvider(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "Rate fetched successfully", response.Message)
-			assert.Equal(t, "950.0", response.Data.MarketSellRate.StringFixed(1))
+			assert.NotNil(t, response.Data.Buy)
+			assert.NotNil(t, response.Data.Sell)
+			if response.Data.Buy == nil || response.Data.Sell == nil {
+				return
+			}
+			assert.Equal(t, "950.0", response.Data.Buy.MarketRate.StringFixed(1))
+			assert.Equal(t, "949.1", response.Data.Buy.MinimumRate.StringFixed(1))
+			assert.Equal(t, "951.0", response.Data.Buy.MaximumRate.StringFixed(1))
+			assert.Equal(t, "950.0", response.Data.Sell.MarketRate.StringFixed(1))
+			assert.Equal(t, "949.1", response.Data.Sell.MinimumRate.StringFixed(1))
+			assert.Equal(t, "951.0", response.Data.Sell.MaximumRate.StringFixed(1))
 		})
 	})
 
@@ -2608,6 +2892,236 @@ func TestProvider(t *testing.T) {
 			err = json.Unmarshal(res.Body.Bytes(), &response)
 			assert.NoError(t, err)
 			assert.Equal(t, "No orders found in the specified date range", response.Message)
+		})
+	})
+
+	t.Run("GetPaymentOrdersV2", func(t *testing.T) {
+		_, _, cleanup := setupIsolatedTest(t)
+		defer cleanup()
+
+		t.Run("returns 400 when search query is empty", func(t *testing.T) {
+			payload := map[string]interface{}{
+				"search":    "",
+				"timestamp": time.Now().Unix(),
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders?search=&timestamp=%v", payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Search query is required", response.Message)
+		})
+
+		t.Run("returns 400 when export csv missing date range", func(t *testing.T) {
+			payload := map[string]interface{}{
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders?export=csv&timestamp=%v", payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Code)
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "error", response.Status)
+			assert.Equal(t, "Both 'from' and 'to' date parameters are required for export", response.Message)
+		})
+
+		t.Run("fetch default list includes orderType", func(t *testing.T) {
+			var payload = map[string]interface{}{
+				"currency":  "NGN",
+				"timestamp": time.Now().Unix(),
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders?currency=NGN&timestamp=%v", payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Orders successfully retrieved", response.Message)
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok)
+			assert.NotEmpty(t, orders)
+			first, ok := orders[0].(map[string]interface{})
+			assert.True(t, ok)
+			assert.NotEmpty(t, first["orderType"])
+		})
+
+		t.Run("supports search on v2 list", func(t *testing.T) {
+			identifier := fmt.Sprintf("v2-provider-search-%d", time.Now().UnixNano())
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
+				"provider":           testCtx.provider,
+				"token_id":           int(testCtx.token.ID),
+				"account_identifier": identifier,
+				"order_type":         "otc",
+			})
+			assert.NoError(t, err)
+
+			var payload = map[string]interface{}{
+				"search":    identifier,
+				"timestamp": time.Now().Unix(),
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders?search=%s&timestamp=%v", identifier, payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "Orders successfully retrieved", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok)
+			assert.GreaterOrEqual(t, len(orders), 1)
+			var matched map[string]interface{}
+			for _, raw := range orders {
+				o, ok := raw.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if idStr, ok := o["id"].(string); ok && idStr == order.ID.String() {
+					matched = o
+					break
+				}
+			}
+			assert.NotNil(t, matched, "expected seeded order in v2 search results")
+			assert.Equal(t, "otc", matched["orderType"])
+			assert.Equal(t, "offramp", matched["direction"])
+			if logs, ok := matched["transactionLogs"].([]interface{}); ok {
+				assert.Empty(t, logs, "v2 search must not load transaction logs on the bulk path")
+			}
+		})
+
+		t.Run("get by id returns V2 schema", func(t *testing.T) {
+			ref := fmt.Sprintf("v2-prov-ref-%d", time.Now().UnixNano())
+			identifier := fmt.Sprintf("v2-prov-getid-%d", time.Now().UnixNano())
+			order, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
+				"provider":           testCtx.provider,
+				"token_id":           int(testCtx.token.ID),
+				"account_identifier": identifier,
+				"order_type":         "otc",
+				"reference":          ref,
+			})
+			assert.NoError(t, err)
+
+			payload := map[string]interface{}{"timestamp": time.Now().Unix()}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders/%s?timestamp=%v", order.ID, payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "The order has been successfully retrieved", response.Message)
+
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			assert.Equal(t, order.ID.String(), data["id"])
+			assert.Equal(t, "otc", data["orderType"])
+			assert.Equal(t, "offramp", data["direction"])
+			assert.Equal(t, ref, data["reference"])
+			src, ok := data["source"].(map[string]interface{})
+			assert.True(t, ok)
+			assert.Equal(t, "crypto", src["type"])
+			dest, ok := data["destination"].(map[string]interface{})
+			assert.True(t, ok)
+			assert.Equal(t, "fiat", dest["type"])
+			_, hasPA := data["providerAccount"]
+			assert.True(t, hasPA)
+		})
+
+		t.Run("status=processing alias filters like fulfilling", func(t *testing.T) {
+			_, err := test.CreateTestPaymentOrder(nil, map[string]interface{}{
+				"provider":           testCtx.provider,
+				"token_id":           int(testCtx.token.ID),
+				"status":             "fulfilling",
+				"account_identifier": fmt.Sprintf("v2-processing-%d", time.Now().UnixNano()),
+			})
+			assert.NoError(t, err)
+
+			payload := map[string]interface{}{
+				"currency":  "NGN",
+				"status":    "processing",
+				"timestamp": time.Now().Unix(),
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders?currency=NGN&status=processing&timestamp=%v", payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+
+			var response types.Response
+			err = json.Unmarshal(res.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			data, ok := response.Data.(map[string]interface{})
+			assert.True(t, ok)
+			orders, ok := data["orders"].([]interface{})
+			assert.True(t, ok)
+			assert.NotEmpty(t, orders)
+			for _, raw := range orders {
+				o, ok := raw.(map[string]interface{})
+				assert.True(t, ok)
+				assert.Equal(t, "fulfilling", o["status"])
+			}
+		})
+
+		t.Run("supports export on v2 list", func(t *testing.T) {
+			today := time.Now().Format("2006-01-02")
+			tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+			var payload = map[string]interface{}{
+				"from":      today,
+				"to":        tomorrow,
+				"export":    "csv",
+				"timestamp": time.Now().Unix(),
+			}
+			signature := token.GenerateHMACSignature(payload, testCtx.apiKeySecret)
+			headers := map[string]string{
+				"Authorization": "HMAC " + testCtx.apiKey.ID.String() + ":" + signature,
+				"Client-Type":   "backend",
+			}
+
+			res, err := test.PerformRequest(t, "GET", fmt.Sprintf("/v2/provider/orders?from=%s&to=%s&timestamp=%v&export=csv", today, tomorrow, payload["timestamp"]), nil, headers, router)
+			assert.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Code)
+			assert.Equal(t, "text/csv", res.Header().Get("Content-Type"))
 		})
 	})
 

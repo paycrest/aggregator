@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -1408,6 +1409,7 @@ func (ctrl *SenderController) initiateOfframpOrderV2(ctx *gin.Context, payload t
 	response := &types.V2PaymentOrderResponse{
 		ID:               paymentOrder.ID,
 		Status:           string(paymentOrder.Status),
+		OrderType:        string(paymentOrder.OrderType),
 		Timestamp:        paymentOrder.CreatedAt,
 		Amount:           cryptoAmount.String(),
 		SenderFee:        senderFee.String(),
@@ -1458,6 +1460,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		return
 	}
 	sender := senderCtx.(*ent.SenderProfile)
+	reqCtx := ctx.Request.Context()
 
 	// Validate mutually exclusive fields: senderFee and senderFeePercent cannot both be provided
 	if payload.SenderFee != "" && payload.SenderFeePercent != "" {
@@ -1499,7 +1502,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			fiatcurrency.CodeEQ(source.Currency),
 			fiatcurrency.IsEnabledEQ(true),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1520,7 +1523,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			institution.CodeEQ(source.RefundAccount.Institution),
 		).
 		WithFiatCurrency().
-		First(ctx)
+		First(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1544,7 +1547,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 
 	// Validate refund account identifier (same as offramp recipient validation)
-	refundAccountName, err := u.ValidateAccount(ctx, source.RefundAccount.Institution, source.RefundAccount.AccountIdentifier)
+	refundAccountName, err := u.ValidateAccount(reqCtx, source.RefundAccount.Institution, source.RefundAccount.AccountIdentifier)
 	if err != nil {
 		if strings.Contains(err.Error(), "not supported") || strings.Contains(err.Error(), "verify account") {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1570,7 +1573,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			tokenEnt.IsEnabledEQ(true),
 		).
 		WithNetwork().
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
@@ -1794,7 +1797,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			senderordertoken.HasTokenWith(tokenEnt.IDEQ(token.ID)),
 			senderordertoken.HasSenderWith(senderprofile.IDEQ(sender.ID)),
 		).
-		Only(ctx)
+		Only(reqCtx)
 	if err != nil {
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 			Field:   "Destination",
@@ -1894,7 +1897,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 				paymentorder.ReferenceEQ(payload.Reference),
 				paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
 			).
-			Exist(ctx)
+			Exist(reqCtx)
 		if err != nil {
 			logger.Errorf("Reference check error: %v", err)
 			u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -1920,18 +1923,34 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		return
 	}
 
+	// Gross token liquidity to reserve must match payin ERC20 approve (settleIn principal + sender fee).
+	payinLocalTransfer := strings.EqualFold(token.BaseCurrency, currency.Code)
+	pseudoOrder := &ent.PaymentOrder{
+		Amount:    cryptoAmountOut,
+		SenderFee: senderFeeCrypto,
+		Rate:      orderRate,
+		Metadata: map[string]interface{}{
+			svc.MetadataKeyPayinLocalTransfer: payinLocalTransfer,
+		},
+	}
+	pseudoOrder.Edges.Token = token
+	totalCryptoToReserve, err := svc.GrossCryptoReservedForApprove(reqCtx, svc.GatewayPayinFeeSettingsReader{}, pseudoOrder)
+	if err != nil {
+		logger.Errorf("Failed to compute payin gross reserve: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
+		return
+	}
+
 	// Reserve provider token liquidity at order creation
 	balanceService := balance.New()
-	tx, err := storage.Client.Tx(ctx)
+	tx, err := storage.Client.Tx(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
 
-	// Reserve token balance: amount + senderFee (both in crypto)
-	totalCryptoToReserve := cryptoAmountOut.Add(senderFeeCrypto)
-	err = balanceService.ReserveTokenBalance(ctx, providerID, token.ID, totalCryptoToReserve, tx)
+	err = balanceService.ReserveTokenBalance(reqCtx, providerID, token.ID, totalCryptoToReserve, tx)
 	if err != nil {
 		logger.Errorf("Failed to reserve token balance: %v", err)
 		_ = tx.Rollback()
@@ -1959,6 +1978,8 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	if payload.AmountIn != "" {
 		metadata["amountIn"] = payload.AmountIn
 	}
+	metadata[svc.MetadataKeyPayinGrossCryptoReserved] = totalCryptoToReserve.String()
+	metadata[svc.MetadataKeyPayinLocalTransfer] = payinLocalTransfer
 
 	// Use order type from ValidateRate result
 	orderType := rateValidationResult.OrderType
@@ -1990,7 +2011,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		SetProviderID(providerID).
 		SetStatus(paymentorder.StatusPending) // VA issued at init; provider already assigned at this point.
 
-	paymentOrder, err := paymentOrderBuilder.Save(ctx)
+	paymentOrder, err := paymentOrderBuilder.Save(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -2004,7 +2025,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		SetStatus(transactionlog.StatusOrderInitiated).
 		SetNetwork(token.Edges.Network.Identifier).
 		SetPaymentOrderID(paymentOrder.ID).
-		Save(ctx)
+		Save(reqCtx)
 	if err != nil {
 		logger.Errorf("error: %v", err)
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -2021,14 +2042,38 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 
 	// On virtual account step failure: release balance and delete the order.
+	// Use a detached context and async work so client disconnect / request cancel does not skip compensation.
 	deleteFailedOnrampOrder := func() {
-		totalCryptoReserved := paymentOrder.Amount.Add(paymentOrder.SenderFee)
-		if relErr := balanceService.ReleaseTokenBalance(ctx, providerID, token.ID, totalCryptoReserved, nil); relErr != nil {
-			logger.Errorf("Failed to release token balance after onramp init failure (order %s): %v", paymentOrder.ID, relErr)
+		orderID := paymentOrder.ID
+		provID := providerID
+		tok := token
+		amt := paymentOrder.Amount
+		sFee := paymentOrder.SenderFee
+		rate := paymentOrder.Rate
+		meta := maps.Clone(paymentOrder.Metadata)
+		if meta == nil {
+			meta = make(map[string]interface{})
 		}
-		if delErr := storage.Client.PaymentOrder.DeleteOneID(paymentOrder.ID).Exec(ctx); delErr != nil {
-			logger.Errorf("Failed to delete order after onramp init failure (order %s): %v", paymentOrder.ID, delErr)
-		}
+		go func() {
+			cleanupCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+			defer cancel()
+			relOrder := &ent.PaymentOrder{
+				Amount:    amt,
+				SenderFee: sFee,
+				Rate:      rate,
+				Metadata:  meta,
+			}
+			relOrder.Edges.Token = tok
+			totalCryptoReserved := svc.PayinReleaseGrossForCleanup(cleanupCtx, svc.GatewayPayinFeeSettingsReader{}, relOrder, func(gErr error) {
+				logger.Warnf("deleteFailedOnrampOrder: GrossCryptoReservedForApprove failed, using amount+senderFee: %v", gErr)
+			})
+			if relErr := balanceService.ReleaseTokenBalance(cleanupCtx, provID, tok.ID, totalCryptoReserved, nil); relErr != nil {
+				logger.Errorf("Failed to release token balance after onramp init failure (order %s): %v", orderID, relErr)
+			}
+			if delErr := storage.Client.PaymentOrder.DeleteOneID(orderID).Exec(cleanupCtx); delErr != nil {
+				logger.Errorf("Failed to delete order after onramp init failure (order %s): %v", orderID, delErr)
+			}
+		}()
 	}
 
 	// Generate Gateway order ID now that we have the payment order ID
@@ -2111,7 +2156,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		providerAccountMap["reference"] = reference
 	}
 	orderMetadata["providerAccount"] = providerAccountMap
-	if _, err := storage.Client.PaymentOrder.UpdateOneID(paymentOrder.ID).SetMetadata(orderMetadata).Save(ctx); err != nil {
+	if _, err := storage.Client.PaymentOrder.UpdateOneID(paymentOrder.ID).SetMetadata(orderMetadata).Save(reqCtx); err != nil {
 		logger.Errorf("Failed to save provider account to order metadata: %v", err)
 		deleteFailedOnrampOrder()
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
@@ -2120,7 +2165,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 
 	// Seed order_request_%s (same key as offramp) so payin AcceptOrder can validate provider
 	orderRequestKey := fmt.Sprintf("order_request_%s", paymentOrder.ID.String())
-	if err := storage.RedisClient.HSet(ctx, orderRequestKey,
+	if err := storage.RedisClient.HSet(reqCtx, orderRequestKey,
 		"providerId", providerID,
 		"direction", "payin",
 		"amount", totalFiatToPay.String(),
@@ -2131,7 +2176,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to initiate payment order", nil)
 		return
 	}
-	_ = storage.RedisClient.Expire(ctx, orderRequestKey, 24*time.Hour).Err()
+	_ = storage.RedisClient.Expire(reqCtx, orderRequestKey, 24*time.Hour).Err()
 
 	// Format sender fee percent for response
 	senderFeePercentStr := ""
@@ -2144,12 +2189,16 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		Type:       destination.Type,
 		Currency:   destination.Currency,
 		ProviderID: destination.ProviderID,
-		Recipient:  types.V2CryptoRecipientOnrampResponse{Address: destination.Recipient.Address},
+		Recipient: types.V2CryptoRecipientOnrampResponse{
+			Address: destination.Recipient.Address,
+			Network: destination.Recipient.Network,
+		},
 	}
 	transactionFee := paymentOrder.NetworkFee.Add(paymentOrder.ProtocolFee)
 	response := &types.V2PaymentOrderResponse{
 		ID:               paymentOrder.ID,
 		Status:           string(paymentOrder.Status),
+		OrderType:        string(paymentOrder.OrderType),
 		Timestamp:        paymentOrder.CreatedAt,
 		Amount:           cryptoAmountOut.String(),
 		SenderFee:        senderFeeCrypto.String(),
@@ -2157,12 +2206,12 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 		TransactionFee:   transactionFee.String(),
 		Reference:        paymentOrder.Reference,
 		ProviderAccount: types.V2FiatProviderAccount{
-			Institution:         institutionName,
-			AccountIdentifier:   accountIdentifier,
-			AccountName:         accountName,
-			ValidUntil:          validUntil,
-			AmountToTransfer:    totalFiatToPay.String(),
-			Currency:            source.Currency,
+			Institution:       institutionName,
+			AccountIdentifier: accountIdentifier,
+			AccountName:       accountName,
+			ValidUntil:        validUntil,
+			AmountToTransfer:  totalFiatToPay.String(),
+			Currency:          source.Currency,
 		},
 		Source:      source,
 		Destination: destOnrampResp,
@@ -2209,6 +2258,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 
 	paymentOrder, err := paymentOrderQuery.
 		Where(paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID))).
+		Where(paymentorder.StatusNEQ(paymentorder.StatusCancelled)).
 		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -2312,6 +2362,7 @@ func (ctrl *SenderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
 	}
 	paymentOrder, err := paymentOrderQuery.
 		Where(paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID))).
+		Where(paymentorder.StatusNEQ(paymentorder.StatusCancelled)).
 		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
 		WithTransactions().
@@ -2351,7 +2402,7 @@ func (ctrl *SenderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
 	u.APIResponse(ctx, http.StatusOK, "success", "The order has been successfully retrieved", resp)
 }
 
-// GetPaymentOrdersV2 returns a list of payment orders in v2 API schema (no search/export; list only).
+// GetPaymentOrdersV2 returns a list of payment orders in v2 API schema, with optional search and CSV export (same query params as v1).
 func (ctrl *SenderController) GetPaymentOrdersV2(ctx *gin.Context) {
 	senderCtx, ok := ctx.Get("sender")
 	if !ok {
@@ -2359,6 +2410,36 @@ func (ctrl *SenderController) GetPaymentOrdersV2(ctx *gin.Context) {
 		return
 	}
 	sender := senderCtx.(*ent.SenderProfile)
+
+	export := ctx.Query("export")
+	isExport := export == "csv" || export == "true"
+	fromDateStr := ctx.Query("from")
+	toDateStr := ctx.Query("to")
+
+	searchParam := ctx.Query("search")
+	searchText := strings.TrimSpace(searchParam)
+	hasSearchParam := ctx.Request.URL.Query().Has("search")
+	isSearch := searchText != ""
+
+	if hasSearchParam && !isSearch {
+		u.APIResponse(ctx, http.StatusBadRequest, "error", "Search query is required", nil)
+		return
+	}
+
+	if isExport {
+		if fromDateStr == "" || toDateStr == "" {
+			u.APIResponse(ctx, http.StatusBadRequest, "error", "Both 'from' and 'to' date parameters are required for export", nil)
+			return
+		}
+		ctrl.handleExportPaymentOrders(ctx, sender)
+		return
+	}
+
+	if isSearch {
+		ctrl.handleSearchPaymentOrdersV2(ctx, sender, searchText)
+		return
+	}
+
 	ctrl.handleListPaymentOrdersV2(ctx, sender)
 }
 
@@ -2406,6 +2487,74 @@ func (ctrl *SenderController) handleListPaymentOrdersV2(ctx *gin.Context, sender
 	u.APIResponse(ctx, http.StatusOK, "success", "Payment orders retrieved successfully", types.V2PaymentOrderListResponse{
 		Page:         page,
 		PageSize:     pageSize,
+		TotalRecords: count,
+		Orders:       orders,
+	})
+}
+
+// handleSearchPaymentOrdersV2 runs the same text search as v1 but returns v2 order objects.
+func (ctrl *SenderController) handleSearchPaymentOrdersV2(ctx *gin.Context, sender *ent.SenderProfile, searchText string) {
+	reqCtx := ctx.Request.Context()
+	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
+		paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+	)
+	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.StatusNEQ(paymentorder.StatusCancelled))
+
+	var searchPredicates []predicate.PaymentOrder
+	if searchUUID, err := uuid.Parse(searchText); err == nil {
+		searchPredicates = append(searchPredicates, paymentorder.IDEQ(searchUUID))
+	}
+	searchPredicates = append(searchPredicates,
+		paymentorder.ReceiveAddressContainsFold(searchText),
+		paymentorder.FromAddressContainsFold(searchText),
+		paymentorder.RefundOrRecipientAddressContainsFold(searchText),
+		paymentorder.Or(
+			paymentorder.AccountIdentifierContainsFold(searchText),
+			paymentorder.AccountNameContainsFold(searchText),
+			paymentorder.MemoContainsFold(searchText),
+			paymentorder.InstitutionContainsFold(searchText),
+		),
+	)
+	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.Or(searchPredicates...))
+
+	count, err := paymentOrderQuery.Count(reqCtx)
+	if err != nil {
+		logger.Errorf("Failed to count payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	maxSearchResults := 10000
+	if count > maxSearchResults {
+		u.APIResponse(ctx, http.StatusBadRequest, "error",
+			fmt.Sprintf("Search returned too many results (%d). Maximum allowed is %d. Please use a more specific search term.",
+				count, maxSearchResults), nil)
+		return
+	}
+
+	paymentOrders, err := paymentOrderQuery.
+		WithProvider().
+		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
+		WithTransactions().
+		Limit(maxSearchResults).
+		Order(ent.Desc(paymentorder.FieldCreatedAt), ent.Desc(paymentorder.FieldID)).
+		All(reqCtx)
+	if err != nil {
+		logger.Errorf("Failed to fetch payment orders: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	orders, err := ctrl.buildV2PaymentOrderGetResponses(ctx, paymentOrders)
+	if err != nil {
+		logger.Errorf("error: %v", err)
+		u.APIResponse(ctx, http.StatusInternalServerError, "error", "Failed to search payment orders", nil)
+		return
+	}
+
+	u.APIResponse(ctx, http.StatusOK, "success", "Payment orders found successfully", types.V2PaymentOrderListResponse{
+		Page:         1,
+		PageSize:     len(orders),
 		TotalRecords: count,
 		Orders:       orders,
 	})
@@ -2533,6 +2682,7 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
 		paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
 	)
+	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.StatusNEQ(paymentorder.StatusCancelled))
 
 	// Apply text search across all relevant fields
 	var searchPredicates []predicate.PaymentOrder
@@ -2720,6 +2870,7 @@ func (ctrl *SenderController) handleExportPaymentOrders(ctx *gin.Context, sender
 // applyFilters applies common filters to payment order query
 func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentOrderQuery) *ent.PaymentOrderQuery {
 	reqCtx := ctx.Request.Context()
+	query = query.Where(paymentorder.StatusNEQ(paymentorder.StatusCancelled))
 	// Filter by status
 	statusQueryParam := ctx.Query("status")
 	statusMap := map[string]paymentorder.Status{
@@ -3063,6 +3214,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 		Query().
 		Where(
 			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+			paymentorder.StatusNEQ(paymentorder.StatusCancelled),
 		).
 		Count(reqCtx)
 	if err != nil {

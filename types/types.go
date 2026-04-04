@@ -704,16 +704,18 @@ type V2CryptoDestination struct {
 }
 
 // V2CryptoDestinationOnrampResponse is the onramp v2 API response shape for destination.
+// Settlement network lives on recipient only (same as V2CryptoRecipient on create).
 type V2CryptoDestinationOnrampResponse struct {
-	Type       string                         `json:"type"`
-	Currency   string                         `json:"currency"`
-	ProviderID string                         `json:"providerId,omitempty"`
+	Type       string                          `json:"type"`
+	Currency   string                          `json:"currency"`
+	ProviderID string                          `json:"providerId,omitempty"`
 	Recipient  V2CryptoRecipientOnrampResponse `json:"recipient"`
 }
 
 // V2CryptoRecipientOnrampResponse is the onramp v2 API response shape for recipient.
 type V2CryptoRecipientOnrampResponse struct {
 	Address string `json:"address"`
+	Network string `json:"network"`
 }
 
 // V2CryptoRecipient represents the crypto recipient configuration for onramp v2 payment orders
@@ -832,24 +834,26 @@ type V2FiatProviderAccount struct {
 // V2PaymentOrderResponse is the response type for v2 payment order creation
 // ProviderAccount, Source, and Destination are polymorphic (any) to support both offramp and onramp flows
 type V2PaymentOrderResponse struct {
-	ID                uuid.UUID `json:"id"`
-	Status            string    `json:"status"`
-	Timestamp         time.Time `json:"timestamp"`
-	Amount            string    `json:"amount"` // Crypto amount (token units) - consistent for both flows
-	Rate              string    `json:"rate,omitempty"`
-	SenderFee         string    `json:"senderFee"` // Crypto amount (token units) - consistent for both flows
-	SenderFeePercent  string    `json:"senderFeePercent"`
-	TransactionFee    string    `json:"transactionFee"`
-	Reference         string    `json:"reference"`
-	ProviderAccount   any       `json:"providerAccount"` // V2CryptoProviderAccount for offramp, V2FiatProviderAccount for onramp
-	Source            any       `json:"source"`           // V2CryptoSource for offramp, V2FiatSource for onramp
-	Destination       any       `json:"destination"`     // V2FiatDestination for offramp, V2CryptoDestinationOnrampResponse for onramp
+	ID               uuid.UUID `json:"id"`
+	Status           string    `json:"status"`
+	OrderType        string    `json:"orderType"` // "regular" | "otc"
+	Timestamp        time.Time `json:"timestamp"`
+	Amount           string    `json:"amount"` // Crypto amount (token units) - consistent for both flows
+	Rate             string    `json:"rate,omitempty"`
+	SenderFee        string    `json:"senderFee"` // Crypto amount (token units) - consistent for both flows
+	SenderFeePercent string    `json:"senderFeePercent"`
+	TransactionFee   string    `json:"transactionFee"`
+	Reference        string    `json:"reference"`
+	ProviderAccount  any       `json:"providerAccount"` // V2CryptoProviderAccount for offramp, V2FiatProviderAccount for onramp
+	Source           any       `json:"source"`          // V2CryptoSource for offramp, V2FiatSource for onramp
+	Destination      any       `json:"destination"`     // V2FiatDestination for offramp, V2CryptoDestinationOnrampResponse for onramp
 }
 
 // V2PaymentOrderGetResponse is the v2 response for GET payment order (single or list item). Aligned with v2 API schema.
 type V2PaymentOrderGetResponse struct {
 	ID                  uuid.UUID        `json:"id"`
 	Status              string           `json:"status"`
+	OrderType           string           `json:"orderType"` // "regular" | "otc"
 	Direction           string           `json:"direction"` // "offramp" or "onramp"
 	CreatedAt           time.Time        `json:"createdAt"`
 	UpdatedAt           time.Time        `json:"updatedAt"`
@@ -902,18 +906,37 @@ type SendEmailResponse struct {
 	Id       string `json:"id"`
 }
 
+// MarketRateSide is side-specific market rate bounds
+type MarketRateSide struct {
+	MarketRate  decimal.Decimal `json:"marketRate"`
+	MinimumRate decimal.Decimal `json:"minimumRate"`
+	MaximumRate decimal.Decimal `json:"maximumRate"`
+}
+
 // MarketRateResponse is the response for the market rate endpoint
 type MarketRateResponse struct {
-	MarketBuyRate  decimal.Decimal `json:"marketBuyRate"`
-	MarketSellRate decimal.Decimal `json:"marketSellRate"`
-	MinimumRate    decimal.Decimal `json:"minimumRate"`
-	MaximumRate    decimal.Decimal `json:"maximumRate"`
+	Buy  *MarketRateSide `json:"buy,omitempty"`
+	Sell *MarketRateSide `json:"sell,omitempty"`
 }
 
 // RateMetadata contains optional metadata for rate responses
 type RateMetadata struct {
 	OrderType            string `json:"orderType"`            // "regular" or "otc"
 	RefundTimeoutMinutes int    `json:"refundTimeoutMinutes"` // Minutes until automatic refund
+}
+
+// V2RateQuoteSide contains side-specific quote information for v2 rates endpoint
+type V2RateQuoteSide struct {
+	Rate                 string   `json:"rate"`
+	ProviderIDs          []string `json:"providerIds"`
+	OrderType            string   `json:"orderType"`
+	RefundTimeoutMinutes int      `json:"refundTimeoutMinutes"`
+}
+
+// V2RateQuoteResponse is the response payload for the v2 rates endpoint
+type V2RateQuoteResponse struct {
+	Buy  *V2RateQuoteSide `json:"buy,omitempty"`
+	Sell *V2RateQuoteSide `json:"sell,omitempty"`
 }
 
 type ResendTokenPayload struct {
