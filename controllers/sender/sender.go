@@ -2267,6 +2267,7 @@ func (ctrl *SenderController) GetPaymentOrderByID(ctx *gin.Context) {
 
 	paymentOrder, err := paymentOrderQuery.
 		Where(paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID))).
+		Where(paymentorder.StatusNEQ(paymentorder.StatusCancelled)).
 		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) {
 			tq.WithNetwork()
@@ -2370,6 +2371,7 @@ func (ctrl *SenderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
 	}
 	paymentOrder, err := paymentOrderQuery.
 		Where(paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID))).
+		Where(paymentorder.StatusNEQ(paymentorder.StatusCancelled)).
 		WithProvider().
 		WithToken(func(tq *ent.TokenQuery) { tq.WithNetwork() }).
 		WithTransactions().
@@ -2505,6 +2507,7 @@ func (ctrl *SenderController) handleSearchPaymentOrdersV2(ctx *gin.Context, send
 	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
 		paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
 	)
+	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.StatusNEQ(paymentorder.StatusCancelled))
 
 	var searchPredicates []predicate.PaymentOrder
 	if searchUUID, err := uuid.Parse(searchText); err == nil {
@@ -2688,6 +2691,7 @@ func (ctrl *SenderController) handleSearchPaymentOrders(ctx *gin.Context, sender
 	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
 		paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
 	)
+	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.StatusNEQ(paymentorder.StatusCancelled))
 
 	// Apply text search across all relevant fields
 	var searchPredicates []predicate.PaymentOrder
@@ -2875,6 +2879,7 @@ func (ctrl *SenderController) handleExportPaymentOrders(ctx *gin.Context, sender
 // applyFilters applies common filters to payment order query
 func (ctrl *SenderController) applyFilters(ctx *gin.Context, query *ent.PaymentOrderQuery) *ent.PaymentOrderQuery {
 	reqCtx := ctx.Request.Context()
+	query = query.Where(paymentorder.StatusNEQ(paymentorder.StatusCancelled))
 	// Filter by status
 	statusQueryParam := ctx.Query("status")
 	statusMap := map[string]paymentorder.Status{
@@ -3218,6 +3223,7 @@ func (ctrl *SenderController) Stats(ctx *gin.Context) {
 		Query().
 		Where(
 			paymentorder.HasSenderProfileWith(senderprofile.IDEQ(sender.ID)),
+			paymentorder.StatusNEQ(paymentorder.StatusCancelled),
 		).
 		Count(reqCtx)
 	if err != nil {
