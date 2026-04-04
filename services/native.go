@@ -597,6 +597,7 @@ func (GatewayPayinFeeSettingsReader) GetTokenFeeSettings(ctx context.Context, ne
 }
 
 // ComputeSettleInPrincipalSubunit returns the token subunit amount passed as settleIn _amount for FX flows (gross-up from net).
+// For FX it uses the smallest gross G such that G - floor(G*providerToAggregatorFx/maxBPS) >= netAmount, matching Gateway.sol.
 // When isLocal is true, the principal equals net (no gateway FX gross-up on principal); rate is ignored.
 func ComputeSettleInPrincipalSubunit(netAmount *big.Int, rate decimal.Decimal, providerToAggregatorFx *big.Int, isLocal bool) (*big.Int, error) {
 	if netAmount == nil {
@@ -616,10 +617,27 @@ func ComputeSettleInPrincipalSubunit(netAmount *big.Int, rate decimal.Decimal, p
 	if providerToAggregatorFx.Sign() < 0 || providerToAggregatorFx.Cmp(maxBPS) >= 0 {
 		return nil, fmt.Errorf("invalid providerToAggregatorFx bps: %s", providerToAggregatorFx.String())
 	}
-	denominator := new(big.Int).Sub(maxBPS, providerToAggregatorFx)
-	numerator := new(big.Int).Mul(netAmount, maxBPS)
-	numerator.Add(numerator, new(big.Int).Sub(denominator, big.NewInt(1)))
-	return new(big.Int).Div(numerator, denominator), nil
+	if netAmount.Sign() == 0 {
+		return big.NewInt(0), nil
+	}
+	// Gateway uses floored fee: netOut = gross - floor(gross*providerToAggregatorFx/maxBPS). Find minimal gross with netOut >= netAmount.
+	denom := new(big.Int).Sub(maxBPS, providerToAggregatorFx)
+	gross := new(big.Int).Mul(netAmount, maxBPS)
+	gross.Div(gross, denom) // initial guess: floor(netAmount * maxBPS / (maxBPS - providerToAggregatorFx))
+	one := big.NewInt(1)
+	const maxGrossSearchSteps = 1_000_000
+	for step := 0; ; step++ {
+		if step > maxGrossSearchSteps {
+			return nil, fmt.Errorf("gross search exceeded step limit for net %s fx bps %s", netAmount.String(), providerToAggregatorFx.String())
+		}
+		fee := new(big.Int).Mul(gross, providerToAggregatorFx)
+		fee.Div(fee, maxBPS)
+		netOut := new(big.Int).Sub(gross, fee)
+		if netOut.Cmp(netAmount) >= 0 {
+			return new(big.Int).Set(gross), nil
+		}
+		gross.Add(gross, one)
+	}
 }
 
 // PrincipalSubunitFromMetadata returns the frozen settleIn principal subunits from accept-time metadata, if present and valid.

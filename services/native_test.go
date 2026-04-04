@@ -600,6 +600,28 @@ func TestGrossCryptoReservedForApprove_MissingPersistedGross_CallsFeeReaderForFX
 	}
 }
 
+func TestComputeSettleInPrincipalSubunit_FlooredFee_MinimalGross_regression(t *testing.T) {
+	// Matches Gateway.sol: netOut = gross - (gross * bps) / maxBPS (integer division).
+	t.Run("net100_bps5000_gross105", func(t *testing.T) {
+		got, err := ComputeSettleInPrincipalSubunit(big.NewInt(100), decimal.Zero, big.NewInt(5000), false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.String() != "105" {
+			t.Fatalf("want gross 105, got %s", got)
+		}
+	})
+	t.Run("net1_bps1_gross1", func(t *testing.T) {
+		got, err := ComputeSettleInPrincipalSubunit(big.NewInt(1), decimal.Zero, big.NewInt(1), false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.String() != "1" {
+			t.Fatalf("want gross 1, got %s", got)
+		}
+	})
+}
+
 func TestPayinReleaseGrossForCleanup_GrossCryptoError_FallsBackToAmountPlusSenderFee(t *testing.T) {
 	tok := testTokenWithNetwork(6)
 	order := &ent.PaymentOrder{

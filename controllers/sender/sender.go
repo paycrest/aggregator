@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -2050,23 +2051,38 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 	}
 
 	// On virtual account step failure: release balance and delete the order.
+	// Use a detached context and async work so client disconnect / request cancel does not skip compensation.
 	deleteFailedOnrampOrder := func() {
-		relOrder := &ent.PaymentOrder{
-			Amount:    paymentOrder.Amount,
-			SenderFee: paymentOrder.SenderFee,
-			Rate:      paymentOrder.Rate,
-			Metadata:  paymentOrder.Metadata,
+		orderID := paymentOrder.ID
+		provID := providerID
+		tok := token
+		amt := paymentOrder.Amount
+		sFee := paymentOrder.SenderFee
+		rate := paymentOrder.Rate
+		meta := maps.Clone(paymentOrder.Metadata)
+		if meta == nil {
+			meta = make(map[string]interface{})
 		}
-		relOrder.Edges.Token = token
-		totalCryptoReserved := svc.PayinReleaseGrossForCleanup(reqCtx, svc.GatewayPayinFeeSettingsReader{}, relOrder, func(gErr error) {
-			logger.Warnf("deleteFailedOnrampOrder: GrossCryptoReservedForApprove failed, using amount+senderFee: %v", gErr)
-		})
-		if relErr := balanceService.ReleaseTokenBalance(reqCtx, providerID, token.ID, totalCryptoReserved, nil); relErr != nil {
-			logger.Errorf("Failed to release token balance after onramp init failure (order %s): %v", paymentOrder.ID, relErr)
-		}
-		if delErr := storage.Client.PaymentOrder.DeleteOneID(paymentOrder.ID).Exec(reqCtx); delErr != nil {
-			logger.Errorf("Failed to delete order after onramp init failure (order %s): %v", paymentOrder.ID, delErr)
-		}
+		go func() {
+			cleanupCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+			defer cancel()
+			relOrder := &ent.PaymentOrder{
+				Amount:    amt,
+				SenderFee: sFee,
+				Rate:      rate,
+				Metadata:  meta,
+			}
+			relOrder.Edges.Token = tok
+			totalCryptoReserved := svc.PayinReleaseGrossForCleanup(cleanupCtx, svc.GatewayPayinFeeSettingsReader{}, relOrder, func(gErr error) {
+				logger.Warnf("deleteFailedOnrampOrder: GrossCryptoReservedForApprove failed, using amount+senderFee: %v", gErr)
+			})
+			if relErr := balanceService.ReleaseTokenBalance(cleanupCtx, provID, tok.ID, totalCryptoReserved, nil); relErr != nil {
+				logger.Errorf("Failed to release token balance after onramp init failure (order %s): %v", orderID, relErr)
+			}
+			if delErr := storage.Client.PaymentOrder.DeleteOneID(orderID).Exec(cleanupCtx); delErr != nil {
+				logger.Errorf("Failed to delete order after onramp init failure (order %s): %v", orderID, delErr)
+			}
+		}()
 	}
 
 	// Generate Gateway order ID now that we have the payment order ID
