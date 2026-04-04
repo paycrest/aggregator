@@ -54,6 +54,25 @@ func normalizeGatewayID(orderID string) string {
 	return strings.ToLower(s)
 }
 
+// UpdateProviderFee updates the provider_fee field on a payment order from a LocalTransferFeeSplit event.
+func UpdateProviderFee(ctx context.Context, network *ent.Network, event *types.LocalTransferFeeSplitEvent) error {
+	gatewayID := normalizeGatewayID(event.OrderId)
+
+	_, err := db.Client.PaymentOrder.
+		Update().
+		Where(
+			paymentorder.GatewayIDEQ(gatewayID),
+			paymentorder.HasTokenWith(
+				tokenent.HasNetworkWith(
+					networkent.IdentifierEQ(network.Identifier),
+				),
+			),
+		).
+		SetProviderFee(event.ProviderAmount).
+		Save(ctx)
+	return err
+}
+
 // ErrNoProvisionBucketForAmount is returned when the amount falls in a gap between tier ranges (no bucket contains it).
 var ErrNoProvisionBucketForAmount = errors.New("no provision bucket for this amount")
 

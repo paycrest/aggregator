@@ -103,6 +103,16 @@ type SettleOutEvent struct {
 	RebatePercent     decimal.Decimal
 }
 
+// LocalTransferFeeSplitEvent represents a LocalTransferFeeSplit event from the Gateway contract.
+type LocalTransferFeeSplitEvent struct {
+	BlockNumber      int64
+	TxHash           string
+	OrderId          string
+	SenderAmount     decimal.Decimal
+	ProviderAmount   decimal.Decimal
+	AggregatorAmount decimal.Decimal
+}
+
 // OrderSettledEvent represents an order settled event. Only used for Starknet.
 type OrderSettledEvent struct {
 	BlockNumber       int64
@@ -1017,9 +1027,10 @@ type ChangePasswordPayload struct {
 
 // SenderStatsResponse is the response for the sender stats endpoint
 type SenderStatsResponse struct {
-	TotalOrders      int             `json:"totalOrders"`
-	TotalOrderVolume decimal.Decimal `json:"totalOrderVolume"`
-	TotalFeeEarnings decimal.Decimal `json:"totalFeeEarnings"`
+	TotalOrders       int             `json:"totalOrders"`
+	TotalOrderVolume  decimal.Decimal `json:"totalOrderVolume"`
+	TotalFeeEarnings  decimal.Decimal `json:"totalFeeEarnings"`
+	TotalProviderFees decimal.Decimal `json:"totalProviderFees"`
 }
 
 // ProviderStatsResponse is the response for the provider stats endpoint
@@ -1163,7 +1174,8 @@ type EventCounts struct {
 	OrderCreated  int `json:"OrderCreated"`
 	SettleOut     int `json:"SettleOut"` // SettleOut (offramp); Starknet OrderSettled is mapped here
 	SettleIn      int `json:"SettleIn"`  // SettleIn (onramp)
-	OrderRefunded int `json:"OrderRefunded"`
+	OrderRefunded         int `json:"OrderRefunded"`
+	LocalTransferFeeSplit int `json:"LocalTransferFeeSplit"`
 }
 
 // ThirdwebWebhookPayload represents the structure of thirdweb insight webhook payload
