@@ -65,6 +65,25 @@ func NewProviderController() *ProviderController {
 	}
 }
 
+// providerExcludedOrderStatusesPredicate hides early-terminal / not-yet-actionable rows from
+// provider dashboard list, search, export, stats count, and get-by-ID.
+func providerExcludedOrderStatusesPredicate() predicate.PaymentOrder {
+	return paymentorder.StatusNotIn(
+		paymentorder.StatusInitiated,
+		paymentorder.StatusExpired,
+		paymentorder.StatusDeposited,
+	)
+}
+
+func isProviderExcludedOrderStatus(s paymentorder.Status) bool {
+	switch s {
+	case paymentorder.StatusInitiated, paymentorder.StatusExpired, paymentorder.StatusDeposited:
+		return true
+	default:
+		return false
+	}
+}
+
 // GetPaymentOrders controller fetches all assigned orders
 func (ctrl *ProviderController) GetPaymentOrders(ctx *gin.Context) {
 	// Get provider profile from the context
@@ -169,6 +188,7 @@ func (ctrl *ProviderController) handleListPaymentOrders(ctx *gin.Context, provid
 		paymentOrderQuery = paymentOrderQuery.Where(
 			paymentorder.InstitutionIn(institutionCodes...),
 		)
+		paymentOrderQuery = paymentOrderQuery.Where(providerExcludedOrderStatusesPredicate())
 	} else {
 		// Currency is required for normal listing
 		u.APIResponse(ctx, http.StatusBadRequest, "error", "Currency is required", nil)
@@ -275,6 +295,7 @@ func (ctrl *ProviderController) handleSearchPaymentOrders(ctx *gin.Context, prov
 	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
 		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 	)
+	paymentOrderQuery = paymentOrderQuery.Where(providerExcludedOrderStatusesPredicate())
 
 	// Apply text search across all relevant fields
 	var searchPredicates []predicate.PaymentOrder
@@ -415,6 +436,7 @@ func (ctrl *ProviderController) handleExportPaymentOrders(ctx *gin.Context, prov
 	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
 		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 	)
+	paymentOrderQuery = paymentOrderQuery.Where(providerExcludedOrderStatusesPredicate())
 
 	// Apply date range filters
 	if fromDate != nil {
@@ -2785,6 +2807,7 @@ func (ctrl *ProviderController) Stats(ctx *gin.Context) {
 		Where(
 			paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 			paymentorder.InstitutionIn(institutionCodes...),
+			providerExcludedOrderStatusesPredicate(),
 		).
 		Count(reqCtx)
 	if err != nil {
@@ -2950,6 +2973,11 @@ func (ctrl *ProviderController) GetPaymentOrderByID(ctx *gin.Context) {
 			"Payment order not found", nil)
 		return
 	}
+	if isProviderExcludedOrderStatus(paymentOrder.Status) {
+		u.APIResponse(ctx, http.StatusNotFound, "error",
+			"Payment order not found", nil)
+		return
+	}
 	var transactions []types.TransactionLog
 	for _, transaction := range paymentOrder.Edges.Transactions {
 		transactions = append(transactions, types.TransactionLog{
@@ -3012,6 +3040,10 @@ func (ctrl *ProviderController) GetPaymentOrderByIDV2(ctx *gin.Context) {
 		Only(ctx)
 	if err != nil {
 		logger.WithFields(logger.Fields{"Error": fmt.Sprintf("%v", err), "Order ID": orderID}).Errorf("Failed to fetch payment order: %v", err)
+		u.APIResponse(ctx, http.StatusNotFound, "error", "Payment order not found", nil)
+		return
+	}
+	if isProviderExcludedOrderStatus(paymentOrder.Status) {
 		u.APIResponse(ctx, http.StatusNotFound, "error", "Payment order not found", nil)
 		return
 	}
@@ -3134,6 +3166,7 @@ func (ctrl *ProviderController) handleListPaymentOrdersV2(ctx *gin.Context, prov
 		return
 	}
 	paymentOrderQuery = paymentOrderQuery.Where(paymentorder.InstitutionIn(institutionCodes...))
+	paymentOrderQuery = paymentOrderQuery.Where(providerExcludedOrderStatusesPredicate())
 
 	statusMap := map[string]paymentorder.Status{
 		"pending":    paymentorder.StatusPending,
@@ -3192,6 +3225,7 @@ func (ctrl *ProviderController) handleSearchPaymentOrdersV2(ctx *gin.Context, pr
 	paymentOrderQuery := storage.Client.PaymentOrder.Query().Where(
 		paymentorder.HasProviderWith(providerprofile.IDEQ(provider.ID)),
 	)
+	paymentOrderQuery = paymentOrderQuery.Where(providerExcludedOrderStatusesPredicate())
 
 	var searchPredicates []predicate.PaymentOrder
 	if searchUUID, err := uuid.Parse(searchText); err == nil {
