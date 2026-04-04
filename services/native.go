@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -18,8 +19,11 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/paycrest/aggregator/config"
 	"github.com/paycrest/aggregator/ent"
+	"github.com/paycrest/aggregator/services/contracts"
+	u "github.com/paycrest/aggregator/utils"
 	cryptoUtils "github.com/paycrest/aggregator/utils/crypto"
 	"github.com/paycrest/aggregator/utils/logger"
+	"github.com/shopspring/decimal"
 )
 
 // --- Public API ---
@@ -544,4 +548,227 @@ func getDefaultNonceManager() *NonceManager {
 		defaultNonceManager = NewNonceManager()
 	})
 	return defaultNonceManager
+}
+
+// --- Payin settleIn / approve alignment (EVM) ---
+
+// MetadataKeyPayinSettleInAmountSubunit is stored on payment order metadata when the provider accepts payin (principal subunits for settleIn _amount).
+const MetadataKeyPayinSettleInAmountSubunit = "payinSettleInAmountSubunit"
+
+// MetadataKeyPayinGrossCryptoReserved is the exact human-decimal gross token amount reserved at sender init (matches ERC20 approve).
+const MetadataKeyPayinGrossCryptoReserved = "payinGrossCryptoReserved"
+
+// MetadataKeyPayinLocalTransfer is true when token base currency matches order fiat (no cross-currency FX on principal).
+const MetadataKeyPayinLocalTransfer = "payinLocalTransfer"
+
+// PayinFeeSettingsReader fetches gateway token fee settings from chain (FX gross-up).
+type PayinFeeSettingsReader interface {
+	GetTokenFeeSettings(ctx context.Context, network *ent.Network, tokenAddress string) (contracts.GatewaySettingManagerTokenFeeSettings, error)
+}
+
+// GatewayPayinFeeSettingsReader reads token fee settings from the gateway contract via RPC.
+type GatewayPayinFeeSettingsReader struct{}
+
+// GetTokenFeeSettings implements PayinFeeSettingsReader.
+func (GatewayPayinFeeSettingsReader) GetTokenFeeSettings(ctx context.Context, network *ent.Network, tokenAddress string) (contracts.GatewaySettingManagerTokenFeeSettings, error) {
+	if network == nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("network is nil")
+	}
+	if network.RPCEndpoint == "" {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("rpc endpoint not configured")
+	}
+	if network.GatewayContractAddress == "" {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("gateway contract address not configured")
+	}
+	client, err := ethclient.DialContext(ctx, network.RPCEndpoint)
+	if err != nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("dial rpc: %w", err)
+	}
+	defer client.Close()
+	caller, err := contracts.NewGatewayCaller(common.HexToAddress(network.GatewayContractAddress), client)
+	if err != nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("gateway caller: %w", err)
+	}
+	settings, err := caller.GetTokenFeeSettings(&bind.CallOpts{Context: ctx}, common.HexToAddress(tokenAddress))
+	if err != nil {
+		return contracts.GatewaySettingManagerTokenFeeSettings{}, fmt.Errorf("get token fee settings: %w", err)
+	}
+	return settings, nil
+}
+
+// ComputeSettleInPrincipalSubunit returns the token subunit amount passed as settleIn _amount for FX flows (gross-up from net).
+// For FX it uses the smallest gross G such that G - floor(G*providerToAggregatorFx/maxBPS) >= netAmount, matching Gateway.sol.
+// When isLocal is true, the principal equals net (no gateway FX gross-up on principal); rate is ignored.
+func ComputeSettleInPrincipalSubunit(netAmount *big.Int, rate decimal.Decimal, providerToAggregatorFx *big.Int, isLocal bool) (*big.Int, error) {
+	if netAmount == nil {
+		return nil, fmt.Errorf("net amount is nil")
+	}
+	if netAmount.Sign() < 0 {
+		return nil, fmt.Errorf("net amount cannot be negative")
+	}
+	if isLocal {
+		return new(big.Int).Set(netAmount), nil
+	}
+	if providerToAggregatorFx == nil {
+		return nil, fmt.Errorf("providerToAggregatorFx is nil for FX settlement")
+	}
+	_ = rate // reserved for future use; gateway packing scales rate separately
+	maxBPS := big.NewInt(100000)
+	if providerToAggregatorFx.Sign() < 0 || providerToAggregatorFx.Cmp(maxBPS) >= 0 {
+		return nil, fmt.Errorf("invalid providerToAggregatorFx bps: %s", providerToAggregatorFx.String())
+	}
+	if netAmount.Sign() == 0 {
+		return big.NewInt(0), nil
+	}
+	// Gateway uses floored fee: netOut = gross - floor(gross*providerToAggregatorFx/maxBPS). Find minimal gross with netOut >= netAmount.
+	denom := new(big.Int).Sub(maxBPS, providerToAggregatorFx)
+	gross := new(big.Int).Mul(netAmount, maxBPS)
+	gross.Div(gross, denom) // initial guess: floor(netAmount * maxBPS / (maxBPS - providerToAggregatorFx))
+	one := big.NewInt(1)
+	const maxGrossSearchSteps = 1_000_000
+	for step := 0; ; step++ {
+		if step > maxGrossSearchSteps {
+			return nil, fmt.Errorf("gross search exceeded step limit for net %s fx bps %s", netAmount.String(), providerToAggregatorFx.String())
+		}
+		fee := new(big.Int).Mul(gross, providerToAggregatorFx)
+		fee.Div(fee, maxBPS)
+		netOut := new(big.Int).Sub(gross, fee)
+		if netOut.Cmp(netAmount) >= 0 {
+			return new(big.Int).Set(gross), nil
+		}
+		gross.Add(gross, one)
+	}
+}
+
+// PrincipalSubunitFromMetadata returns the frozen settleIn principal subunits from accept-time metadata, if present and valid.
+func PrincipalSubunitFromMetadata(metadata map[string]interface{}) (*big.Int, bool) {
+	if metadata == nil {
+		return nil, false
+	}
+	raw, ok := metadata[MetadataKeyPayinSettleInAmountSubunit]
+	if !ok || raw == nil {
+		return nil, false
+	}
+	switch value := raw.(type) {
+	case string:
+		n := new(big.Int)
+		if _, ok := n.SetString(value, 10); ok {
+			return n, true
+		}
+	case fmt.Stringer:
+		n := new(big.Int)
+		if _, ok := n.SetString(value.String(), 10); ok {
+			return n, true
+		}
+	}
+	return nil, false
+}
+
+// PayinIsLocalTransfer reports whether principal should skip FX gross-up (token base matches fiat).
+// Prefers MetadataKeyPayinLocalTransfer; falls back to legacy stored rate == 1 for older rows.
+func PayinIsLocalTransfer(order *ent.PaymentOrder) bool {
+	if order == nil {
+		return false
+	}
+	if order.Metadata != nil {
+		raw, ok := order.Metadata[MetadataKeyPayinLocalTransfer]
+		if ok && raw != nil {
+			switch v := raw.(type) {
+			case bool:
+				return v
+			case float64:
+				return v != 0
+			case string:
+				s := strings.TrimSpace(strings.ToLower(v))
+				return s == "true" || s == "1"
+			}
+		}
+	}
+	return order.Rate.Equal(decimal.NewFromInt(1))
+}
+
+func payinGrossCryptoReservedFromMetadata(metadata map[string]interface{}) (decimal.Decimal, bool) {
+	if metadata == nil {
+		return decimal.Zero, false
+	}
+	raw, ok := metadata[MetadataKeyPayinGrossCryptoReserved]
+	if !ok || raw == nil {
+		return decimal.Zero, false
+	}
+	var s string
+	switch v := raw.(type) {
+	case string:
+		s = strings.TrimSpace(v)
+	case fmt.Stringer:
+		s = strings.TrimSpace(v.String())
+	default:
+		s = strings.TrimSpace(fmt.Sprint(v))
+	}
+	if s == "" {
+		return decimal.Zero, false
+	}
+	d, err := decimal.NewFromString(s)
+	if err != nil || !d.IsPositive() {
+		return decimal.Zero, false
+	}
+	return d, true
+}
+
+// GrossCryptoReservedForApprove returns the human decimal token amount matching ERC20 approve(spender, amount)
+// for payin: settleIn principal + sender fee (same subunit sum as prepareApproveCallData).
+func GrossCryptoReservedForApprove(ctx context.Context, reader PayinFeeSettingsReader, order *ent.PaymentOrder) (decimal.Decimal, error) {
+	if order == nil {
+		return decimal.Zero, fmt.Errorf("order is nil")
+	}
+	if order.Edges.Token == nil {
+		return decimal.Zero, fmt.Errorf("order has no token")
+	}
+	if order.Edges.Token.Edges.Network == nil {
+		return decimal.Zero, fmt.Errorf("order token has no network")
+	}
+	if d, ok := payinGrossCryptoReservedFromMetadata(order.Metadata); ok {
+		return d, nil
+	}
+	dec := order.Edges.Token.Decimals
+	netBig := u.ToSubunit(order.Amount, dec)
+	senderFeeBig := u.ToSubunit(order.SenderFee, dec)
+
+	principalBig, hasSnapshot := PrincipalSubunitFromMetadata(order.Metadata)
+	if !hasSnapshot {
+		principalBig = new(big.Int).Set(netBig)
+		if !PayinIsLocalTransfer(order) {
+			if reader == nil {
+				return decimal.Zero, fmt.Errorf("fee reader is required for FX payin gross amount")
+			}
+			settings, err := reader.GetTokenFeeSettings(ctx, order.Edges.Token.Edges.Network, order.Edges.Token.ContractAddress)
+			if err != nil {
+				return decimal.Zero, fmt.Errorf("get token fee settings: %w", err)
+			}
+			var err2 error
+			principalBig, err2 = ComputeSettleInPrincipalSubunit(netBig, order.Rate, settings.ProviderToAggregatorFx, false)
+			if err2 != nil {
+				return decimal.Zero, err2
+			}
+		}
+	}
+
+	grossSub := new(big.Int).Add(new(big.Int).Set(principalBig), senderFeeBig)
+	return u.FromSubunit(grossSub, dec), nil
+}
+
+// PayinReleaseGrossForCleanup returns the token gross amount to release after a failed onramp init (virtual account step).
+// It uses GrossCryptoReservedForApprove (honouring payinGrossCryptoReserved metadata when present). On error it falls back
+// to amount+senderFee and invokes onFallback if non-nil (e.g. logging). It does not panic.
+func PayinReleaseGrossForCleanup(ctx context.Context, reader PayinFeeSettingsReader, order *ent.PaymentOrder, onFallback func(error)) decimal.Decimal {
+	d, err := GrossCryptoReservedForApprove(ctx, reader, order)
+	if err != nil {
+		if onFallback != nil {
+			onFallback(err)
+		}
+		if order != nil {
+			return order.Amount.Add(order.SenderFee)
+		}
+		return decimal.Zero
+	}
+	return d
 }

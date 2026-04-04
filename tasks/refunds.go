@@ -57,7 +57,9 @@ func ExpireStaleOrders() error {
 			paymentorder.StatusEQ(paymentorder.StatusPending),
 		).
 		WithProvider().
-		WithToken().
+		WithToken(func(tq *ent.TokenQuery) {
+			tq.WithNetwork()
+		}).
 		All(ctx)
 	if err != nil {
 		return fmt.Errorf("ExpireStaleOrders.pendingOnramp: %w", err)
@@ -88,7 +90,14 @@ func ExpireStaleOrders() error {
 			continue
 		}
 		if order.Edges.Provider != nil && order.Edges.Token != nil {
-			totalCryptoReserved := order.Amount.Add(order.SenderFee)
+			totalCryptoReserved, gErr := services.GrossCryptoReservedForApprove(ctx, services.GatewayPayinFeeSettingsReader{}, order)
+			if gErr != nil {
+				logger.WithFields(logger.Fields{
+					"OrderID": order.ID.String(),
+					"Error":   gErr.Error(),
+				}).Warnf("ExpireStaleOrders: GrossCryptoReservedForApprove failed; using amount+senderFee")
+				totalCryptoReserved = order.Amount.Add(order.SenderFee)
+			}
 			if relErr := balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
 				logger.WithFields(logger.Fields{
 					"OrderID": order.ID.String(),

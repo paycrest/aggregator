@@ -15,12 +15,26 @@ import (
 	"github.com/paycrest/aggregator/ent/senderprofile"
 	"github.com/paycrest/aggregator/ent/transactionlog"
 	"github.com/paycrest/aggregator/ent/webhookretryattempt"
+	"github.com/paycrest/aggregator/services"
 	"github.com/paycrest/aggregator/services/balance"
 	"github.com/paycrest/aggregator/services/email"
 	"github.com/paycrest/aggregator/storage"
 	"github.com/paycrest/aggregator/utils"
 	"github.com/paycrest/aggregator/utils/logger"
+	"github.com/shopspring/decimal"
 )
+
+func payinGrossCryptoForRelease(ctx context.Context, order *ent.PaymentOrder) decimal.Decimal {
+	g, err := services.GrossCryptoReservedForApprove(ctx, services.GatewayPayinFeeSettingsReader{}, order)
+	if err != nil {
+		logger.WithFields(logger.Fields{
+			"OrderID": order.ID.String(),
+			"Error":   err.Error(),
+		}).Errorf("payinGrossCryptoForRelease: fallback to amount+senderFee")
+		return order.Amount.Add(order.SenderFee)
+	}
+	return g
+}
 
 const txStatusFiveMinError = "Failed to get transaction status after 5 minutes"
 const txStatusRetryWindow = 5 * time.Minute
@@ -258,7 +272,7 @@ func SyncPaymentOrderFulfillments() {
 				// Payin (onramp): release reserved token balance on failure
 				if order.Direction == paymentorder.DirectionOnramp && order.Edges.Token != nil && order.Edges.Provider != nil {
 					balanceService := balance.New()
-					totalCryptoReserved := order.Amount.Add(order.SenderFee)
+					totalCryptoReserved := payinGrossCryptoForRelease(ctx, order)
 					if relErr := balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
 						logger.WithFields(logger.Fields{"OrderID": order.ID.String(), "Error": relErr}).Errorf("SyncPaymentOrderFulfillments: release balance on payin failed")
 					}
@@ -276,7 +290,7 @@ func SyncPaymentOrderFulfillments() {
 				}
 				// Payin (onramp): ask provider to run AcceptOrder + FulfillOrder(Success) with EIP-7702 auth
 				if order.Direction == paymentorder.DirectionOnramp {
-					if reqErr := callRequestAuthorization(ctx, order, psp, txId, order.Amount.Add(order.SenderFee).String()); reqErr != nil {
+					if reqErr := callRequestAuthorization(ctx, order, psp, txId, payinGrossCryptoForRelease(ctx, order).String()); reqErr != nil {
 						logger.WithFields(logger.Fields{
 							"OrderID": order.ID.String(),
 							"Error":   reqErr.Error(),
@@ -419,7 +433,7 @@ func SyncPaymentOrderFulfillments() {
 						// Payin (onramp): release reserved token balance on failure
 						if order.Direction == paymentorder.DirectionOnramp && order.Edges.Token != nil && order.Edges.Provider != nil {
 							balanceService := balance.New()
-							totalCryptoReserved := order.Amount.Add(order.SenderFee)
+							totalCryptoReserved := payinGrossCryptoForRelease(ctx, order)
 							if relErr := balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
 								logger.WithFields(logger.Fields{"OrderID": order.ID.String(), "Error": relErr}).Errorf("SyncPaymentOrderFulfillments: release balance on payin failed (pending→failed)")
 							}
@@ -436,7 +450,7 @@ func SyncPaymentOrderFulfillments() {
 						}
 						// Onramp: ask provider to run AcceptOrder + FulfillOrder(Success) with EIP-7702 auth
 						if order.Direction == paymentorder.DirectionOnramp {
-							if reqErr := callRequestAuthorization(ctx, order, fulfillment.Psp, fulfillment.TxID, order.Amount.Add(order.SenderFee).String()); reqErr != nil {
+							if reqErr := callRequestAuthorization(ctx, order, fulfillment.Psp, fulfillment.TxID, payinGrossCryptoForRelease(ctx, order).String()); reqErr != nil {
 								logger.WithFields(logger.Fields{
 									"OrderID": order.ID.String(),
 									"Error":   reqErr.Error(),
@@ -825,7 +839,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 		}
 		if order.Edges.Token != nil && order.Edges.Provider != nil {
 			balanceService := balance.New()
-			totalCryptoReserved := order.Amount.Add(order.SenderFee)
+			totalCryptoReserved := payinGrossCryptoForRelease(ctx, order)
 			if relErr := balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil); relErr != nil {
 				logger.WithFields(logger.Fields{
 					"OrderID":    order.ID.String(),
@@ -864,7 +878,7 @@ func syncRefundingOrder(ctx context.Context, order *ent.PaymentOrder) {
 				Save(ctx)
 			if order.Edges.Token != nil && order.Edges.Provider != nil {
 				balanceService := balance.New()
-				totalCryptoReserved := order.Amount.Add(order.SenderFee)
+				totalCryptoReserved := payinGrossCryptoForRelease(ctx, order)
 				_ = balanceService.ReleaseTokenBalance(ctx, order.Edges.Provider.ID, order.Edges.Token.ID, totalCryptoReserved, nil)
 			}
 			// Mark order as Fulfilled so it does not remain in Refunding indefinitely (consistent with payin-failed and handlePayinFulfillment).

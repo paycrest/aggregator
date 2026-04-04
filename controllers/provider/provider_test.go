@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -33,6 +34,56 @@ import (
 	"github.com/paycrest/aggregator/utils/token"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestComputeSettleInPrincipalSubunit(t *testing.T) {
+	t.Run("local keeps net amount", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(5000), true)
+		assert.NoError(t, err)
+		assert.Equal(t, net.String(), got.String())
+	})
+
+	t.Run("fx rate grosses up amount", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		// 5% providerToAggregatorFx: minimal gross matching Gateway floored fee (not continuous ceil).
+		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(5000), false)
+		assert.NoError(t, err)
+		assert.Equal(t, "1052631", got.String())
+	})
+
+	t.Run("fx zero bps keeps net amount", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		got, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(0), false)
+		assert.NoError(t, err)
+		assert.Equal(t, net.String(), got.String())
+	})
+
+	t.Run("fx rejects invalid bps", func(t *testing.T) {
+		net := big.NewInt(1000000)
+		_, err := services.ComputeSettleInPrincipalSubunit(net, decimal.NewFromInt(750), big.NewInt(100000), false)
+		assert.Error(t, err)
+	})
+}
+
+func TestSettleInAmountSubunitFromMetadata(t *testing.T) {
+	t.Run("reads valid snapshot", func(t *testing.T) {
+		metadata := map[string]interface{}{
+			services.MetadataKeyPayinSettleInAmountSubunit: "1052631",
+		}
+		got, ok := services.PrincipalSubunitFromMetadata(metadata)
+		assert.True(t, ok)
+		assert.Equal(t, "1052631", got.String())
+	})
+
+	t.Run("rejects invalid snapshot", func(t *testing.T) {
+		metadata := map[string]interface{}{
+			services.MetadataKeyPayinSettleInAmountSubunit: "not-a-number",
+		}
+		got, ok := services.PrincipalSubunitFromMetadata(metadata)
+		assert.False(t, ok)
+		assert.Nil(t, got)
+	})
+}
 
 var testCtx = struct {
 	user         *ent.User
