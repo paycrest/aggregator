@@ -698,7 +698,6 @@ type V2FiatRefundAccount struct {
 type V2CryptoDestination struct {
 	Type       string            `json:"type" binding:"required,eq=crypto"`
 	Currency   string            `json:"currency" binding:"required"`
-	Network    string            `json:"network" binding:"required"`
 	ProviderID string            `json:"providerId,omitempty"`
 	Recipient  V2CryptoRecipient `json:"recipient" binding:"required"`
 	KYC        *KYCDetail        `json:"kyc,omitempty"`
