@@ -1650,7 +1650,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 				})
 				return
 			}
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(reqCtx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
@@ -1702,7 +1702,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 				})
 				return
 			}
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(reqCtx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
@@ -1749,7 +1749,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			}
 
 			// Validate rate is achievable (using buy side)
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(reqCtx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
@@ -1770,7 +1770,7 @@ func (ctrl *SenderController) initiateOnrampOrderV2(ctx *gin.Context, payload ty
 			orderRate = providedRate
 		} else {
 			// Fetch rate from ValidateRate (buy side)
-			rateResult, err := u.ValidateRate(ctx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
+			rateResult, err := u.ValidateRate(reqCtx, token, currency, cryptoAmountOut, destination.ProviderID, destination.Recipient.Network, u.RateSideBuy)
 			if err != nil {
 				u.APIResponse(ctx, http.StatusBadRequest, "error", "Failed to validate payload", types.ErrorData{
 					Field:   "Rate",
